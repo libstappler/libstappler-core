@@ -1,0 +1,308 @@
+/**
+Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
+Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+**/
+
+#ifndef STAPPLER_CORE_UTILS_SPREF_H_
+#define STAPPLER_CORE_UTILS_SPREF_H_
+
+#include "SPTime.h"
+
+// enable Ref debug mode to track retain/release sources
+#ifndef SP_REF_DEBUG
+#define SP_REF_DEBUG 0
+#endif
+
+namespace stappler {
+
+struct AtomicCounter {
+	AtomicCounter() { _count.store(1); }
+
+	void increment() { ++ _count; }
+	bool decrement() { if (_count.fetch_sub(1) == 1) { return true; } return false; }
+	uint32_t get() const { return _count.load(); }
+
+	std::atomic<uint32_t> _count;
+};
+
+template <typename Interface>
+class RefBase : public Interface::AllocBaseType {
+public:
+	using InterfaceType = Interface;
+
+#if SP_REF_DEBUG
+	virtual uint64_t retain();
+	virtual void release(uint64_t id);
+
+	void foreachBacktrace(const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &) const;
+
+#else
+	uint64_t retain() { _counter.increment(); return 0; }
+	void release(uint64_t id) { if (_counter.decrement()) { delete this; } }
+#endif
+
+	uint32_t getReferenceCount() const { return _counter.get(); }
+
+	virtual ~RefBase() { }
+
+protected:
+	RefBase() { }
+
+#if SP_REF_DEBUG
+	virtual bool isRetainTrackerEnabled() const {
+		return false;
+	}
+#endif
+
+	AtomicCounter _counter;
+};
+
+namespace memleak {
+
+uint64_t getNextRefId();
+uint64_t retainBacktrace(const RefBase<memory::StandartInterface> *);
+void releaseBacktrace(const RefBase<memory::StandartInterface> *, uint64_t);
+void foreachBacktrace(const RefBase<memory::StandartInterface> *,
+		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &);
+
+uint64_t retainBacktrace(const RefBase<memory::PoolInterface> *);
+void releaseBacktrace(const RefBase<memory::PoolInterface> *, uint64_t);
+void foreachBacktrace(const RefBase<memory::PoolInterface> *,
+		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &);
+}
+
+
+template <class Base>
+struct _Rc_PtrCast {
+	inline static Base *cast(Base *b) { return b; }
+};
+
+template <typename Base>
+class RcBase {
+public:
+	using Type = typename std::remove_cv<Base>::type;
+	using Self = RcBase<Base>;
+	using Pointer = Type *;
+
+	template <class... Args>
+	static inline Self create(Args && ... args) {
+		auto pRet = new Type();
+	    if (pRet->init(std::forward<Args>(args)...)) {
+	    	return Self(pRet, true); // unsafe assignment
+		} else {
+			delete pRet;
+			return Self(nullptr);
+		}
+	}
+
+	static inline Self alloc() {
+		return Self(new Type(), true);
+	}
+
+	template <class... Args>
+	static inline Self alloc(Args && ... args) {
+		return Self(new Type(std::forward<Args>(args)...), true);
+	}
+
+	inline RcBase() : _ptr(nullptr) { }
+	inline RcBase(const nullptr_t &) : _ptr(nullptr) { }
+	inline RcBase(const Pointer &value) : _ptr(value) { doRetain(); }
+	inline RcBase(const Self &v) { _ptr = v._ptr; doRetain(); }
+	inline RcBase(Self &&v) {
+		_ptr = v._ptr; v._ptr = nullptr;
+#if SP_REF_DEBUG
+		_id = v._id; v._id = 0;
+#endif
+	}
+
+	inline RcBase & operator = (const nullptr_t &) {
+		doRelease();
+		_ptr = nullptr;
+#if SP_REF_DEBUG
+		_id = 0;
+#endif
+		return *this;
+	}
+
+	template <typename B, typename std::enable_if<std::is_convertible<B*, Base *>{}>::type* = nullptr>
+	inline RcBase & operator = (const RcBase<B> &value) { set(value); return *this; }
+
+	inline RcBase & operator = (const Pointer &value) { set(value); return *this; }
+	inline RcBase & operator = (const Self &v) { set(v._ptr); return *this; }
+	inline RcBase & operator = (Self &&v) {
+		doRelease();
+		_ptr = v._ptr; v._ptr = nullptr;
+#if SP_REF_DEBUG
+		_id = v._id; v._id = 0;
+#endif
+		return *this;
+	}
+
+	inline ~RcBase() { doRelease(); _ptr = nullptr; }
+
+	inline void set(const Pointer &value) {
+		_ptr = doSwap(value);
+	}
+
+	inline Base *get() const {
+#if SP_REF_DEBUG
+		assert(_ptr);
+#endif
+		return _Rc_PtrCast<Base>::cast(_ptr);
+	}
+
+	inline operator Base * () const { return get(); }
+	inline operator bool () const { return _ptr != nullptr; }
+
+	template <typename B, typename std::enable_if<std::is_convertible<Base *, B*>{}>::type* = nullptr>
+	inline operator RcBase<B> () { return RcBase<B>(static_cast<B *>(get())); }
+
+	inline void swap(Self & v) { auto ptr = _ptr; _ptr = v._ptr; v._ptr = ptr; }
+
+	inline Base * operator->() const { return _Rc_PtrCast<Base>::cast(_ptr); }
+
+	template <typename Target>
+	inline RcBase<Target> cast() const {
+		if (auto v = dynamic_cast<Target *>(_ptr)) {
+			return RcBase<Target>(v);
+		}
+		return RcBase<Target>(nullptr);
+	}
+
+	inline bool operator == (const Self & other) const { return _ptr == other._ptr; }
+	inline bool operator == (const Base * & other) const { return _ptr == other; }
+	inline bool operator == (typename std::remove_const<Base>::type * other) const { return _ptr == other; }
+	inline bool operator == (const std::nullptr_t other) const { return _ptr == other; }
+
+	inline bool operator != (const Self & other) const { return _ptr != other._ptr; }
+	inline bool operator != (const Base * & other) const { return _ptr != other; }
+	inline bool operator != (typename std::remove_const<Base>::type * other) const { return _ptr != other; }
+	inline bool operator != (const std::nullptr_t other) const { return _ptr != other; }
+
+	inline bool operator > (const Self & other) const { return _ptr > other._ptr; }
+	inline bool operator > (const Base * other) const { return _ptr > other; }
+	inline bool operator > (typename std::remove_const<Base>::type * other) const { return _ptr > other; }
+	inline bool operator > (const std::nullptr_t other) const { return _ptr > other; }
+
+	inline bool operator < (const Self & other) const { return _ptr < other._ptr; }
+	inline bool operator < (const Base * other) const { return _ptr < other; }
+	inline bool operator < (typename std::remove_const<Base>::type * other) const { return _ptr < other; }
+	inline bool operator < (const std::nullptr_t other) const { return _ptr < other; }
+
+	inline bool operator >= (const Self & other) const { return _ptr >= other._ptr; }
+	inline bool operator >= (const Base * other) const { return _ptr >= other; }
+	inline bool operator >= (typename std::remove_const<Base>::type * other) const { return _ptr >= other; }
+	inline bool operator >= (const std::nullptr_t other) const { return _ptr >= other; }
+
+	inline bool operator <= (const Self & other) const { return _ptr <= other._ptr; }
+	inline bool operator <= (const Base * other) const { return _ptr <= other; }
+	inline bool operator <= (typename std::remove_const<Base>::type * other) const { return _ptr <= other; }
+	inline bool operator <= (const std::nullptr_t other) const { return _ptr <= other; }
+
+#if SP_REF_DEBUG
+	uint64_t getId() const { return _id; }
+#endif
+private:
+	inline void doRetain() {
+#if SP_REF_DEBUG
+		if (_ptr) { _id = _ptr->retain(); }
+#else
+		if (_ptr) { _ptr->retain(); }
+#endif
+	}
+
+	inline void doRelease() {
+#if SP_REF_DEBUG
+		if (_ptr) { _ptr->release(_id); }
+#else
+		if (_ptr) { _ptr->release(0); }
+#endif
+	}
+
+	inline Pointer doSwap(Pointer value) {
+#if SP_REF_DEBUG
+		uint64_t id = 0;
+		if (value) { id = value->retain(); }
+		if (_ptr) { _ptr->release(_id); }
+		_id = id;
+		return value;
+#else
+		if (value) { value->retain(); }
+		if (_ptr) { _ptr->release(0); }
+		return value;
+#endif
+	}
+
+	// unsafe
+	inline RcBase(Pointer value, bool v) : _ptr(value) { }
+
+	Pointer _ptr = nullptr;
+#if SP_REF_DEBUG
+	uint64_t _id = 0;
+#endif
+};
+
+template <typename T>
+using Rc = RcBase<T>;
+
+#if SP_REF_DEBUG
+
+template <typename Interface>
+uint64_t RefBase<Interface>::retain() {
+	_counter.increment();
+	if (isRetainTrackerEnabled()) {
+		return memleak::retainBacktrace(this);
+	}
+	return 0;
+}
+
+template <typename Interface>
+void RefBase<Interface>::release(uint64_t v) {
+	if (isRetainTrackerEnabled()) {
+		memleak::releaseBacktrace(this, v);
+	}
+	if (_counter.decrement()) {
+		delete this;
+	}
+}
+
+template <typename Interface>
+void RefBase<Interface>::foreachBacktrace(const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &cb) const {
+	memleak::foreachBacktrace(this, cb);
+}
+
+#endif
+
+}
+
+namespace stappler::mem_std {
+
+using Ref = RefBase<memory::StandartInterface>;
+
+}
+
+namespace stappler::mem_pool {
+
+using Ref = RefBase<memory::PoolInterface>;
+
+}
+
+#endif /* STAPPLER_CORE_UTILS_REF_SPREF_H_ */

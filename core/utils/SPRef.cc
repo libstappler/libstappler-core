@@ -1,0 +1,367 @@
+/**
+Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
+Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+**/
+
+#include "SPRef.h"
+#include "SPLog.h"
+#include "SPSubscription.h"
+#include "SPTime.h"
+#include <cxxabi.h>
+
+namespace stappler::backtrace {
+
+static StringView filepath_lastComponent(StringView path) {
+	size_t pos = path.rfind('/');
+	if (pos != maxOf<size_t>()) {
+		return path.sub(pos + 1);
+	} else {
+		return path;
+	}
+}
+
+static StringView filepath_name(StringView path) {
+	auto cmp = filepath_lastComponent(path);
+
+	size_t pos = cmp.find('.');
+	if (pos == maxOf<size_t>()) {
+		return cmp;
+	} else {
+		return cmp.sub(0, pos);
+	}
+}
+
+static size_t SPUNUSED print(char *buf, size_t bufLen, uintptr_t pc, StringView filename, int lineno, StringView function) {
+	char *target = buf;
+	auto w = ::snprintf(target, bufLen, "[%p]", (void *)pc);
+	bufLen -= w;
+	target += w;
+
+	if (!filename.empty()) {
+		auto name = filepath_name(filename);
+		if (lineno >= 0) {
+			w = ::snprintf(target, bufLen, " %.*s:%d", int(name.size()), name.data(), lineno);
+		} else {
+			w = ::snprintf(target, bufLen, " %.*s", int(name.size()), name.data());
+		}
+		bufLen -= w;
+		target += w;
+	}
+
+	if (!function.empty()) {
+		int status = 0;
+		auto ptr = abi::__cxa_demangle(function.data(), nullptr, nullptr, &status);
+		if (ptr) {
+			w = ::snprintf(target, bufLen, " - %s", ptr);
+			bufLen -= w;
+			target += w;
+			::free(ptr);
+		} else {
+			w = ::snprintf(target, bufLen, " - %.*s", int(function.size()), function.data());
+			bufLen -= w;
+			target += w;
+		}
+	}
+	return target - buf;
+}
+
+}
+
+#if MODULE_STAPPLER_BACKTRACE
+
+#include "backtrace.h"
+
+namespace stappler {
+
+static void debug_backtrace_error(void *data, const char *msg, int errnum) {
+	std::cout << "[Backtrace] error: " << msg << "\n";
+}
+
+static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *filename, int lineno, const char *function) {
+	if (pc != uintptr_t(0xffffffffffffffffLLU)) {
+		auto ret = (const Callback<void(StringView)> *)data;
+		char buf[1024] = { 0 };
+		auto size = backtrace::print(buf, 1024, pc, filename, lineno, function);
+		(*ret)(StringView(buf, size));
+	}
+	return 0;
+}
+
+struct BacktraceState {
+	static BacktraceState *getInstance() {
+		static std::mutex s_mutex;
+		static BacktraceState * s_instance = nullptr;
+
+		s_mutex.lock();
+		if (!s_instance) {
+			s_instance = new BacktraceState();
+		}
+		s_mutex.unlock();
+		return s_instance;
+	}
+
+	BacktraceState() {
+		_backtraceState = ::backtrace_create_state(nullptr, 1, debug_backtrace_error, nullptr);
+	}
+
+	void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
+		::backtrace_full(_backtraceState, 2 + offset, debug_backtrace_full_callback, debug_backtrace_error, (void *)&cb);
+	}
+
+	::backtrace_state *_backtraceState;
+};
+
+void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
+	BacktraceState::getInstance()->getBacktrace(offset, cb);
+}
+
+}
+
+#elif LINUX
+
+#include <execinfo.h>
+
+namespace stappler {
+
+static constexpr int LinuxBacktraceSize = 128;
+static constexpr int LinuxBacktraceOffset = 2;
+
+void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
+	void *bt[LinuxBacktraceSize + LinuxBacktraceOffset + offset];
+	char **bt_syms;
+	int bt_size;
+
+	bt_size = ::backtrace(bt, LinuxBacktraceSize + LinuxBacktraceOffset + offset);
+	bt_syms = ::backtrace_symbols(bt, bt_size);
+
+	for (int i = LinuxBacktraceOffset + offset; i < bt_size; i++) {
+		StringView str(bt_syms[i]);
+
+		auto first = str.find('(');
+		auto second = str.rfind('+');
+
+		char buf[1024] = { 0 };
+		auto size = backtrace::print(buf, 1024, (uintptr_t) bt[i], StringView(str, first), -1, StringView(str, first + 1, second - first - 1));
+
+		cb(StringView(buf, size));
+	}
+
+	::free(bt_syms);
+}
+
+}
+
+#elif __APPLE__
+
+#include <libunwind.h>
+#include <inttypes.h>
+
+namespace stappler {
+
+void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
+	unw_cursor_t cursor;
+	unw_context_t context;
+	unw_getcontext(&context);
+	unw_init_local(&cursor, &context);
+
+	char buf[1024] = { 0 };
+
+	while (unw_step(&cursor)) {
+		if (offset > 0) {
+			-- offset;
+			continue;
+		}
+
+		unw_word_t ip, sp, off;
+
+		unw_get_reg(&cursor, UNW_REG_IP, &ip);
+		unw_get_reg(&cursor, UNW_REG_SP, &sp);
+
+		char symbol[1024] = { "<unknown>" };
+
+		unw_get_proc_name(&cursor, symbol, sizeof(symbol), &off);
+		auto size = backtrace::print(buf, 1024, (uintptr_t) off, StringView(), -1, StringView(symbol));
+
+		cb(StringView(buf, size));
+	}
+}
+
+}
+
+#else
+
+namespace stappler {
+
+void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) { }
+
+}
+
+#endif
+
+
+namespace stappler::memleak {
+
+static std::mutex s_mutex;
+static std::atomic<uint64_t> s_refId = 1;
+
+struct BackraceInfo {
+	Time t;
+	std::vector<std::string> backtrace;
+};
+
+static std::map<const RefBase<memory::StandartInterface> *, std::map<uint64_t, BackraceInfo>> s_retainStdMap;
+static std::map<const RefBase<memory::PoolInterface> *, std::map<uint64_t, BackraceInfo>> s_retainPoolMap;
+
+uint64_t getNextRefId() {
+	return s_refId.fetch_add(1);
+}
+
+uint64_t retainBacktrace(const RefBase<memory::StandartInterface> *ptr) {
+	auto id = getNextRefId();
+	std::vector<std::string> bt;
+	getBacktrace(0, [&] (StringView str) {
+		bt.emplace_back(str.str<memory::StandartInterface>());
+	});
+	s_mutex.lock();
+
+	auto it = s_retainStdMap.find(ptr);
+	if (it == s_retainStdMap.end()) {
+		it = s_retainStdMap.emplace(ptr, std::map<uint64_t, BackraceInfo>()).first;
+	}
+
+	auto iit = it->second.find(id);
+	if (iit == it->second.end()) {
+		it->second.emplace(id, BackraceInfo{Time::now(), move(bt)});
+	}
+
+	s_mutex.unlock();
+	return id;
+}
+
+void releaseBacktrace(const RefBase<memory::StandartInterface> *ptr, uint64_t id) {
+	if (!id) {
+		return;
+	}
+
+	s_mutex.lock();
+
+	auto it = s_retainStdMap.find(ptr);
+	if (it != s_retainStdMap.end()) {
+		auto iit = it->second.find(id);
+		if (iit != it->second.end()) {
+			it->second.erase(iit);
+		}
+		if (it->second.size() == 0) {
+			s_retainStdMap.erase(it);
+		}
+	}
+
+	s_mutex.unlock();
+}
+
+void foreachBacktrace(const RefBase<memory::StandartInterface> *ptr,
+		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &cb) {
+	s_mutex.lock();
+
+	auto it = s_retainStdMap.find(ptr);
+	if (it != s_retainStdMap.end()) {
+		for (auto &iit : it->second) {
+			cb(iit.first, iit.second.t, iit.second.backtrace);
+		}
+	}
+
+	s_mutex.unlock();
+}
+
+uint64_t retainBacktrace(const RefBase<memory::PoolInterface> *ptr) {
+	auto id = getNextRefId();
+	std::vector<std::string> bt;
+	getBacktrace(0, [&] (StringView str) {
+		bt.emplace_back(str.str<memory::StandartInterface>());
+	});
+	s_mutex.lock();
+
+	auto it = s_retainPoolMap.find(ptr);
+	if (it == s_retainPoolMap.end()) {
+		it = s_retainPoolMap.emplace(ptr, std::map<uint64_t, BackraceInfo>()).first;
+	}
+
+	auto iit = it->second.find(id);
+	if (iit == it->second.end()) {
+		it->second.emplace(id, BackraceInfo{Time::now(), move(bt)});
+	}
+
+	s_mutex.unlock();
+	return id;
+}
+
+void releaseBacktrace(const RefBase<memory::PoolInterface> *ptr, uint64_t id) {
+	if (!id) {
+		return;
+	}
+
+	s_mutex.lock();
+
+	auto it = s_retainPoolMap.find(ptr);
+	if (it != s_retainPoolMap.end()) {
+		auto iit = it->second.find(id);
+		if (iit != it->second.end()) {
+			it->second.erase(iit);
+		}
+		if (it->second.size() == 0) {
+			s_retainPoolMap.erase(it);
+		}
+	}
+
+	s_mutex.unlock();
+}
+
+void foreachBacktrace(const RefBase<memory::PoolInterface> *ptr,
+		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &cb) {
+	s_mutex.lock();
+
+	auto it = s_retainPoolMap.find(ptr);
+	if (it != s_retainPoolMap.end()) {
+		for (auto &iit : it->second) {
+			cb(iit.first, iit.second.t, iit.second.backtrace);
+		}
+	}
+
+	s_mutex.unlock();
+}
+
+}
+
+namespace stappler {
+
+template <>
+SubscriptionId SubscriptionTemplate<memory::PoolInterface>::getNextId() {
+	static std::atomic<SubscriptionId::Type> nextId(0);
+	return Id(nextId.fetch_add(1));
+}
+
+template <>
+SubscriptionId SubscriptionTemplate<memory::StandartInterface>::getNextId() {
+	static std::atomic<SubscriptionId::Type> nextId(0);
+	return Id(nextId.fetch_add(1));
+}
+
+}
