@@ -26,26 +26,6 @@ THE SOFTWARE.
 
 namespace stappler::memory {
 
-void *AllocPool::operator new(size_t size) noexcept {
-	return pool::alloc(pool::acquire(), size);
-}
-
-void *AllocPool::operator new(size_t size, pool_t *pool) noexcept {
-	return pool::alloc(pool, size);
-}
-
-void *AllocPool::operator new(size_t size, void *mem) noexcept {
-	return mem;
-}
-
-void AllocPool::operator delete(void *data) noexcept {
-	// APR doesn't require to free object's memory
-}
-
-pool_t *AllocPool::getCurrentPool() {
-	return pool::acquire();
-}
-
 bool AllocPool::isCustomPool(pool_t *p) {
 	if (p && *((uint64_t *)p) == stappler::mempool::custom::POOL_MAGIC) {
 		return true;

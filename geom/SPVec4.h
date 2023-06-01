@@ -44,9 +44,16 @@ public:
 
 	static float angle(const Vec4& v1, const Vec4& v2);
 	static float dot(const Vec4& v1, const Vec4& v2);
-	static void add(const Vec4& v1, const Vec4& v2, Vec4* dst);
+
+	static void add(const Vec4& v1, const Vec4& v2, Vec4* dst) {
+		simd::addVec4(&v1.x, &v2.x, &dst->x);
+	}
+
+	static void subtract(const Vec4& v1, const Vec4& v2, Vec4* dst) {
+		simd::subVec4(&v1.x, &v2.x, &dst->x);
+	}
+
 	static void clamp(const Vec4& v, const Vec4& min, const Vec4& max, Vec4* dst);
-	static void subtract(const Vec4& v1, const Vec4& v2, Vec4* dst);
 
 	float x;
 	float y;

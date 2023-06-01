@@ -89,12 +89,6 @@ void foreachBacktrace(const RefBase<memory::PoolInterface> *,
 		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &);
 }
 
-
-template <class Base>
-struct _Rc_PtrCast {
-	inline static Base *cast(Base *b) { return b; }
-};
-
 template <typename Base>
 class RcBase {
 public:
@@ -166,7 +160,7 @@ public:
 #if SP_REF_DEBUG
 		assert(_ptr);
 #endif
-		return _Rc_PtrCast<Base>::cast(_ptr);
+		return _ptr;
 	}
 
 	inline operator Base * () const { return get(); }
@@ -177,7 +171,7 @@ public:
 
 	inline void swap(Self & v) { auto ptr = _ptr; _ptr = v._ptr; v._ptr = ptr; }
 
-	inline Base * operator->() const { return _Rc_PtrCast<Base>::cast(_ptr); }
+	inline Base * operator->() const { return _ptr; }
 
 	template <typename Target>
 	inline RcBase<Target> cast() const {

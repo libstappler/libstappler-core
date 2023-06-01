@@ -38,12 +38,23 @@ struct AllocBase {
 // Root class for pool allocated objects
 // Use with care
 struct AllocPool {
-	void *operator new(size_t size) noexcept;
-	void *operator new(size_t size, pool_t *pool) noexcept;
-	void *operator new(size_t size, void *mem) noexcept;
-	void operator delete(void *) noexcept;
+	void *operator new(size_t size) noexcept {
+		return pool::alloc(pool::acquire(), size);
+	}
+	void *operator new(size_t size, pool_t *pool) noexcept {
+		return pool::alloc(pool, size);
+	}
+	void *operator new(size_t size, void *mem) noexcept {
+		return mem;
+	}
+	void operator delete(void *) noexcept {
+		// APR doesn't require to free object's memory
+	}
 
-	static pool_t *getCurrentPool();
+	static pool_t *getCurrentPool() {
+		return pool::acquire();
+	}
+
 	static bool isCustomPool(pool_t *);
 
 	template <typename T>

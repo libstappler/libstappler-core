@@ -59,10 +59,27 @@ struct RawEncoder : public Interface::AllocBaseType {
 	using InterfaceType = Interface;
 	using ValueType = ValueTemplate<Interface>;
 
+	enum Type {
+		Stream,
+		Bytes,
+	};
+
 	inline RawEncoder(std::ostream *stream) : stream(stream) { }
 
-	inline void write(nullptr_t) { (*stream) << "null"; }
-	inline void write(bool value) { (*stream) << ((value)?"true":"false"); }
+	inline void writeData(const char *data, size_t size) {
+		stream->write(data, size);
+	}
+
+	inline void writeData(const char *data) {
+		writeData(data, strlen(data));
+	}
+
+	inline void writeChar(char c) {
+		stream->put(c);
+	}
+
+	inline void write(nullptr_t) { writeData("null", "null"_len); }
+	inline void write(bool value) { writeData((value)?"true":"false"); }
 	inline void write(int64_t value) { (*stream) << value; }
 	inline void write(double value) { (*stream) << std::setprecision(std::numeric_limits<double>::max_digits10) << value; }
 
@@ -82,7 +99,9 @@ struct RawEncoder : public Interface::AllocBaseType {
 	inline void onKey(const typename ValueType::StringType &str) { write(str); (*stream) << ':'; }
 	inline void onNextValue() { (*stream) << ','; }
 
-	std::ostream *stream;
+	Type type = Type::Stream;
+	std::ostream *stream = nullptr;
+	typename Interface::BytesType *bytes = nullptr;
 };
 
 template <typename Interface>

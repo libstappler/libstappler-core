@@ -24,6 +24,7 @@ THE SOFTWARE.
 #include "SPTess.h"
 #include "SPLog.h"
 #include "SPTessTypes.h"
+#include "SPTessSimd.hpp"
 
 namespace stappler::geom {
 
@@ -92,12 +93,6 @@ struct Tesselator::Data : ObjectAllocator {
 	void splitVertex(HalfEdge *first, HalfEdge *last);
 	void displaceBoundary(FaceEdge *);
 };
-
-SP_ATTR_OPTIMIZE_FN static void getVertexNormal(const float v0[2], const float v1[], const float v2[], float result[4]) {
-	simd::f32x4 normVec = getNormalizedVec(v0, v1, v2);
-	simd::f32x4 bisectVec = getBisectVec(normVec);
-	simd::store(result, bisectVec);
-}
 
 Tesselator::~Tesselator() {
 	if (_data) {

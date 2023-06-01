@@ -36,6 +36,8 @@ THE SOFTWARE.
 
 namespace stappler::mempool::base::pool {
 
+static constexpr size_t SP_ALLOC_STACK_SIZE = 256;
+
 static void setPoolInfo(pool_t *p, uint32_t tag, const void *ptr);
 
 class AllocStack {
@@ -62,7 +64,7 @@ protected:
 	template <typename T>
 	struct stack {
 		size_t size = 0;
-		std::array<T, 32> data;
+		std::array<T, SP_ALLOC_STACK_SIZE> data;
 
 		bool empty() const { return size == 0; }
 #if DEBUG
@@ -81,7 +83,7 @@ protected:
 			}
 		}
 #else
-		void push(const T &t) { data[size] = t; ++ size; }
+		void push(const T &t) { data[size ++] = t; }
 		void pop() { -- size; }
 #endif
 		const T &get() const { return data[size - 1]; }

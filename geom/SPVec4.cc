@@ -33,15 +33,6 @@ float Vec4::angle(const Vec4& v1, const Vec4& v2) {
 	return atan2f(sqrt(dx * dx + dy * dy + dz * dz) + math::MATH_FLOAT_SMALL, dot(v1, v2));
 }
 
-void Vec4::add(const Vec4& v1, const Vec4& v2, Vec4* dst) {
-	assert(dst);
-
-	dst->x = v1.x + v2.x;
-	dst->y = v1.y + v2.y;
-	dst->z = v1.z + v2.z;
-	dst->w = v1.w + v2.w;
-}
-
 void Vec4::clamp(const Vec4& min, const Vec4& max) {
 	assert(!(min.x > max.x || min.y > max.y || min.z > max.z || min.w > max.w));
 
@@ -148,15 +139,6 @@ Vec4 Vec4::getNormalized() const {
 	Vec4 v(*this);
 	v.normalize();
 	return v;
-}
-
-void Vec4::subtract(const Vec4& v1, const Vec4& v2, Vec4* dst) {
-	assert(dst);
-
-	dst->x = v1.x - v2.x;
-	dst->y = v1.y - v2.y;
-	dst->z = v1.z - v2.z;
-	dst->w = v1.w - v2.w;
 }
 
 }

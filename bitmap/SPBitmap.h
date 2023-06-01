@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 #include "SPBitmapFormat.h"
 #include "SPFilepath.h"
+#include "SPLog.h" // for SPASSERT
 
 namespace stappler::bitmap {
 

@@ -72,15 +72,21 @@ struct Encoder : public Interface::AllocBaseType {
 		}
 	}
 
-	Encoder(bool prefix = false) : type(Interface::usesMemoryPool()?Vector:Buffered) {
+	Encoder(bool prefix = false, size_t reserve = 1_KiB) : type(Interface::usesMemoryPool()?Vector:Buffered) {
 		static thread_local typename ValueType::BytesType tl_buffer;
 		if constexpr (Interface::usesMemoryPool()) {
 			buffer = new typename ValueType::BytesType();
 		} else {
-			buffer = &tl_buffer;
-			buffer->clear();
+			if (reserve <= 1_KiB) {
+				buffer = &tl_buffer;
+				buffer->clear();
+				reserve = 1_KiB;
+			} else {
+				type = Vector;
+				buffer = new typename ValueType::BytesType();
+			}
 		}
-		buffer->reserve(1_KiB);
+		buffer->reserve(reserve);
 		if (prefix && isOpen()) {
 			cbor::_writeId(*this);
 		}
@@ -189,8 +195,8 @@ inline auto writeObject(const typename ValueTemplate<Interface>::DictionaryType 
 }
 
 template <typename Interface>
-inline auto write(const ValueTemplate<Interface> &data) -> typename Interface::BytesType {
-	Encoder<Interface> enc(true);
+inline auto write(const ValueTemplate<Interface> &data, size_t reserve = 1_KiB) -> typename Interface::BytesType {
+	Encoder<Interface> enc(true, reserve);
 	if (enc.isOpen()) {
 		data.encode(enc);
 		return enc.data();

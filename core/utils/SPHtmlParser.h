@@ -105,7 +105,7 @@ template <typename StringReader>
 auto Tag_readAttrValue(StringReader &s, bool keepClean = false) -> StringReader;
 
 template <typename __StringReader>
-struct Tag : public ReaderClassBase<char16_t> {
+struct Tag {
 	using StringReader = __StringReader;
 
 	Tag(const StringReader &name) : name(name) {

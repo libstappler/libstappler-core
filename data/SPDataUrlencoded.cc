@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "SPString.h"
 #include "SPValid.h"
+#include "SPData.h"
 
 namespace stappler::data {
 

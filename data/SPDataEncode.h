@@ -118,7 +118,7 @@ struct EncodeTraits {
 	using BytesType = typename ValueType::BytesType;
 	using StringType = typename ValueType::StringType;
 
-	static BytesType write(const ValueType &data, EncodeFormat fmt) {
+	static BytesType write(const ValueType &data, EncodeFormat fmt, size_t reserve = 0) {
 		BytesType ret;
 		switch (fmt.format) {
 		case EncodeFormat::Json:
@@ -131,7 +131,7 @@ struct EncodeTraits {
 		}
 		case EncodeFormat::Cbor:
 		case EncodeFormat::DefaultFormat:
-			ret = cbor::write(data);
+			ret = cbor::write(data, reserve);
 			break;
 
 		case EncodeFormat::Serenity:
@@ -213,8 +213,8 @@ struct EncodeTraits {
 };
 
 template <typename Interface> inline auto
-write(const ValueTemplate<Interface> &data, EncodeFormat fmt = EncodeFormat()) -> typename ValueTemplate<Interface>::BytesType {
-	return EncodeTraits<Interface>::write(data, fmt);
+write(const ValueTemplate<Interface> &data, EncodeFormat fmt = EncodeFormat(), size_t reserve = 0) -> typename ValueTemplate<Interface>::BytesType {
+	return EncodeTraits<Interface>::write(data, fmt, reserve);
 }
 
 template <typename Interface> inline bool

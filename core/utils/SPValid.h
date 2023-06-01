@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define STAPPLER_CORE_UTILS_SPVALID_H_
 
 #include "SPStringView.h"
+#include "SPBytesView.h"
 
 namespace stappler::valid {
 
