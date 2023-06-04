@@ -457,8 +457,8 @@ void LineDrawer::pushStroke(const Vec2 &v0, const Vec2 &v1, const Vec2 &v2) {
 	if (std::abs(result.y) < _miterLimit) {
 		stroke->pushStrokeVertex(strokeCursor, v1, Vec2(result.z * mod, result.w * mod));
 	} else {
-		auto l0 = v1.getDistanceSq(v0);
-		auto l2 = v1.getDistanceSq(v2);
+		auto l0 = v1.distanceSquared(v0);
+		auto l2 = v1.distanceSquared(v2);
 
 		float qSquared;
 		if (l0 > l2) {

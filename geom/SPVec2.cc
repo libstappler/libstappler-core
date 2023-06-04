@@ -110,19 +110,8 @@ void Vec2::clamp(const Vec2& v, const Vec2& min, const Vec2& max, Vec2* dst) {
 	}
 }
 
-float Vec2::distance(const Vec2& v) const {
-	const float dx = v.x - x;
-	const float dy = v.y - y;
-
-	return sqrt(dx * dx + dy * dy);
-}
-
 float Vec2::dot(const Vec2& v1, const Vec2& v2) {
 	return (v1.x * v2.x + v1.y * v2.y);
-}
-
-float Vec2::length() const {
-	return sqrt(x * x + y * y);
 }
 
 Vec2 & Vec2::normalize() {

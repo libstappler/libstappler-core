@@ -728,6 +728,26 @@ static bool readHashColor(const StringView &origStr, Color3B &color) {
 	return true;
 }
 
+static bool readHashColor(const StringView &origStr, Color4B &color) {
+	StringView str(origStr);
+	++ str;
+	if (str.size() == 8) {
+		color.r = base16::hexToChar(str[0], str[1]);
+		color.g = base16::hexToChar(str[2], str[3]);
+		color.b = base16::hexToChar(str[4], str[5]);
+		color.a = base16::hexToChar(str[4], str[5]);
+	} else if (str.size() == 4) {
+		color.r = base16::hexToChar(str[0], str[0]);
+		color.g = base16::hexToChar(str[1], str[1]);
+		color.b = base16::hexToChar(str[2], str[2]);
+		color.a = base16::hexToChar(str[2], str[2]);
+	} else {
+		return false;
+	}
+
+	return true;
+}
+
 static bool readNamedColor(const StringView &origStr, Color3B &color) {
 	if (origStr.compare("white")) {
 		color = Color3B::WHITE;
@@ -792,9 +812,13 @@ bool readColor(const StringView &str, Color4B &color4) {
 			color4 = Color4B(color);
 			return true;
 		}
-	} else if (str.is('#')) {
+	} else if (str.is('#') && (str.size() == 3 || str.size() == 6)) {
 		if (readHashColor(str, color)) {
 			color4 = Color4B(color);
+			return true;
+		}
+	} else if (str.is('#') && (str.size() == 4 || str.size() == 8)) {
+		if (readHashColor(str, color4)) {
 			return true;
 		}
 	} else {

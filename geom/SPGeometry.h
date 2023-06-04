@@ -297,8 +297,6 @@ inline std::ostream & operator<<(std::ostream & stream, const Extent3 & obj) {
 	return stream;
 }
 
-using Size = Size2;
-
 }
 
 #endif /* STAPPLER_GEOM_SPGEOMETRY_H_ */

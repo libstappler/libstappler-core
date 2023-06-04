@@ -198,14 +198,6 @@ public:
 		return std::sqrt(x*x + y*y);
 	}
 
-	constexpr float getLengthSq() const {
-		return dot(*this); //x*x + y*y;
-	}
-
-	constexpr float getDistanceSq(const Vec2& other) const {
-		return (*this - other).getLengthSq();
-	}
-
 	constexpr float getDistance(const Vec2& other) const {
 		return (*this - other).getLength();
 	}
@@ -260,8 +252,6 @@ public:
 	}
 
 	float getAngle(const Vec2& other) const;
-	float distance(const Vec2& v) const;
-	float length() const;
 	Vec2 getNormalized() const;
 	Vec2 rotateByAngle(const Vec2& pivot, float angle) const;
 

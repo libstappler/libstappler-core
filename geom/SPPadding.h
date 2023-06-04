@@ -38,11 +38,11 @@ struct Padding {
 	constexpr float horizontal() const { return right + left; }
 	constexpr float vertical() const { return top + bottom; }
 
-	constexpr Vec2 getBottomLeft(const Size &size) const { return Vec2(left, bottom); }
-	constexpr Vec2 getTopLeft(const Size &size) const { return Vec2(left, size.height - top); }
+	constexpr Vec2 getBottomLeft(const Size2 &size) const { return Vec2(left, bottom); }
+	constexpr Vec2 getTopLeft(const Size2 &size) const { return Vec2(left, size.height - top); }
 
-	constexpr Vec2 getBottomRight(const Size &size) const { return Vec2(size.width - right, bottom); }
-	constexpr Vec2 getTopRight(const Size &size) const { return Vec2(size.width - right, size.height - top); }
+	constexpr Vec2 getBottomRight(const Size2 &size) const { return Vec2(size.width - right, bottom); }
+	constexpr Vec2 getTopRight(const Size2 &size) const { return Vec2(size.width - right, size.height - top); }
 
 	constexpr Padding &setTop(float value) { top = value; return *this; }
 	constexpr Padding &setBottom(float value) { bottom = value; return *this; }
