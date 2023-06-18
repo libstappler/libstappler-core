@@ -32,7 +32,7 @@ static const char * const sp_lowercase_set = "абвгдеёжзийклмноп
 static const char16_t * const sp_uppercase_set_16 = u"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
 static const char16_t * const sp_lowercase_set_16 = u"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
 
-inline size_t Utf8CharLength(const uint8_t *ptr, uint8_t &mask) SPUNUSED;
+SPUNUSED inline size_t Utf8CharLength(const uint8_t *ptr, uint8_t &mask);
 
 static inline void sp_str_replace(const char *target, const char *str, char &b, char &c) {
 	int i = 0;

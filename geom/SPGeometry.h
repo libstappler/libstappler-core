@@ -161,7 +161,7 @@ struct Extent2 {
 
 	constexpr bool operator==(const Extent2 &other) const = default;
 	constexpr bool operator!=(const Extent2 &other) const = default;
-	constexpr auto operator<=>(const Extent2 &other) const = default;
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Extent2)
 
 	constexpr operator Size2 () const { return Size2(width, height); }
 };
@@ -194,7 +194,7 @@ struct Extent3 {
 
 	constexpr bool operator==(const Extent3 &other) const = default;
 	constexpr bool operator!=(const Extent3 &other) const = default;
-	constexpr auto operator<=>(const Extent3 &other) const = default;
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Extent3)
 
 	constexpr operator Size3 () const { return Size3(width, height, depth); }
 };

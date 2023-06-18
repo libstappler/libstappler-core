@@ -33,9 +33,9 @@ static void popPoolInfo(pool_t *pool);
 
 namespace stappler::mempool::custom {
 
-static SPUNUSED Allocator *s_global_allocator = nullptr;
-static SPUNUSED Pool *s_global_pool = nullptr;
-static SPUNUSED std::atomic<int> s_global_init = 0;
+SPUNUSED static Allocator *s_global_allocator = nullptr;
+SPUNUSED static Pool *s_global_pool = nullptr;
+SPUNUSED static std::atomic<int> s_global_init = 0;
 
 static std::atomic<size_t> s_nPools = 0;
 

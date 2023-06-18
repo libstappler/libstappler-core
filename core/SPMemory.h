@@ -85,6 +85,21 @@ using Mutex = std::mutex;
 
 using stappler::makeSpanView;
 
+template <typename Callback>
+inline auto perform(const Callback &cb, memory::pool_t *p) {
+	struct Context {
+		Context(memory::pool_t *p) {
+			memory::pool::push(p);
+		}
+		~Context() {
+			memory::pool::pop();
+		}
+
+		memory::pool_t *pool = nullptr;
+	} holder(p);
+	return cb();
+}
+
 template <typename T>
 inline bool emplace_ordered(Vector<T> &vec, T val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
@@ -96,6 +111,15 @@ inline bool emplace_ordered(Vector<T> &vec, T val) {
 		return true;
 	}
 	return false;
+}
+
+template <typename T>
+inline bool exists_ordered(Vector<T> &vec, const T & val) {
+	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
+	if (lb == vec.end() || *lb != val) {
+		return false;
+	}
+	return true;
 }
 
 }
@@ -150,6 +174,21 @@ using Mutex = std::mutex;
 
 using stappler::makeSpanView;
 
+template <typename Callback>
+inline auto perform(const Callback &cb, memory::pool_t *p) {
+	struct Context {
+		Context(memory::pool_t *p) {
+			memory::pool::push(p);
+		}
+		~Context() {
+			memory::pool::pop();
+		}
+
+		memory::pool_t *pool = nullptr;
+	} holder(p);
+	return cb();
+}
+
 template <typename T>
 inline bool emplace_ordered(Vector<T> &vec, T val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
@@ -161,6 +200,15 @@ inline bool emplace_ordered(Vector<T> &vec, T val) {
 		return true;
 	}
 	return false;
+}
+
+template <typename T>
+inline bool exists_ordered(Vector<T> &vec, const T & val) {
+	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
+	if (lb == vec.end() || *lb != val) {
+		return false;
+	}
+	return true;
 }
 
 }

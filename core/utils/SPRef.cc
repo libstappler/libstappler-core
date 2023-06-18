@@ -49,7 +49,7 @@ static StringView filepath_name(StringView path) {
 	}
 }
 
-static size_t SPUNUSED print(char *buf, size_t bufLen, uintptr_t pc, StringView filename, int lineno, StringView function) {
+SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView filename, int lineno, StringView function) {
 	char *target = buf;
 	auto w = ::snprintf(target, bufLen, "[%p]", (void *)pc);
 	bufLen -= w;

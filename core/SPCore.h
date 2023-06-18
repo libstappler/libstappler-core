@@ -113,6 +113,19 @@ using iter_reference_t = typename T::reference;
 #endif
 #endif
 
+
+#if __cpp_impl_three_way_comparison >= 201711
+#define SP_THREE_WAY_COMPARISON_TYPE(Type) auto operator<=>(const Type&) const = default;
+#define SP_THREE_WAY_COMPARISON_FRIEND(Type) friend auto operator<=>(const Type&, const Type &) = default;
+#define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type) constexpr auto operator<=>(const Type &) const = default;
+#define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type) friend constexpr auto operator<=>(const Type&, const Type &) = default;
+#else
+#define SP_THREE_WAY_COMPARISON_TYPE(Type)
+#define SP_THREE_WAY_COMPARISON_FRIEND(Type)
+#define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type)
+#define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type)
+#endif
+
 #define __STDC_WANT_IEC_60559_TYPES_EXT__ 1
 
 #include <type_traits>
@@ -209,7 +222,7 @@ _LIBCPP_END_NAMESPACE_STD
 #endif
 
 #else
-#define SPUNUSED __attribute__((unused))
+#define SPUNUSED [[maybe_unused]]
 #define SPINLINE __attribute__((always_inline))
 #endif
 
@@ -285,6 +298,10 @@ constexpr unsigned long long int operator"" _KiB ( unsigned long long int val ) 
 
 constexpr char16_t operator"" _c16 (unsigned long long int val) { return (char16_t)val; }
 constexpr char operator"" _c8 (unsigned long long int val) { return (char)val; }
+
+constexpr uint64_t operator"" _usec ( unsigned long long int val ) { return val * 1000'000; }
+constexpr uint64_t operator"" _msec ( unsigned long long int val ) { return val * 1000; }
+constexpr uint64_t operator"" _mksec ( unsigned long long int val ) { return val; }
 
 namespace stappler {
 
@@ -558,9 +575,7 @@ struct ValueWrapper {
 	inline constexpr std::enable_if_t<HasMultiplication<Type, M>::type::value, ValueWrapper<T, Flag>>
 	operator*(const M &v) const { return ValueWrapper<T, Flag>(value * v); }
 
-#if __cpp_impl_three_way_comparison >= 201711
-	friend constexpr auto operator<=>(const ValueWrapper&, const ValueWrapper &) = default;
-#endif
+	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(ValueWrapper)
 
 	T value;
 };
