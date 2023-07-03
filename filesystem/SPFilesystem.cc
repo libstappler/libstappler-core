@@ -401,9 +401,7 @@ bool mkdir_recursive(StringView ipath, bool appWide) {
 				Stat stat;
 				if (control || !filesystem::native::stat_fn(path, stat)) {
 					control = true;
-					if (!filesystem::native::mkdir_fn(construct)) {
-						return false;
-					}
+					filesystem::native::mkdir_fn(construct);
 				} else if (!stat.isDir) {
 					return false;
 				}

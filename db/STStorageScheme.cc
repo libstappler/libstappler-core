@@ -23,13 +23,16 @@ THE SOFTWARE.
 
 #include "STStorageScheme.h"
 
-#include "SPBitmap.h"
 #include "STInputFile.h"
 #include "STStorageAdapter.h"
 #include "STStorageFile.h"
 #include "STStorageObject.h"
 #include "STStorageTransaction.h"
 #include "STStorageWorker.h"
+
+#if MODULE_STAPPLER_BITMAP
+#include "SPBitmap.h"
+#endif
 
 namespace stappler::db {
 
@@ -1352,6 +1355,7 @@ void Scheme::initScheme() {
 }
 
 void Scheme::addView(const Scheme *s, const Field *f) {
+	memory::pool::push(views.get_allocator());
 	if (auto view = static_cast<const FieldView *>(f->getSlot())) {
 		views.emplace_back(new ViewScheme{s, f, *view});
 		auto viewScheme = views.back();
@@ -1402,6 +1406,7 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 			}));
 		}
 	}
+	memory::pool::pop();
 }
 
 void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme &a) {

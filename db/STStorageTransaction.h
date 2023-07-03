@@ -147,9 +147,9 @@ public: // adapter interface
 	int64_t getDeltaValue(const Scheme &); // scheme-based delta
 	int64_t getDeltaValue(const Scheme &, const FieldView &, uint64_t); // view-based delta
 
-	Vector<int64_t> performQueryListForIds(const QueryList &, size_t count = stappler::maxOf<size_t>());
-	Value performQueryList(const QueryList &, size_t count = stappler::maxOf<size_t>(), bool forUpdate = false);
-	Value performQueryListField(const QueryList &, const Field &);
+	Vector<int64_t> performQueryListForIds(const QueryList &, size_t count = stappler::maxOf<size_t>()) const;
+	Value performQueryList(const QueryList &, size_t count = stappler::maxOf<size_t>(), bool forUpdate = false) const;
+	Value performQueryListField(const QueryList &, const Field &) const;
 
 	void scheduleAutoField(const Scheme &, const Field &, uint64_t id) const;
 

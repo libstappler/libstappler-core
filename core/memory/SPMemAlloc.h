@@ -69,6 +69,11 @@ template< class...Args> struct Allocator_SelectFirst;
 template< class A, class ...Args> struct Allocator_SelectFirst<A,Args...>{ using type = A; };
 }
 
+template <typename Type>
+struct Allocator_protect_construct {
+	static constexpr bool value = false; // !std::is_scalar<Type>::value;
+};
+
 template <class T>
 class Allocator {
 public:
@@ -163,9 +168,13 @@ public:
 				}
 			}
 
-			memory::pool::push(pool_ptr(pool));
+			if constexpr (Allocator_protect_construct<T>::value) {
+				memory::pool::push(pool_ptr(pool));
+			}
 			new ((T*)p) T(std::forward<Args>(args)...);
-			memory::pool::pop();
+			if constexpr (Allocator_protect_construct<T>::value) {
+				memory::pool::pop();
+			}
 		}
 	}
 
@@ -173,9 +182,13 @@ public:
 		if constexpr (!std::is_destructible<T>::value || std::is_scalar<T>::value) {
 			// do nothing
 		} else {
-			memory::pool::push(pool_ptr(pool));
+			if constexpr (Allocator_protect_construct<T>::value) {
+				memory::pool::push(pool_ptr(pool));
+			}
 			do { p->~T(); } while (0);
-			memory::pool::pop();
+			if constexpr (Allocator_protect_construct<T>::value) {
+				memory::pool::pop();
+			}
 		}
 	}
 
@@ -183,11 +196,15 @@ public:
 		if constexpr (!std::is_destructible<T>::value || std::is_scalar<T>::value) {
 			// do nothing
 		} else {
-			memory::pool::push(pool);
+			if constexpr (Allocator_protect_construct<T>::value) {
+				memory::pool::push(pool);
+			}
 			for (size_t i = 0; i < size; ++i) {
 				(p + i)->~T();
 			}
-			memory::pool::pop();
+			if constexpr (Allocator_protect_construct<T>::value) {
+				memory::pool::pop();
+			}
 		}
 	}
 

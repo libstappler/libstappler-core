@@ -622,7 +622,7 @@ Map<StringView, TableRec> TableRec::parse(const BackendInterface::Config &cfg,
 				TableRec table;
 				table.viewScheme = it.second;
 				table.viewField = slot;
-				table.cols.emplace("__vid", ColRec(ColRec::Type::Int8, true));
+				table.cols.emplace("__vid", ColRec(ColRec::Type::Int8, true, true));
 				table.cols.emplace(toString(source, "_id"), ColRec(ColRec::Type::Int8, true));
 				table.cols.emplace(toString(target, "_id"), ColRec(ColRec::Type::Int8, true));
 
@@ -1027,7 +1027,7 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 	StringStream stream;
 	TableRec::writeCompareResult(stream, requiredTables, existedTables, s);
 
-	auto name = toString(".serenity/update.", stappler::Time::now().toMilliseconds(), ".sql");
+	auto name = toString(".db/update.", stappler::Time::now().toMilliseconds(), ".sql");
 	if (stream.size() > 3) {
 		if (performSimpleQuery(stream.weak(), [&] (const Value &errInfo) {
 			stream << "Server: " << cfg.name << "\n";
@@ -1051,11 +1051,6 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 	query << "DELETE FROM __login WHERE \"date\" < " << stappler::Time::now().toSeconds() - config::getInternalsStorageTime().toSeconds() << ";";
 	performSimpleQuery(query.weak());
 	query.clear();
-
-	query << "DELETE FROM __error WHERE \"time\" < " << stappler::Time::now().toMicros() - config::getInternalsStorageTime().toMicros() << ";";
-	performSimpleQuery(query.weak());
-	query.clear();
-	endTransaction_pg();
 
 	return true;
 }

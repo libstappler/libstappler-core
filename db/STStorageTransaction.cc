@@ -512,7 +512,7 @@ int64_t Transaction::getDeltaValue(const Scheme &scheme, const FieldView &f, uin
 	return _data->adapter.getDeltaValue(scheme, f, id);
 }
 
-Vector<int64_t> Transaction::performQueryListForIds(const QueryList &list, size_t count) {
+Vector<int64_t> Transaction::performQueryListForIds(const QueryList &list, size_t count) const {
 	for (auto &it : list.getItems()) {
 		if (!isOpAllowed(*it.scheme, Id)) {
 			return Vector<int64_t>();
@@ -522,7 +522,7 @@ Vector<int64_t> Transaction::performQueryListForIds(const QueryList &list, size_
 	return _data->adapter.performQueryListForIds(list, count);
 }
 
-Value Transaction::performQueryList(const QueryList &list, size_t count, bool forUpdate) {
+Value Transaction::performQueryList(const QueryList &list, size_t count, bool forUpdate) const {
 	count = (count == stappler::maxOf<size_t>()) ? list.size() : count;
 	for (auto &it : list.getItems()) {
 		if (!isOpAllowed(*it.scheme, Id)) {
@@ -563,7 +563,7 @@ Value Transaction::performQueryList(const QueryList &list, size_t count, bool fo
 	return vals;
 }
 
-Value Transaction::performQueryListField(const QueryList &list, const Field &f) {
+Value Transaction::performQueryListField(const QueryList &list, const Field &f) const {
 	auto count = list.size();
 	if (f.getType() == Type::View || f.getType() == Type::Set) {
 		count -= 1;

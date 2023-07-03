@@ -46,11 +46,11 @@ bool FieldTextArray::transformValue(const db::Scheme &, const Value &obj, Value 
 Value FieldTextArray::readFromStorage(const db::ResultCursor &iface, size_t field) const {
 	if (iface.isBinaryFormat(field)) {
 		auto r = stappler::BytesViewNetwork(iface.toBytes(field));
-		auto SPUNUSED ndim = r.readUnsigned32();
+		SPUNUSED auto ndim = r.readUnsigned32();
 		r.offset(4); // ignored;
-		auto SPUNUSED oid = r.readUnsigned32();
+		SPUNUSED auto oid = r.readUnsigned32();
 		auto size = r.readUnsigned32();
-		auto SPUNUSED index = r.readUnsigned32();
+		SPUNUSED auto index = r.readUnsigned32();
 
 		if (size > 0) {
 			Value ret(Value::Type::ARRAY); ret.getArray().reserve(size);

@@ -222,7 +222,7 @@ size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t de
 	case EncodeFormat::Brotli: {
 		const int offSize = ((srcSize <= 0xFFFF) ? 2 : 4);
 		size_t ret = destSize - offSize;
-		if (BrotliEncoderCompress(BROTLI_MAX_QUALITY, BROTLI_MAX_WINDOW_BITS, BROTLI_DEFAULT_MODE,
+		if (BrotliEncoderCompress(10, BROTLI_MAX_WINDOW_BITS, BROTLI_DEFAULT_MODE,
 				srcSize, (const uint8_t *)src, &ret,dest + offSize) == BROTLI_TRUE) {
 			if (srcSize <= 0xFFFF) {
 				uint16_t sz = srcSize;

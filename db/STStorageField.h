@@ -194,8 +194,8 @@ enum class Linkage {
 using MinLength = stappler::ValueWrapper<size_t, class MinLengthTag>; // min utf8 length for string
 using MaxLength = stappler::ValueWrapper<size_t, class MaxLengthTag>; // max utf8 length for string
 using PasswordSalt = stappler::ValueWrapper<String, class PasswordSaltTag>; // hashing salt for password
-using ForeignLink = stappler::ValueWrapper<String, class ForeignLinkTag>; // hashing salt for password
-using Documentation = stappler::ValueWrapper<String, class DocumentationTag>; // hashing salt for password
+using ForeignLink = stappler::ValueWrapper<String, class ForeignLinkTag>; // name for foreign linked field
+using Documentation = stappler::ValueWrapper<String, class DocumentationTag>; // tag for field documentation text
 
 // policy for images, that do not match bounds
 enum class ImagePolicy {
