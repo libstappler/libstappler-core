@@ -159,19 +159,19 @@ protected:
 std::atomic<uint32_t> CurlHandle::s_activeHandles = 0;
 thread_local CurlHandle *CurlHandle::tl_handle = nullptr;
 
-static CURL *CurlHandle_alloc() {
+SPUNUSED static CURL *CurlHandle_alloc() {
 	return CurlHandle::alloc();
 }
 
-static void CurlHandle_release(CURL *curl) {
+SPUNUSED static void CurlHandle_release(CURL *curl) {
 	CurlHandle::release(curl);
 }
 
-static CURL * CurlHandle_getHandle(bool reuse, memory::pool_t *pool) {
+SPUNUSED static CURL * CurlHandle_getHandle(bool reuse, memory::pool_t *pool) {
 	return CurlHandle::getHandle(reuse, pool);
 }
 
-static void CurlHandle_releaseHandle(CURL *curl, bool reuse, bool success, memory::pool_t *pool) {
+SPUNUSED static void CurlHandle_releaseHandle(CURL *curl, bool reuse, bool success, memory::pool_t *pool) {
 	CurlHandle::releaseHandle(curl, reuse, success, pool);
 }
 

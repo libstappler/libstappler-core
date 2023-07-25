@@ -145,7 +145,7 @@ size_t get_active_count();
 bool debug_begin(pool_t *pool = nullptr);
 
 // stop recording and return info
-std::map<pool_t *, const char **> debug_end();
+std::map<pool_t *, const char **, std::less<void>> debug_end();
 
 void debug_foreach(void *, void(*)(void *, pool_t *));
 

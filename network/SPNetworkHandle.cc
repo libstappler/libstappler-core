@@ -39,8 +39,8 @@ THE SOFTWARE.
 
 namespace stappler::network {
 
-static CURL *CurlHandle_alloc();
-static void CurlHandle_release(CURL *curl);
+SPUNUSED static CURL *CurlHandle_alloc();
+SPUNUSED static void CurlHandle_release(CURL *curl);
 
 template <>
 bool Handle<memory::PoolInterface>::init(Method method, StringView url) {

@@ -77,7 +77,7 @@ struct ExecParamData {
 
 static std::mutex s_logMutex;
 
-static String pg_numeric_to_string(BytesViewNetwork r) {
+SPUNUSED static String pg_numeric_to_string(BytesViewNetwork r) {
 	using NumericDigit = int16_t;
 	static constexpr auto DEC_DIGITS = 4;
 	static constexpr auto NUMERIC_NEG = 0x4000;

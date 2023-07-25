@@ -392,32 +392,6 @@ inline void crossVec3(const float v1[3], const float v2[3], float dst[3]) {
 
 #endif
 
-inline void multiplyVec4(const float a[4], const float b[4], float dst[4]) {
-	simde_vst1q_f32(dst,
-		simde_vmulq_f32(
-			simde_vld1q_f32(a),
-			simde_vld1q_f32(b)));
-}
-
-inline void multiplyVec4Scalar(const float a[4], const float &b, float dst[4]) {
-	simde_vst1q_f32(dst,
-		simde_vmulq_f32(
-			simde_vld1q_f32(a),
-			simde_vld1q_dup_f32(&b)));
-}
-
-inline void divideVec4(const float a[4], const float b[4], float dst[4]) {
-	#if defined(SIMDE_ARM_NEON_A64V8_NATIVE)
-		simde_vst1q_f32(dst,
-			vdivq_f32(
-				simde_vld1q_f32(a),
-				simde_vld1q_f32(b)));
-	#else
-		// vdivq_f32 is not defied in simde, use SSE-based replacement
-		sse::divideVec4(a, b, dst);
-	#endif
-}
-
 // input for test A->B vs C->D (ax, ay, bx, by), (cx, cy, dx, dy)
 SP_ATTR_OPTIMIZE_INLINE_FN inline bool isVec2BboxIntersects(const f32x4 & v1, const f32x4 & v2, f32x4 &isect) {
 	struct alignas(16) data_t {

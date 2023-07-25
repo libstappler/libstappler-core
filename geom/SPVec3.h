@@ -32,30 +32,68 @@ namespace stappler::geom {
 
 class Mat4;
 class Quaternion;
+struct Size3;
+struct Extent3;
 
 class Vec3 {
 public:
+	static constexpr size_t Dimansions = 2;
+
 	static const Vec3 ZERO;
 	static const Vec3 ONE;
 	static const Vec3 UNIT_X;
 	static const Vec3 UNIT_Y;
 	static const Vec3 UNIT_Z;
 
-	static void add(const Vec3& v1, const Vec3& v2, Vec3* dst) {
+	static constexpr void add(const Vec3& v1, const Vec3& v2, Vec3* dst) {
 		dst->x = v1.x + v2.x; dst->y = v1.y + v2.y; dst->z = v1.z + v2.z;
 	}
-	static void subtract(const Vec3& v1, const Vec3& v2, Vec3* dst) {
+
+	static constexpr void subtract(const Vec3& v1, const Vec3& v2, Vec3* dst) {
 		dst->x = v1.x - v2.x; dst->y = v1.y - v2.y; dst->z = v1.z - v2.z;
 	}
+
+	static constexpr void scale(const Vec3& v1, const Vec3& v2, Vec3* dst) {
+		dst->x = v1.x * v2.x; dst->y = v1.y * v2.y; dst->z = v1.z * v2.z;
+	}
+
+	static constexpr void unscale(const Vec3& v1, const Vec3& v2, Vec3* dst) {
+		dst->x = v1.x / v2.x; dst->y = v1.y / v2.y; dst->z = v1.z / v2.z;
+	}
+
 	static void cross(const Vec3& v1, const Vec3& v2, Vec3* dst) {
 		simd::crossVec3(&v1.x, &v2.x, &dst->x);
 	}
-	static float dot(const Vec3& v1, const Vec3& v2) {
+
+	static constexpr float dot(const Vec3& v1, const Vec3& v2) {
 		return (v1.x * v2.x + v1.y * v2.y + v1.z * v2.z);
 	}
 
 	static float angle(const Vec3& v1, const Vec3& v2);
+
 	static void clamp(const Vec3& v, const Vec3& min, const Vec3& max, Vec3* dst);
+
+	template <typename Functor>
+	static constexpr std::bitset<3> bitop(const Vec3& v, const Functor &f) {
+		std::bitset<3> ret;
+		ret.set(0, f(v.x));
+		ret.set(1, f(v.y));
+		ret.set(2, f(v.z));
+		return ret;
+	}
+
+	template <typename Functor>
+	static constexpr std::bitset<3> bitop(const Vec3& v1, const Vec3& v2, const Functor &f) {
+		std::bitset<3> ret;
+		ret.set(0, f(v1.x, v2.x));
+		ret.set(1, f(v1.y, v2.y));
+		ret.set(2, f(v1.z, v2.z));
+		return ret;
+	}
+
+	static constexpr Vec3 fill(float v) {
+		return Vec3(v, v, v);
+	}
 
 	float x;
 	float y;
@@ -65,55 +103,97 @@ public:
 	constexpr Vec3(float xx, float yy, float zz) : x(xx), y(yy), z(zz) { }
 	constexpr Vec3(const Vec2 &pt, float zz) : x(pt.x), y(pt.y), z(zz) { }
 
-	constexpr Vec3(const Vec3& p1, const Vec3& p2) : x(p2.x - p1.x), y(p2.y - p1.y), z(p2.z - p1.z) { }
-	constexpr Vec3(const Vec3& copy) = default;
+	constexpr Vec3(const Vec3 &p1, const Vec3 &p2) : x(p2.x - p1.x), y(p2.y - p1.y), z(p2.z - p1.z) { }
 
-	constexpr bool isZero() const { return x == 0.0f && y == 0.0f && z == 0.0f; }
-	constexpr bool isOne() const { return x == 1.0f && y == 1.0f && z == 1.0f; }
-	constexpr void add(const Vec3& v) { x += v.x; y += v.y; z += v.z; }
-	constexpr void add(float xx, float yy, float zz) { x += xx; y += yy; z += zz; }
-	constexpr void subtract(const Vec3& v) { x -= v.x; y -= v.y; z -= v.z; }
-	constexpr float length() const { return std::sqrt(x * x + y * y + z * z); }
-	constexpr float lengthSquared() const { return (x * x + y * y + z * z); }
+	template <typename Functor>
+	constexpr Vec3(const Vec3 &v, const Functor &f) : x(f(v.x)), y(f(v.y)), z(f(v.z)) { }
+
+	template <typename Functor>
+	constexpr Vec3(const Vec3 &v1, const Vec3 &v2, const Functor &f) : x(f(v1.x, v2.x)), y(f(v1.y, v2.y)), z(f(v1.z, v2.z)) { }
+
+	constexpr Vec3(const Vec3 &copy) = default;
+
+	explicit Vec3(const Size3 &);
+	explicit Vec3(const Extent3 &);
+
+	constexpr bool isValid() const { return !std::isnan(x) && !std::isnan(y) && !std::isnan(z); }
+
+	constexpr Vec2 xy() const {
+		return Vec2(x, y);
+	}
+
+	constexpr void add(const float &v) {
+		x += v; y += v; z += v;
+	}
+
+	constexpr void add(const Vec3 &v) {
+		x += v.x; y += v.y; z += v.z;
+	}
+
+	constexpr void subtract(const float &v) {
+		x -= v; y -= v; z -= v;
+	}
+
+	constexpr void subtract(const Vec3 &v) {
+		x -= v.x; y -= v.y; z -= v.z;
+	}
+
+	constexpr void scale(const float &v) {
+		x *= v; y *= v; z *= v;
+	}
+
+	constexpr void scale(const Vec3 &v) {
+		x *= v.x; y *= v.y; z *= v.z;
+	}
+
+	constexpr void unscale(const float &v) {
+		x /= v; y /= v; z /= v;
+	}
+
+	constexpr void unscale(const Vec3 &v) {
+		x /= v.x; y /= v.y; z /= v.z;
+	}
+
+	void clamp(const Vec3& min, const Vec3& max);
+
+	constexpr float distanceSquared(const Vec3& v) const {
+		const float dx = v.x - x;
+		const float dy = v.y - y;
+		const float dz = v.z - z;
+
+		return (dx * dx + dy * dy + dz * dz);
+	}
+
+	constexpr float lengthSquared() const {
+		return (x * x + y * y + z * z);
+	}
+
+	constexpr float distance(const Vec3& other) const { return std::sqrt(distanceSquared(other)); }
+
+	constexpr float length() const { return std::sqrt(lengthSquared()); }
+
+	constexpr bool isWithinDistance(const Vec3& v, float val) const {
+		return distanceSquared(v) < val * val;
+	}
+
+	constexpr float dot(const Vec3& v) const { return (x * v.x + y * v.y + z * v.z); }
+
+	void cross(const Vec3& v) { cross(*this, v, this); }
+
 	constexpr void negate() { x = -x; y = -y; z = -z; }
-	constexpr void scale(float scalar) { x *= scalar; y *= scalar; z *= scalar; }
-	constexpr Vec3 lerp(const Vec3& target, float alpha) const { return *this * (1.f - alpha) + target * alpha; }
-	constexpr void setZero() { x = y = z = 0.0f; }
 
-	constexpr bool fuzzyEquals(const Vec3& b, float var) const {
+	constexpr Vec3 & normalize();
+
+	Vec3 getNormalized() const;
+
+	constexpr bool fuzzyEquals(const Vec3& b, float var = NumericLimits<float>::epsilon()) const {
 		return (x - var <= b.x && b.x <= x + var) && (y - var <= b.y && b.y <= y + var)
 				 && (z - var <= b.z && b.z <= z + var);
 	}
 
-	constexpr Vec3 getAbs() const {
-		return Vec3(std::abs(x), std::abs(y), std::abs(z));
-	}
-
-	void clamp(const Vec3& min, const Vec3& max);
-	constexpr Vec3 & normalize();
-
-	void cross(const Vec3& v) { cross(*this, v, this); }
-	float dot(const Vec3& v) const { return (x * v.x + y * v.y + z * v.z); }
-
-	float distance(const Vec3& v) const;
-	float distanceSquared(const Vec3& v) const;
-
-	Vec2 xy() const;
-
-	Vec3 getNormalized() const;
-
-	/**
-	 * Updates this vector towards the given target using a smoothing function.
-	 * The given response time determines the amount of smoothing (lag). A longer
-	 * response time yields a smoother result and more lag. To force this vector to
-	 * follow the target closely, provide a response time that is very small relative
-	 * to the given elapsed time. */
-	void smooth(const Vec3& target, float elapsedTime, float responseTime);
-
-	constexpr const Vec3 operator+(const Vec3& v) const {
-		Vec3 result(*this);
-		result.add(v);
-		return result;
+	constexpr Vec3& operator+=(const float &v) {
+		add(v);
+		return *this;
 	}
 
 	constexpr Vec3& operator+=(const Vec3& v) {
@@ -121,10 +201,9 @@ public:
 		return *this;
 	}
 
-	constexpr const Vec3 operator-(const Vec3& v) const {
-		Vec3 result(*this);
-		result.subtract(v);
-		return result;
+	constexpr Vec3& operator-=(const float &v) {
+		subtract(v);
+		return *this;
 	}
 
 	constexpr Vec3& operator-=(const Vec3& v) {
@@ -132,42 +211,27 @@ public:
 		return *this;
 	}
 
-	constexpr const Vec3 operator-() const {
-		Vec3 result(*this);
-		result.negate();
-		return result;
+	constexpr Vec3& operator*=(const float &v) {
+		scale(v);
+		return *this;
 	}
 
-	constexpr const Vec3 operator*(float s) const {
-		Vec3 result(*this);
-		result.scale(s);
-		return result;
-	}
-
-	constexpr Vec3& operator*=(float s) {
+	constexpr Vec3& operator*=(const Vec3 &s) {
 		scale(s);
 		return *this;
 	}
 
-	constexpr const Vec3 operator/(float s) const {
-		return Vec3(this->x / s, this->y / s, this->z / s);
+	constexpr Vec3& operator/=(const float &v) {
+		unscale(v);
+		return *this;
 	}
 
-	constexpr bool operator < (const Vec3& rhs) const {
-		return (x < rhs.x && y < rhs.y && z < rhs.z);
+	constexpr Vec3& operator/=(const Vec3 &s) {
+		unscale(s);
+		return *this;
 	}
 
-	constexpr bool operator >(const Vec3& rhs) const {
-		return (x > rhs.x && y > rhs.y && z > rhs.z);
-	}
-
-	constexpr bool operator==(const Vec3& v) const {
-		return x==v.x && y==v.y && z==v.z;
-	}
-
-	constexpr bool operator!=(const Vec3& v) const {
-		return x!=v.x || y!=v.y || z!=v.z;
-	}
+	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Vec3)
 };
 
 constexpr inline Vec3 & Vec3::normalize() {
@@ -197,9 +261,69 @@ constexpr const Vec3 Vec3::UNIT_X(1.0f, 0.0f, 0.0f);
 constexpr const Vec3 Vec3::UNIT_Y(0.0f, 1.0f, 0.0f);
 constexpr const Vec3 Vec3::UNIT_Z(0.0f, 0.0f, 1.0f);
 
-constexpr const Vec3 operator*(float x, const Vec3& v) {
+constexpr inline const Vec3 operator+(const Vec3 &l, const Vec3 &r) {
+	Vec3 result;
+	Vec3::add(l, r, &result);
+	return result;
+}
+
+constexpr inline const Vec3 operator+(const Vec3 &l, const float &r) {
+	Vec3 result(l);
+	result.add(r);
+	return result;
+}
+
+constexpr inline const Vec3 operator+(const float &l, const Vec3 &r) {
+	Vec3 result(r);
+	result.add(l);
+	return result;
+}
+
+constexpr inline const Vec3 operator-(const Vec3 &l, const Vec3 &r) {
+	Vec3 result;
+	Vec3::subtract(l, r, &result);
+	return result;
+}
+
+constexpr inline const Vec3 operator-(const Vec3 &l, const float &r) {
+	Vec3 result(l);
+	result.subtract(r);
+	return result;
+}
+
+constexpr inline const Vec3 operator*(const Vec3 &l, const Vec3 &r) {
+	Vec3 result;
+	Vec3::scale(l, r, &result);
+	return result;
+}
+
+constexpr inline const Vec3 operator*(const Vec3 &l, const float &r) {
+	Vec3 result(l);
+	result.scale(r);
+	return result;
+}
+
+constexpr inline const Vec3 operator*(const float &l, const Vec3 &r) {
+	Vec3 result(r);
+	result.scale(l);
+	return result;
+}
+
+constexpr inline const Vec3 operator/(const Vec3 &l, const Vec3 &r) {
+	Vec3 result;
+	Vec3::unscale(l, r, &result);
+	return result;
+}
+
+constexpr inline const Vec3 operator/(const Vec3 &l, const float &r) {
+	Vec3 result(l);
+	result.unscale(r);
+	return result;
+}
+
+constexpr Vec3 operator-(const Vec3& v) {
 	Vec3 result(v);
-	result.scale(x);
+	result.negate();
 	return result;
 }
 
@@ -207,14 +331,6 @@ inline std::basic_ostream<char> &
 operator << (std::basic_ostream<char> & os, const Vec3 & vec) {
 	os << "(x: " << vec.x << "; y: " << vec.y << "; z: " << vec.z << ")";
 	return os;
-}
-
-inline std::bitset<3> lessThanEqual(const Vec3 &l, const Vec3 &r) {
-	std::bitset<3> ret;
-	ret.set(0, l.x <= r.x);
-	ret.set(1, l.y <= r.y);
-	ret.set(2, l.z <= r.z);
-	return ret;
 }
 
 }

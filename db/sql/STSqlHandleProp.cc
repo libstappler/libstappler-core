@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 namespace stappler::db::sql {
 
-static void Handle_writeSelectViewDataQuery(SqlQuery &q, const db::Scheme &s, uint64_t oid, const db::FieldView &f, const Value &data);
+SPUNUSED static void Handle_writeSelectViewDataQuery(SqlQuery &q, const db::Scheme &s, uint64_t oid, const db::FieldView &f, const Value &data);
 
 Value SqlHandle::getFileField(Worker &w, SqlQuery &query, uint64_t oid, uint64_t targetId, const Field &f) {
 	if (auto fs = internals::getFileScheme()) {

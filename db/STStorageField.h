@@ -328,6 +328,8 @@ public:
 
 	struct Slot : public AllocBase {
 	public:
+		virtual ~Slot() { }
+
 		template <typename F, typename T>
 		static void setOptions(F &f, T && t) {
 			FieldOption<F, typename std::remove_reference<T>::type>::assign(f, std::forward<T>(t));

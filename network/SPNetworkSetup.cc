@@ -38,11 +38,10 @@ static constexpr auto s_UserAgent = "Stappler/1 CURL";
 
 struct CurlHandle;
 
-static StringView getCABundle();
+SPUNUSED static StringView getCABundle();
 
-static CURL * CurlHandle_getHandle(bool reuse, memory::pool_t *pool);
-static void CurlHandle_releaseHandle(CURL *curl, bool reuse, bool success, memory::pool_t *pool);
-
+SPUNUSED static CURL * CurlHandle_getHandle(bool reuse, memory::pool_t *pool);
+SPUNUSED static void CurlHandle_releaseHandle(CURL *curl, bool reuse, bool success, memory::pool_t *pool);
 
 static size_t _writeDummy(const void *data, size_t size, size_t nmemb, void *userptr) {
 	return size * nmemb;

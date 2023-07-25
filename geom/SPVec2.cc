@@ -60,6 +60,8 @@ static float crossProduct2Vector(const Vec2& A, const Vec2& B, const Vec2& C, co
 
 Vec2::Vec2(const Size2 &s) : x(s.width), y(s.height) { }
 
+Vec2::Vec2(const Extent2 &s) : x(s.width), y(s.height) { }
+
 float Vec2::angle(const Vec2& v1, const Vec2& v2) {
 	const float dz = v1.x * v2.y - v1.y * v2.x;
 	return atan2f(fabsf(dz) + math::MATH_FLOAT_SMALL, dot(v1, v2));
@@ -110,29 +112,6 @@ void Vec2::clamp(const Vec2& v, const Vec2& min, const Vec2& max, Vec2* dst) {
 	}
 }
 
-float Vec2::dot(const Vec2& v1, const Vec2& v2) {
-	return (v1.x * v2.x + v1.y * v2.y);
-}
-
-Vec2 & Vec2::normalize() {
-	float n = x * x + y * y;
-	// Already normalized.
-	if (n == 1.0f) {
-		return *this;
-	}
-
-	n = sqrt(n);
-	// Too close to zero.
-	if (n < math::MATH_TOLERANCE) {
-		return *this;
-	}
-
-	n = 1.0f / n;
-	x *= n;
-	y *= n;
-	return *this;
-}
-
 Vec2 Vec2::getNormalized() const {
 	Vec2 v(*this);
 	v.normalize();
@@ -143,7 +122,7 @@ void Vec2::rotate(const Vec2& point, float angle) {
 	const double sinAngle = sin(angle);
 	const double cosAngle = cos(angle);
 
-	if (point.isZero()) {
+	if (point == Vec2::ZERO) {
 		float tempX = x * cosAngle - y * sinAngle;
 		y = y * cosAngle + x * sinAngle;
 		x = tempX;

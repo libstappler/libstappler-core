@@ -192,7 +192,7 @@ static std::mutex s_driverMutex;
 
 struct PgDriverLibStorage {
 	std::mutex s_driverMutex;
-	std::map<std::string, DriverSym> s_driverLibs;
+	std::map<std::string, DriverSym, std::less<void>> s_driverLibs;
 
 	static PgDriverLibStorage *getInstance();
 
@@ -230,7 +230,7 @@ struct PgDriverLibStorage {
 };
 
 static PgDriverLibStorage *s_libStorage;
-static String pg_numeric_to_string(BytesViewNetwork r);
+SPUNUSED static String pg_numeric_to_string(BytesViewNetwork r);
 
 PgDriverLibStorage *PgDriverLibStorage::getInstance() {
 	if (!s_libStorage) {
@@ -821,7 +821,7 @@ Value ResultCursor::toTypedData(size_t field) const {
 		break;
 	}
 	case BackendInterface::StorageType::Bytes:
-		return Value(toBytes(field));
+		return Value(toBytes(field).bytes<Interface>());
 		break;
 	}
 	return Value();

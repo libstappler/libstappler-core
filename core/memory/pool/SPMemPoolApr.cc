@@ -99,13 +99,13 @@ using cleanup_fn = status_t(*)(void *);
 
 namespace stappler::mempool::apr::allocator {
 
-static allocator_t *create() {
+SPUNUSED static allocator_t *create() {
 	allocator_t *ret = nullptr;
 	apr_allocator_create(&ret);
 	return ret;
 }
 
-static allocator_t *create(void *mutex) {
+SPUNUSED static allocator_t *create(void *mutex) {
 	if (!mutex) {
 		abort();
 	}
@@ -115,16 +115,16 @@ static allocator_t *create(void *mutex) {
 	return ret;
 }
 
-static void destroy(allocator_t *alloc) {
+SPUNUSED static void destroy(allocator_t *alloc) {
 	apr_allocator_destroy(alloc);
 }
-static void owner_set(allocator_t *alloc, pool_t *pool) {
+SPUNUSED static void owner_set(allocator_t *alloc, pool_t *pool) {
 	apr_allocator_owner_set(alloc, pool);
 }
-static pool_t * owner_get(allocator_t *alloc) {
+SPUNUSED static pool_t * owner_get(allocator_t *alloc) {
 	return apr_allocator_owner_get(alloc);
 }
-static void max_free_set(allocator_t *alloc, size_t size) {
+SPUNUSED static void max_free_set(allocator_t *alloc, size_t size) {
 	apr_allocator_max_free_set(alloc, size);
 }
 
@@ -137,11 +137,11 @@ static custom::AllocManager *allocmngr_get(pool_t *pool) {
 	return (custom::AllocManager *)serenity_allocmngr_get(pool);
 }
 
-static void initialize() {
+SPUNUSED static void initialize() {
 	apr_pool_initialize();
 }
 
-static void terminate() {
+SPUNUSED static void terminate() {
 	apr_pool_terminate();
 }
 
@@ -151,7 +151,7 @@ static pool_t *create() {
 	return ret;
 }
 
-static pool_t *create(apr_allocator_t *alloc) {
+SPUNUSED static pool_t *create(apr_allocator_t *alloc) {
 	pool_t *ret = nullptr;
 	apr_pool_create_unmanaged_ex(&ret, NULL, alloc);
 	return ret;
@@ -167,23 +167,23 @@ static pool_t *create(pool_t *p) {
 	return ret;
 }
 
-static pool_t *createTagged(const char *tag) {
+SPUNUSED static pool_t *createTagged(const char *tag) {
 	auto ret = create();
 	apr_pool_tag(ret, tag);
 	return ret;
 }
 
-static pool_t *createTagged(pool_t *p, const char *tag) {
+SPUNUSED static pool_t *createTagged(pool_t *p, const char *tag) {
 	auto ret = create(p);
 	apr_pool_tag(ret, tag);
 	return ret;
 }
 
-static void destroy(pool_t *p) {
+SPUNUSED static void destroy(pool_t *p) {
 	apr_pool_destroy(p);
 }
 
-static void clear(pool_t *p) {
+SPUNUSED static void clear(pool_t *p) {
 	apr_pool_clear(p);
 }
 
@@ -196,23 +196,25 @@ static void *alloc(pool_t *p, size_t &size) {
 		return apr_palloc(p, size);
 	}
 }
-static void free(pool_t *p, void *ptr, size_t size) {
+
+SPUNUSED static void free(pool_t *p, void *ptr, size_t size) {
 	if (size >= custom::BlockThreshold) {
 		return allocmngr_get(p)->free(ptr, size, [] (void *p, size_t s) { return apr_palloc((pool_t *)p, s); });
 	}
 }
 
-static void *palloc(pool_t *p, size_t size) {
+SPUNUSED static void *palloc(pool_t *p, size_t size) {
 	return pool::alloc(p, size);
 }
-static void *calloc(pool_t *p, size_t count, size_t eltsize) {
+
+SPUNUSED static void *calloc(pool_t *p, size_t count, size_t eltsize) {
 	size_t s = count * eltsize;
 	auto ptr = pool::alloc(p, s);
 	memset(ptr, 0, s);
 	return ptr;
 }
 
-static void cleanup_kill(pool_t *p, void *ptr, status_t(*cb)(void *)) {
+SPUNUSED static void cleanup_kill(pool_t *p, void *ptr, status_t(*cb)(void *)) {
 	apr_pool_cleanup_kill(p, ptr, cb);
 }
 
@@ -231,7 +233,7 @@ struct __CleaupData {
 	}
 };
 
-static void cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *)) {
+SPUNUSED static void cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *)) {
 	auto data = (__CleaupData *)apr_palloc(p, sizeof(__CleaupData));
 	data->data = ptr;
 	data->pool = p;
@@ -239,33 +241,33 @@ static void cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *)) {
 	apr_pool_cleanup_register(p, data, &__CleaupData::doCleanup, apr_pool_cleanup_null);
 }
 
-static status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
+SPUNUSED static status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
 	return apr_pool_userdata_set(data, key, cb, pool);
 }
 
-static status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
+SPUNUSED static status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
 	return apr_pool_userdata_setn(data, key, cb, pool);
 }
 
-static status_t userdata_get(void **data, const char *key, pool_t *pool) {
+SPUNUSED static status_t userdata_get(void **data, const char *key, pool_t *pool) {
 	return apr_pool_userdata_get(data, key, pool);
 }
 
-static size_t get_allocated_bytes(pool_t *p) {
+SPUNUSED static size_t get_allocated_bytes(pool_t *p) {
 	return allocmngr_get(p)->get_alloc();
 }
-static size_t get_return_bytes(pool_t *p) {
+SPUNUSED static size_t get_return_bytes(pool_t *p) {
 	return allocmngr_get(p)->get_return();
 }
 
-static allocator_t *get_allocator(pool_t *p) {
+SPUNUSED static allocator_t *get_allocator(pool_t *p) {
 	return apr_pool_allocator_get(p);
 }
 
-static void *pmemdup(pool_t *a, const void *m, size_t n) { return apr_pmemdup(a, m, n); }
-static char *pstrdup(pool_t *a, const char *s) { return apr_pstrdup(a, s); }
+SPUNUSED static void *pmemdup(pool_t *a, const void *m, size_t n) { return apr_pmemdup(a, m, n); }
+SPUNUSED static char *pstrdup(pool_t *a, const char *s) { return apr_pstrdup(a, s); }
 
-static void setPoolInfo(pool_t *p, uint32_t tag, const void *ptr) {
+SPUNUSED static void setPoolInfo(pool_t *p, uint32_t tag, const void *ptr) {
 	if (auto mngr = allocmngr_get(p)) {
 		if (tag > mngr->tag) {
 			mngr->tag = tag;
@@ -274,14 +276,14 @@ static void setPoolInfo(pool_t *p, uint32_t tag, const void *ptr) {
 	}
 }
 
-static bool isThreadSafeAsParent(pool_t *pool) {
+SPUNUSED static bool isThreadSafeAsParent(pool_t *pool) {
 	if (auto a = apr_pool_allocator_get(pool)) {
 		return apr_allocator_mutex_get(a) != nullptr;
 	}
 	return false;
 }
 
-static const char *get_tag(pool_t *pool) {
+SPUNUSED static const char *get_tag(pool_t *pool) {
 	return serenity_pool_get_tag(pool);
 }
 

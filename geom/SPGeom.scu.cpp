@@ -29,3 +29,4 @@ THE SOFTWARE.
 #include "SPVec2.cc"
 #include "SPVec3.cc"
 #include "SPVec4.cc"
+#include "SPFontStyle.cc"

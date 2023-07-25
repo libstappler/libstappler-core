@@ -31,9 +31,9 @@ THE SOFTWARE.
 namespace stappler::bitmap {
 
 const BitmapFormat &getDefaultFormat(uint32_t);
-static std::unique_lock<std::mutex> lockFormatList();
-static void addCustomFormat(BitmapFormat &&fmt);
-static const std::vector<BitmapFormat *> &getCustomFormats();
+SPUNUSED static std::unique_lock<std::mutex> lockFormatList();
+SPUNUSED static void addCustomFormat(BitmapFormat &&fmt);
+SPUNUSED static const std::vector<BitmapFormat *> &getCustomFormats();
 
 static Pair<FileFormat, StringView> _loadData(BitmapWriter &w, const uint8_t * data, size_t dataLen) {
 	for (int i = 0; i < toInt(FileFormat::Custom); ++i) {

@@ -33,6 +33,7 @@ class Worker;
 class TaskQueue : public RefBase<memory::StandartInterface> {
 public:
 	using Ref = RefBase<memory::StandartInterface>;
+	using TaskMap = std::map<uint32_t, std::vector<Rc<Task>>, std::less<void>>;
 
 	enum class Flags {
 		None = 0,
@@ -64,7 +65,7 @@ public:
 	void perform(Rc<Task> &&task, bool first = false);
 	void perform(std::function<void()> &&, Ref * = nullptr, bool first = false);
 
-	bool perform(std::map<uint32_t, std::vector<Rc<Task>>> &&tasks);
+	bool perform(TaskMap &&tasks);
 
 	void update(uint32_t *count = nullptr);
 

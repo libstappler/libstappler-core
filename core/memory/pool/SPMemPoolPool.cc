@@ -27,7 +27,7 @@ THE SOFTWARE.
 
 namespace stappler::mempool::base::pool {
 
-static void popPoolInfo(pool_t *pool);
+SPUNUSED static void popPoolInfo(pool_t *pool);
 
 }
 

@@ -135,24 +135,36 @@ SP_ATTR_OPTIMIZE_INLINE_FN inline f32x4 rsqrt1(const f32x4 &v) {
 	return SP_GEOM_DEFAULT_SIMD_NAMESPACE::rsqrt1(v);
 }
 
-SP_ATTR_OPTIMIZE_INLINE_FN inline void addVec4(const float a[4], const float b[4], float dst[4]) {
-	SP_GEOM_DEFAULT_SIMD_NAMESPACE::addVec4(a, b, dst);
+SP_ATTR_OPTIMIZE_INLINE_FN inline void add(const float a[4], const float b[4], float dst[4]) {
+	store(dst, add(load(a), load(b)));
 }
 
-SP_ATTR_OPTIMIZE_INLINE_FN inline void subVec4(const float a[4], const float b[4], float dst[4]) {
-	SP_GEOM_DEFAULT_SIMD_NAMESPACE::subVec4(a, b, dst);
+SP_ATTR_OPTIMIZE_INLINE_FN inline void add(const float a[4], const float &b, float dst[4]) {
+	store(dst, add(load(a), load(b)));
 }
 
-SP_ATTR_OPTIMIZE_INLINE_FN inline void multiplyVec4(const float a[4], const float b[4], float dst[4]) {
-	SP_GEOM_DEFAULT_SIMD_NAMESPACE::multiplyVec4(a, b, dst);
+SP_ATTR_OPTIMIZE_INLINE_FN inline void sub(const float a[4], const float b[4], float dst[4]) {
+	store(dst, sub(load(a), load(b)));
 }
 
-SP_ATTR_OPTIMIZE_INLINE_FN inline void multiplyVec4Scalar(const float a[4], const float &b, float dst[4]) {
-	SP_GEOM_DEFAULT_SIMD_NAMESPACE::multiplyVec4Scalar(a, b, dst);
+SP_ATTR_OPTIMIZE_INLINE_FN inline void sub(const float a[4], const float &b, float dst[4]) {
+	store(dst, sub(load(a), load(b)));
 }
 
-SP_ATTR_OPTIMIZE_INLINE_FN inline void divideVec4(const float a[4], const float b[4], float dst[4]) {
-	SP_GEOM_DEFAULT_SIMD_NAMESPACE::divideVec4(a, b, dst);
+SP_ATTR_OPTIMIZE_INLINE_FN inline void multiply(const float a[4], const float b[4], float dst[4]) {
+	store(dst, mul(load(a), load(b)));
+}
+
+SP_ATTR_OPTIMIZE_INLINE_FN inline void multiply(const float a[4], const float &b, float dst[4]) {
+	store(dst, mul(load(a), load(b)));
+}
+
+SP_ATTR_OPTIMIZE_INLINE_FN inline void divide(const float a[4], const float b[4], float dst[4]) {
+	store(dst, div(load(a), load(b)));
+}
+
+SP_ATTR_OPTIMIZE_INLINE_FN inline void divide(const float a[4], const float &b, float dst[4]) {
+	store(dst, div(load(a), load(b)));
 }
 
 SP_ATTR_OPTIMIZE_INLINE_FN inline void addMat4Scalar(const float m[16], float scalar, float dst[16]) {

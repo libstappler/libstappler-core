@@ -26,54 +26,11 @@ THE SOFTWARE.
 
 #include "SPHtmlParser.h"
 #include "SPVectorPath.h"
+#include "SPFontStyle.h"
 
 namespace stappler::vg {
 
-struct Metric {
-	enum Units {
-		Percent,
-		Px,
-		Em,
-		Rem,
-		Auto,
-		Dpi,
-		Dppx,
-		Contain, // only for background-size
-		Cover, // only for background-size
-		Vw,
-		Vh,
-		VMin,
-		VMax
-	};
-
-	inline bool isAuto() const { return metric == Units::Auto; }
-
-	inline bool isFixed() const {
-		switch (metric) {
-		case Units::Px:
-		case Units::Em:
-		case Units::Rem:
-		case Units::Vw:
-		case Units::Vh:
-		case Units::VMin:
-		case Units::VMax:
-			return true;
-			break;
-		default:
-			break;
-		}
-		return false;
-	}
-
-	float value = 0.0f;
-	Units metric = Units::Auto;
-
-	Metric(float value, Units m) : value(value), metric(m) { }
-
-	Metric() = default;
-
-	bool readStyleValue(StringView r, bool resolutionMetric, bool allowEmptyMetric);
-};
+using Metric = geom::Metric;
 
 struct SvgTag : public html::Tag<StringView> {
 	SvgTag(StringView &r) : Tag(r) { }

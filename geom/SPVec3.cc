@@ -25,6 +25,10 @@ This file was modified for stappler project
 
 namespace stappler::geom {
 
+Vec3::Vec3(const Size3 &s) : x(s.width), y(s.height), z(s.depth) { }
+
+Vec3::Vec3(const Extent3 &s) : x(s.width), y(s.height), z(s.depth) { }
+
 float Vec3::angle(const Vec3& v1, const Vec3& v2) {
 	const float dx = v1.y * v2.z - v1.z * v2.y;
 	const float dy = v1.z * v2.x - v1.x * v2.z;
@@ -93,36 +97,10 @@ void Vec3::clamp(const Vec3& v, const Vec3& min, const Vec3& max, Vec3* dst) {
 	}
 }
 
-float Vec3::distance(const Vec3& v) const {
-	const float dx = v.x - x;
-	const float dy = v.y - y;
-	const float dz = v.z - z;
-
-	return sqrt(dx * dx + dy * dy + dz * dz);
-}
-
-float Vec3::distanceSquared(const Vec3& v) const {
-	const float dx = v.x - x;
-	const float dy = v.y - y;
-	const float dz = v.z - z;
-
-	return (dx * dx + dy * dy + dz * dz);
-}
-
-Vec2 Vec3::xy() const {
-	return Vec2(x, y);
-}
-
 Vec3 Vec3::getNormalized() const {
 	Vec3 v(*this);
 	v.normalize();
 	return v;
-}
-
-void Vec3::smooth(const Vec3& target, float elapsedTime, float responseTime) {
-	if (elapsedTime > 0) {
-		*this += (target - *this) * (elapsedTime / (elapsedTime + responseTime));
-	}
 }
 
 }

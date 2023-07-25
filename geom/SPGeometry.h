@@ -39,13 +39,14 @@ struct Size2 {
 
 	constexpr Size2() = default;
 	constexpr Size2(float w, float h) : width(w), height(h) { }
+
+	template <typename Functor>
+	constexpr Size2(const Size2 &v, const Functor &f) : width(f(v.width)), height(f(v.height)) { }
+
 	constexpr Size2(const Size2 &other) = default;
 	constexpr explicit Size2(const Vec2 &point) : width(point.x), height(point.y) { }
 
 	constexpr operator Vec2() const { return Vec2(width, height); }
-
-	constexpr bool operator==(const Size2 &s) const { return equals(s); }
-	constexpr bool operator!=(const Size2 &s) const { return !equals(s); }
 
 	constexpr Size2& operator= (const Size2 &other) = default;
 	constexpr Size2& operator= (const Vec2 &point) {
@@ -68,10 +69,12 @@ struct Size2 {
 
 	constexpr void setSize(float w, float h) {  }
 
-	constexpr bool equals(const Size2 &target) const {
-		return (std::fabs(this->width - target.width) < NumericLimits<float>::epsilon())
-				&& (std::fabs(this->height - target.height) < NumericLimits<float>::epsilon());
+	constexpr bool fuzzyEquals(const Size2 &target, float var = NumericLimits<float>::epsilon()) const {
+		return (std::fabs(this->width - target.width) < var)
+				&& (std::fabs(this->height - target.height) < var);
 	}
+
+	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Size2)
 };
 
 constexpr Size2 Size2::ZERO(0.0f, 0.0f);
@@ -86,13 +89,14 @@ struct Size3 {
 
 	constexpr Size3() = default;
 	constexpr Size3(float w, float h, float d) : width(w), height(h), depth(d) { }
+
+	template <typename Functor>
+	constexpr Size3(const Size3 &v, const Functor &f) : width(f(v.width)), height(f(v.height)), depth(f(v.depth)) { }
+
 	constexpr Size3(const Size3& other) = default;
 	constexpr explicit Size3(const Vec3& point) : width(point.x), height(point.y), depth(point.z) { }
 
 	constexpr operator Vec3() const { return Vec3(width, height, depth); }
-
-	constexpr bool operator==(const Size3 &s) const { return equals(s); }
-	constexpr bool operator!=(const Size3 &s) const { return !equals(s); }
 
 	constexpr Size3& operator= (const Size3& other) = default;
 	constexpr Size3& operator= (const Vec3& point) {
@@ -131,11 +135,13 @@ struct Size3 {
 		return ret;
 	}
 
-	constexpr bool equals(const Size3& target) const {
-		return (std::fabs(this->width - target.width) < NumericLimits<float>::epsilon())
-				&& (std::fabs(this->height - target.height) < NumericLimits<float>::epsilon())
-				&& (std::fabs(this->depth - target.depth) < NumericLimits<float>::epsilon());
+	constexpr bool fuzzyEquals(const Size3 &target, float var = NumericLimits<float>::epsilon()) const {
+		return (std::fabs(this->width - target.width) < var)
+				&& (std::fabs(this->height - target.height) < var)
+				&& (std::fabs(this->depth - target.depth) < var);
 	}
+
+	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Size3)
 };
 
 constexpr Size3 Size3::ZERO = Size3(0.0f, 0.0f, 0.0f);
@@ -210,7 +216,11 @@ struct Rect {
 
 	constexpr Rect() = default;
 	constexpr Rect(float x, float y, float width, float height) : origin(x, y), size(width, height) { }
-	constexpr Rect(const Vec2 &origin, const Size2 &size) : origin(origin), size(size) { }
+	constexpr Rect(const Vec2 &o, const Size2 &s) : origin(o), size(s) { }
+
+	template <typename Functor>
+	constexpr Rect(const Rect &v, const Functor &f) : origin(Vec2(v.origin, f)), size(Size2(v.size, f)) { }
+
 	constexpr Rect(const Rect& other) = default;
 
 	constexpr Rect& operator= (const Rect& other) = default;
@@ -223,7 +233,7 @@ struct Rect {
 	constexpr float getMinY() const { return origin.y; }
 
 	constexpr bool equals(const Rect& rect) const {
-		return (origin.equals(rect.origin) && size.equals(rect.size));
+		return (origin == rect.origin) && (size == rect.size);
 	}
 
 	bool containsPoint(const Vec2& point) const;
@@ -235,6 +245,8 @@ struct Rect {
 
 	/** Compute the min rect which can contain this and rect, assign it to this. */
 	void merge(const Rect& rect);
+
+	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Rect)
 };
 
 constexpr Rect Rect::ZERO = Rect(0.0f, 0.0f, 0.0f, 0.0f);

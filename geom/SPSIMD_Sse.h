@@ -268,26 +268,6 @@ SP_ATTR_OPTIMIZE_INLINE_FN inline void transformVec4_impl(const simde__m128 m[4]
 
 #if SP_GEOM_DEFAULT_SIMD == SP_GEOM_DEFAULT_SIMD_SSE
 
-SP_ATTR_OPTIMIZE_INLINE_FN inline void addVec4(const float a[4], const float b[4], float dst[4]) {
-	*((simde__m128 *)dst) = simde_mm_add_ps( *(simde__m128 *)a, *(simde__m128 *)b);
-}
-
-SP_ATTR_OPTIMIZE_INLINE_FN inline void subVec4(const float a[4], const float b[4], float dst[4]) {
-	*((simde__m128 *)dst) = simde_mm_sub_ps( *(simde__m128 *)a, *(simde__m128 *)b);
-}
-
-SP_ATTR_OPTIMIZE_INLINE_FN inline void multiplyVec4(const float a[4], const float b[4], float dst[4]) {
-	*((simde__m128 *)dst) = simde_mm_mul_ps( *(simde__m128 *)a, *(simde__m128 *)b);
-}
-
-SP_ATTR_OPTIMIZE_INLINE_FN inline void multiplyVec4Scalar(const float a[4], const float &b, float dst[4]) {
-	*((simde__m128 *)dst) = simde_mm_mul_ps( *(simde__m128 *)a, simde_mm_load1_ps(&b));
-}
-
-SP_ATTR_OPTIMIZE_INLINE_FN inline void divideVec4(const float a[4], const float b[4], float dst[4]) {
-	*((simde__m128 *)dst) = simde_mm_div_ps( *(simde__m128 *)a, *(simde__m128 *)b);
-}
-
 SP_ATTR_OPTIMIZE_INLINE_FN inline void addMat4Scalar(const float m[16], float scalar, float dst[16]) {
 	addMat4Scalar_impl((const simde__m128 *)m, scalar, (simde__m128 *)dst);
 }
@@ -325,27 +305,6 @@ SP_ATTR_OPTIMIZE_INLINE_FN inline void transformVec4(const float m[16], const fl
 }
 
 #else
-
-SP_ATTR_OPTIMIZE_INLINE_FN inline void multiplyVec4(const float a[4], const float b[4], float dst[4]) {
-	simde_mm_store_ps(dst,
-		simde_mm_mul_ps(
-			simde_mm_load_ps(a),
-			simde_mm_load_ps(b)));
-}
-
-SP_ATTR_OPTIMIZE_INLINE_FN inline void multiplyVec4Scalar(const float a[4], const float &b, float dst[4]) {
-	simde_mm_store_ps(dst,
-		simde_mm_mul_ps(
-			simde_mm_load_ps(a),
-			simde_mm_load_ps1(&b)));
-}
-
-SP_ATTR_OPTIMIZE_INLINE_FN inline void divideVec4(const float a[4], const float b[4], float dst[4]) {
-	simde_mm_store_ps(dst,
-		simde_mm_div_ps(
-			simde_mm_load_ps(a),
-			simde_mm_load_ps(b)));
-}
 
 SP_ATTR_OPTIMIZE_INLINE_FN inline void addMat4Scalar(const float m[16], float scalar, float dst[16]) {
 	simde__m128 dstM[4];

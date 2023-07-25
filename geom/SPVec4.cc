@@ -111,30 +111,6 @@ void Vec4::clamp(const Vec4& v, const Vec4& min, const Vec4& max, Vec4* dst)
 	}
 }
 
-float Vec4::dot(const Vec4& v1, const Vec4& v2) {
-	return (v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w);
-}
-
-void Vec4::normalize() {
-	float n = x * x + y * y + z * z + w * w;
-	// Already normalized.
-	if (n == 1.0f) {
-		return;
-	}
-
-	n = sqrt(n);
-	// Too close to zero.
-	if (n < math::MATH_TOLERANCE) {
-		return;
-	}
-
-	n = 1.0f / n;
-	x *= n;
-	y *= n;
-	z *= n;
-	w *= n;
-}
-
 Vec4 Vec4::getNormalized() const {
 	Vec4 v(*this);
 	v.normalize();

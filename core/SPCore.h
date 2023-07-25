@@ -188,7 +188,7 @@ using iter_reference_t = typename T::reference;
 #endif
 
 #if __CDT_PARSER__
-#define SPUNUSED
+#define SPUNUSED __attribute__((unused))
 #define SPINLINE
 
 // Eclipse fails to detect iterator_traits for pointer in new libstdc++
@@ -652,6 +652,28 @@ namespace stappler::math {
 
 constexpr float MATH_FLOAT_SMALL = 1.0e-37f;
 constexpr float MATH_TOLERANCE = 2e-37f;
+
+/**
+ * Updates this vector towards the given target using a smoothing function.
+ * The given response time determines the amount of smoothing (lag). A longer
+ * response time yields a smoother result and more lag. To force this vector to
+ * follow the target closely, provide a response time that is very small relative
+ * to the given elapsed time. */
+
+// avoid constexpr to support SIMD-based implementation
+template <typename T> inline
+T smooth(const T &source, const T &target, float elapsed, float response) {
+	if (elapsed > 0) {
+		return source + (target - source) * (elapsed / (elapsed + response));
+	}
+	return source;
+}
+
+// avoid constexpr to support SIMD-based implementation
+template <typename T> inline
+T lerp(const T &a, const T &b, float alpha) {
+	return (a * (1.0f - alpha) + b * alpha);
+}
 
 template<class T, class Compare> constexpr inline
 const T& clamp(const T& v, const T& lo, const T& hi, Compare comp) {

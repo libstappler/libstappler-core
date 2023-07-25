@@ -161,7 +161,10 @@ template <typename T, typename Compare = std::less<void>>
 using Set = std::set<T, Compare>;
 
 template <typename T, typename V>
-using HashMap = std::unordered_map<T, V>;
+using HashMap = std::unordered_map<T, V, std::hash<T>, std::equal_to<T>>;
+
+template <typename T>
+using HashSet = std::unordered_set<T, std::hash<T>, std::equal_to<T>, std::allocator<T>>;
 
 template <typename T>
 using Function = std::function<T>;

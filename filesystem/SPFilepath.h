@@ -90,7 +90,7 @@ void split(StringView, const Callback<void(StringView)> &);
 
 // merges two path component, removes or adds '/' where needed
 template <typename Interface>
-auto merge(StringView root, StringView path) -> typename Interface::StringType;
+auto _merge(StringView root, StringView path) -> typename Interface::StringType;
 
 std::string merge(const std::vector<std::string> &);
 memory::string merge(const memory::vector<memory::string> &);
@@ -98,9 +98,19 @@ memory::string merge(const memory::vector<memory::string> &);
 std::string merge(const std::vector<StringView> &);
 memory::string merge(const memory::vector<StringView> &);
 
+template <typename Interface>
+auto merge(stappler::memory::StandartInterface::StringType &&str) {
+	return str;
+}
+
+template <typename Interface>
+auto merge(stappler::memory::PoolInterface::StringType &&str) {
+	return str;
+}
+
 template <typename Interface, class... Args>
 auto merge(StringView root, StringView path, Args&&... args) -> typename Interface::StringType {
-	return merge<Interface>(merge<Interface>(root, path), std::forward<Args>(args)...);
+	return merge<Interface>(_merge<Interface>(root, path), std::forward<Args>(args)...);
 }
 
 // translate some MIME Content-Type to common extensions
@@ -158,7 +168,7 @@ auto reconstructPath(StringView path) -> typename Interface::StringType {
 }
 
 template <typename Interface>
-auto merge(StringView root, StringView path) -> typename Interface::StringType {
+auto _merge(StringView root, StringView path) -> typename Interface::StringType {
 	if (path.empty()) {
 		return root.str<Interface>();
 	}

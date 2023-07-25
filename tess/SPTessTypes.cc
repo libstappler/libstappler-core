@@ -197,7 +197,7 @@ const Vec2 &HalfEdge::getDstVec() const {
 }
 
 float HalfEdge::getLength() const {
-	return origin.getDistance(sym()->origin);
+	return origin.distance(sym()->origin);
 }
 
 Edge *HalfEdge::getEdge() const {
@@ -284,7 +284,7 @@ uint32_t Edge::getRightOrg() const {
 }
 
 void Edge::updateInfo() {
-	if (isnan(direction)) {
+	if (std::isnan(direction)) {
 		inverted = !EdgeGoesRight(&left);
 		direction = EdgeDirection(getRightVec() - getLeftVec());
 	}

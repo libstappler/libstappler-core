@@ -27,7 +27,7 @@ THE SOFTWARE.
 
 namespace stappler::thread {
 
-static uint32_t getNextThreadId();
+SPUNUSED static uint32_t getNextThreadId();
 
 class Worker : public ThreadInterface<memory::StandartInterface> {
 public:
@@ -341,7 +341,7 @@ void TaskQueue::perform(std::function<void()> &&cb, Ref *ref, bool first) {
 	}, nullptr, ref), first);
 }
 
-bool TaskQueue::perform(std::map<uint32_t, std::vector<Rc<Task>>> &&tasks) {
+bool TaskQueue::perform(TaskMap &&tasks) {
 	if (tasks.empty()) {
 		return false;
 	}

@@ -202,43 +202,43 @@ using cleanup_fn = status_t(*)(void *);
 
 namespace stappler::mempool::apr::allocator {
 
-static allocator_t *create();
-static allocator_t *create(void *mutex);
-static void destroy(allocator_t *alloc);
-static void owner_set(allocator_t *alloc, pool_t *pool);
-static pool_t * owner_get(allocator_t *alloc);
-static void max_free_set(allocator_t *alloc, size_t size);
+SPUNUSED static allocator_t *create();
+SPUNUSED static allocator_t *create(void *mutex);
+SPUNUSED static void destroy(allocator_t *alloc);
+SPUNUSED static void owner_set(allocator_t *alloc, pool_t *pool);
+SPUNUSED static pool_t * owner_get(allocator_t *alloc);
+SPUNUSED static void max_free_set(allocator_t *alloc, size_t size);
 
 }
 
 namespace stappler::mempool::apr::pool {
 
-static void initialize();
-static void terminate();
-static pool_t *create();
-static pool_t *create(apr_allocator_t *alloc);
-static pool_t *create(pool_t *p);
-static pool_t *createTagged(const char *tag);
-static pool_t *createTagged(pool_t *p, const char *tag);
-static void destroy(pool_t *p);
-static void clear(pool_t *p);
-static void *alloc(pool_t *p, size_t &size);
-static void free(pool_t *p, void *ptr, size_t size);
-static void *palloc(pool_t *p, size_t size);
-static void *calloc(pool_t *p, size_t count, size_t eltsize);
-static void cleanup_kill(pool_t *p, void *ptr, status_t(*cb)(void *));
-static void cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *));
-static status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool);
-static status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool);
-static status_t userdata_get(void **data, const char *key, pool_t *pool);
-static size_t get_allocated_bytes(pool_t *p);
-static size_t get_return_bytes(pool_t *p);
-static allocator_t *get_allocator(pool_t *p);
-static void *pmemdup(pool_t *a, const void *m, size_t n);
-static char *pstrdup(pool_t *a, const char *s);
-static void setPoolInfo(pool_t *p, uint32_t tag, const void *ptr);
-static bool isThreadSafeAsParent(pool_t *pool);
-static const char *get_tag(pool_t *pool);
+SPUNUSED static void initialize();
+SPUNUSED static void terminate();
+SPUNUSED static pool_t *create();
+SPUNUSED static pool_t *create(apr_allocator_t *alloc);
+SPUNUSED static pool_t *create(pool_t *p);
+SPUNUSED static pool_t *createTagged(const char *tag);
+SPUNUSED static pool_t *createTagged(pool_t *p, const char *tag);
+SPUNUSED static void destroy(pool_t *p);
+SPUNUSED static void clear(pool_t *p);
+SPUNUSED static void *alloc(pool_t *p, size_t &size);
+SPUNUSED static void free(pool_t *p, void *ptr, size_t size);
+SPUNUSED static void *palloc(pool_t *p, size_t size);
+SPUNUSED static void *calloc(pool_t *p, size_t count, size_t eltsize);
+SPUNUSED static void cleanup_kill(pool_t *p, void *ptr, status_t(*cb)(void *));
+SPUNUSED static void cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *));
+SPUNUSED static status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool);
+SPUNUSED static status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool);
+SPUNUSED static status_t userdata_get(void **data, const char *key, pool_t *pool);
+SPUNUSED static size_t get_allocated_bytes(pool_t *p);
+SPUNUSED static size_t get_return_bytes(pool_t *p);
+SPUNUSED static allocator_t *get_allocator(pool_t *p);
+SPUNUSED static void *pmemdup(pool_t *a, const void *m, size_t n);
+SPUNUSED static char *pstrdup(pool_t *a, const char *s);
+SPUNUSED static void setPoolInfo(pool_t *p, uint32_t tag, const void *ptr);
+SPUNUSED static bool isThreadSafeAsParent(pool_t *pool);
+SPUNUSED static const char *get_tag(pool_t *pool);
 
 }
 
@@ -328,7 +328,7 @@ static std::atomic<size_t> s_activePools = 0;
 static std::atomic<bool> s_poolDebug = 0;
 static std::mutex s_poolDebugMutex;
 static pool_t *s_poolDebugTarget = nullptr;
-static std::map<pool_t *, const char **> s_poolDebugInfo;
+static std::map<pool_t *, const char **, std::less<void>> s_poolDebugInfo;
 
 #if DEBUG_POOL_LIST
 static std::vector<pool_t *> s_poolList;
@@ -779,8 +779,8 @@ bool debug_begin(pool_t *pool) {
 	return false;
 }
 
-std::map<pool_t *, const char **> debug_end() {
-	std::map<pool_t *, const char **> ret;
+std::map<pool_t *, const char **, std::less<void>> debug_end() {
+	std::map<pool_t *, const char **, std::less<void>> ret;
 	s_poolDebugMutex.lock();
 	ret = std::move(s_poolDebugInfo);
 	s_poolDebugInfo.clear();

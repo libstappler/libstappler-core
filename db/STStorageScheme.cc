@@ -36,7 +36,7 @@ THE SOFTWARE.
 
 namespace stappler::db {
 
-static void prepareGetQuery(Query &query, uint64_t oid, bool forUpdate);
+SPUNUSED static void prepareGetQuery(Query &query, uint64_t oid, bool forUpdate);
 
 static void Scheme_setOwner(const Scheme *scheme, const Map<String, Field> &map) {
 	for (auto &it : map) {

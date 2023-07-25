@@ -230,12 +230,12 @@ struct GifReadStruct {
 	size_t transparent = maxOf<size_t>();
 };
 
-static bool infoGif(const uint8_t *inputData, size_t size, ImageInfo &outputData) {
+SPUNUSED static bool infoGif(const uint8_t *inputData, size_t size, ImageInfo &outputData) {
 	GifReadStruct readStruct;
 	return readStruct.init(inputData, size) && readStruct.info(outputData);
 }
 
-static bool loadGif(const uint8_t *inputData, size_t size, BitmapWriter &outputData) {
+SPUNUSED static bool loadGif(const uint8_t *inputData, size_t size, BitmapWriter &outputData) {
 	GifReadStruct readStruct;
 	return readStruct.init(inputData, size) && readStruct.load(outputData);
 }

@@ -53,7 +53,7 @@ static BitmapFormat s_defaultFormats[toInt(FileFormat::Custom)] = {
 static std::mutex _formatListMutex;
 static std::vector<BitmapFormat *> _formatList;
 
-static const BitmapFormat &getDefaultFormat(uint32_t i) {
+SPUNUSED static const BitmapFormat &getDefaultFormat(uint32_t i) {
 	return s_defaultFormats[i];
 }
 
@@ -61,12 +61,12 @@ static std::unique_lock<std::mutex> lockFormatList() {
 	return std::unique_lock<std::mutex>(_formatListMutex);
 }
 
-static void addCustomFormat(BitmapFormat &&fmt) {
+SPUNUSED static void addCustomFormat(BitmapFormat &&fmt) {
 	auto lock = lockFormatList();
 	_formatList.emplace_back(new BitmapFormat(move(fmt)));
 }
 
-static const std::vector<BitmapFormat *> &getCustomFormats() {
+SPUNUSED static const std::vector<BitmapFormat *> &getCustomFormats() {
 	return _formatList;
 }
 

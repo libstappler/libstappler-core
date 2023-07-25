@@ -2174,7 +2174,7 @@ void Tesselator::Data::displaceBoundary(FaceEdge *edge) {
 	Vec4 result;
 	getVertexNormal(&v0.x, &v1.x, &v2.x, &result.x);
 
-	if (isnan(result.y) || result.y > 4.0f) {
+	if (std::isnan(result.y) || result.y > 4.0f) {
 		edge->_next->_value = 1.0f - 4.0f / result.y;
 		result.y = 4.0f;
 	}
@@ -2202,7 +2202,7 @@ void Tesselator::Data::displaceBoundary(FaceEdge *edge) {
 	if (shouldRelocate) {
 		if (edge->_next->_vertex) {
 			edge->_next->_vertex->relocate(Vec2(v1.x - result.z * mod, v1.y - result.w * mod));
-			SPASSERT(!isnan(edge->_next->_vertex->_origin.x) && !isnan(edge->_next->_vertex->_origin.y),
+			SPASSERT(!std::isnan(edge->_next->_vertex->_origin.x) && !std::isnan(edge->_next->_vertex->_origin.y),
 					"Tess: displaced vertex is NaN");
 		}
 	}

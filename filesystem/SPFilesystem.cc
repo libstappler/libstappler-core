@@ -37,7 +37,7 @@ THE SOFTWARE.
 
 namespace stappler::filepath {
 
-static bool inAppBundle(StringView path);
+SPUNUSED static bool inAppBundle(StringView path);
 
 }
 
