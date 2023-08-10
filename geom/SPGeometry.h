@@ -265,6 +265,12 @@ struct URect {
 	uint32_t width = 0;
 	uint32_t height = 0;
 
+	URect() = default;
+	URect(const UVec2 &origin, const Extent2 &size)
+	: x(origin.x), y(origin.y), width(size.width), height(size.height) { }
+	URect(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+	: x(x), y(y), width(w), height(h) { }
+
 	constexpr UVec2 origin() const { return UVec2{x, y}; }
 
 	constexpr bool operator==(const URect &) const = default;

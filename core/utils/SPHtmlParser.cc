@@ -73,6 +73,7 @@ template <> StringViewUtf8 Tag_readAttrName<StringViewUtf8>(StringViewUtf8 &s, b
 }
 
 template <> StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s, bool keepClean) {
+	s.skipChars<StringViewUtf8::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier16>();
 		return StringViewUtf8();
@@ -140,6 +141,7 @@ template <> StringView Tag_readAttrName<StringView>(StringView &s, bool keepClea
 }
 
 template <> StringView Tag_readAttrValue<StringView>(StringView &s, bool keepClean) {
+	s.skipChars<StringView::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier8>();
 		return StringView();
@@ -207,6 +209,7 @@ template <> WideStringView Tag_readAttrName<WideStringView>(WideStringView &s, b
 }
 
 template <> WideStringView Tag_readAttrValue<WideStringView>(WideStringView &s, bool keepClean) {
+	s.skipChars<WideStringView::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier16>();
 		return WideStringView();
