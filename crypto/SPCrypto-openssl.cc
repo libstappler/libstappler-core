@@ -55,7 +55,7 @@ static void logOpenSSLErrors() {
     ERR_print_errors(bio);
     char *buf;
     size_t len = BIO_get_mem_data(bio, &buf);
-    log::text("OpenSSL", StringView(buf, len));
+    log::error("OpenSSL", StringView(buf, len));
     BIO_free(bio);
     ERR_clear_error();
 }
@@ -354,7 +354,7 @@ bool PrivateKey::exportDer(const Callback<void(const uint8_t *, size_t)> &cb, Ke
 				return finalize(false);
 			}
 		} else {
-			log::text("PrivateKey", "exportDer: passPhrase is not supported for KeyFormat::RSA");
+			log::error("PrivateKey", "exportDer: passPhrase is not supported for KeyFormat::RSA");
 			return finalize(false);
 		}
 		break;

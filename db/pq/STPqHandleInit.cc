@@ -1035,7 +1035,7 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 		})) {
 			performSimpleQuery("COMMIT;"_weak);
 		} else {
-			stappler::log::format("Database", "Fail to perform update %s", name.c_str());
+			log::error("Database", "Fail to perform update ", name.c_str());
 			stream << "\nError: " << driver->getStatusMessage(lastError) << "\n";
 			performSimpleQuery("ROLLBACK;"_weak);
 		}

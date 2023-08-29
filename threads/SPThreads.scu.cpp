@@ -36,7 +36,7 @@ void _workerThread(const ThreadCallbacks &tm, void *);
 
 static std::atomic<uint32_t> s_threadId(1);
 
-static uint32_t getNextThreadId() {
+SPUNUSED static uint32_t getNextThreadId() {
 	auto id = s_threadId.fetch_add(1);
 	return (id % 0xFFFF) + (1 << 16);
 }

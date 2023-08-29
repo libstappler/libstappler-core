@@ -112,14 +112,14 @@ bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memo
 	do {
 		auto err = curl_multi_perform(m, &running);
 		if (err != CURLM_OK) {
-			log::text("CURL", string::ToStringTraits<memory::PoolInterface>::toString("Fail to perform multi: ", err));
+			log::error("CURL", "Fail to perform multi: ", err);
 			return false;
 		}
 
 		if (running > 0) {
 			err = curl_multi_poll(m, NULL, 0, 1000, nullptr);
 			if (err != CURLM_OK) {
-				log::text("CURL", string::ToStringTraits<memory::PoolInterface>::toString("Fail to poll multi: ", err));
+				log::error("CURL", "Fail to poll multi: ", err);
 				return false;
 			}
 		}
@@ -195,14 +195,14 @@ bool MultiHandle<memory::StandartInterface>::perform(const Callback<bool(Handle<
 	do {
 		auto err = curl_multi_perform(m, &running);
 		if (err != CURLM_OK) {
-			log::text("CURL", string::ToStringTraits<memory::StandartInterface>::toString("Fail to perform multi: ", err));
+			log::error("CURL", string::ToStringTraits<memory::StandartInterface>::toString("Fail to perform multi: ", err));
 			return false;
 		}
 
 		if (running > 0) {
 			err = curl_multi_poll(m, NULL, 0, 1000, nullptr);
 			if (err != CURLM_OK) {
-				log::text("CURL", string::ToStringTraits<memory::StandartInterface>::toString("Fail to poll multi: ", err));
+				log::error("CURL", string::ToStringTraits<memory::StandartInterface>::toString("Fail to poll multi: ", err));
 				return false;
 			}
 		}

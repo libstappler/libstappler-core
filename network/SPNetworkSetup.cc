@@ -581,7 +581,7 @@ bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx, const Callba
 
 	if (!check) {
 		if (!iface.process.silent) {
-			log::format("CURL", "Fail to setup %s", iface.send.url.data());
+			log::error("CURL", "Fail to setup: ", iface.send.url.data());
 		}
 		return false;
 	}
@@ -589,7 +589,7 @@ bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx, const Callba
 	if (onBeforePerform) {
 		if (!onBeforePerform(ctx->curl)) {
 			if (!iface.process.silent) {
-				log::text("CURL", "onBeforePerform failed");
+				log::error("CURL", "onBeforePerform failed");
 			}
 			return false;
 		}
@@ -618,7 +618,7 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callb
 		size_t allowedRange = size_t(iface.getReceivedHeaderInt("X-Range"));
 		if (allowedRange == ctx->inputPos) {
 			if (!iface.process.silent) {
-				log::text("CURL", "Get 0-range is not an error, fixed error code to CURLE_OK");
+				log::warn("CURL", "Get 0-range is not an error, fixed error code to CURLE_OK");
 			}
 			ctx->success = true;
 			iface.process.errorCode = CURLE_OK;
@@ -654,7 +654,7 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callb
 				if (allowedRange == ctx->inputPos) {
 					iface.process.responseCode = 200;
 					if (!iface.process.silent) {
-						log::text("CURL", string::ToStringTraits<Interface>::toString(iface.send.url, ": Get 0-range is not an error, fixed response code to 200"));
+						log::warn("CURL", iface.send.url, ": Get 0-range is not an error, fixed response code to 200");
 					}
 				}
 			}
@@ -669,7 +669,7 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callb
 		}
 	} else {
 		if (!iface.process.silent) {
-			log::format("CURL", "fail to perform %s: (%ld) %s", iface.send.url.data(), iface.process.errorCode, ctx->error.data());
+			log::format(log::Error, "CURL", "fail to perform %s: (%ld) %s", iface.send.url.data(), iface.process.errorCode, ctx->error.data());
 		}
 		iface.process.error = ctx->error.data();
 		ctx->success = false;

@@ -74,19 +74,19 @@ struct PngReadStruct {
 	bool init(const uint8_t *inputData, size_t size) {
 		png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 		if (png_ptr == NULL) {
-			log::text("libpng", "fail to create read struct");
+			log::error("libpng", "fail to create read struct");
 			return false;
 		}
 
 		info_ptr = png_create_info_struct(png_ptr);
 		if (info_ptr == NULL) {
-			log::text("libpng", "fail to create info struct");
+			log::error("libpng", "fail to create info struct");
 			png_destroy_read_struct(&png_ptr, NULL, NULL);
 			return false;
 		}
 
 		if (setjmp(png_jmpbuf(png_ptr))) {
-			log::text("libpng", "error in processing (setjmp return)");
+			log::error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
 
@@ -103,7 +103,7 @@ struct PngReadStruct {
 
 	bool info(ImageInfo &info) {
 		if (setjmp(png_jmpbuf(png_ptr))) {
-			log::text("libpng", "error in processing (setjmp return)");
+			log::error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
 
@@ -147,7 +147,7 @@ struct PngReadStruct {
 			info.width = 0;
 			info.height = 0;
 			info.stride = 0;
-			log::format("libpng", "unsupported color type: %u", (unsigned int)color_type);
+			log::format(log::Error, "libpng", "unsupported color type: %u", (unsigned int)color_type);
 			return false;
 		}
 
@@ -168,7 +168,7 @@ struct PngReadStruct {
 		}
 
 		if (setjmp(png_jmpbuf(png_ptr))) {
-			log::text("libpng", "error in processing (setjmp return)");
+			log::error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
 
@@ -219,13 +219,13 @@ struct PngWriteStruct {
 	PngWriteStruct() {
 		png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 		if (png_ptr == nullptr) {
-			log::text("libpng", "fail to create write struct");
+			log::error("libpng", "fail to create write struct");
 			return;
 		}
 
 		info_ptr = png_create_info_struct (png_ptr);
 		if (info_ptr == nullptr) {
-			log::text("libpng", "fail to create info struct");
+			log::error("libpng", "fail to create info struct");
 			return;
 		}
 	}
@@ -238,7 +238,7 @@ struct PngWriteStruct {
 	PngWriteStruct(StringView filename) : PngWriteStruct() {
 		fp = filesystem::native::fopen_fn(filename, "wb");
 		if (!fp) {
-			log::format("libpng", "fail to open file '%s' to write png data", filename.data());
+			log::error("libpng", "fail to open file '%s' to write png data", filename.data());
 			valid = false;
 			return;
 		}
@@ -261,7 +261,7 @@ struct PngWriteStruct {
 		}
 
 		if (setjmp (png_jmpbuf (png_ptr))) {
-			log::text("libpng", "error in processing (setjmp return)");
+			log::error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
 

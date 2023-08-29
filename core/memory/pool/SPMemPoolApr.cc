@@ -145,7 +145,7 @@ SPUNUSED static void terminate() {
 	apr_pool_terminate();
 }
 
-static pool_t *create() {
+SPUNUSED static pool_t *create() {
 	pool_t *ret = nullptr;
 	apr_pool_create_unmanaged_ex(&ret, NULL, NULL);
 	return ret;
@@ -157,7 +157,7 @@ SPUNUSED static pool_t *create(apr_allocator_t *alloc) {
 	return ret;
 }
 
-static pool_t *create(pool_t *p) {
+SPUNUSED static pool_t *create(pool_t *p) {
 	pool_t *ret = nullptr;
 	if (!p) {
 		apr_pool_create_ex(&ret, nullptr, nullptr, nullptr);
@@ -187,7 +187,7 @@ SPUNUSED static void clear(pool_t *p) {
 	apr_pool_clear(p);
 }
 
-static void *alloc(pool_t *p, size_t &size) {
+SPUNUSED static void *alloc(pool_t *p, size_t &size) {
 	auto mngr = allocmngr_get(p);
 	if (size >= custom::BlockThreshold) {
 		return mngr->alloc(size, [] (void *p, size_t s) { return apr_palloc((pool_t *)p, s); });

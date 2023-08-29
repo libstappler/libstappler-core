@@ -1245,7 +1245,7 @@ void ResamplerData::resample(Filter filter, const BitmapTemplate<Interface> &sou
 
 		for (auto &it : nodes) {
 			if (!it.resampler->put_line(it.sample.data())) {
-				log::format("Bitmap", "Resampler: Out of memory!");
+				log::error("Bitmap", "Resampler: Out of memory!");
 				memory::pool::pop();
 				return;
 			}
@@ -1296,19 +1296,19 @@ auto BitmapTemplate<memory::PoolInterface>::resample(ResampleFilter f, uint32_t 
 	}
 
 	if ((min(width, height) <= 1) || (max(height, height) > Resampler::MaxDimensions)) {
-		log::format("Bitmap", "Invalid resample width/height (%u x %u), max dimension is %u",
+		log::format(log::Error, "Bitmap", "Invalid resample width/height (%u x %u), max dimension is %u",
 				width, height, Resampler::MaxDimensions);
 		return ret;
 	}
 
 	if ((max(_width, _height) > Resampler::MaxDimensions)) {
-		log::format("Bitmap", "Bitmap is too large (%u x %u), max dimension is %u",
+		log::format(log::Error, "Bitmap", "Bitmap is too large (%u x %u), max dimension is %u",
 				width, height, Resampler::MaxDimensions);
 		return ret;
 	}
 
 	if (getBytesPerPixel(_color) == 0) {
-		log::text("Bitmap", "Invalid color format for resampling");
+		log::error("Bitmap", "Invalid color format for resampling");
 		return ret;
 	}
 
@@ -1341,19 +1341,19 @@ auto BitmapTemplate<memory::StandartInterface>::resample(ResampleFilter f, uint3
 	}
 
 	if ((min(width, height) <= 1) || (max(height, height) > Resampler::MaxDimensions)) {
-		log::format("Bitmap", "Invalid resample width/height (%u x %u), max dimension is %u",
+		log::format(log::Error, "Bitmap", "Invalid resample width/height (%u x %u), max dimension is %u",
 				width, height, Resampler::MaxDimensions);
 		return ret;
 	}
 
 	if ((max(_width, _height) > Resampler::MaxDimensions)) {
-		log::format("Bitmap", "Bitmap is too large (%u x %u), max dimension is %u",
+		log::format(log::Error, "Bitmap", "Bitmap is too large (%u x %u), max dimension is %u",
 				width, height, Resampler::MaxDimensions);
 		return ret;
 	}
 
 	if (getBytesPerPixel(_color) == 0) {
-		log::text("Bitmap", "Invalid color format for resampling");
+		log::error("Bitmap", "Invalid color format for resampling");
 		return ret;
 	}
 

@@ -97,8 +97,6 @@ THE SOFTWARE.
 #   error "Unknown compiler"
 #endif
 
-#define __cpp_concepts 0
-
 namespace std {
 
 template <typename T>

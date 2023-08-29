@@ -614,7 +614,7 @@ bool VectorImage::init(StringView data) {
 		}
 		return true;
 	} else {
-		log::text("layout::Image", "No paths found in input string");
+		log::error("layout::Image", "No paths found in input string");
 	}
 
 	return false;
@@ -632,7 +632,7 @@ bool VectorImage::init(BytesView data) {
 		}
 		return true;
 	} else {
-		log::text("layout::Image", "No paths found in input data");
+		log::error("layout::Image", "No paths found in input data");
 	}
 
 	return false;

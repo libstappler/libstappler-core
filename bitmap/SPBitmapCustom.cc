@@ -52,7 +52,7 @@ static size_t detectSvgSize(StringView value) {
 	} else if (str == "cm") {
 		fvalue = fvalue * 35.43307f;
 	} else {
-		log::format("Bitmap", "Invalid size metric in svg: %s", str.data());
+		log::error("Bitmap", "Invalid size metric in svg: %s", str.data());
 		return 0;
 	}
 

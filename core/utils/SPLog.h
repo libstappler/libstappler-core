@@ -30,6 +30,16 @@ THE SOFTWARE.
 
 namespace stappler::log {
 
+enum LogType {
+	Verbose,
+	Debug,
+	Info,
+	Warn,
+	Error,
+	Fatal,
+	Default = Debug,
+};
+
 struct CustomLog {
 	union VA {
 		StringView text;
@@ -46,7 +56,7 @@ struct CustomLog {
 		Format
 	};
 
-	using log_fn = void (*) (const StringView &, Type, VA &);
+	using log_fn = void (*) (LogType, const StringView &, Type, VA &);
 
 	CustomLog(log_fn fn);
 	~CustomLog();
@@ -61,18 +71,47 @@ struct CustomLog {
 	Rc<RefBase<memory::StandartInterface>> manager;
 };
 
-void format(const StringView &tag, const char *, ...) SPPRINTF(2, 3);
-void text(const StringView &tag, const StringView &);
+// log is suppressed if bit is set
+// only default logger is affected
+void setLogFilterMask(std::bitset<6> &&);
+
+void format(LogType, const StringView &tag, const char *, ...) SPPRINTF(3, 4);
+void text(LogType, const StringView &tag, const StringView &);
 
 template <typename ... Args>
-void vtext(const StringView &tag, Args && ... args) {
-	text(tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+void verbose(const StringView &tag, Args && ... args) {
+	text(LogType::Verbose, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+}
+
+template <typename ... Args>
+void debug(const StringView &tag, Args && ... args) {
+	text(LogType::Debug, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+}
+
+template <typename ... Args>
+void info(const StringView &tag, Args && ... args) {
+	text(LogType::Info, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+}
+
+template <typename ... Args>
+void warn(const StringView &tag, Args && ... args) {
+	text(LogType::Warn, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+}
+
+template <typename ... Args>
+void error(const StringView &tag, Args && ... args) {
+	text(LogType::Error, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+}
+
+template <typename ... Args>
+void fatal(const StringView &tag, Args && ... args) {
+	text(LogType::Fatal, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
 }
 
 #if DEBUG
 #define SPASSERT(cond, msg) do { \
 	if (!(cond)) { \
-		if (strlen(msg)) { ::stappler::log::format("Assert", "%s", msg);} \
+		if (strlen(msg)) { ::stappler::log::format(stappler::log::LogType::Fatal, "Assert", "%s", msg);} \
 		assert(cond); \
 	} \
 } while (0)

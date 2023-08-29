@@ -429,7 +429,7 @@ static pool_t *pushPoolInfo(pool_t *pool) {
 	return pool;
 }
 
-static void popPoolInfo(pool_t *pool) {
+SPUNUSED static void popPoolInfo(pool_t *pool) {
 	if (pool) {
 		if (s_poolDebug.load()) {
 			s_poolDebugMutex.lock();

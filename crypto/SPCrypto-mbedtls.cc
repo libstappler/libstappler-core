@@ -283,7 +283,7 @@ bool PrivateKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb, Ke
 	switch (fmt) {
 	case KeyFormat::PKCS1:
 		if (!passPhrase.empty()) {
-			log::text("Crypto", "Password-encoding is not supported for PKCS1");
+			log::error("Crypto", "Password-encoding is not supported for PKCS1");
 		}
 		ret = mbedtls_pk_write_key_pem((mbedtls_pk_context *)&_key, buf, 10_KiB);
 		if (ret > 0) {
@@ -298,7 +298,7 @@ bool PrivateKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb, Ke
 		}
 		break;
 	case KeyFormat::PKCS8:
-		log::text("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1");
+		log::warn("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1");
 		ret = mbedtls_pk_write_key_pem((mbedtls_pk_context *)&_key, buf, 10_KiB);
 		if (ret > 0) {
 			cb(buf + 10_KiB - ret, ret);
@@ -321,7 +321,7 @@ bool PrivateKey::exportDer(const Callback<void(const uint8_t *, size_t)> &cb, Ke
 	switch (fmt) {
 	case KeyFormat::PKCS1:
 		if (!passPhrase.empty()) {
-			log::text("Crypto", "Password-encoding is not supported for PKCS1");
+			log::error("Crypto", "Password-encoding is not supported for PKCS1");
 		}
 		ret = mbedtls_pk_write_key_der((mbedtls_pk_context *)&_key, buf, 10_KiB);
 		if (ret > 0) {
@@ -330,7 +330,7 @@ bool PrivateKey::exportDer(const Callback<void(const uint8_t *, size_t)> &cb, Ke
 		}
 		break;
 	case KeyFormat::PKCS8:
-		log::text("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1");
+		log::warn("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1");
 		ret = mbedtls_pk_write_key_der((mbedtls_pk_context *)&_key, buf, 10_KiB);
 		if (ret > 0) {
 			cb(buf + 10_KiB - ret, ret);

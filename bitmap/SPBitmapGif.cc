@@ -75,17 +75,17 @@ struct GifReadStruct {
 		file = DGifOpen((void *)&reader, &Gif_InputFunc, &error);
 
 		if (!file || error != 0) {
-			log::text("GIF", "fail to open file");
+			log::error("GIF", "fail to open file");
 			return false;
 		}
 
 		if (DGifSlurp(file) != GIF_OK) {
-			log::text("GIF", "fail to read file");
+			log::error("GIF", "fail to read file");
 			return false;
 		}
 
 		if (file->ImageCount == 0) {
-			log::text("GIF", "no images found");
+			log::error("GIF", "no images found");
 			return false;
 		}
 
@@ -95,7 +95,7 @@ struct GifReadStruct {
 	bool info(ImageInfo &outputData) {
 		ColorMapObject *colors =  (file->SavedImages->ImageDesc.ColorMap) ? file->SavedImages->ImageDesc.ColorMap : file->SColorMap;
 		if (!colors) {
-			log::text("GIF", "no color profile found");
+			log::error("GIF", "no color profile found");
 			return false;
 		}
 
@@ -154,7 +154,7 @@ struct GifReadStruct {
 
 		ColorMapObject *colors =  (file->SavedImages->ImageDesc.ColorMap) ? file->SavedImages->ImageDesc.ColorMap : file->SColorMap;
 		if (!colors) {
-			log::text("GIF", "no color profile found");
+			log::error("GIF", "no color profile found");
 			return false;
 		}
 

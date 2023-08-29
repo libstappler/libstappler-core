@@ -230,6 +230,7 @@ struct ToStringTraits<memory::StandartInterface> {
 		return std::to_string(value);
 	}
 
+	static String toString(const StringView &value) { return value.str<memory::StandartInterface>(); }
 	static String toString(const String &value) { return value; }
 	static String toString(const char *value) { return value; }
 
@@ -266,6 +267,7 @@ struct ToStringTraits<memory::PoolInterface> {
 	    return stream.str();
 	}
 
+	static String toString(const StringView &value) { return value.str<memory::PoolInterface>(); }
 	static String toString(const String &value) { return value; }
 	static String toString(const char *value) { return value; }
 

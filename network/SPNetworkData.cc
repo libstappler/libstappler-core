@@ -68,7 +68,7 @@ template <typename Interface>
 static void Handle_addMailTo(HandleData<Interface> &data, StringView name) {
 	auto nameStr = name.str<Interface>();
 	if (!valid::validateEmail(nameStr)) {
-		log::vtext("NetworkHandle", "Fail to add MailTo: ", name, ": invalid email address");
+		log::error("NetworkHandle", "Fail to add MailTo: ", name, ": invalid email address");
 		return;
 	}
 

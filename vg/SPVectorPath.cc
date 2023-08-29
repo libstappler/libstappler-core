@@ -27,10 +27,10 @@ THE SOFTWARE.
 namespace stappler::vg {
 
 #define SP_PATH_LOG(...)
-//#define SP_PATH_LOG(...) stappler::log::format("Path Debug", __VA_ARGS__)
+//#define SP_PATH_LOG(...) stappler::log::format(log::Debug, "Path Debug", __VA_ARGS__)
 
 #define SP_PATH_LOG_TEXT(...)
-//#define SP_PATH_LOG_TEXT(...) stappler::log::vtext("Path Debug", __VA_ARGS__)
+//#define SP_PATH_LOG_TEXT(...) stappler::log::text(log::Debug, "Path Debug", __VA_ARGS__)
 
 
 // to prevent math errors on relative values we use double for SVG reader

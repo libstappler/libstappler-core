@@ -57,7 +57,7 @@ SPUNUSED static const BitmapFormat &getDefaultFormat(uint32_t i) {
 	return s_defaultFormats[i];
 }
 
-static std::unique_lock<std::mutex> lockFormatList() {
+SPUNUSED static std::unique_lock<std::mutex> lockFormatList() {
 	return std::unique_lock<std::mutex>(_formatListMutex);
 }
 

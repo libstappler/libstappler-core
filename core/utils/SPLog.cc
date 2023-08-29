@@ -23,23 +23,82 @@ THE SOFTWARE.
 
 #include "SPLog.h"
 
+#if MODULE_STAPPLER_THREADS
+#include "SPThread.h"
+#endif
+
+#if ANDROID
+#include <android/log.h>
+#endif
+
 namespace stappler::log {
 
 static const constexpr int MAX_LOG_FUNC = 16;
 
-static void DefaultLog2(const StringView &tag, const StringView &text) {
-#if MSYS
-	std::cout << '[' << tag << "] " << text << '\n';
-	std::cout.flush();
-#else
-	std::cerr << '[' << tag << "] " << text << '\n';
-	std::cerr.flush();
+static std::bitset<6> s_logMask;
+
+static void DefaultLog2(LogType type, const StringView &tag, const StringView &text) {
+	if (s_logMask.test(toInt(type))) {
+		return;
+	}
+
+	std::stringstream stream;
+
+#if !ANDROID
+	switch (type) {
+	case LogType::Verbose: stream << "Verbose: "; break;
+	case LogType::Debug: break;
+	case LogType::Info: stream << "Info: "; break;
+	case LogType::Warn: stream << "Warn: "; break;
+	case LogType::Error: stream << "Error: "; break;
+	case LogType::Fatal: stream << "Fatal: "; break;
+	}
 #endif
+
+#if MODULE_STAPPLER_THREADS
+	if (auto local = thread::ThreadInfo::getThreadLocal()) {
+		if (!local->managed) {
+			stream << "[Thread:" << std::this_thread::get_id() << "] ";
+		} else if (local->threadId == thread::ThreadInfo::mainThreadId) {
+			stream << "[MainThread] ";
+		} else if (local->detouched) {
+			stream << "[" << local->name << "] ";
+		} else {
+			stream << "[" << local->name << ":" << local->threadId << ":" << local->workerId << "] ";
+		}
+	} else {
+		stream << "[Log] ";
+	}
+#endif
+
+#if !ANDROID
+	stream << tag << ": ";
+#endif
+	stream << text;
+#ifndef __apple__
+	stream << "\n";
+#endif
+
+	auto str = stream.str();
+
+#if ANDROID
+	switch (type) {
+	case LogType::Verbose: __android_log_print(ANDROID_LOG_VERBOSE, tag.data(), "%s", str.c_str()); break;
+	case LogType::Debug: __android_log_print(ANDROID_LOG_DEBUG, tag.data(), "%s", str.c_str()); break;
+	case LogType::Info: __android_log_print(ANDROID_LOG_INFO, tag.data(), "%s", str.c_str()); break;
+	case LogType::Warn: __android_log_print(ANDROID_LOG_WARN, tag.data(), "%s", str.c_str()); break;
+	case LogType::Error: __android_log_print(ANDROID_LOG_ERROR, tag.data(), "%s", str.c_str()); break;
+	case LogType::Fatal: __android_log_print(ANDROID_LOG_FATAL, tag.data(), "%s", str.c_str()); break;
+	}
+#else
+	fwrite(str.c_str(), str.length(), 1, stdout);
+	fflush(stdout);
+#endif // platform switch
 }
 
-static void DefaultLog(const StringView &tag, CustomLog::Type t, CustomLog::VA &va) {
+static void DefaultLog(LogType type, const StringView &tag, CustomLog::Type t, CustomLog::VA &va) {
 	if (t == CustomLog::Text) {
-		DefaultLog2(tag, va.text);
+		DefaultLog2(type, tag, va.text);
 	} else {
 		char stackBuf[1_KiB];
 		va_list tmpList;
@@ -49,12 +108,12 @@ static void DefaultLog(const StringView &tag, CustomLog::Type t, CustomLog::VA &
 		if (size > int(1_KiB - 1)) {
 			char *buf = new char[size + 1];
 			size = vsnprintf(buf, size_t(size), va.format.format, va.format.args);
-			DefaultLog2(tag, StringView(buf, size));
+			DefaultLog2(type, tag, StringView(buf, size));
 			delete [] buf;
 		} else if (size >= 0) {
-			DefaultLog2(tag, StringView(stackBuf, size));
+			DefaultLog2(type, tag, StringView(stackBuf, size));
 		} else {
-			DefaultLog2(tag, "Log error");
+			DefaultLog2(type, tag, "Log error");
 		}
 	}
 }
@@ -99,59 +158,64 @@ struct CustomLogManager : RefBase<memory::StandartInterface> {
 		logFuncMutex.unlock();
 	}
 
-	void log(const StringView tag, CustomLog::Type t, CustomLog::VA &va) {
+	void log(LogType type, const StringView tag, CustomLog::Type t, CustomLog::VA &va) {
 		int count = logFuncCount.load();
 		if (count == 0) {
-			DefaultLog(tag, t, va);
+			DefaultLog(type, tag, t, va);
 		} else {
 			logFuncMutex.lock();
 			count = logFuncCount.load();
 			for (int i = 0; i < count; i++) {
-				logFuncArr[i](tag, t, va);
+				logFuncArr[i](type, tag, t, va);
 			}
 			logFuncMutex.unlock();
 		}
 	}
 };
 
-CustomLog::CustomLog(log_fn fn) : fn(fn) {
+CustomLog::CustomLog(log_fn logfn) : fn(logfn) {
 	manager = CustomLogManager::get();
 	if (fn) {
-		((CustomLogManager *)manager.get())->insert(fn);
+		static_cast<CustomLogManager *>(manager.get())->insert(fn);
 	}
 }
 
 CustomLog::~CustomLog() {
 	if (fn) {
-		((CustomLogManager *)manager.get())->remove(fn);
+		static_cast<CustomLogManager *>(manager.get())->remove(fn);
 	}
 }
 
 CustomLog::CustomLog(CustomLog && other) : fn(other.fn) {
 	other.fn = nullptr;
 }
+
 CustomLog& CustomLog::operator=(CustomLog && other) {
 	fn = other.fn;
 	other.fn = nullptr;
 	return *this;
 }
 
-void format(const StringView &tag, const char *fmt, ...) {
+void setLogFilterMask(std::bitset<6> &&mask) {
+	s_logMask = move(mask);
+}
+
+void format(LogType type, const StringView &tag, const char *fmt, ...) {
 	CustomLog::VA va;
     va_start(va.format.args, fmt);
     va.format.format = fmt;
 
     auto m = CustomLogManager::get();
-	m->log(tag, CustomLog::Format, va);
+	m->log(type, tag, CustomLog::Format, va);
 
     va_end(va.format.args);
 }
 
-void text(const StringView &tag, const StringView &text) {
+void text(LogType type, const StringView &tag, const StringView &text) {
 	CustomLog::VA va;
 	va.text = text;
     auto m = CustomLogManager::get();
-	m->log(tag, CustomLog::Text, va);
+	m->log(type, tag, CustomLog::Text, va);
 }
 
 }

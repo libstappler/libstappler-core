@@ -81,6 +81,10 @@ public:
 		}
 	}
 
+	MovingAverage() {
+		memset(_values.data(), 0, _values.size() * sizeof(T));
+	}
+
 protected:
 	size_t _current = 0;
     std::array<T, Count> _values;
