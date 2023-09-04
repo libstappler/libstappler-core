@@ -327,6 +327,8 @@ void TaskQueue::perform(Rc<Task> &&task, bool first) {
 		return;
 	}
 
+	task->addRef(this);
+
 	++ _tasksCounter;
 	_inputQueue.push(task->getPriority().get(), first, std::move(task));
 	if (_context) {
@@ -361,6 +363,7 @@ bool TaskQueue::perform(TaskMap &&tasks) {
 				t->setSuccessful(false);
 				onMainThread(std::move(t));
 			} else {
+				t->addRef(this);
 				++ _tasksCounter;
 				w->perform(move(t));
 			}
@@ -409,6 +412,8 @@ void TaskQueue::onMainThread(Rc<Task> &&task) {
     if (!task) {
         return;
     }
+
+    task->addRef(this);
 
     _outputMutex.lock();
     _outputQueue.push_back(std::move(task));

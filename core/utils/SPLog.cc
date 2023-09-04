@@ -35,7 +35,11 @@ namespace stappler::log {
 
 static const constexpr int MAX_LOG_FUNC = 16;
 
+#if DEBUG
 static std::bitset<6> s_logMask;
+#else
+static std::bitset<6> s_logMask = (1 | 2 | 4 | 8);
+#endif
 
 static void DefaultLog2(LogType type, const StringView &tag, const StringView &text) {
 	if (s_logMask.test(toInt(type))) {

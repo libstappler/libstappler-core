@@ -30,7 +30,7 @@ Task::~Task() { }
 
 /* creates empty task with only complete function to be used as callback from other thread */
 bool Task::init(const CompleteCallback &c, Ref *t) {
-	_target = t;
+	addRef(t);
 	if (c) {
 		_complete.push_back(c);
 	}
@@ -38,7 +38,7 @@ bool Task::init(const CompleteCallback &c, Ref *t) {
 }
 
 bool Task::init(CompleteCallback &&c, Ref *t) {
-	_target = t;
+	addRef(t);
 	if (c) {
 		_complete.emplace_back(move(c));
 	}
@@ -47,7 +47,7 @@ bool Task::init(CompleteCallback &&c, Ref *t) {
 
 /* creates regular async task without initialization phase */
 bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t) {
-	_target = t;
+	addRef(t);
 	if (e) {
 		_execute.push_back(e);
 	}
@@ -58,7 +58,7 @@ bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t) {
 }
 
 bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t) {
-	_target = t;
+	addRef(t);
 	if (e) {
 		_execute.emplace_back(move(e));
 	}
@@ -70,7 +70,7 @@ bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t) {
 
 /* creates regular async task with initialization phase */
 bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const CompleteCallback &c, Ref *t) {
-	_target = t;
+	addRef(t);
 	if (p) {
 		_prepare.push_back(p);
 	}
@@ -84,7 +84,7 @@ bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const Comple
 }
 
 bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, Ref *t) {
-	_target = t;
+	addRef(t);
 	if (p) {
 		_prepare.emplace_back(move(p));
 	}

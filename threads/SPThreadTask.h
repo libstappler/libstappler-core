@@ -83,10 +83,7 @@ public: /* typedefs */
 	/* get task priority */
 	PriorityType getPriority() const { return _priority; }
 
-	void setTarget(Ref *target) { _target = target; }
-
-	/* get assigned target */
-	Ref *getTarget() const { return _target; }
+	void addRef(Ref *target) { _refs.emplace_back(target); }
 
 	/* used by task manager to set success state */
 	void setSuccessful(bool value) { _isSuccessful = value; }
@@ -112,8 +109,7 @@ protected:
 	int _tag = -1;
 	PriorityType _priority = PriorityType();
 
-	Rc<Ref> _target;
-
+	std::vector<Rc<Ref>> _refs;
 	std::vector<PrepareCallback> _prepare;
 	std::vector<ExecuteCallback> _execute;
 	std::vector<CompleteCallback> _complete;
