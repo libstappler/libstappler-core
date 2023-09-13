@@ -316,12 +316,14 @@ template <typename Interface>
 auto encode(const CoderSource &source) -> typename Interface::StringType;
 
 void encode(std::basic_ostream<char> &stream, const CoderSource &source);
+void encode(const Callback<void(char)> &cb, const CoderSource &source);
 size_t encode(char *, size_t bsize, const CoderSource &source);
 
 template <typename Interface>
 auto decode(const CoderSource &source) -> typename Interface::BytesType;
 
 void decode(std::basic_ostream<char> &stream, const CoderSource &source);
+void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
 size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 
 }
@@ -337,6 +339,7 @@ auto encode(const CoderSource &source) -> typename Interface::StringType;
 
 void encode(std::basic_ostream<char> &stream, const CoderSource &source);
 void encode(const Callback<void(char)> &cb, const CoderSource &source);
+size_t encode(char *, size_t bsize, const CoderSource &source);
 
 
 template <typename Interface>
@@ -344,6 +347,7 @@ auto decode(const CoderSource &source) -> typename Interface::BytesType;
 
 void decode(std::basic_ostream<char> &stream, const CoderSource &source);
 void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
+size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 
 }
 
@@ -358,6 +362,7 @@ auto encode(const CoderSource &source) -> typename Interface::StringType;
 
 void encode(std::basic_ostream<char> &stream, const CoderSource &source);
 void encode(const Callback<void(char)> &cb, const CoderSource &source);
+size_t encode(char *, size_t bsize, const CoderSource &source);
 
 
 template <typename Interface>
@@ -365,6 +370,7 @@ auto decode(const CoderSource &source) -> typename Interface::BytesType;
 
 void decode(std::basic_ostream<char> &stream, const CoderSource &source);
 void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
+size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 
 }
 
@@ -933,6 +939,10 @@ inline void decode(std::basic_ostream<char> &stream, const CoderSource &source) 
 
 inline void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source) {
 	base64::decode(cb, source);
+}
+
+inline size_t decode(uint8_t *buf, size_t bsize, const CoderSource &source) {
+	return base64::decode(buf, bsize, source);;
 }
 
 }

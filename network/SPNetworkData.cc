@@ -113,7 +113,7 @@ static bool Handle_setPrivateKeyAuth(HandleData<Interface> &iface, const crypto:
 
 template <typename Interface>
 static bool Handle_setPrivateKeyAuth(HandleData<Interface> &iface, BytesView data) {
-	crypto::PrivateKey pk(data);
+	crypto::PrivateKey pk(crypto::Backend::Default, data);
 	if (pk) {
 		return Handle_setPrivateKeyAuth(iface, pk);
 	}

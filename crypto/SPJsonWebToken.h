@@ -126,8 +126,8 @@ public:
 protected:
 	static string::Sha512::Buf getFingerprint(const Fingerprint &, Time t, BytesView secret);
 
-	Bytes encryptAes(const crypto::AesKey &, const Value &) const;
-	static Value decryptAes(const crypto::AesKey &, BytesView);
+	Bytes encryptAes(const crypto::BlockKey256 &, const Value &) const;
+	static Value decryptAes(const crypto::BlockKey256 &, BytesView);
 
 	AesToken();
 	AesToken(Keys keys);
@@ -408,12 +408,12 @@ AesToken<Interface> AesToken<Interface>::parse(StringView token, const Fingerpri
 		auto fp = getFingerprint(fpb, tf, keys.secret);
 
 		if (BytesView(fp.data(), fp.size()) == BytesView(input.payload.getBytes("fp"))) {
-			auto v = crypto::getAesVersion(input.payload.getBytes("p"));
-			crypto::AesKey aesKey;
+			auto v = crypto::getBlockInfo(input.payload.getBytes("p"));
+			crypto::BlockKey256 aesKey;
 			if (keys.priv) {
-				aesKey = crypto::makeAesKey(*keys.priv, BytesView(fp.data(), fp.size()), v);
+				aesKey = crypto::makeBlockKey(*keys.priv, BytesView(fp.data(), fp.size()), v.second, v.first);
 			} else {
-				aesKey = crypto::makeAesKey(keys.secret, BytesView(fp.data(), fp.size()), v);
+				aesKey = crypto::makeBlockKey(keys.secret, BytesView(fp.data(), fp.size()), v.second, v.first);
 			}
 
 			auto p = decryptAes(aesKey, input.payload.getBytes("p"));
@@ -431,13 +431,13 @@ AesToken<Interface> AesToken<Interface>::parse(const Value &payload, const Finge
 	auto fp = getFingerprint(fpb, tf, keys.secret);
 
 	if (BytesView(fp.data(), fp.size()) == BytesView(payload.getBytes("fp"))) {
-		auto v = crypto::getAesVersion(payload.getBytes("p"));
+		auto v = crypto::getBlockInfo(payload.getBytes("p"));
 
-		crypto::AesKey aesKey;
+		crypto::BlockKey256 aesKey;
 		if (keys.priv) {
-			aesKey = crypto::makeAesKey(*keys.priv, BytesView(fp.data(), fp.size()), v);
+			aesKey = crypto::makeBlockKey(*keys.priv, BytesView(fp.data(), fp.size()), v.cipher, v.version);
 		} else {
-			aesKey = crypto::makeAesKey(keys.secret, BytesView(fp.data(), fp.size()), v);
+			aesKey = crypto::makeBlockKey(keys.secret, BytesView(fp.data(), fp.size()), v.cipher, v.version);
 		}
 
 		auto p = decryptAes(aesKey, payload.getBytes("p"));
@@ -468,11 +468,11 @@ auto AesToken<Interface>::exportToken(StringView iss, const Fingerprint &fpb, Ti
 	token.payload.setBytes(BytesView(fp.data(), fp.size()), "fp");
 	token.payload.setInteger(t.toMicros(), "tf");
 
-	crypto::AesKey aesKey;
+	crypto::BlockKey256 aesKey;
 	if (_keys.priv) {
-		aesKey = crypto::makeAesKey(*_keys.priv, BytesView(fp.data(), fp.size()));
+		aesKey = crypto::makeBlockKey(*_keys.priv, BytesView(fp.data(), fp.size()));
 	} else {
-		aesKey = crypto::makeAesKey(_keys.secret, BytesView(fp.data(), fp.size()));
+		aesKey = crypto::makeBlockKey(_keys.secret, BytesView(fp.data(), fp.size()));
 	}
 
 	token.payload.setBytes(encryptAes(aesKey, this->_data), "p");
@@ -488,11 +488,11 @@ auto AesToken<Interface>::exportData(const Fingerprint &fpb) const -> Value {
 	payload.setBytes(BytesView(fp.data(), fp.size()), "fp");
 	payload.setInteger(t.toMicros(), "tf");
 
-	crypto::AesKey aesKey;
+	crypto::BlockKey256 aesKey;
 	if (_keys.priv) {
-		aesKey = crypto::makeAesKey(*_keys.priv, BytesView(fp.data(), fp.size()));
+		aesKey = crypto::makeBlockKey(*_keys.priv, BytesView(fp.data(), fp.size()));
 	} else {
-		aesKey = crypto::makeAesKey(_keys.secret, BytesView(fp.data(), fp.size()));
+		aesKey = crypto::makeBlockKey(_keys.secret, BytesView(fp.data(), fp.size()));
 	}
 
 	payload.setBytes(encryptAes(aesKey, this->_data), "p");
@@ -523,19 +523,19 @@ string::Sha512::Buf AesToken<Interface>::getFingerprint(const Fingerprint &fp, T
 }
 
 template <typename Interface>
-auto AesToken<Interface>::encryptAes(const crypto::AesKey &key, const Value &val) const -> Bytes {
+auto AesToken<Interface>::encryptAes(const crypto::BlockKey256 &key, const Value &val) const -> Bytes {
 	auto d = data::write<Interface>(val, data::EncodeFormat::CborCompressed);
 	Bytes out;
-	crypto::encryptAes(key, d, [&] (const uint8_t *data, size_t len) {
+	crypto::encryptBlock(key, d, [&] (const uint8_t *data, size_t len) {
 		out = BytesView(data, len).bytes<Interface>();
 	});
 	return out;
 }
 
 template <typename Interface>
-auto AesToken<Interface>::decryptAes(const crypto::AesKey &key, BytesView val) -> Value {
+auto AesToken<Interface>::decryptAes(const crypto::BlockKey256 &key, BytesView val) -> Value {
 	Value out;
-	crypto::decryptAes(key, val, [&] (const uint8_t *data, size_t len) {
+	crypto::decryptBlock(key, val, [&] (const uint8_t *data, size_t len) {
 		out = data::read<Interface>(BytesView(data, len));
 	});
 	return out;

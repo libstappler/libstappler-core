@@ -484,7 +484,7 @@ Value SqlHandle::getDeltaData(const Scheme &scheme, const stappler::Time &time) 
 	return ret;
 }
 
-static void Handle_writeSelectViewDataQuery(SqlQuery &q, const db::Scheme &s, uint64_t oid, const db::FieldView &f, const Value &data) {
+SPUNUSED static void Handle_writeSelectViewDataQuery(SqlQuery &q, const db::Scheme &s, uint64_t oid, const db::FieldView &f, const Value &data) {
 	auto fs = f.scheme;
 
 	auto fieldName = toString(fs->getName(), "_id");

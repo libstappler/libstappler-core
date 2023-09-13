@@ -27,541 +27,662 @@ THE SOFTWARE.
 #include "SPCrypto.h"
 
 #if __CDT_PARSER__
-#define SP_CRYPTO_GNUTLS 1
+#define MODULE_STAPPLER_CRYPTO_GNUTLS 1
 #endif
 
-#if SP_CRYPTO_GNUTLS
+#if MODULE_STAPPLER_CRYPTO_GNUTLS
+
+#include "SPCryptoAsn1.h"
 
 #include <gnutls/abstract.h>
 #include <gnutls/crypto.h>
+#include <gnutls/gnutls.h>
 
 namespace stappler::crypto {
 
-static bool isPemKey(BytesView data) {
-	StringView str((const char *)data.data(), data.size());
-	str.readChars<StringView::WhiteSpace>();
-	if (str.is("-----")) {
-		return true;
-	}
-	return false;
-}
-
-static bool exportPubKeyDer(gnutls_pubkey_t key, const Callback<void(gnutls_datum_t *)> &cb) {
-	gnutls_datum_t out;
-	if (gnutls_pubkey_export2(key, GNUTLS_X509_FMT_DER, &out) == GNUTLS_E_SUCCESS) {
-		cb(&out);
-		gnutls_free(out.data);
-		return true;
-	}
-	return false;
-}
-
-static bool exportPubKeyPem(gnutls_pubkey_t key, const Callback<void(gnutls_datum_t *)> &cb) {
-	gnutls_datum_t out;
-	if (gnutls_pubkey_export2(key, GNUTLS_X509_FMT_PEM, &out) == GNUTLS_E_SUCCESS) {
-		cb(&out);
-		gnutls_free(out.data);
-		return true;
-	}
-	return false;
-}
-
-static bool exportPrivKeyDer(gnutls_privkey_t key, const Callback<void(gnutls_datum_t *)> &cb) {
-	bool success = false;
-	gnutls_datum_t out;
-	gnutls_x509_privkey_t pk;
-	if (gnutls_privkey_export_x509(key, &pk) == GNUTLS_E_SUCCESS) {
-		if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_DER, nullptr, 0, &out) == GNUTLS_E_SUCCESS) {
-			cb(&out);
-			gnutls_free(out.data);
-			success = true;
-		}
-		gnutls_x509_privkey_deinit(pk);
-	}
-	return success;
-}
-
-static bool exportPrivKeyPem(gnutls_privkey_t key, const Callback<void(gnutls_datum_t *)> &cb) {
-	bool success = false;
-	gnutls_datum_t out;
-	gnutls_x509_privkey_t pk;
-	if (gnutls_privkey_export_x509(key, &pk) == GNUTLS_E_SUCCESS) {
-		if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_PEM, nullptr, 0, &out) == GNUTLS_E_SUCCESS) {
-			cb(&out);
-			gnutls_free(out.data);
-			success = true;
-		}
-		gnutls_x509_privkey_deinit(pk);
-	}
-	return success;
-}
-
-static gnutls_sign_algorithm_t getAlgo(SignAlgorithm a) {
+static gnutls_sign_algorithm_t getGnuTLSAlgo(SignAlgorithm a) {
 	switch (a) {
 	case SignAlgorithm::RSA_SHA256: return GNUTLS_SIGN_RSA_SHA256; break;
 	case SignAlgorithm::RSA_SHA512: return GNUTLS_SIGN_RSA_SHA512; break;
 	case SignAlgorithm::ECDSA_SHA256: return GNUTLS_SIGN_ECDSA_SHA256; break;
 	case SignAlgorithm::ECDSA_SHA512: return GNUTLS_SIGN_ECDSA_SHA512; break;
+	case SignAlgorithm::GOST_256: return GNUTLS_SIGN_GOST_256; break;
+	case SignAlgorithm::GOST_512: return GNUTLS_SIGN_GOST_512; break;
 	}
 	return GNUTLS_SIGN_UNKNOWN;
 }
 
-static constexpr size_t DATA_ALIGN_BOUNDARY ( 16 );
+static gnutls_cipher_algorithm_t getGnuTLSAlgo(BlockCipher b) {
+	switch (b) {
+	case BlockCipher::AES_CBC:
+		return GNUTLS_CIPHER_AES_256_CBC;
+		break;
+	case BlockCipher::AES_CFB8:
+		return GNUTLS_CIPHER_AES_256_CFB8;
+		break;
+	case BlockCipher::Gost3412_2015_CTR_ACPKM:
+		return GNUTLS_CIPHER_KUZNYECHIK_CTR_ACPKM;
+		break;
+	}
+	return GNUTLS_CIPHER_AES_256_CBC;
+}
 
-static bool doEncryptAes(const AesKey &key, BytesView d, size_t dataSize, BytesView output, uint32_t version) {
-	memcpy((uint8_t *)output.data(), &dataSize, sizeof(dataSize));
-	memcpy((uint8_t *)output.data() + 8, &version, sizeof(version));
-	memcpy((uint8_t *)output.data() + 16, d.data(), d.size());
+static KeyType getGnuTLSKeyType(int a) {
+	switch (a) {
+	case GNUTLS_PK_RSA: return KeyType::RSA; break;
+	case GNUTLS_PK_DSA: return KeyType::DSA; break;
+	case GNUTLS_PK_DH: break;
+	case GNUTLS_PK_ECDSA: return KeyType::ECDSA; break;
+	case GNUTLS_PK_RSA_PSS: break;
+	case GNUTLS_PK_EDDSA_ED25519: break;
+	case GNUTLS_PK_GOST_01: break;
+	case GNUTLS_PK_GOST_12_256: return KeyType::GOST3410_2012_256; break;
+	case GNUTLS_PK_GOST_12_512: return KeyType::GOST3410_2012_512; break;
+	case GNUTLS_PK_EDDSA_ED448: return KeyType::EDDSA_ED448; break;
+	default:
+		break;
+	}
+	return KeyType::Unknown;
+}
 
-	uint8_t iv[16] = { 0 };
-	gnutls_datum_t ivData;
-	ivData.data = (unsigned char *)iv;
-	ivData.size = (unsigned int)16;
+struct Pkcs1RsaPubKeyReader {
+	using Decoder = Asn1Decoder<memory::StandartInterface, Pkcs1RsaPubKeyReader>;
 
-	gnutls_datum_t keyData;
-	keyData.data = (unsigned char *)key.data();
-	keyData.size = (unsigned int)key.size();
+	enum State {
+		Init,
+		Seq,
+		Exp,
+		Mod,
+		Fin,
+		Invalid
+	};
 
-	auto algo = GNUTLS_CIPHER_AES_256_CBC;
-
-	gnutls_cipher_hd_t aes;
-	auto err = gnutls_cipher_init(&aes, algo, &keyData, &ivData);
-	if (err != 0) {
-		std::cout << "Crypto: gnutls_cipher_init() = [" << err << "] " << gnutls_strerror(err) << "\n";
-		return false;
+	Pkcs1RsaPubKeyReader(const BytesViewNetwork &source) {
+		Decoder dec;
+		dec.decode(*this, source);
 	}
 
-	size_t outSize = output.size() - 16;
-	err = gnutls_cipher_encrypt(aes, (uint8_t *)output.data() + 16, outSize);
-	if (err != 0) {
+	void onBeginSequence(Decoder &) {
+		if (state == Init) {
+			state = Seq;
+		} else {
+			state = Invalid;
+		}
+	}
+	void onEndSequence(Decoder &) {
+		if (state == Exp) {
+			state = Fin;
+		} else {
+			state = Invalid;
+		}
+	}
+
+	void onBigInteger(Decoder &, const BytesViewNetwork &val) {
+		switch (state) {
+		case Seq:
+			mod = val;
+			state = Mod;
+			break;
+		case Mod:
+			exp = val;
+			state = Exp;
+			break;
+		default:
+			state = Invalid;
+			break;
+		}
+	}
+
+	void onCustom(Decoder &, uint8_t, const BytesViewNetwork &val) {
+		state = Invalid;
+	}
+
+	State state = State::Init;
+	BytesViewNetwork exp;
+	BytesViewNetwork mod;
+};
+
+static BackendCtx s_gnuTLSCtx = {
+	.name = Backend::GnuTLS,
+	.title = StringView("GnuTLS"),
+	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsPKCS8 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary
+		| BackendFlags::SupportsGost3410_2012,
+	.initialize = [] () {
+		log::verbose("Crypto", "GnuTLS backend loaded: ", gnutls_check_version("3.0.0"));
+		/*gnutls_global_set_log_level(9);
+		gnutls_global_set_log_function([] (int l, const char *data) {
+			log::verbose("GnuTLS", l, ": ", data);
+		})*/;
+		gnutls_global_init();
+	},
+	.finalize = [] () {
+		gnutls_global_deinit();
+	},
+	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
+		auto cipherBlockSize = getBlockSize(key.cipher);
+		auto algo = getGnuTLSAlgo(key.cipher);
+
+		uint64_t dataSize = d.size();
+		auto blockSize = math::align<size_t>(dataSize, cipherBlockSize)
+				+ cipherBlockSize; // allocate space for possible padding
+
+		uint8_t output[blockSize + sizeof(CryptoBlockHeader)];
+
+		uint8_t iv[16] = { 0 };
+		gnutls_datum_t ivData = {
+			.data = static_cast<unsigned char *>(iv),
+			.size = static_cast<unsigned int>(16)
+		};
+
+		gnutls_datum_t keyData = {
+			.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(key.data.data())),
+			.size = static_cast<unsigned int>(key.data.size())
+		};
+
+		gnutls_cipher_hd_t aes;
+		auto err = gnutls_cipher_init(&aes, algo, &keyData, &ivData);
+		if (err != 0) {
+			log::error("Crypto", "gnutls_cipher_init() = [", err, "] ", gnutls_strerror(err));
+			return false;
+		}
+
+		size_t outSize = blockSize - sizeof(CryptoBlockHeader);
+		fillCryptoBlockHeader(output, key, d);
+
+		if constexpr (SafeBlockEncoding) {
+			memcpy(output + sizeof(CryptoBlockHeader), d.data(), d.size());
+			memset(output + sizeof(CryptoBlockHeader) + d.size(), 0, blockSize - d.size());
+			err = gnutls_cipher_encrypt(aes, output + sizeof(CryptoBlockHeader), outSize);
+		} else {
+			err = gnutls_cipher_encrypt2(aes, d.data(), math::align<size_t>(dataSize, cipherBlockSize), output + sizeof(CryptoBlockHeader), outSize);
+		}
+
+		if (err != 0) {
+			gnutls_cipher_deinit(aes);
+			log::error("Crypto", "gnutls_cipher_encrypt() = [", err, "] ", gnutls_strerror(err));
+			return false;
+		}
+
 		gnutls_cipher_deinit(aes);
-		std::cout << "Crypto: gnutls_cipher_encrypt() = [" << err << "] " << gnutls_strerror(err) << "\n";
-		return false;
-	}
+		cb(output, blockSize + sizeof(CryptoBlockHeader) - cipherBlockSize);
+		return true;
+	},
+	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
+		auto info = getBlockInfo(b);
+		auto cipherBlockSize = getBlockSize(info.cipher);
+		auto algo = getGnuTLSAlgo(info.cipher);
 
-	gnutls_cipher_deinit(aes);
-	return true;
-}
+		auto blockSize = math::align<size_t>(info.dataSize, cipherBlockSize) + cipherBlockSize;
+		b.offset(sizeof(CryptoBlockHeader));
 
-static bool doDecryptAes(const AesKey &key, BytesView val, BytesView output) {
-	uint8_t iv[16] = { 0 };
-	gnutls_datum_t ivData;
-	ivData.data = (unsigned char *)iv;
-	ivData.size = (unsigned int)16;
+		uint8_t output[blockSize];
 
-	gnutls_datum_t keyData;
-	keyData.data = (unsigned char *)key.data();
-	keyData.size = (unsigned int)key.size();
+		uint8_t iv[16] = { 0 };
+		gnutls_datum_t ivData = {
+			.data = static_cast<unsigned char *>(iv),
+			.size = static_cast<unsigned int>(16)
+		};
 
-	auto algo = GNUTLS_CIPHER_AES_256_CBC;
+		gnutls_datum_t keyData = {
+			.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(key.data.data())),
+			.size = static_cast<unsigned int>(key.data.size())
+		};
 
-	gnutls_cipher_hd_t aes;
-	auto err = gnutls_cipher_init(&aes, algo, &keyData, &ivData);
-	if (err != 0) {
-		std::cout << "Crypto: gnutls_cipher_init() = [" << err << "] " << gnutls_strerror(err) << "\n";
-		return false;
-	}
+		gnutls_cipher_hd_t aes;
+		auto err = gnutls_cipher_init(&aes, algo, &keyData, &ivData);
+		if (err != 0) {
+			log::error("Crypto", "gnutls_cipher_init() = [", err, "] ", gnutls_strerror(err));
+			return false;
+		}
 
-	err = gnutls_cipher_decrypt2(aes, val.data(), val.size(), (uint8_t *)output.data(), output.size());
-	if (err != 0) {
+		err = gnutls_cipher_decrypt2(aes, b.data(), b.size(), output, blockSize);
+		if (err != 0) {
+			gnutls_cipher_deinit(aes);
+			log::error("Crypto", "gnutls_cipher_decrypt2() = [", err, "] ", gnutls_strerror(err));
+			return false;
+		}
+
 		gnutls_cipher_deinit(aes);
-		std::cout << "Crypto: gnutls_pubkey_init() = [" << err << "] " << gnutls_strerror(err) << "\n";
-		return false;
-	}
+		cb(output, info.dataSize);
+		return true;
+	},
+	.hash256 = [] (Sha256::Buf &buf, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func) -> bool {
+		gnutls_hash_hd_t hash;
+		switch (func) {
+		case HashFunction::SHA_2:
+			if (gnutls_hash_init(&hash, GNUTLS_DIG_SHA256) != GNUTLS_E_SUCCESS) {
+				return false;
+			}
+			break;
+		case HashFunction::GOST_3411:
+			if (gnutls_hash_init(&hash, GNUTLS_DIG_STREEBOG_256) != GNUTLS_E_SUCCESS) {
+				return false;
+			}
+			break;
+		}
 
-	gnutls_cipher_deinit(aes);
-	return true;
-}
+		bool success = true;
+		cb([&] (const CoderSource &data) {
+			if (success && gnutls_hash(hash, data.data(), data.size()) != GNUTLS_E_SUCCESS) {
+				success = false;
+				return false;
+			}
+			return true;
+		});
+		gnutls_hash_deinit(hash, buf.data());
+		return success;
+	},
+	.hash512 = [] (Sha512::Buf &buf, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func) -> bool {
+		gnutls_hash_hd_t hash;
+		switch (func) {
+		case HashFunction::SHA_2:
+			if (gnutls_hash_init(&hash, GNUTLS_DIG_SHA512) != GNUTLS_E_SUCCESS) {
+				return false;
+			}
+			break;
+		case HashFunction::GOST_3411:
+			if (gnutls_hash_init(&hash, GNUTLS_DIG_STREEBOG_512) != GNUTLS_E_SUCCESS) {
+				return false;
+			}
+			break;
+		}
 
-template <>
-auto encryptAes<memory::PoolInterface>(const AesKey &key, BytesView d, uint32_t version) -> memory::PoolInterface::BytesType {
-	auto dataSize = d.size();
-	auto blockSize = math::align<size_t>(dataSize, DATA_ALIGN_BOUNDARY);
-	memory::PoolInterface::BytesType output; output.resize(blockSize + 16);
+		bool success = true;
+		cb([&] (const CoderSource &data) {
+			if (success && gnutls_hash(hash, data.data(), data.size()) != GNUTLS_E_SUCCESS) {
+				success = false;
+				return false;
+			}
+			return true;
+		});
+		gnutls_hash_deinit(hash, buf.data());
+		return success;
+	},
+	.privInit = [] (KeyContext &ctx) -> bool {
+		return gnutls_privkey_init( reinterpret_cast<gnutls_privkey_t *>(&ctx.keyCtx) ) == GNUTLS_E_SUCCESS;
+	},
+	.privFree = [] (KeyContext &ctx) {
+		gnutls_privkey_deinit( static_cast<gnutls_privkey_t>(ctx.keyCtx) );
+	},
+	.privGen = [] (KeyContext &ctx, KeyBits bits) -> bool {
+		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 
-	if (!doEncryptAes(key, d, dataSize, output, version)) {
-		return memory::PoolInterface::BytesType();
-	}
-
-	return output;
-}
-
-template <>
-auto encryptAes<memory::StandartInterface>(const AesKey &key, BytesView d, uint32_t version) -> memory::StandartInterface::BytesType {
-	auto dataSize = d.size();
-	auto blockSize = math::align<size_t>(dataSize, DATA_ALIGN_BOUNDARY);
-	memory::StandartInterface::BytesType output; output.resize(blockSize + 16);
-
-	if (!doEncryptAes(key, d, dataSize, output, version)) {
-		return memory::StandartInterface::BytesType();
-	}
-
-	return output;
-}
-
-template <>
-auto decryptAes<memory::PoolInterface>(const AesKey &key, BytesView val) -> memory::PoolInterface::BytesType {
-	auto dataSize = val.readUnsigned64();
-	auto blockSize = math::align<size_t>(dataSize, DATA_ALIGN_BOUNDARY);
-
-	val.offset(8);
-
-	memory::PoolInterface::BytesType output; output.resize(blockSize);
-
-	if (!doDecryptAes(key, val, output)) {
-		return memory::PoolInterface::BytesType();
-	}
-
-	output.resize(dataSize);
-	return output;
-}
-
-template <>
-auto decryptAes<memory::StandartInterface>(const AesKey &key, BytesView val) -> memory::StandartInterface::BytesType {
-	auto dataSize = val.readUnsigned64();
-	auto blockSize = math::align<size_t>(dataSize, DATA_ALIGN_BOUNDARY);
-
-	val.offset(8);
-
-	memory::StandartInterface::BytesType output; output.resize(blockSize);
-
-	if (!doDecryptAes(key, val, output)) {
-		return memory::StandartInterface::BytesType();
-	}
-
-	output.resize(dataSize);
-	return output;
-}
-
-PrivateKey::PrivateKey() {
-	if (gnutls_privkey_init( &_key ) == GNUTLS_E_SUCCESS) {
-		_valid = true;
-	}
-}
-
-PrivateKey::PrivateKey(BytesView data, const CoderSource &str) {
-	if (gnutls_privkey_init( &_key ) == GNUTLS_E_SUCCESS) {
-		_valid = true;
-
-		import(data, str);
-	}
-}
-
-PrivateKey::~PrivateKey() {
-	if (_valid) {
-		gnutls_privkey_deinit( _key );
-		_valid = false;
-	}
-}
-
-bool PrivateKey::generate(KeyBits bits) {
-	if (_valid && !_loaded) {
 		int err = 0;
 		switch (bits) {
-		case KeyBits::_1024: err = gnutls_privkey_generate(_key, GNUTLS_PK_RSA, 1024, 0); break;
-		case KeyBits::_2048: err = gnutls_privkey_generate(_key, GNUTLS_PK_RSA, 2048, 0); break;
-		case KeyBits::_4096: err = gnutls_privkey_generate(_key, GNUTLS_PK_RSA, 4096, 0); break;
+		case KeyBits::_1024: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 1024, 0); break;
+		case KeyBits::_2048: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 2048, 0); break;
+		case KeyBits::_4096: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 4096, 0); break;
 		}
 
 		if (err == GNUTLS_E_SUCCESS) {
-			_loaded = true;
+			ctx.type = getGnuTLSKeyType(gnutls_privkey_get_pk_algorithm(key, nullptr));
 			return true;
-		} else {
-			gnutls_privkey_deinit( _key );
-			_valid = false;
 		}
-	}
 
-	return false;
-}
-
-bool PrivateKey::import(BytesView data, const CoderSource &passwd) {
-	if (_valid && !_loaded) {
+		return false;
+	},
+	.privImport = [] (KeyContext &ctx, BytesView data, const CoderSource &passwd) {
 		gnutls_datum_t keyData;
-		keyData.data = (unsigned char *)data.data();
-		keyData.size = (unsigned int)data.size();
+		keyData.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(data.data()));
+		keyData.size = static_cast<unsigned int>(data.size());
 
+		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 		if (isPemKey(data)) {
-			if (gnutls_privkey_import_x509_raw(_key, &keyData, GNUTLS_X509_FMT_PEM,
-					(const char *)(passwd._data.empty() ? nullptr : passwd._data.data()), 0) != GNUTLS_E_SUCCESS) {
-				gnutls_privkey_deinit( _key );
-				_valid = false;
-			} else {
-				_loaded = true;
+			if (gnutls_privkey_import_x509_raw(key, &keyData, GNUTLS_X509_FMT_PEM,
+					reinterpret_cast<const char *>(passwd._data.empty() ? nullptr : passwd._data.data()), 0) == GNUTLS_E_SUCCESS) {
+				ctx.type = getGnuTLSKeyType(gnutls_privkey_get_pk_algorithm(key, nullptr));
 				return true;
 			}
 		} else {
-			if (gnutls_privkey_import_x509_raw(_key, &keyData, GNUTLS_X509_FMT_DER,
-					(const char *)(passwd._data.empty() ? nullptr : passwd._data.data()), 0) != GNUTLS_E_SUCCESS) {
-				gnutls_privkey_deinit( _key );
-				_valid = false;
-			} else {
-				_loaded = true;
+			if (gnutls_privkey_import_x509_raw(key, &keyData, GNUTLS_X509_FMT_DER,
+					reinterpret_cast<const char *>(passwd._data.empty() ? nullptr : passwd._data.data()), 0) == GNUTLS_E_SUCCESS) {
+				ctx.type = getGnuTLSKeyType(gnutls_privkey_get_pk_algorithm(key, nullptr));
 				return true;
 			}
 		}
-	}
-	return false;
-}
-
-
-PublicKey PrivateKey::exportPublic() const {
-	return PublicKey(*this);
-}
-
-template <>
-auto sign<memory::PoolInterface>(gnutls_privkey_t _key, BytesView data, SignAlgorithm algo) -> memory::PoolInterface::BytesType {
-	memory::PoolInterface::BytesType ret;
-
-	gnutls_datum_t dataToSign;
-	dataToSign.data = (unsigned char *)data.data();
-	dataToSign.size = (unsigned int)data.size();
-
-	gnutls_datum_t signature;
-
-	if (gnutls_privkey_sign_data2(_key, getAlgo(algo), 0, &dataToSign, &signature) == GNUTLS_E_SUCCESS) {
-		ret.resize(signature.size);
-		memcpy(ret.data(), signature.data, signature.size);
-		gnutls_free(signature.data);
-	}
-
-	return ret;
-}
-
-template <>
-auto sign<memory::StandartInterface>(gnutls_privkey_t _key, BytesView data, SignAlgorithm algo) -> memory::StandartInterface::BytesType {
-	memory::StandartInterface::BytesType ret;
-
-	gnutls_datum_t dataToSign;
-	dataToSign.data = (unsigned char *)data.data();
-	dataToSign.size = (unsigned int)data.size();
-
-	gnutls_datum_t signature;
-
-	if (gnutls_privkey_sign_data2(_key, getAlgo(algo), 0, &dataToSign, &signature) == GNUTLS_E_SUCCESS) {
-		ret.resize(signature.size);
-		memcpy(ret.data(), signature.data, signature.size);
-		gnutls_free(signature.data);
-	}
-
-	return ret;
-}
-
-PublicKey::PublicKey() {
-	auto err = gnutls_pubkey_init( &_key );
-	if (err == GNUTLS_E_SUCCESS) {
-		_valid = true;
-	} else {
-		std::cout << "Crypto: gnutls_pubkey_init() = [" << err << "] " << gnutls_strerror(err) << "\n";
-	}
-}
-PublicKey::PublicKey(BytesView data) {
-	auto err = gnutls_pubkey_init( &_key );
-	if (err == GNUTLS_E_SUCCESS) {
-		_valid = true;
-
-		import(data);
-	} else {
-		std::cout << "Crypto: gnutls_pubkey_init() = [" << err << "] " << gnutls_strerror(err) << "\n";
-	}
-}
-PublicKey::PublicKey(const PrivateKey &priv) {
-	auto err = gnutls_pubkey_init( &_key );
-	if (err == GNUTLS_E_SUCCESS) {
-		_valid = true;
-
-		if (gnutls_pubkey_import_privkey(_key, priv.getKey(), 0, 0) != GNUTLS_E_SUCCESS) {
-			gnutls_pubkey_deinit( _key );
-			_valid = false;
-		} else {
-			_loaded = true;
+		return false;
+	},
+	.privExportPem = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
+		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
+		bool success = false;
+		gnutls_datum_t out;
+		gnutls_x509_privkey_t pk;
+		if (gnutls_privkey_export_x509(key, &pk) == GNUTLS_E_SUCCESS) {
+			switch (fmt) {
+			case KeyFormat::PKCS1:
+				if (!passPhrase.empty()) {
+					log::error("Crypto", "Password-encoding is not supported for PKCS1");
+				}
+				if (gnutls_x509_privkey_export2(pk, GNUTLS_X509_FMT_PEM, &out) == GNUTLS_E_SUCCESS) {
+					cb(out.data, out.size);
+					gnutls_free(out.data);
+					success = true;
+				}
+				break;
+			case KeyFormat::PKCS8:
+				if (!passPhrase.empty()) {
+					char buf[passPhrase.size() + 1];
+					memcpy(buf, passPhrase.data(), passPhrase.size());
+					buf[passPhrase.size()] = 0;
+					if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_PEM, buf, 0, &out) == GNUTLS_E_SUCCESS) {
+						cb(out.data, out.size);
+						gnutls_free(out.data);
+						success = true;
+					}
+				} else {
+					if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_PEM, nullptr, 0, &out) == GNUTLS_E_SUCCESS) {
+						cb(out.data, out.size);
+						gnutls_free(out.data);
+						success = true;
+					}
+				}
+				break;
+			}
+			gnutls_x509_privkey_deinit(pk);
 		}
-	} else {
-		std::cout << "Crypto: gnutls_pubkey_init() = [" << err << "] " << gnutls_strerror(err) << "\n";
-	}
-}
+		return success;
+	},
+	.privExportDer = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
+		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
+		bool success = false;
+		gnutls_datum_t out;
+		gnutls_x509_privkey_t pk;
+		if (gnutls_privkey_export_x509(key, &pk) == GNUTLS_E_SUCCESS) {
+			switch (fmt) {
+			case KeyFormat::PKCS1:
+				if (!passPhrase.empty()) {
+					log::error("Crypto", "Password-encoding is not supported for PKCS1");
+				}
+				if (gnutls_x509_privkey_export2(pk, GNUTLS_X509_FMT_DER, &out) == GNUTLS_E_SUCCESS) {
+					cb(out.data, out.size);
+					gnutls_free(out.data);
+					success = true;
+				}
+				break;
+			case KeyFormat::PKCS8:
+				if (!passPhrase.empty()) {
+					char buf[passPhrase.size() + 1];
+					memcpy(buf, passPhrase.data(), passPhrase.size());
+					buf[passPhrase.size()] = 0;
+					if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_DER, buf, 0, &out) == GNUTLS_E_SUCCESS) {
+						cb(out.data, out.size);
+						gnutls_free(out.data);
+						success = true;
+					}
+				} else {
+					if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_DER, nullptr, 0, &out) == GNUTLS_E_SUCCESS) {
+						cb(out.data, out.size);
+						gnutls_free(out.data);
+						success = true;
+					}
+				}
+				break;
+			}
+			gnutls_x509_privkey_deinit(pk);
+		}
+		return success;
+	},
+	.privExportPublic = [] (KeyContext &target, const KeyContext &privKey) {
+		auto err = gnutls_pubkey_init( reinterpret_cast<gnutls_pubkey_t *>(&target.keyCtx) );
+		if (err == GNUTLS_E_SUCCESS) {
+			if (gnutls_pubkey_import_privkey(static_cast<gnutls_pubkey_t>(target.keyCtx),
+					static_cast<gnutls_privkey_t>(privKey.keyCtx), 0, 0) != GNUTLS_E_SUCCESS) {
+				gnutls_pubkey_deinit( static_cast<gnutls_pubkey_t>(target.keyCtx) );
+			} else {
+				target.type = getGnuTLSKeyType(gnutls_pubkey_get_pk_algorithm(static_cast<gnutls_pubkey_t>(target.keyCtx), nullptr));
+				return true;
+			}
+		} else {
+			log::error("Crypto", "gnutls_pubkey_init() = [", err, "] ", gnutls_strerror(err));
+		}
+		return false;
+	},
+	.privSign = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data, SignAlgorithm algo) {
+		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 
-PublicKey::~PublicKey() {
-	if (_valid) {
-		gnutls_pubkey_deinit( _key );
-		_valid = false;
-	}
-}
+		gnutls_datum_t dataToSign;
+		dataToSign.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(data.data()));
+		dataToSign.size = static_cast<unsigned int>(data.size());
 
-bool PublicKey::import(BytesView data) {
-	if (_valid && !_loaded) {
+		gnutls_datum_t signature;
+
+		if (gnutls_privkey_sign_data2(key, getGnuTLSAlgo(algo), 0, &dataToSign, &signature) == GNUTLS_E_SUCCESS) {
+			cb(signature.data, signature.size);
+			gnutls_free(signature.data);
+			return true;
+		}
+		return false;
+	},
+	.privVerify = [] (const KeyContext &ctx, const CoderSource &data, BytesView signature, SignAlgorithm algo) {
+		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
+		bool success = false;
+
+		gnutls_pubkey_t pubkey;
+		auto err = gnutls_pubkey_init( &pubkey );
+		if (err == GNUTLS_E_SUCCESS) {
+			if (gnutls_pubkey_import_privkey(pubkey, key, 0, 0) == GNUTLS_E_SUCCESS) {
+				gnutls_datum_t inputData;
+				inputData.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(data.data()));
+				inputData.size = static_cast<unsigned int>(data.size());
+
+				gnutls_datum_t signatureData;
+				signatureData.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(signature.data()));
+				signatureData.size = static_cast<unsigned int>(signature.size());
+
+				success = gnutls_pubkey_verify_data2(pubkey, getGnuTLSAlgo(algo), 0, &inputData, &signatureData) >= 0;
+			}
+			gnutls_pubkey_deinit(pubkey);
+		} else {
+			log::error("Crypto", "gnutls_pubkey_init() = [", err, "] ", gnutls_strerror(err));
+		}
+		return success;
+	},
+	.privEncrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
+		bool success = false;
+
+		gnutls_pubkey_t pubkey;
+		auto err = gnutls_pubkey_init( &pubkey );
+		if (err == GNUTLS_E_SUCCESS) {
+			auto err = gnutls_pubkey_import_privkey(pubkey, key, 0, 0);
+			if (err == GNUTLS_E_SUCCESS) {
+				gnutls_datum_t dataToEncrypt;
+				dataToEncrypt.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(data.data()));
+				dataToEncrypt.size = static_cast<unsigned int>(data.size());
+
+				gnutls_datum_t output;
+
+				err = gnutls_pubkey_encrypt_data(pubkey, 0, &dataToEncrypt, &output);
+				if (err == GNUTLS_E_SUCCESS) {
+					cb(output.data, output.size);
+					gnutls_free(output.data);
+					success = true;
+				}
+			}
+			gnutls_pubkey_deinit(pubkey);
+		} else {
+			log::error("Crypto", "gnutls_pubkey_init() = [", err, "] ", gnutls_strerror(err));
+		}
+		return success;
+	},
+	.privDecrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
+
+		gnutls_datum_t dataToDecrypt;
+		dataToDecrypt.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(data.data()));
+		dataToDecrypt.size = static_cast<unsigned int>(data.size());
+
+		gnutls_datum_t output;
+
+		auto err = gnutls_privkey_decrypt_data(key, 0, &dataToDecrypt, &output);
+		if (err == GNUTLS_E_SUCCESS) {
+			cb(output.data, output.size);
+			gnutls_free(output.data);
+			return true;
+		}
+		return false;
+	},
+	.pubInit = [] (KeyContext &ctx) -> bool {
+		return gnutls_pubkey_init( reinterpret_cast<gnutls_pubkey_t *>(&ctx.keyCtx) ) == GNUTLS_E_SUCCESS;
+	},
+	.pubFree = [] (KeyContext &ctx) {
+		gnutls_pubkey_deinit( static_cast<gnutls_pubkey_t>(ctx.keyCtx) );
+	},
+	.pubImport = [] (KeyContext &ctx, BytesView data) {
+		auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
+
 		gnutls_datum_t keyData;
-		keyData.data = (unsigned char *)data.data();
-		keyData.size = (unsigned int)data.size();
+		keyData.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(data.data()));
+		keyData.size = static_cast<unsigned int>(data.size());
 
 		int err = 0;
 		if (isPemKey(data)) {
-			err = gnutls_pubkey_import(_key, &keyData, GNUTLS_X509_FMT_PEM);
-			if (err != GNUTLS_E_SUCCESS) {
-				gnutls_pubkey_deinit( _key );
-				_valid = false;
-			} else {
-				_loaded = true;
+			err = gnutls_pubkey_import(key, &keyData, GNUTLS_X509_FMT_PEM);
+			if (err == GNUTLS_E_SUCCESS) {
+				ctx.type = getGnuTLSKeyType(gnutls_pubkey_get_pk_algorithm(key, nullptr));
 				return true;
 			}
+
+			StringView str(reinterpret_cast<const char *>(data.data()), data.size());
+			str.skipUntilString("-----");
+			if (str.is("-----BEGIN RSA PUBLIC KEY-----\n")) {
+				str += "-----BEGIN RSA PUBLIC KEY-----\n"_len;
+
+				auto data = str.readUntilString("\n-----END RSA PUBLIC KEY-----");
+				auto tmp = data;
+				tmp.skipChars<StringView::Base64, StringView::WhiteSpace>();
+				if (tmp.empty()) {
+					size_t len = 0;
+					uint8_t buf[base64::decodeSize(data.size())];
+					base64::decode([&] (uint8_t b) {
+						buf[len ++] = b;
+					}, data);
+
+					BytesViewNetwork asn1(buf, len);
+					Pkcs1RsaPubKeyReader r(asn1);
+					if (r.state == Pkcs1RsaPubKeyReader::Fin) {
+						gnutls_datum_t mData;
+						mData.data = const_cast<unsigned char *>(r.mod.data());
+						mData.size = static_cast<unsigned int>(r.mod.size());
+
+						gnutls_datum_t eData;
+						eData.data = const_cast<unsigned char *>(r.exp.data());
+						eData.size = static_cast<unsigned int>(r.exp.size());
+
+						auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
+						auto err = gnutls_pubkey_import_rsa_raw(key, &mData, &eData);
+						if (err == GNUTLS_E_SUCCESS) {
+							ctx.type = getGnuTLSKeyType(gnutls_pubkey_get_pk_algorithm(key, nullptr));
+							return true;
+						}
+					}
+				}
+			}
 		} else {
-			err = gnutls_pubkey_import(_key, &keyData, GNUTLS_X509_FMT_DER);
-			if (err != GNUTLS_E_SUCCESS) {
-				gnutls_pubkey_deinit( _key );
-				_valid = false;
-			} else {
-				_loaded = true;
+			err = gnutls_pubkey_import(key, &keyData, GNUTLS_X509_FMT_DER);
+			if (err == GNUTLS_E_SUCCESS) {
+				ctx.type = getGnuTLSKeyType(gnutls_pubkey_get_pk_algorithm(key, nullptr));
 				return true;
 			}
 		}
-	}
-	return false;
-}
+		return false;
+	},
+	.pubImportOpenSSH = [] (KeyContext &ctx, StringView r) {
+		auto origKeyType = r.readUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
+		r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
+		auto dataBlock = r.readUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
+		auto valid = valid::validateBase64(dataBlock);
+		if (valid) {
+			uint8_t bytes[base64::decodeSize(dataBlock.size())];
+			uint8_t *target = bytes;
+			base64::decode([&] (uint8_t c) {
+				*target++ = c;
+			}, dataBlock);
 
-bool PublicKey::import(BytesView m, BytesView e) {
-	if (_valid && !_loaded) {
+			BytesViewNetwork dataView(bytes, target - bytes);
+			auto len = dataView.readUnsigned32();
+			auto keyType = dataView.readString(len);
 
-		gnutls_datum_t mData;
-		mData.data = (unsigned char *)m.data();
-		mData.size = (unsigned int)m.size();
+			if (origKeyType != keyType || keyType != "ssh-rsa") {
+				return false;
+			}
 
-		gnutls_datum_t eData;
-		eData.data = (unsigned char *)e.data();
-		eData.size = (unsigned int)e.size();
+			auto elen = dataView.readUnsigned32();
+			auto exp = dataView.readBytes(elen);
 
-		auto err = gnutls_pubkey_import_rsa_raw(_key, &mData, &eData);
-		if (err != GNUTLS_E_SUCCESS) {
-			gnutls_pubkey_deinit( _key );
-			_valid = false;
-		} else {
-			_loaded = true;
+			auto mlen = dataView.readUnsigned32();
+			auto modulus = dataView.readBytes(mlen);
+
+			gnutls_datum_t mData;
+			mData.data = const_cast<unsigned char *>(modulus.data());
+			mData.size = static_cast<unsigned int>(mlen);
+
+			gnutls_datum_t eData;
+			eData.data = const_cast<unsigned char *>(exp.data());
+			eData.size = static_cast<unsigned int>(elen);
+
+			auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
+			auto err = gnutls_pubkey_import_rsa_raw(key, &mData, &eData);
+			if (err == GNUTLS_E_SUCCESS) {
+				ctx.type = getGnuTLSKeyType(gnutls_pubkey_get_pk_algorithm(key, nullptr));
+				return true;
+			}
+		}
+		return false;
+	},
+	.pubExportPem = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) {
+		auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
+
+		gnutls_datum_t out;
+		if (gnutls_pubkey_export2(key, GNUTLS_X509_FMT_PEM, &out) == GNUTLS_E_SUCCESS) {
+			cb(out.data, out.size);
+			gnutls_free(out.data);
 			return true;
 		}
-	}
+		return false;
+	},
+	.pubExportDer = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) {
+		auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
 
-	return false;
-}
-
-bool PublicKey::verify(BytesView data, BytesView signature, SignAlgorithm algo) {
-	gnutls_datum_t inputData;
-	inputData.data = (unsigned char *)data.data();
-	inputData.size = (unsigned int)data.size();
-
-	gnutls_datum_t signatureData;
-	signatureData.data = (unsigned char *)signature.data();
-	signatureData.size = (unsigned int)signature.size();
-
-	return gnutls_pubkey_verify_data2(_key, getAlgo(algo), 0, &inputData, &signatureData) >= 0;
-}
-
-template <>
-auto exportPem<memory::PoolInterface>(gnutls_pubkey_t _key) -> memory::PoolInterface::BytesType {
-	memory::PoolInterface::BytesType ret;
-	exportPubKeyPem(_key, [&] (gnutls_datum_t *data) {
-		ret.resize(data->size);
-		memcpy(ret.data(), data->data, data->size);
-	});
-	return ret;
-}
-
-template <>
-auto exportPem<memory::StandartInterface>(gnutls_pubkey_t _key) -> memory::StandartInterface::BytesType {
-	memory::StandartInterface::BytesType ret;
-	exportPubKeyPem(_key, [&] (gnutls_datum_t *data) {
-		ret.resize(data->size);
-		memcpy(ret.data(), data->data, data->size);
-	});
-	return ret;
-}
-
-template <>
-auto exportDer<memory::PoolInterface>(gnutls_pubkey_t _key) -> memory::PoolInterface::BytesType {
-	memory::PoolInterface::BytesType ret;
-	exportPubKeyDer(_key, [&] (gnutls_datum_t *data) {
-		ret.resize(data->size);
-		memcpy(ret.data(), data->data, data->size);
-	});
-	return ret;
-}
-
-template <>
-auto exportDer<memory::StandartInterface>(gnutls_pubkey_t _key) -> memory::StandartInterface::BytesType {
-	memory::StandartInterface::BytesType ret;
-	exportPubKeyDer(_key, [&] (gnutls_datum_t *data) {
-		ret.resize(data->size);
-		memcpy(ret.data(), data->data, data->size);
-	});
-	return ret;
-}
-
-template <>
-auto exportPem<memory::PoolInterface>(gnutls_privkey_t _key) -> memory::PoolInterface::BytesType {
-	memory::PoolInterface::BytesType ret;
-	exportPrivKeyPem(_key, [&] (gnutls_datum_t *data) {
-		ret.resize(data->size);
-		memcpy(ret.data(), data->data, data->size);
-	});
-	return ret;
-}
-
-template <>
-auto exportPem<memory::StandartInterface>(gnutls_privkey_t _key) -> memory::StandartInterface::BytesType {
-	memory::StandartInterface::BytesType ret;
-	exportPrivKeyPem(_key, [&] (gnutls_datum_t *data) {
-		ret.resize(data->size);
-		memcpy(ret.data(), data->data, data->size);
-	});
-	return ret;
-}
-
-template <>
-auto exportDer<memory::PoolInterface>(gnutls_privkey_t _key) -> memory::PoolInterface::BytesType {
-	memory::PoolInterface::BytesType ret;
-	exportPrivKeyDer(_key, [&] (gnutls_datum_t *data) {
-		ret.resize(data->size);
-		memcpy(ret.data(), data->data, data->size);
-	});
-	return ret;
-}
-
-template <>
-auto exportDer<memory::StandartInterface>(gnutls_privkey_t _key) -> memory::StandartInterface::BytesType {
-	memory::StandartInterface::BytesType ret;
-	exportPrivKeyDer(_key, [&] (gnutls_datum_t *data) {
-		ret.resize(data->size);
-		memcpy(ret.data(), data->data, data->size);
-	});
-	return ret;
-}
-
-template <typename Interface>
-static auto _convertOpenSSHKey(StringView r, uint8_t * outBuf, size_t outSize) -> typename Interface::BytesType {
-	auto keyType = r.readUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-	r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-	auto dataBlock = r.readUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-	if (valid::validateBase64(dataBlock)) {
-		auto data = base64::decode<Interface>(dataBlock);
-		BytesViewNetwork dataView(data);
-		auto len = dataView.readUnsigned32();
-		keyType = dataView.readString(len);
-
-		if (keyType != "ssh-rsa") {
-			return typename Interface::BytesType();
+		gnutls_datum_t out;
+		if (gnutls_pubkey_export2(key, GNUTLS_X509_FMT_DER, &out) == GNUTLS_E_SUCCESS) {
+			cb(out.data, out.size);
+			gnutls_free(out.data);
+			return true;
 		}
+		return false;
+	},
+	.pubVerify = [] (const KeyContext &ctx, const CoderSource &data, BytesView signature, SignAlgorithm algo) {
+		auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
+		gnutls_datum_t inputData;
+		inputData.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(data.data()));
+		inputData.size = static_cast<unsigned int>(data.size());
 
-		auto mlen = dataView.readUnsigned32();
-		auto modulus = dataView.readBytes(mlen);
+		gnutls_datum_t signatureData;
+		signatureData.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(signature.data()));
+		signatureData.size = static_cast<unsigned int>(signature.size());
 
-		auto elen = dataView.readUnsigned32();
-		auto exp = dataView.readBytes(elen);
+		return gnutls_pubkey_verify_data2(key, getGnuTLSAlgo(algo), 0, &inputData, &signatureData) >= 0;
+	},
+	.pubEncrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+		auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
 
-		crypto::PublicKey pk;
-		pk.import(modulus, exp);
+		gnutls_datum_t dataToEncrypt;
+		dataToEncrypt.data = const_cast<unsigned char *>(static_cast<const unsigned char *>(data.data()));
+		dataToEncrypt.size = static_cast<unsigned int>(data.size());
 
-		return pk.exportDer<Interface>();
-	}
-	return typename Interface::BytesType();
-}
+		gnutls_datum_t output;
+
+		if (gnutls_pubkey_encrypt_data(key, 0, &dataToEncrypt, &output) == GNUTLS_E_SUCCESS) {
+			cb(output.data, output.size);
+			gnutls_free(output.data);
+			return true;
+		}
+		return false;
+	},
+};
+
+BackendCtxRef s_gnuTlsRef(&s_gnuTLSCtx);
 
 }
 

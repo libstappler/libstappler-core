@@ -119,8 +119,9 @@ enum class Endian {
 enum class Endian {
 	Big,
 	Little,
+	Mixed,
 	Network = Big,
-#if (__i386__) || (_M_IX86) || (__x86_64__) || (_M_X64) || (__arm__) || (_M_ARM) || (__arm64__) || (__arm64) || defined (__aarch64__)
+#if (__i386__) || (_M_IX86) || (__x86_64__) || (_M_X64) || (__arm__) || (_M_ARM) || (__arm64__) || (__arm64) || defined(__aarch64__) || defined(__e2k__)
 	Host = Little,
 #else
 	Host = Big,

@@ -37,6 +37,7 @@ THE SOFTWARE.
 #include "SPBase64.cc"
 #include "SPCharGroup.cc"
 #include "SPSha2.cc"
+#include "SPGost3411-2012.cc"
 #include "SPString.cc"
 #include "SPUnicode.cc"
 #include "SPCommon.h"
@@ -55,13 +56,6 @@ THE SOFTWARE.
 
 #ifdef MODULE_STAPPLER_IDN
 #include "SPIdn.cc"
-#endif
-
-#ifdef MODULE_STAPPLER_CRYPTO
-#include "SPCrypto.cc"
-#include "SPCrypto-gnutls.cc"
-#include "SPCrypto-openssl.cc"
-#include "SPCrypto-mbedtls.cc"
 #endif
 
 #ifdef MODULE_STAPPLER_SQL

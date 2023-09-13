@@ -125,8 +125,6 @@ struct CoderSource {
 
 namespace stappler::crypto {
 
-class PublicKey;
-
 /* SHA-2 512-bit context
  * designed for chain use: Sha512().update(input).final() */
 struct Sha512 {
