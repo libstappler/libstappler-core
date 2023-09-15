@@ -51,6 +51,9 @@ struct Gost3411_512 {
 	template <typename ... Args>
 	static Buf perform(Args && ... args);
 
+	static Buf make(const CoderSource &, const StringView &salt = StringView());
+	static Buf hmac(const CoderSource &data, const CoderSource &key);
+
 	Gost3411_512();
 	Gost3411_512 & init();
 
@@ -77,6 +80,9 @@ struct Gost3411_256 {
 
 	template <typename ... Args>
 	static Buf perform(Args && ... args);
+
+	static Buf make(const CoderSource &, const StringView &salt = StringView());
+	static Buf hmac(const CoderSource &data, const CoderSource &key);
 
 	Gost3411_256();
 	Gost3411_256 & init();

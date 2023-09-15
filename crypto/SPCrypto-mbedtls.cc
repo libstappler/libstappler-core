@@ -529,6 +529,21 @@ static BackendCtx s_mbedTLSCtx = {
 
 		return false;
 	},
+	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+		switch (ctx.type) {
+		case KeyType::RSA:
+		case KeyType::DSA:
+			return s_mbedTLSCtx.privSign(ctx, cb, data, SignAlgorithm::RSA_SHA512);
+			break;
+		case KeyType::ECDSA:
+		case KeyType::EDDSA_ED448:
+			return s_mbedTLSCtx.privSign(ctx, cb, data, SignAlgorithm::ECDSA_SHA512);
+			break;
+		default:
+			break;
+		}
+		return false;
+	},
 	.pubInit = [] (KeyContext &ctx) -> bool {
 		mbedtls_pk_init(reinterpret_cast<mbedtls_pk_context *>(&ctx));
 		return true;

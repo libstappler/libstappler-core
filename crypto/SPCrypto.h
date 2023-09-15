@@ -145,6 +145,7 @@ public:
 
 	PublicKey exportPublic() const;
 
+	Backend getBackend() const;
 	KeyContext getKey() const { return _key; }
 	KeyType getType() const { return _key.type; }
 
@@ -158,6 +159,8 @@ public:
 
 	bool sign(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &, SignAlgorithm = SignAlgorithm::RSA_SHA512) const;
 	bool verify(const CoderSource &data, BytesView signature, SignAlgorithm) const;
+
+	bool fingerprint(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &) const;
 
 	bool isSupported(KeyFormat) const;
 
@@ -184,6 +187,7 @@ public:
 	bool import(BytesView);
 	bool importOpenSSH(StringView);
 
+	Backend getBackend() const;
 	KeyContext getKey() const { return _key; }
 	KeyType getType() const { return _key.type; }
 

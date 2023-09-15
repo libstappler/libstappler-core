@@ -57,6 +57,7 @@ struct BackendCtx {
 	bool (*privVerify) (const KeyContext &ctx, const CoderSource &data, BytesView signature, SignAlgorithm algo) = nullptr;
 	bool (*privEncrypt) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) = nullptr;
 	bool (*privDecrypt) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) = nullptr;
+	bool (*privFingerprint) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) = nullptr;
 
 	bool (*pubInit) (KeyContext &ctx) = nullptr;
 	void (*pubFree) (KeyContext &ctx) = nullptr;
@@ -268,16 +269,26 @@ BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher b, 
 	BlockKey256 ret;
 	ret.cipher = b;
 	if (version == 2) {
-		if (!pkey.sign([&] (const uint8_t *ptr, size_t s) {
-			ret.data = string::Sha256().update(BytesView(ptr, s)).final();
-			ret.version = version;
-		}, hash, getSignForBlockCipher(pkey))) {
-			ret.version = 0;
+		ret.version = 0;
+		switch (b) {
+		case BlockCipher::AES_CBC:
+		case BlockCipher::AES_CFB8:
+			pkey.sign([&] (const uint8_t *ptr, size_t s) {
+				ret.version = version;
+				ret.data = hash256(pkey.getBackend(), CoderSource(BytesView(ptr, s)), HashFunction::SHA_2);
+			}, hash, getSignForBlockCipher(pkey));
+			break;
+		case BlockCipher::Gost3412_2015_CTR_ACPKM:
+			pkey.fingerprint([&] (const uint8_t *ptr, size_t s) {
+				ret.version = version;
+				ret.data = Gost3411_256::hmac(hash, BytesView(ptr, s));;
+			}, hash);
+			break;
 		}
 	} else if (version == 1) {
 		if (!pkey.sign([&] (const uint8_t *ptr, size_t s) {
 			s = std::min(s, size_t(256));
-			ret.data = string::Sha256().update(BytesView(ptr, s)).final();
+			ret.data = hash256(pkey.getBackend(), CoderSource(BytesView(ptr, s)), HashFunction::SHA_2);
 			ret.version = version;
 		}, hash, getSignForBlockCipher(pkey))) {
 			ret.version = 0;
@@ -458,6 +469,11 @@ PublicKey PrivateKey::exportPublic() const {
 	return PublicKey(*this);
 }
 
+Backend PrivateKey::getBackend() const {
+	auto backend = static_cast<BackendCtx *>(_key.backendCtx);
+	return backend->name;
+}
+
 bool PrivateKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) const {
 	if (!_loaded || !_valid) {
 		return false;
@@ -522,6 +538,19 @@ bool PrivateKey::verify(const CoderSource &data, BytesView signature, SignAlgori
 
 	auto backend = static_cast<BackendCtx *>(_key.backendCtx);
 	if (backend && backend->privVerify && backend->privVerify(_key, data, signature, algo)) {
+		return true;
+	}
+
+	return false;
+}
+
+bool PrivateKey::fingerprint(const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) const {
+	if (!_loaded || !_valid) {
+		return false;
+	}
+
+	auto backend = static_cast<BackendCtx *>(_key.backendCtx);
+	if (backend && backend->privFingerprint && backend->privFingerprint(_key, cb, data)) {
 		return true;
 	}
 
@@ -636,6 +665,11 @@ bool PublicKey::importOpenSSH(StringView r) {
 	}
 
 	return false;
+}
+
+Backend PublicKey::getBackend() const {
+	auto backend = static_cast<BackendCtx *>(_key.backendCtx);
+	return backend->name;
 }
 
 bool PublicKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb) const {

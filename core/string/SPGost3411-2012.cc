@@ -2163,6 +2163,35 @@ void gost3411_hash_finish(Gost3411_Ctx * CTX, unsigned char *digest) {
 
 }
 
+Gost3411_512::Buf Gost3411_512::make(const CoderSource &source, const StringView &salt) {
+	return Gost3411_512().update(salt.empty()?StringView(SP_SECURE_KEY):salt).update(source).final();
+}
+
+Gost3411_512::Buf Gost3411_512::hmac(const CoderSource &data, const CoderSource &key) {
+	Buf ret;
+	std::array<uint8_t, Length> keyData = { 0 };
+
+	Gost3411_512 hashCtx;
+    if (key.size() > Length) {
+    	hashCtx.update(key).final(keyData.data());
+    } else {
+    	memcpy(keyData.data(), key.data(), key.size());
+    }
+
+    for (auto &it : keyData) {
+    	it ^= HMAC_I_PAD;
+    }
+
+    hashCtx.init().update(keyData).update(data).final(ret.data());
+
+    for (auto &it : keyData) {
+    	it ^= HMAC_I_PAD ^ HMAC_O_PAD;
+    }
+
+    hashCtx.init().update(keyData).update(ret).final(ret.data());
+    return ret;
+}
+
 Gost3411_512::Gost3411_512() { gost3411_hash_init(&ctx, 512); }
 Gost3411_512 & Gost3411_512::init() { gost3411_hash_init(&ctx, 512); return *this; }
 
@@ -2186,6 +2215,35 @@ void Gost3411_512::final(uint8_t *buf) {
 	gost3411_hash_finish(&ctx, buf);
 }
 
+
+Gost3411_256::Buf Gost3411_256::make(const CoderSource &source, const StringView &salt) {
+	return Gost3411_256().update(salt.empty()?StringView(SP_SECURE_KEY):salt).update(source).final();
+}
+
+Gost3411_256::Buf Gost3411_256::hmac(const CoderSource &data, const CoderSource &key) {
+	Buf ret;
+	std::array<uint8_t, Length> keyData = { 0 };
+
+	Gost3411_256 hashCtx;
+    if (key.size() > Length) {
+    	hashCtx.update(key).final(keyData.data());
+    } else {
+    	memcpy(keyData.data(), key.data(), key.size());
+    }
+
+    for (auto &it : keyData) {
+    	it ^= HMAC_I_PAD;
+    }
+
+    hashCtx.init().update(keyData).update(data).final(ret.data());
+
+    for (auto &it : keyData) {
+    	it ^= HMAC_I_PAD ^ HMAC_O_PAD;
+    }
+
+    hashCtx.init().update(keyData).update(ret).final(ret.data());
+    return ret;
+}
 
 Gost3411_256::Gost3411_256() { gost3411_hash_init(&ctx, 256); }
 Gost3411_256 & Gost3411_256::init() { gost3411_hash_init(&ctx, 512); return *this; }

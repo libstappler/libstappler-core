@@ -41,10 +41,364 @@ THE SOFTWARE.
 extern "C" {
 
 #include <gost-engine.h>
+#include <e_gost_err.h>
 
+int pack_sign_cp(ECDSA_SIG *s, int order, unsigned char *sig, size_t *siglen);
+int gost_ec_point_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n,
+                      const EC_POINT *q, const BIGNUM *m, BN_CTX *ctx);
 }
 
 namespace stappler::crypto {
+
+static const char *ossl_engine_gost_id = "stappler-gost-hook";
+static const char *ossl_engine_gost_name = "Hook for GOST engine sign functions";
+
+static EVP_PKEY_METHOD *s_ossl_GostR3410_2012_256_resign;
+static int (*s_ossl_GostR3410_2012_256_psign_init)(EVP_PKEY_CTX *ctx);
+static int (*s_ossl_GostR3410_2012_256_psign)(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned char *tbs, size_t tbslen);
+
+static EVP_PKEY_METHOD *s_ossl_GostR3410_2012_512_resign;
+static int (*s_ossl_GostR3410_2012_512_psign_init)(EVP_PKEY_CTX *ctx);
+static int (*s_ossl_GostR3410_2012_512_psign)(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned char *tbs, size_t tbslen);
+
+static EVP_PKEY_METHOD *s_ossl_GostR3410_2012_meths[] = {
+	nullptr,
+	nullptr
+};
+
+static int s_ossl_GostR3410_2012_nids_array[] = {
+	NID_id_GostR3410_2012_256,
+	NID_id_GostR3410_2012_512
+};
+
+static ENGINE *s_ossl_Engine = nullptr;
+
+typedef enum bnrand_flag_e {
+    NORMAL, TESTING, PRIVATE
+} BNRAND_FLAG;
+
+static int hook_ossl_bnrand(BIGNUM *rnd, int bits, int top, int bottom, unsigned int strength, const Gost3411_512::Buf &rndData) {
+	unsigned char *buf = NULL;
+	int ret = 0, bit, bytes, mask;
+
+	if (bits == 0) {
+		if (top != BN_RAND_TOP_ANY || bottom != BN_RAND_BOTTOM_ANY)
+			goto toosmall;
+		BN_zero(rnd);
+		return 1;
+	}
+	if (bits < 0 || (bits == 1 && top > 0))
+		goto toosmall;
+
+	bytes = (bits + 7) / 8;
+	bit = (bits - 1) % 8;
+	mask = 0xff << (bit + 1);
+
+	buf = static_cast<unsigned char *>(OPENSSL_malloc(bytes));
+	if (buf == NULL) {
+		ERR_raise(ERR_LIB_BN, ERR_R_MALLOC_FAILURE);
+		goto err;
+	}
+
+	/* make a random number and set the top and bottom bits */
+	if (size_t(bytes) > rndData.size()) {
+		goto err;
+	}
+	memcpy(buf, rndData.data(), bytes);
+
+	if (top >= 0) {
+		if (top) {
+			if (bit == 0) {
+				buf[0] = 1;
+				buf[1] |= 0x80;
+			} else {
+				buf[0] |= (3 << (bit - 1));
+			}
+		} else {
+			buf[0] |= (1 << bit);
+		}
+	}
+	buf[0] &= ~mask;
+	if (bottom) /* set bottom bit if requested */
+		buf[bytes - 1] |= 1;
+	if (!BN_bin2bn(buf, bytes, rnd))
+		goto err;
+	ret = 1;
+err:
+	OPENSSL_clear_free(buf, bytes);
+	return ret;
+
+toosmall:
+	ERR_raise(ERR_LIB_BN, BN_R_BITS_TOO_SMALL);
+	return 0;
+}
+
+/* random number r:  0 <= r < range */
+static int hook_ossl_bnrand_range(BIGNUM *r, const BIGNUM *range, unsigned int strength, const Gost3411_512::Buf &rndData) {
+	int n;
+	int count = 100;
+
+	if (r == NULL) {
+		ERR_raise(ERR_LIB_BN, ERR_R_PASSED_NULL_PARAMETER);
+		return 0;
+	}
+
+	if (BN_is_zero(range)) {
+		ERR_raise(ERR_LIB_BN, BN_R_INVALID_RANGE);
+		return 0;
+	}
+
+	n = BN_num_bits(range); /* n > 0 */
+
+	/* BN_is_bit_set(range, n - 1) always holds */
+
+	if (n == 1)
+		BN_zero(r);
+	else if (!BN_is_bit_set(range, n - 2) && !BN_is_bit_set(range, n - 3)) {
+		/*
+		 * range = 100..._2, so 3*range (= 11..._2) is exactly one bit longer
+		 * than range
+		 */
+		do {
+			if (!hook_ossl_bnrand(r, n + 1, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, strength, rndData))
+				return 0;
+
+			/*
+			 * If r < 3*range, use r := r MOD range (which is either r, r -
+			 * range, or r - 2*range). Otherwise, iterate once more. Since
+			 * 3*range = 11..._2, each iteration succeeds with probability >=
+			 * .75.
+			 */
+			if (BN_cmp(r, range) >= 0) {
+				if (!BN_sub(r, r, range))
+					return 0;
+				if (BN_cmp(r, range) >= 0)
+					if (!BN_sub(r, r, range))
+						return 0;
+			}
+
+			if (!--count) {
+				ERR_raise(ERR_LIB_BN, BN_R_TOO_MANY_ITERATIONS);
+				return 0;
+			}
+
+		} while (BN_cmp(r, range) >= 0);
+	} else {
+		do {
+			/* range = 11..._2  or  range = 101..._2 */
+			if (!hook_ossl_bnrand(r, n, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, rndData))
+				return 0;
+
+			if (!--count) {
+				ERR_raise(ERR_LIB_BN, BN_R_TOO_MANY_ITERATIONS);
+				return 0;
+			}
+		} while (BN_cmp(r, range) >= 0);
+	}
+
+	return 1;
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC_KEY *eckey) {
+	ECDSA_SIG *newsig = NULL, *ret = NULL;
+	BIGNUM *md = NULL;
+	BIGNUM *order = NULL;
+	const EC_GROUP *group;
+	const BIGNUM *priv_key;
+	BIGNUM *r = NULL, *s = NULL, *X = NULL, *tmp = NULL, *tmp2 = NULL, *k = NULL, *e = NULL;
+
+	BIGNUM *new_r = NULL, *new_s = NULL;
+
+	EC_POINT *C = NULL;
+	BN_CTX *ctx;
+
+	OPENSSL_assert(dgst != NULL && eckey != NULL);
+
+	if (!(ctx = BN_CTX_secure_new())) {
+		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+		return NULL;
+	}
+
+	BN_CTX_start(ctx);
+	OPENSSL_assert(dlen == 32 || dlen == 64);
+	md = BN_lebin2bn(dgst, dlen, NULL);
+	newsig = ECDSA_SIG_new();
+	if (!newsig || !md) {
+		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+		goto err;
+	}
+	group = EC_KEY_get0_group(eckey);
+	if (!group) {
+		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+		goto err;
+	}
+	order = BN_CTX_get(ctx);
+	if (!order || !EC_GROUP_get_order(group, order, ctx)) {
+		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+		goto err;
+	}
+	priv_key = EC_KEY_get0_private_key(eckey);
+
+	if (!priv_key) {
+		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+		goto err;
+	}
+	e = BN_CTX_get(ctx);
+	if (!e || !BN_mod(e, md, order, ctx)) {
+		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+		goto err;
+	}
+#ifdef DEBUG_SIGN
+    fprintf(stderr, "digest as bignum=");
+    BN_print_fp(stderr, md);
+    fprintf(stderr, "\ndigest mod q=");
+    BN_print_fp(stderr, e);
+    fprintf(stderr, "\n");
+#endif
+	if (BN_is_zero(e)) {
+		BN_one(e);
+	}
+	k = BN_CTX_get(ctx);
+	C = EC_POINT_new(group);
+	if (!k || !C) {
+		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+		goto err;
+	}
+
+	do {
+		do {
+			auto hexPrivKey = BN_bn2hex(priv_key);
+			auto privBytes = base16::decode<memory::StandartInterface>(StringView(hexPrivKey));
+			std::reverse(privBytes.begin(), privBytes.end());
+			OPENSSL_free(hexPrivKey);
+
+			auto randSeed = Gost3411_512::hmac(privBytes, BytesView(dgst, dlen));
+
+			if (!hook_ossl_bnrand_range(k, order, 0, randSeed)) {
+				GOSTerr(GOST_F_GOST_EC_SIGN, GOST_R_RNG_ERROR);
+				goto err;
+			}
+			if (!gost_ec_point_mul(group, C, k, NULL, NULL, ctx)) {
+				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_EC_LIB);
+				goto err;
+			}
+			if (!X)
+				X = BN_CTX_get(ctx);
+			if (!r)
+				r = BN_CTX_get(ctx);
+			if (!X || !r) {
+				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+				goto err;
+			}
+			if (!EC_POINT_get_affine_coordinates(group, C, X, NULL, ctx)) {
+				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_EC_LIB);
+				goto err;
+			}
+
+			if (!BN_nnmod(r, X, order, ctx)) {
+				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+				goto err;
+			}
+		} while (BN_is_zero(r));
+		/* s =  (r*priv_key+k*e) mod order */
+		if (!tmp)
+			tmp = BN_CTX_get(ctx);
+		if (!tmp2)
+			tmp2 = BN_CTX_get(ctx);
+		if (!s)
+			s = BN_CTX_get(ctx);
+		if (!tmp || !tmp2 || !s) {
+			GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+			goto err;
+		}
+
+		if (!BN_mod_mul(tmp, priv_key, r, order, ctx) || !BN_mod_mul(tmp2, k, e, order, ctx) || !BN_mod_add(s, tmp, tmp2, order, ctx)) {
+			GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+			goto err;
+		}
+	} while (BN_is_zero(s));
+
+	new_s = BN_dup(s);
+	new_r = BN_dup(r);
+	if (!new_s || !new_r) {
+		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+		goto err;
+	}
+	ECDSA_SIG_set0(newsig, new_r, new_s);
+
+	ret = newsig;
+err:
+	BN_CTX_end(ctx);
+	BN_CTX_free(ctx);
+	if (C)
+		EC_POINT_free(C);
+	if (md)
+		BN_free(md);
+	if (!ret && newsig) {
+		ECDSA_SIG_free(newsig);
+	}
+	return ret;
+}
+
+static int s_ossl_GostR3410_2012_256_psign_resign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned char *tbs, size_t tbs_len) {
+	if (!sig) {
+		return s_ossl_GostR3410_2012_256_psign(ctx, sig, siglen, tbs, tbs_len);
+	} else {
+		size_t order;
+		s_ossl_GostR3410_2012_256_psign(ctx, nullptr, &order, tbs, tbs_len);
+
+	    EVP_PKEY *pkey = EVP_PKEY_CTX_get0_pkey(ctx);
+		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, tbs_len, (EC_KEY *)EVP_PKEY_get0(pkey));
+		if (!unpacked_sig) {
+			return 0;
+		}
+		return pack_sign_cp(unpacked_sig, order / 2, sig, siglen);
+	}
+}
+
+static int s_ossl_GostR3410_2012_512_psign_resign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned char *tbs, size_t tbs_len) {
+	if (!sig) {
+		return s_ossl_GostR3410_2012_512_psign(ctx, sig, siglen, tbs, tbs_len);
+	} else {
+		size_t order;
+		s_ossl_GostR3410_2012_512_psign(ctx, nullptr, &order, tbs, tbs_len);
+
+	    EVP_PKEY *pkey = EVP_PKEY_CTX_get0_pkey(ctx);
+		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, tbs_len, (EC_KEY *)EVP_PKEY_get0(pkey));
+		if (!unpacked_sig) {
+			return 0;
+		}
+		return pack_sign_cp(unpacked_sig, order / 2, sig, siglen);
+	}
+}
+#pragma GCC diagnostic pop
+
+static int ossl_gost_meth_nids(const int **nids) {
+    if (nids) {
+    	*nids = s_ossl_GostR3410_2012_nids_array;
+    }
+    return 2;
+}
+
+static int ossl_gost_pkey_meths(ENGINE *e, EVP_PKEY_METHOD **pmeth, const int **nids, int nid) {
+	if (!pmeth)
+		return ossl_gost_meth_nids(nids);
+
+	size_t i = 0;
+	for (auto &it : s_ossl_GostR3410_2012_nids_array) {
+		if (nid == it) {
+			*pmeth = s_ossl_GostR3410_2012_meths[i];
+			return 1;
+		}
+		++ i;
+	}
+
+	*pmeth = NULL;
+	return 0;
+}
 
 // For interoperability with GnuTLS
 static constexpr int OPENSSL_PK_ENCRYPT_PADDING = RSA_PKCS1_PADDING;
@@ -102,10 +456,50 @@ static BackendCtx s_openSSLCtx = {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		ENGINE_load_gost();
+
+		auto e = ENGINE_get_pkey_meth_engine(NID_id_GostR3410_2012_256);
+		if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_256)) {
+			s_ossl_GostR3410_2012_256_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_256, 0);
+			EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_256_resign, meth);
+
+			EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_256_resign,
+					&s_ossl_GostR3410_2012_256_psign_init, &s_ossl_GostR3410_2012_256_psign);
+			EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_256_resign, s_ossl_GostR3410_2012_256_psign_init,
+					&s_ossl_GostR3410_2012_256_psign_resign);
+
+			s_ossl_GostR3410_2012_meths[0] = s_ossl_GostR3410_2012_256_resign;
+			EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_256_resign);
+		}
+		if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_512)) {
+			s_ossl_GostR3410_2012_512_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_512, 0);
+			EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_512_resign, meth);
+
+			EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_512_resign,
+					&s_ossl_GostR3410_2012_512_psign_init, &s_ossl_GostR3410_2012_512_psign);
+			EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_512_resign, s_ossl_GostR3410_2012_512_psign_init,
+					&s_ossl_GostR3410_2012_512_psign_resign);
+
+			s_ossl_GostR3410_2012_meths[1] = s_ossl_GostR3410_2012_512_resign;
+			EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_512_resign);
+		}
+		if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_256)) {
+			EVP_PKEY_asn1_add0(meth);
+		}
+		if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_512)) {
+			EVP_PKEY_asn1_add0(meth);
+		}
+
+		s_ossl_Engine = ENGINE_new();
+		ENGINE_set_id(s_ossl_Engine, ossl_engine_gost_id);
+		ENGINE_set_name(s_ossl_Engine, ossl_engine_gost_name);
+		ENGINE_set_pkey_meths(s_ossl_Engine, ossl_gost_pkey_meths);
+
+		ENGINE_register_pkey_meths(s_ossl_Engine);
+
 	    ENGINE_register_all_complete();
 		OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, NULL);
-#pragma GCC diagnostic pop
 		log::verbose("Crypto", "OpenSSL+gost backend loaded");
+#pragma GCC diagnostic pop
 	},
 	.finalize = [] () { },
 	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
@@ -532,6 +926,7 @@ static BackendCtx s_openSSLCtx = {
 	.privSign = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data, SignAlgorithm algo) {
 		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
 		EVP_MD_CTX *mdctx =  EVP_MD_CTX_create();
+		EVP_PKEY_CTX *pctx = nullptr;
 		unsigned char *sigdata = nullptr;
 		size_t siglen = 0;
 
@@ -554,19 +949,19 @@ static BackendCtx s_openSSLCtx = {
 		switch (algo) {
 		case SignAlgorithm::RSA_SHA256:
 		case SignAlgorithm::ECDSA_SHA256:
-			if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, key)) {
+			if (1 != EVP_DigestSignInit(mdctx, &pctx, EVP_sha256(), NULL, key)) {
 				return cleanup(false);
 			}
 			break;
 		case SignAlgorithm::RSA_SHA512:
 		case SignAlgorithm::ECDSA_SHA512:
-			if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha512(), NULL, key)) {
+			if (1 != EVP_DigestSignInit(mdctx, &pctx, EVP_sha512(), NULL, key)) {
 				return cleanup(false);
 			}
 			break;
 		case SignAlgorithm::GOST_256:
 			if (auto md = EVP_get_digestbyname("md_gost12_256")) {
-				if (1 != EVP_DigestSignInit(mdctx, NULL, md, NULL, key)) {
+				if (1 != EVP_DigestSignInit(mdctx, &pctx, md, NULL, key)) {
 					return cleanup(false);
 				}
 			} else {
@@ -575,7 +970,7 @@ static BackendCtx s_openSSLCtx = {
 			break;
 		case SignAlgorithm::GOST_512:
 			if (auto md = EVP_get_digestbyname("md_gost12_512")) {
-				if (1 != EVP_DigestSignInit(mdctx, NULL, md, NULL, key)) {
+				if (1 != EVP_DigestSignInit(mdctx, &pctx, md, NULL, key)) {
 					return cleanup(false);
 				}
 			} else {
@@ -596,7 +991,6 @@ static BackendCtx s_openSSLCtx = {
 					cb(sigdata, siglen);
 					return cleanup(true);
 				}
-
 			}
 		}
 		return cleanup(false);
@@ -764,6 +1158,36 @@ static BackendCtx s_openSSLCtx = {
 		cb(static_cast<uint8_t *>(out), outlen);
 
 		return cleanup(true);
+	},
+	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
+		bool success = false;
+		switch (ctx.type) {
+		case KeyType::RSA:
+		case KeyType::DSA:
+			return s_openSSLCtx.privSign(ctx, cb, data, SignAlgorithm::RSA_SHA512);
+			break;
+		case KeyType::ECDSA:
+		case KeyType::EDDSA_ED448:
+			return s_openSSLCtx.privSign(ctx, cb, data, SignAlgorithm::RSA_SHA512);
+			break;
+		case KeyType::GOST3410_2012_256:
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+			EVP_PKEY_set1_engine(key, s_ossl_Engine);
+			success = s_openSSLCtx.privSign(ctx, cb, data, SignAlgorithm::GOST_256);
+			EVP_PKEY_set1_engine(key, nullptr);
+			break;
+		case KeyType::GOST3410_2012_512:
+			EVP_PKEY_set1_engine(key, s_ossl_Engine);
+			success = s_openSSLCtx.privSign(ctx, cb, data, SignAlgorithm::GOST_512);
+			EVP_PKEY_set1_engine(key, nullptr);
+#pragma GCC diagnostic pop
+			break;
+		default:
+			break;
+		}
+		return success;
 	},
 	.pubInit = [] (KeyContext &ctx) -> bool {
 		ctx.keyCtx = nullptr;

@@ -125,6 +125,13 @@ struct CoderSource {
 
 namespace stappler::crypto {
 
+constexpr uint8_t HMAC_I_PAD = 0x36;
+constexpr uint8_t HMAC_O_PAD = 0x5C;
+
+#ifndef SP_SECURE_KEY
+constexpr auto SP_SECURE_KEY = "Nev3rseenany0nesoequalinth1sscale";
+#endif
+
 /* SHA-2 512-bit context
  * designed for chain use: Sha512().update(input).final() */
 struct Sha512 {

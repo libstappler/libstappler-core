@@ -37,8 +37,112 @@ THE SOFTWARE.
 #include <gnutls/abstract.h>
 #include <gnutls/crypto.h>
 #include <gnutls/gnutls.h>
+#include <nettle/bignum.h>
+#include <nettle/gostdsa.h>
+#include <nettle/ecc.h>
+#include <nettle/ecc-curve.h>
+#include <gmp.h>
 
 namespace stappler::crypto {
+
+struct Hook_GnuTLS_RandomData {
+	const Gost3411_512::Buf *buf;
+	size_t offset;
+};
+
+static void hook_gnutls_random_func(void *ctx, size_t length, uint8_t *dst) {
+	Hook_GnuTLS_RandomData *data = static_cast<Hook_GnuTLS_RandomData *>(ctx);
+	memcpy(dst, data->buf->data() + data->offset, length);
+	data->offset += length;
+}
+
+static void hook_gnutls_mpi_print(const mpz_t *p, void *buffer, size_t *nbytes) {
+	unsigned int size = nettle_mpz_sizeinbase_256_u(*p);
+	if (buffer) {
+		nettle_mpz_get_str_256(size, static_cast<uint8_t *>(buffer), *p);
+	}
+	*nbytes = size;
+}
+
+static void hook_gnutls_mpi_bprint_size(const mpz_t *a, uint8_t *buf, size_t size) {
+	size_t bytes = 0;
+	hook_gnutls_mpi_print(a, NULL, &bytes);
+
+	if (bytes <= size) {
+		unsigned i;
+		size_t diff = size - bytes;
+
+		for (i = 0; i < diff; i++) {
+			buf[i] = 0;
+		}
+		hook_gnutls_mpi_print(a, &buf[diff], &bytes);
+	} else {
+		hook_gnutls_mpi_print(a, buf, &bytes);
+	}
+}
+
+static bool hook_gnutls_sign_gost(gnutls_privkey_t key, BytesView hash, const Callback<void(const uint8_t *, size_t)> &cb) {
+	gnutls_ecc_curve_t c;
+	gnutls_digest_algorithm_t digest;
+	gnutls_gost_paramset_t paramset;
+	gnutls_datum_t k;
+	gnutls_privkey_export_gost_raw2(key, &c, &digest, &paramset, nullptr, nullptr, &k, 0);
+
+	struct ecc_scalar priv;
+	struct dsa_signature sig;
+	const struct ecc_curve *curve;
+
+	switch (c) {
+	case GNUTLS_ECC_CURVE_GOST256CPA:
+	case GNUTLS_ECC_CURVE_GOST256CPXA:
+	case GNUTLS_ECC_CURVE_GOST256B:
+		curve = nettle_get_gost_gc256b();
+		break;
+	case GNUTLS_ECC_CURVE_GOST512A:
+		curve = nettle_get_gost_gc512a();
+		break;
+	default:
+		break;
+	}
+
+	if (!curve) {
+		gnutls_free(k.data);
+		return false;
+	}
+
+	mpz_t privKeyK;
+	mpz_init(privKeyK);
+	mpz_import(privKeyK, k.size, -1, 1, 0, 0, k.data);
+
+	ecc_scalar_init(&priv, curve);
+	if (ecc_scalar_set(&priv, privKeyK) == 0) {
+		ecc_scalar_clear(&priv);
+	}
+
+	dsa_signature_init(&sig);
+
+	auto randSeed = Gost3411_512::hmac(BytesView(k.data, k.size), hash);
+
+	Hook_GnuTLS_RandomData randomData { &randSeed, 0 };
+
+	gostdsa_sign(&priv, &randomData, hook_gnutls_random_func, hash.size(), hash.data(), &sig);
+
+	auto intsize = (ecc_bit_size(curve) + 7) / 8;
+	uint8_t data[intsize * 2];
+
+	hook_gnutls_mpi_bprint_size(&sig.s, data, intsize);
+	hook_gnutls_mpi_bprint_size(&sig.r, data + intsize, intsize);
+
+	cb(data, intsize * 2);
+
+	dsa_signature_clear(&sig);
+	ecc_scalar_clear(&priv);
+	mpz_clear(privKeyK);
+
+	gnutls_free(k.data);
+
+	return true;
+}
 
 static gnutls_sign_algorithm_t getGnuTLSAlgo(SignAlgorithm a) {
 	switch (a) {
@@ -299,7 +403,11 @@ static BackendCtx s_gnuTLSCtx = {
 		return success;
 	},
 	.privInit = [] (KeyContext &ctx) -> bool {
-		return gnutls_privkey_init( reinterpret_cast<gnutls_privkey_t *>(&ctx.keyCtx) ) == GNUTLS_E_SUCCESS;
+		auto err = gnutls_privkey_init( reinterpret_cast<gnutls_privkey_t *>(&ctx.keyCtx) );
+		if (err == GNUTLS_E_SUCCESS) {
+			return true;
+		}
+		return false;
 	},
 	.privFree = [] (KeyContext &ctx) {
 		gnutls_privkey_deinit( static_cast<gnutls_privkey_t>(ctx.keyCtx) );
@@ -519,6 +627,27 @@ static BackendCtx s_gnuTLSCtx = {
 			cb(output.data, output.size);
 			gnutls_free(output.data);
 			return true;
+		}
+		return false;
+	},
+	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+		switch (ctx.type) {
+		case KeyType::RSA:
+		case KeyType::DSA:
+			return s_gnuTLSCtx.privSign(ctx, cb, data, SignAlgorithm::RSA_SHA512);
+			break;
+		case KeyType::ECDSA:
+		case KeyType::EDDSA_ED448:
+			return s_gnuTLSCtx.privSign(ctx, cb, data, SignAlgorithm::ECDSA_SHA512);
+			break;
+		case KeyType::GOST3410_2012_256:
+			return  hook_gnutls_sign_gost(static_cast<gnutls_privkey_t>(ctx.keyCtx), Gost3411_256().update(data).final(), cb);
+			break;
+		case KeyType::GOST3410_2012_512:
+			return  hook_gnutls_sign_gost(static_cast<gnutls_privkey_t>(ctx.keyCtx), Gost3411_512().update(data).final(), cb);
+			break;
+		default:
+			break;
 		}
 		return false;
 	},

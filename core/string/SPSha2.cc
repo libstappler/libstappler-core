@@ -28,10 +28,6 @@ THE SOFTWARE.
 #include "SPSha.h"
 #include "SPCommon.h"
 
-#ifndef SP_SECURE_KEY
-#define SP_SECURE_KEY "Nev3rseenany0nesoequalinth1sscale"
-#endif
-
 namespace sha256 {
 
 using sha256_state = stappler::crypto::Sha256::_Ctx;
@@ -355,22 +351,16 @@ static void sha_done(sha512_state& md, void *out) {
 
 namespace stappler::crypto {
 
-constexpr uint32_t SHA256_BLOCK_SIZE = 64;
-constexpr uint32_t SHA512_BLOCK_SIZE = 128;
-
-constexpr uint8_t HMAC_I_PAD = 0x36;
-constexpr uint8_t HMAC_O_PAD = 0x5C;
-
 Sha512::Buf Sha512::make(const CoderSource &source, const StringView &salt) {
 	return Sha512().update(salt.empty()?StringView(SP_SECURE_KEY):salt).update(source).final();
 }
 
 Sha512::Buf Sha512::hmac(const CoderSource &data, const CoderSource &key) {
-	Sha512::Buf ret;
-	std::array<uint8_t, SHA512_BLOCK_SIZE> keyData = { 0 };
+	Buf ret;
+	std::array<uint8_t, Length> keyData = { 0 };
 
 	Sha512 shaCtx;
-    if (key.size() > SHA512_BLOCK_SIZE) {
+    if (key.size() > Length) {
     	shaCtx.update(key).final(keyData.data());
     } else {
     	memcpy(keyData.data(), key.data(), key.size());
@@ -419,12 +409,12 @@ Sha256::Buf Sha256::make(const CoderSource &source, const StringView &salt) {
 }
 
 Sha256::Buf Sha256::hmac(const CoderSource &data, const CoderSource &key) {
-	Sha256::Buf ret;
-	std::array<uint8_t, SHA256_BLOCK_SIZE> keyData = { 0 };
+	Buf ret;
+	std::array<uint8_t, Length> keyData = { 0 };
 	memset(keyData.data(), 0, keyData.size());
 
 	Sha256 shaCtx;
-    if (key.size() > SHA256_BLOCK_SIZE) {
+    if (key.size() > Length) {
     	shaCtx.init().update(key).final(keyData.data());
     } else {
     	memcpy(keyData.data(), key.data(), key.size());
