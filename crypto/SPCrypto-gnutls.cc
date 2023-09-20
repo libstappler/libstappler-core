@@ -270,7 +270,7 @@ static BackendCtx s_gnuTLSCtx = {
 		auto blockSize = math::align<size_t>(dataSize, cipherBlockSize)
 				+ cipherBlockSize; // allocate space for possible padding
 
-		uint8_t output[blockSize + sizeof(CryptoBlockHeader)];
+		uint8_t output[blockSize + sizeof(BlockCryptoHeader)];
 
 		uint8_t iv[16] = { 0 };
 		gnutls_datum_t ivData = {
@@ -290,15 +290,15 @@ static BackendCtx s_gnuTLSCtx = {
 			return false;
 		}
 
-		size_t outSize = blockSize - sizeof(CryptoBlockHeader);
+		size_t outSize = blockSize - sizeof(BlockCryptoHeader);
 		fillCryptoBlockHeader(output, key, d);
 
 		if constexpr (SafeBlockEncoding) {
-			memcpy(output + sizeof(CryptoBlockHeader), d.data(), d.size());
-			memset(output + sizeof(CryptoBlockHeader) + d.size(), 0, blockSize - d.size());
-			err = gnutls_cipher_encrypt(aes, output + sizeof(CryptoBlockHeader), outSize);
+			memcpy(output + sizeof(BlockCryptoHeader), d.data(), d.size());
+			memset(output + sizeof(BlockCryptoHeader) + d.size(), 0, blockSize - d.size());
+			err = gnutls_cipher_encrypt(aes, output + sizeof(BlockCryptoHeader), outSize);
 		} else {
-			err = gnutls_cipher_encrypt2(aes, d.data(), math::align<size_t>(dataSize, cipherBlockSize), output + sizeof(CryptoBlockHeader), outSize);
+			err = gnutls_cipher_encrypt2(aes, d.data(), math::align<size_t>(dataSize, cipherBlockSize), output + sizeof(BlockCryptoHeader), outSize);
 		}
 
 		if (err != 0) {
@@ -308,7 +308,7 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 
 		gnutls_cipher_deinit(aes);
-		cb(output, blockSize + sizeof(CryptoBlockHeader) - cipherBlockSize);
+		cb(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize);
 		return true;
 	},
 	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
@@ -317,7 +317,7 @@ static BackendCtx s_gnuTLSCtx = {
 		auto algo = getGnuTLSAlgo(info.cipher);
 
 		auto blockSize = math::align<size_t>(info.dataSize, cipherBlockSize) + cipherBlockSize;
-		b.offset(sizeof(CryptoBlockHeader));
+		b.offset(sizeof(BlockCryptoHeader));
 
 		uint8_t output[blockSize];
 

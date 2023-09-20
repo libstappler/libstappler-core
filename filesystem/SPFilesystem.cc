@@ -524,7 +524,7 @@ File openForReading(StringView ipath) {
 	return File();
 }
 
-bool readIntoBuffer(uint8_t *buf, const StringView &ipath, size_t off, size_t size) {
+bool readIntoBuffer(uint8_t *buf, StringView ipath, size_t off, size_t size) {
 	auto f = openForReading(ipath);
 	if (f) {
 		size_t fsize = f.size();
@@ -547,7 +547,7 @@ bool readIntoBuffer(uint8_t *buf, const StringView &ipath, size_t off, size_t si
 	return false;
 }
 
-bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, const StringView &ipath, size_t off, size_t size) {
+bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, StringView ipath, size_t off, size_t size) {
 	auto f = openForReading(ipath);
 	if (f) {
 		size_t fsize = f.size();

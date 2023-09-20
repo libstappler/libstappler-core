@@ -188,23 +188,16 @@ static BackendCtx *findBackendForBlock(BlockCipher c) {
 	return nullptr;
 }
 
-struct CryptoBlockHeader {
-	uint64_t size;
-	uint16_t version;
-	uint16_t cipher;
-	uint32_t padding;
-};
-
 static void fillCryptoBlockHeader(uint8_t *buf, const BlockKey256 &key, BytesView d) {
 	uint64_t dataSize = d.size();
 
-	CryptoBlockHeader header;
+	BlockCryptoHeader header;
 	header.size = byteorder::HostToLittle(dataSize);
 	header.version = byteorder::HostToLittle(key.version);
 	header.cipher = byteorder::HostToLittle(toInt(key.cipher));
 	header.padding = 0;
 
-	memcpy(buf, &header, sizeof(CryptoBlockHeader));
+	memcpy(buf, &header, sizeof(BlockCryptoHeader));
 }
 
 static SignAlgorithm getSignForBlockCipher(const PrivateKey &key) {

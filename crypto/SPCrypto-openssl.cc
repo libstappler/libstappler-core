@@ -24,6 +24,8 @@ THE SOFTWARE.
 #include "SPString.h"
 #include "SPLog.h"
 #include "SPCrypto.h"
+#include "SPGost3411-2012.h"
+#include "SPValid.h"
 
 #if __CDT_PARSER__
 #define MODULE_STAPPLER_CRYPTO_OPENSSL 1
@@ -49,6 +51,9 @@ int gost_ec_point_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n,
 }
 
 namespace stappler::crypto {
+
+static uint8_t * writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwork exp);
+static void fillCryptoBlockHeader(uint8_t *buf, const BlockKey256 &key, BytesView d);
 
 static const char *ossl_engine_gost_id = "stappler-gost-hook";
 static const char *ossl_engine_gost_name = "Hook for GOST engine sign functions";
@@ -510,7 +515,7 @@ static BackendCtx s_openSSLCtx = {
 		auto blockSize = math::align<size_t>(dataSize, cipherBlockSize)
 				+ cipherBlockSize; // allocate space for possible padding
 
-		uint8_t output[blockSize + sizeof(CryptoBlockHeader)];
+		uint8_t output[blockSize + sizeof(BlockCryptoHeader)];
 
 		fillCryptoBlockHeader(output, key, d);
 
@@ -564,16 +569,16 @@ static BackendCtx s_openSSLCtx = {
 			memset(tmp, 0, blockSize);
 			memcpy(tmp, d.data(), d.size());
 
-			if (!perform(en, tmp, blockSize - cipherBlockSize, output + sizeof(CryptoBlockHeader))) {
+			if (!perform(en, tmp, blockSize - cipherBlockSize, output + sizeof(BlockCryptoHeader))) {
 				return finalize(false);
 			}
 		} else {
-			if (!perform(en, d.data(), d.size(), output + sizeof(CryptoBlockHeader))) {
+			if (!perform(en, d.data(), d.size(), output + sizeof(BlockCryptoHeader))) {
 				return finalize(false);
 			}
 		}
 
-		cb(output, blockSize + sizeof(CryptoBlockHeader) - cipherBlockSize);
+		cb(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize);
 		return finalize(true);
 	},
 	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
@@ -582,7 +587,7 @@ static BackendCtx s_openSSLCtx = {
 		auto cipher = getOpenSSLCipher(info.cipher);
 
 		auto blockSize = math::align<size_t>(info.dataSize, cipherBlockSize) + cipherBlockSize;
-		b.offset(sizeof(CryptoBlockHeader));
+		b.offset(sizeof(BlockCryptoHeader));
 
 		uint8_t output[blockSize];
 

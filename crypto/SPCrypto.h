@@ -123,6 +123,13 @@ struct BlockKey256 {
 	bool operator!=(const BlockKey256 &) const = default;
 };
 
+struct BlockCryptoHeader {
+	uint64_t size;
+	uint16_t version;
+	uint16_t cipher;
+	uint32_t padding;
+};
+
 struct BlockInfo {
 	uint64_t dataSize = 0;
 	uint16_t version = 0; // keygen version

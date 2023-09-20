@@ -96,7 +96,7 @@ static BackendCtx s_mbedTLSCtx = {
 		auto blockSize = math::align<size_t>(dataSize, cipherBlockSize)
 				+ cipherBlockSize; // allocate space for possible padding
 
-		uint8_t output[blockSize + sizeof(CryptoBlockHeader)];
+		uint8_t output[blockSize + sizeof(BlockCryptoHeader)];
 
 		fillCryptoBlockHeader(output, key, d);
 
@@ -130,16 +130,16 @@ static BackendCtx s_mbedTLSCtx = {
 			uint8_t tmp[blockSize] = { 0 };
 			memcpy(tmp, d.data(), d.size());
 
-			if (!perform(tmp, blockSize - cipherBlockSize, output + sizeof(CryptoBlockHeader))) {
+			if (!perform(tmp, blockSize - cipherBlockSize, output + sizeof(BlockCryptoHeader))) {
 				return false;
 			}
 		} else {
-			if (!perform(d.data(), blockSize - cipherBlockSize, output + sizeof(CryptoBlockHeader))) {
+			if (!perform(d.data(), blockSize - cipherBlockSize, output + sizeof(BlockCryptoHeader))) {
 				return false;
 			}
 		}
 
-		cb(output, blockSize + sizeof(CryptoBlockHeader) - cipherBlockSize);
+		cb(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize);
 		return true;
 	},
 	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
@@ -148,7 +148,7 @@ static BackendCtx s_mbedTLSCtx = {
 		auto cipherBlockSize = getBlockSize(info.cipher);
 
 		auto blockSize = math::align<size_t>(info.dataSize, cipherBlockSize) + cipherBlockSize;
-		b.offset(sizeof(CryptoBlockHeader));
+		b.offset(sizeof(BlockCryptoHeader));
 
 		uint8_t output[blockSize];
 

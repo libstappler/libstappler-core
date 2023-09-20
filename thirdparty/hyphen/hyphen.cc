@@ -979,7 +979,6 @@ int hnj_hyphen_hyph_(HyphenDict *dict, const char *word, int word_size,
   int * matchindex;
   char ** matchrepl;
   int isrepl = 0;
-  int nHyphCount;
 
   size_t prep_word_size = word_size + 3;
   prep_word = (char*) hnj_malloc (prep_word_size);
@@ -1114,10 +1113,8 @@ int hnj_hyphen_hyph_(HyphenDict *dict, const char *word, int word_size,
 
        /* now create a new char string showing hyphenation positions */
        /* count the hyphens and allocate space for the new hyphenated string */
-       nHyphCount = 0;
        for (i = 0; i < word_size; i++)
           if (hyphens[i]&1)
-             nHyphCount++;
        j = 0;
        for (i = 0; i < word_size; i++) {
            if (isrepl && (matchindex[i] >= 0) && matchrepl[matchindex[i]]) {

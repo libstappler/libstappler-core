@@ -22,6 +22,7 @@ This file was modified for stappler project
 */
 
 #include "SPVec3.h"
+#include "SPGeometry.h"
 
 namespace stappler::geom {
 

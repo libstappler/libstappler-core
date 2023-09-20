@@ -159,8 +159,6 @@ void Decoder<Interface>::decodeArray(uint8_t type, ValueType &ret) {
 		ret.arrayVal->reserve(size);
 	}
 
-	size_t idx = 0;
-
 	while (
 			(!r.empty() || (
 					(majorType == MajorTypeEncoded::Unsigned || majorType == MajorTypeEncoded::Negative || majorType == MajorTypeEncoded::Simple)
@@ -182,8 +180,6 @@ void Decoder<Interface>::decodeArray(uint8_t type, ValueType &ret) {
 			majorType = MajorTypeEncoded::Simple;
 			type = toInt(Flags::UndefinedLength);
 		}
-
-		idx ++;
 	}
 }
 

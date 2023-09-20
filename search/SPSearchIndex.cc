@@ -180,7 +180,6 @@ float SearchIndex::Heuristic::operator () (const SearchIndex &index, const Searc
 
 	float mod = tagScore(node.node->tag);
 
-	size_t fullMatches = 0;
 	float fullMatchCost = fullMatchScore / float(node.matches.size());
 	for (const SearchIndex::ResultToken &token_it : node.matches) {
 		if (excludeEqualMatches) {
@@ -194,7 +193,6 @@ float SearchIndex::Heuristic::operator () (const SearchIndex &index, const Searc
 
 		if (token_it.match == token_it.slice.size) {
 			score += mod * fullMatchCost;
-			++ fullMatches;
 		}
 
 		score += mod * wordScore(token_it.match, token_it.slice.size);
