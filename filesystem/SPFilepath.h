@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define STAPPLER_FILESYSTEM_SPFILEPATH_H_
 
 #include "SPStringView.h"
+#include "SPSpanView.h"
 
 namespace stappler {
 
@@ -92,21 +93,20 @@ void split(StringView, const Callback<void(StringView)> &);
 template <typename Interface>
 auto _merge(StringView root, StringView path) -> typename Interface::StringType;
 
-std::string merge(const std::vector<std::string> &);
-memory::string merge(const memory::vector<memory::string> &);
-
-std::string merge(const std::vector<StringView> &);
-memory::string merge(const memory::vector<StringView> &);
+template <typename Interface>
+auto merge(SpanView<std::string>) -> typename Interface::StringType;
 
 template <typename Interface>
-auto merge(stappler::memory::StandartInterface::StringType &&str) {
-	return str;
-}
+auto merge(SpanView<memory::string>) -> typename Interface::StringType;
 
 template <typename Interface>
-auto merge(stappler::memory::PoolInterface::StringType &&str) {
-	return str;
-}
+auto merge(SpanView<StringView>) -> typename Interface::StringType;
+
+template <typename Interface>
+auto merge(stappler::memory::StandartInterface::StringType &&str) -> typename Interface::StringType;
+
+template <typename Interface>
+auto merge(stappler::memory::PoolInterface::StringType &&str) -> typename Interface::StringType;
 
 template <typename Interface, class... Args>
 auto merge(StringView root, StringView path, Args&&... args) -> typename Interface::StringType {
@@ -165,26 +165,6 @@ auto reconstructPath(StringView path) -> typename Interface::StringType {
 		ret.push_back('/');
 	}
 	return ret;
-}
-
-template <typename Interface>
-auto _merge(StringView root, StringView path) -> typename Interface::StringType {
-	if (path.empty()) {
-		return root.str<Interface>();
-	}
-	if (root.back() == '/') {
-		if (path.front() == '/') {
-			return StringView::merge<Interface>(root, path.sub(1));
-		} else {
-			return StringView::merge<Interface>(root, path);
-		}
-	} else {
-		if (path.front() == '/') {
-			return StringView::merge<Interface>(root, path);
-		} else {
-			return StringView::merge<Interface>(root, "/", path);
-		}
-	}
 }
 
 template <typename Interface>

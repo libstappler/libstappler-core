@@ -101,6 +101,7 @@ void ThreadInterface<memory::PoolInterface>::workerThread(ThreadInterface<memory
 
 #include "SPThreads-android.cc"
 #include "SPThreads-linux.cc"
+#include "SPThreads-win32.cc"
 #include "SPThreadTask.cc"
 #include "SPThreadTaskQueue.cc"
 

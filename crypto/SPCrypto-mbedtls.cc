@@ -127,7 +127,8 @@ static BackendCtx s_mbedTLSCtx = {
 		};
 
 		if constexpr (SafeBlockEncoding) {
-			uint8_t tmp[blockSize] = { 0 };
+			uint8_t tmp[blockSize];
+			memset(tmp, 0, blockSize);
 			memcpy(tmp, d.data(), d.size());
 
 			if (!perform(tmp, blockSize - cipherBlockSize, output + sizeof(BlockCryptoHeader))) {

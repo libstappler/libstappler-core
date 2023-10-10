@@ -24,7 +24,25 @@ THE SOFTWARE.
 #define STAPPLER_NETWORK_SPNETWORKCONTEXT_H_
 
 #include "SPNetworkHandle.h"
+
+#if XWIN
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define CURL_STATICLIB
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonportable-include-path"
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#pragma clang diagnostic ignored "-Wmicrosoft-include"
+#pragma clang diagnostic ignored "-Wignored-pragma-intrinsic"
+#pragma clang diagnostic ignored "-Wpragma-pack"
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+#endif
+
 #include "curl/curl.h"
+
+#if XWIN
+#pragma clang diagnostic pop
+#endif
 
 namespace stappler::network {
 

@@ -20,6 +20,8 @@
 # THE SOFTWARE.
 
 
+ifdef LINUX
+
 MODULE_STAPPLER_CRYPTO_GNUTLS_LIBS := -lgnutls -lnettle -lgmp -lhogweed
 MODULE_STAPPLER_CRYPTO_GNUTLS_FLAGS :=
 MODULE_STAPPLER_CRYPTO_GNUTLS_SRCS_DIRS :=
@@ -31,8 +33,10 @@ MODULE_STAPPLER_CRYPTO_GNUTLS_DEPENDS_ON :=
 # module name resolution
 MODULE_stappler_crypto_gnutls := MODULE_STAPPLER_CRYPTO_GNUTLS
 
+endif
 
-MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS := -l:libgost.a -l:libssl.a -l:libcrypto.a -lpthread
+
+MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS := -l:libgost.a -l:libssl.a -l:libcrypto.a
 MODULE_STAPPLER_CRYPTO_OPENSSL_FLAGS :=
 MODULE_STAPPLER_CRYPTO_OPENSSL_SRCS_DIRS :=
 MODULE_STAPPLER_CRYPTO_OPENSSL_SRCS_OBJS :=
@@ -42,6 +46,14 @@ MODULE_STAPPLER_CRYPTO_OPENSSL_DEPENDS_ON :=
 
 # module name resolution
 MODULE_stappler_crypto_openssl := MODULE_STAPPLER_CRYPTO_OPENSSL
+
+ifdef LINUX
+MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lpthread
+endif
+
+ifdef WIN32
+MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lcrypt32 -ladvapi32 -luser32
+endif
 
 
 MODULE_STAPPLER_CRYPTO_MBEDTLS_LIBS := -l:libmbedtls.a -l:libmbedcrypto.a -l:libmbedx509.a
@@ -54,6 +66,10 @@ MODULE_STAPPLER_CRYPTO_MBEDTLS_DEPENDS_ON :=
 
 # module name resolution
 MODULE_stappler_crypto_mbedtls := MODULE_STAPPLER_CRYPTO_MBEDTLS
+
+ifdef WIN32
+MODULE_STAPPLER_CRYPTO_MBEDTLS_LIBS += -lcrypt32 -ladvapi32
+endif
 
 
 MODULE_STAPPLER_CRYPTO_LIBS :=

@@ -1039,7 +1039,7 @@ Distance::Distance(const StringView &origin, const StringView &canonical, size_t
 	int positionNW;// Used only when mode is NW.
 	AlignmentData alignData;
 	bool dynamicK = false;
-	int k = maxDistance != maxOf<size_t>() ? maxDistance : -1;
+	int k = (maxDistance != maxOf<size_t>()) ? maxDistance : -1;
 	if (k < 0) { // If valid k is not given, auto-adjust k until solution is found.
 		dynamicK = true;
 		k = WORD_SIZE;// Gives better results than smaller k.

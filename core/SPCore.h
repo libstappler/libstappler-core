@@ -126,6 +126,22 @@ using iter_reference_t = typename T::reference;
 
 #define __STDC_WANT_IEC_60559_TYPES_EXT__ 1
 
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonportable-include-path"
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#pragma clang diagnostic ignored "-Wmicrosoft-include"
+#pragma clang diagnostic ignored "-Wignored-pragma-intrinsic"
+#pragma clang diagnostic ignored "-Wpragma-pack"
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+#endif
+
+#if WIN32
+#define NOMINMAX 1
+#define _USE_MATH_DEFINES 1
+#endif
+
 #include <type_traits>
 #include <iterator>
 #include <limits>
@@ -174,15 +190,8 @@ using iter_reference_t = typename T::reference;
 #include <pwd.h>
 #endif
 
-#ifdef __MINGW32__
-
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-
-#define UNICODE
-#define _UNICODE
-
-#include <WinSock2.h>
-#include <Windows.h>
+#if XWIN
+#pragma clang diagnostic pop
 #endif
 
 #if __CDT_PARSER__

@@ -786,7 +786,7 @@ template< class CharT > bool operator>=( const CharT* lhs, const basic_string<Ch
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>:: find(const _CharT* __s, size_type __pos, size_type __n) const {
+basic_string<_CharT>:: find(const charT* __s, size_type __pos, size_type __n) const {
 	const size_type __size = this->size();
 	const _CharT* __data = _mem.data();
 
@@ -803,7 +803,7 @@ basic_string<_CharT>:: find(const _CharT* __s, size_type __pos, size_type __n) c
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>::find(_CharT __c, size_type __pos) const {
+basic_string<_CharT>::find(charT __c, size_type __pos) const {
 	size_type __ret = npos;
 	const size_type __size = this->size();
 	if (__pos < __size) {
@@ -817,7 +817,7 @@ basic_string<_CharT>::find(_CharT __c, size_type __pos) const {
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>::rfind(const _CharT* __s, size_type __pos, size_type __n) const {
+basic_string<_CharT>::rfind(const charT* __s, size_type __pos, size_type __n) const {
 	const size_type __size = this->size();
 	if (__n <= __size) {
 		__pos = min(size_type(__size - __n), __pos);
@@ -832,7 +832,7 @@ basic_string<_CharT>::rfind(const _CharT* __s, size_type __pos, size_type __n) c
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>::rfind(_CharT __c, size_type __pos) const {
+basic_string<_CharT>::rfind(charT __c, size_type __pos) const {
 	size_type __size = this->size();
 	if (__size) {
 		if (--__size > __pos)
@@ -845,7 +845,7 @@ basic_string<_CharT>::rfind(_CharT __c, size_type __pos) const {
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>::find_first_of(const _CharT* __s, size_type __pos, size_type __n) const {
+basic_string<_CharT>::find_first_of(const charT* __s, size_type __pos, size_type __n) const {
 	for (; __n && __pos < this->size(); ++__pos) {
 		const _CharT* __p = traits_type::find(__s, __n, _mem.data()[__pos]);
 		if (__p)
@@ -855,7 +855,7 @@ basic_string<_CharT>::find_first_of(const _CharT* __s, size_type __pos, size_typ
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>:: find_last_of(const _CharT* __s, size_type __pos, size_type __n) const {
+basic_string<_CharT>:: find_last_of(const charT* __s, size_type __pos, size_type __n) const {
 	size_type __size = this->size();
 	if (__size && __n) {
 		if (--__size > __pos)
@@ -869,7 +869,7 @@ basic_string<_CharT>:: find_last_of(const _CharT* __s, size_type __pos, size_typ
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>::find_first_not_of(const _CharT* __s, size_type __pos, size_type __n) const  {
+basic_string<_CharT>::find_first_not_of(const charT* __s, size_type __pos, size_type __n) const  {
 	for (; __pos < this->size(); ++__pos)
 		if (!traits_type::find(__s, __n, _mem.data()[__pos]))
 			return __pos;
@@ -877,7 +877,7 @@ basic_string<_CharT>::find_first_not_of(const _CharT* __s, size_type __pos, size
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>::find_first_not_of(_CharT __c, size_type __pos) const {
+basic_string<_CharT>::find_first_not_of(charT __c, size_type __pos) const {
 	for (; __pos < this->size(); ++__pos)
 		if (!traits_type::eq(_mem.data()[__pos], __c))
 			return __pos;
@@ -885,7 +885,7 @@ basic_string<_CharT>::find_first_not_of(_CharT __c, size_type __pos) const {
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>:: find_last_not_of(const _CharT* __s, size_type __pos, size_type __n) const {
+basic_string<_CharT>:: find_last_not_of(const charT* __s, size_type __pos, size_type __n) const {
 	size_type __size = this->size();
 	if (__size)	{
 		if (--__size > __pos)
@@ -899,7 +899,7 @@ basic_string<_CharT>:: find_last_not_of(const _CharT* __s, size_type __pos, size
 }
 
 template<typename _CharT> typename basic_string<_CharT>::size_type
-basic_string<_CharT>::find_last_not_of(_CharT __c, size_type __pos) const {
+basic_string<_CharT>::find_last_not_of(charT __c, size_type __pos) const {
 	size_type __size = this->size();
 	if (__size)	{
 		if (--__size > __pos)

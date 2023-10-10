@@ -370,6 +370,11 @@ inline bool operator== (const memory::StandartInterface::BytesType &l, const Byt
 	return BytesViewTemplate<Endianess>(l) == r;
 }
 
+template <Endian Endianess, size_t Size>
+inline bool operator== (const std::array<uint8_t, Size> &l, const BytesViewTemplate<Endianess> &r) {
+	return BytesViewTemplate<Endianess>(l) == r;
+}
+
 template <Endian Endianess>
 inline bool operator== (const BytesViewTemplate<Endianess> &l, const memory::PoolInterface::BytesType &r) {
 	return l == BytesViewTemplate<Endianess>(r);
@@ -377,6 +382,11 @@ inline bool operator== (const BytesViewTemplate<Endianess> &l, const memory::Poo
 
 template <Endian Endianess>
 inline bool operator== (const BytesViewTemplate<Endianess> &l, const memory::StandartInterface::BytesType &r) {
+	return l == BytesViewTemplate<Endianess>(r);
+}
+
+template <Endian Endianess, size_t Size>
+inline bool operator== (const BytesViewTemplate<Endianess> &l, const std::array<uint8_t, Size> &r) {
 	return l == BytesViewTemplate<Endianess>(r);
 }
 
@@ -391,6 +401,11 @@ inline bool operator!= (const memory::StandartInterface::BytesType &l, const Byt
 	return BytesViewTemplate<Endianess>(l) != r;
 }
 
+template <Endian Endianess, size_t Size>
+inline bool operator!= (const std::array<uint8_t, Size> &l, const BytesViewTemplate<Endianess> &r) {
+	return BytesViewTemplate<Endianess>(l) != r;
+}
+
 template <Endian Endianess>
 inline bool operator!= (const BytesViewTemplate<Endianess> &l, const memory::PoolInterface::BytesType &r) {
 	return l != BytesViewTemplate<Endianess>(r);
@@ -398,6 +413,11 @@ inline bool operator!= (const BytesViewTemplate<Endianess> &l, const memory::Poo
 
 template <Endian Endianess>
 inline bool operator!= (const BytesViewTemplate<Endianess> &l, const memory::StandartInterface::BytesType &r) {
+	return l != BytesViewTemplate<Endianess>(r);
+}
+
+template <Endian Endianess, size_t Size>
+inline bool operator!= (const BytesViewTemplate<Endianess> &l, const std::array<uint8_t, Size> &r) {
 	return l != BytesViewTemplate<Endianess>(r);
 }
 

@@ -169,12 +169,16 @@ public:
 			}
 
 			if constexpr (Allocator_protect_construct<T>::value) {
-				memory::pool::push(pool_ptr(pool));
+				auto selfP = pool_ptr(pool);
+				auto p = memory::pool::acquire();
+				if (p != selfP) {
+					memory::pool::push(selfP);
+					new ((T*)p) T(std::forward<Args>(args)...);
+					memory::pool::pop();
+					return;
+				}
 			}
 			new ((T*)p) T(std::forward<Args>(args)...);
-			if constexpr (Allocator_protect_construct<T>::value) {
-				memory::pool::pop();
-			}
 		}
 	}
 
@@ -183,12 +187,17 @@ public:
 			// do nothing
 		} else {
 			if constexpr (Allocator_protect_construct<T>::value) {
-				memory::pool::push(pool_ptr(pool));
+				auto selfP = pool_ptr(pool);
+				auto pool = memory::pool::acquire();
+				if (pool != selfP) {
+					memory::pool::push(selfP);
+					do { p->~T(); } while (0);
+					memory::pool::pop();
+					return;
+				}
 			}
+
 			do { p->~T(); } while (0);
-			if constexpr (Allocator_protect_construct<T>::value) {
-				memory::pool::pop();
-			}
 		}
 	}
 
@@ -197,13 +206,20 @@ public:
 			// do nothing
 		} else {
 			if constexpr (Allocator_protect_construct<T>::value) {
-				memory::pool::push(pool);
+				auto selfP = pool_ptr(pool);
+				auto pool = memory::pool::acquire();
+				if (pool != selfP) {
+					memory::pool::push(selfP);
+					for (size_t i = 0; i < size; ++i) {
+						(p + i)->~T();
+					}
+					memory::pool::pop();
+					return;
+				}
 			}
+
 			for (size_t i = 0; i < size; ++i) {
 				(p + i)->~T();
-			}
-			if constexpr (Allocator_protect_construct<T>::value) {
-				memory::pool::pop();
 			}
 		}
 	}

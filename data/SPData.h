@@ -150,8 +150,7 @@ auto parseCommandLineOptions(int argc, const char16_t * wargv[],
 
 // decode x-www-urlencoded into data
 template <typename Interface>
-auto readUrlencoded(StringView, size_t maxLength = maxOf<size_t>(),
-		size_t maxVarSize = maxOf<size_t>()) -> data::ValueTemplate<Interface>;
+auto readUrlencoded(StringView, size_t maxVarSize = maxOf<size_t>()) -> data::ValueTemplate<Interface>;
 
 }
 

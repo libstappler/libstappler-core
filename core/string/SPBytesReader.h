@@ -36,7 +36,7 @@ public:
 	template <CharType ... Args>
 	using Chars = chars::Chars<CharType, Args...>;
 
-	template <char First, char Last>
+	template <CharType First, CharType Last>
 	using Range = chars::Range<CharType, First, Last>;
 
 	template <CharGroupId Group>
@@ -48,7 +48,7 @@ public:
 	constexpr BytesReader() : ptr(nullptr), len(0) { }
 	constexpr BytesReader(const CharType *p, size_t l) : ptr(p), len(l) { }
 
-	BytesReader & set(const uint8_t *p, size_t l) { ptr = p; len = l; return *this; }
+	BytesReader & set(const CharType *p, size_t l) { ptr = p; len = l; return *this; }
 
 	void offset(size_t l) { if (l > len) { len = 0; } else { ptr += l; len -= l; } }
 

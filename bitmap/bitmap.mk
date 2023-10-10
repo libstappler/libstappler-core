@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-MODULE_STAPPLER_BITMAP_LIBS := -lpthread -l:libpng16.a -l:libgif.a -l:libjpeg.a -l:libwebp.a -l:libsharpyuv.a
+MODULE_STAPPLER_BITMAP_LIBS := -l:libpng16.a -l:libgif.a -l:libjpeg.a -l:libwebp.a -l:libsharpyuv.a
 MODULE_STAPPLER_BITMAP_SRCS_DIRS := $(STAPPLER_MODULE_DIR)/bitmap
 MODULE_STAPPLER_BITMAP_SRCS_OBJS := 
 MODULE_STAPPLER_BITMAP_INCLUDES_DIRS :=
@@ -27,7 +27,11 @@ MODULE_STAPPLER_BITMAP_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/bitmap
 MODULE_STAPPLER_BITMAP_DEPENDS_ON := stappler_filesystem
 
 ifdef LINUX
-MODULE_STAPPLER_BITMAP_LIBS += -l:libz.a
+MODULE_STAPPLER_BITMAP_LIBS += -l:libz.a -lpthread
+endif
+
+ifdef WIN32
+MODULE_STAPPLER_BITMAP_LIBS += -lz
 endif
 
 # module name resolution

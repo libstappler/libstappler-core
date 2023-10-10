@@ -23,15 +23,9 @@ THE SOFTWARE.
 
 #include "SPFilesystem.h"
 
-#if __APPLE__
-#include <unistd.h>
-#endif
-
-#if ANDROID
-#include <unistd.h>
-#endif
-
-#if LINUX
+#if WIN32
+#include "SPLog.h"
+#else
 #include <unistd.h>
 #endif
 
@@ -47,6 +41,10 @@ File File::open_tmp(const char *prefix, bool delOnClose) {
 	if (prefix == nullptr) {
 		prefix = "sa.tmp";
 	}
+
+#if WIN32
+	log::warn("filesystem", "File::open_tmp unavailable on win32");
+#else
 	char buf[256] = { 0 };
 	const char *tmp = P_tmpdir;
 	size_t len = strlen(tmp);
@@ -63,6 +61,8 @@ File File::open_tmp(const char *prefix, bool delOnClose) {
 			return ret;
 		}
 	}
+#endif
+
 	return File();
 }
 
@@ -158,8 +158,8 @@ size_t File::seek(int64_t offset, io::Seek s) {
 				}
 			}
 			auto p = ftell(_nativeFile);
-			if (p >= 0){
-				return (size_t)p;
+			if (p >= 0) {
+				return static_cast<size_t>(p);
 			} else {
 				return maxOf<size_t>();
 			}
@@ -174,7 +174,7 @@ size_t File::tell() const {
 	if (!_isBundled) {
 		auto p = ftell(_nativeFile);
 		if (p >= 0) {
-			return (size_t)p;
+			return static_cast<size_t>(p);
 		} else {
 			return maxOf<size_t>();
 		}
@@ -223,7 +223,7 @@ typename File::streamsize File::xsputn(const char* s, streamsize n) {
 typename File::streamsize File::xsgetn(char* s, streamsize n) {
 	streamsize ret = -1;
 	if (is_open()) {
-		ret = read((uint8_t *)s, n);
+		ret = read(reinterpret_cast<uint8_t *>(s), n);
 	}
 	return ret;
 }
@@ -244,7 +244,7 @@ void File::close() {
 		if (!_isBundled) {
 			fclose(_nativeFile);
 			if (_flags != Flags::DelOnClose && _buf[0] != 0) {
-				::unlink(_buf);
+				native::unlink_fn(_buf);
 			}
 			memset(_buf, 0, 256);
 			_nativeFile = nullptr;
@@ -260,7 +260,7 @@ void File::close_remove() {
 		if (!_isBundled) {
 			fclose(_nativeFile);
 			if (_buf[0] != 0) {
-				::unlink(_buf);
+				native::unlink_fn(_buf);
 			}
 			memset(_buf, 0, 256);
 			_nativeFile = nullptr;
@@ -280,7 +280,7 @@ bool File::close_rename(StringView path) {
 				memset(_buf, 0, 256);
 				return true;
 			} else {
-				_nativeFile = fopen(_buf, "wb+");
+				_nativeFile = native::fopen_fn(_buf, "wb+");
 			}
 		}
 	}

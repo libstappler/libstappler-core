@@ -37,14 +37,13 @@ public:
 		}
 	}
 	void addValue(T value) {
-		_values[_current] = value;
-		if ((++_current) >= Count) _current = 0;
+		_values[_current ++ % Count] = value;
 	}
-	T getAverage(bool exceptZero = false) const {
+	T getAverage() const {
 		size_t c = 0;
 		T s = 0;
-		for (size_t i = 0; i < Count; i++) {
-			if (!exceptZero || _values[i] != 0) {
+		for (size_t i = 0; i < min(Count, _current); i++) {
+			if (_values[i] != 0) {
 				s += _values[i];
 				++ c;
 			}
@@ -56,11 +55,11 @@ public:
 		return getAverage();
 	}
 
-	T range(bool exceptZero = false) {
+	T range() {
 		Pair<T, T> minmax(std::numeric_limits<T>::max(), std::numeric_limits<T>::min());
 
-		for (size_t i = 0; i < Count; i++) {
-			if (!exceptZero || _values[i] != 0) {
+		for (size_t i = 0; i < min(Count, _current); i++) {
+			if (_values[i] != 0) {
 				if (_values[i] < minmax.first) { minmax.first = _values[i]; }
 				if (_values[i] > minmax.second) { minmax.second = _values[i]; }
 			}
@@ -86,7 +85,7 @@ public:
 	}
 
 protected:
-	size_t _current = 0;
+	uint64_t _current = 0;
     std::array<T, Count> _values;
 };
 

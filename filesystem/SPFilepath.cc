@@ -115,7 +115,7 @@ auto absolute_fn(StringView path, bool writable) -> typename Interface::StringTy
 		} else if (path.starts_with("%CURRENT%")) {
 			return filesystem::currentDir<Interface>(path.sub(9), true);
 		} else if (path.starts_with("%PLATFORM%:")) {
-			return path.str<Interface>();
+			writable = false;
 		}
 	}
 
@@ -276,48 +276,124 @@ StringView name(StringView path) {
 	}
 }
 
-std::string merge(const std::vector<std::string> &vec) {
-	std::ostringstream ret;
-	for (auto it = vec.begin(); it != vec.end(); it ++) {
-		if (it != vec.begin()) {
-			ret << "/";
-		}
-		ret << (*it);
+template <typename Interface>
+auto do_merge(StringView root, StringView path) -> typename Interface::StringType {
+	if (path.empty()) {
+		return root.str<Interface>();
 	}
-	return ret.str();
+	return StringView::merge<Interface, '/'>(root, path);
 }
 
-std::string merge(const std::vector<StringView> &vec) {
-	std::ostringstream ret;
+
+template <typename SourceVector>
+static size_t getMergeSize(const SourceVector &vec) {
+	size_t ret = vec.size();
 	for (auto it = vec.begin(); it != vec.end(); it ++) {
-		if (it != vec.begin()) {
-			ret << "/";
-		}
-		ret << (*it);
+		ret += it->size();
 	}
-	return ret.str();
+	return ret;
 }
 
-memory::string merge(const memory::vector<memory::string> &vec) {
-	memory::ostringstream ret;
-	for (auto it = vec.begin(); it != vec.end(); it ++) {
-		if (it != vec.begin()) {
-			ret << "/";
+template <typename Buf, typename SourceVector>
+static void doMerge(Buf &out, const SourceVector &vec) {
+	auto stripSeps = [] (auto str) {
+		StringView tmp(str);
+		tmp.trimChars<StringView::Chars<'/'>>();
+		return tmp;
+	};
+
+	bool hasSeparator = true;
+	auto it = vec.begin();
+	for (; it != vec.end(); it ++) {
+		if (it->empty()) {
+			continue;
 		}
-		ret << (*it);
+
+		if (!hasSeparator) {
+			out.push_back('/');
+		} else {
+			hasSeparator = false;
+		}
+
+		auto tmp = stripSeps(*it);
+		out.append(tmp.data(), tmp.size());
 	}
-	return ret.str();
 }
 
-memory::string merge(const memory::vector<StringView> &vec) {
-	memory::ostringstream ret;
-	for (auto it = vec.begin(); it != vec.end(); it ++) {
-		if (it != vec.begin()) {
-			ret << "/";
-		}
-		ret << (*it);
-	}
-	return ret.str();
+template <>
+auto _merge<memory::StandartInterface>(StringView root, StringView path) -> memory::StandartInterface::StringType {
+	return do_merge<memory::StandartInterface>(root, path);
+}
+
+template <>
+auto _merge<memory::PoolInterface>(StringView root, StringView path) -> memory::PoolInterface::StringType {
+	return do_merge<memory::PoolInterface>(root, path);
+}
+
+template <>
+auto merge<memory::StandartInterface>(SpanView<std::string> vec) -> memory::StandartInterface::StringType {
+	memory::StandartInterface::StringType ret; ret.reserve(getMergeSize(vec));
+	doMerge(ret, vec);
+	return ret;
+}
+
+template <>
+auto merge<memory::PoolInterface>(SpanView<std::string> vec) -> memory::PoolInterface::StringType {
+	memory::PoolInterface::StringType ret; ret.reserve(getMergeSize(vec));
+	doMerge(ret, vec);
+	return ret;
+}
+
+
+template <>
+auto merge<memory::StandartInterface>(SpanView<memory::string> vec) -> memory::StandartInterface::StringType {
+	memory::StandartInterface::StringType ret; ret.reserve(getMergeSize(vec));
+	doMerge(ret, vec);
+	return ret;
+}
+
+template <>
+auto merge<memory::PoolInterface>(SpanView<memory::string> vec) -> memory::PoolInterface::StringType {
+	memory::PoolInterface::StringType ret; ret.reserve(getMergeSize(vec));
+	doMerge(ret, vec);
+	return ret;
+}
+
+
+template <>
+auto merge<memory::StandartInterface>(SpanView<StringView> vec) -> memory::StandartInterface::StringType {
+	memory::StandartInterface::StringType ret; ret.reserve(getMergeSize(vec));
+	doMerge(ret, vec);
+	return ret;
+}
+
+template <>
+auto merge<memory::PoolInterface>(SpanView<StringView> vec) -> memory::PoolInterface::StringType {
+	memory::PoolInterface::StringType ret; ret.reserve(getMergeSize(vec));
+	doMerge(ret, vec);
+	return ret;
+}
+
+
+template <>
+auto merge<memory::StandartInterface>(stappler::memory::StandartInterface::StringType &&str) -> memory::StandartInterface::StringType {
+	return str;
+}
+
+template <>
+auto merge<memory::PoolInterface>(stappler::memory::StandartInterface::StringType &&str) -> memory::PoolInterface::StringType {
+	return StringView(str).str<memory::PoolInterface>();
+}
+
+
+template <>
+auto merge<memory::StandartInterface>(stappler::memory::PoolInterface::StringType &&str) -> memory::StandartInterface::StringType {
+	return StringView(str).str<memory::StandartInterface>();
+}
+
+template <>
+auto merge<memory::PoolInterface>(stappler::memory::PoolInterface::StringType &&str) -> memory::PoolInterface::StringType {
+	return str;
 }
 
 size_t extensionCount(StringView path) {

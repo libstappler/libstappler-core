@@ -23,11 +23,12 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
+#include "SPFilepath.cc"
+#include "SPFilesystem.cc"
+#include "SPFilesystemNativePosix.cc"
+#include "SPFilesystemNativeWin32.cc"
+
 #include "platform/SPFilesystem-android.cc"
 #include "platform/SPFilesystem-linux.cc"
 #include "platform/SPFilesystem-mac.cc"
-
-#include "SPFilepath.cc"
-#include "SPFilesystem.cc"
-#include "SPFilesystemNativeMingw.cc"
-#include "SPFilesystemNativePosix.cc"
+#include "platform/SPFilesystem-win32.cc"

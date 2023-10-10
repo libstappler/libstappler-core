@@ -25,7 +25,11 @@ THE SOFTWARE.
 #include "SPLog.h"
 #include "SPSubscription.h"
 #include "SPTime.h"
+
+#if WIN32
+#else
 #include <cxxabi.h>
+#endif
 
 namespace stappler::backtrace {
 
@@ -67,6 +71,11 @@ SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView 
 	}
 
 	if (!function.empty()) {
+#if WIN32
+		w = ::snprintf(target, bufLen, " - %.*s", int(function.size()), function.data());
+		bufLen -= w;
+		target += w;
+#else
 		int status = 0;
 		auto ptr = abi::__cxa_demangle(function.data(), nullptr, nullptr, &status);
 		if (ptr) {
@@ -79,6 +88,7 @@ SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView 
 			bufLen -= w;
 			target += w;
 		}
+#endif
 	}
 	return target - buf;
 }

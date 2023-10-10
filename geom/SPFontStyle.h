@@ -144,7 +144,7 @@ enum class VerticalAlign : EnumSize {
 };
 
 // slnt axis or special value for Italic
-struct FontStyle : ValueWrapper<int16_t, class FontWeightFlag> {
+struct FontStyle : ValueWrapper<int16_t, class FontStyleFlag> {
 	static const FontStyle Normal;
 	static const FontStyle Italic;
 	static const FontStyle Oblique;

@@ -45,10 +45,6 @@ struct Decoder : public Interface::AllocBaseType {
 		BackIsGeneric,
 	};
 
-	enum TokenType {
-		Generic,
-	};
-
 	Decoder(StringView &r) : backType(BackIsGeneric), r(r), back(nullptr) {
 		stack.reserve(10);
 	}

@@ -174,7 +174,7 @@ public:
 	bool operator== (double v) const { return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false; }
 	bool operator== (const char *v) const { return isString() ? strVal->compare(v) == 0 : false; }
 	bool operator== (const StringView &v) const { return isString() ? string::compare(*strVal, v) == 0 : false; }
-	bool operator== (const BytesType &v) const { return isBytes() ? (*bytesVal) == v : false; }
+	bool operator== (const BytesView &v) const { return isBytes() ? (*bytesVal) == v : false; }
 	bool operator== (const ArrayType &v) const { return isArray() ? compare(*arrayVal, v) : false; }
 	bool operator== (const DictionaryType &v) const { return isDictionary() ? compare(*dictVal, v) : false; }
 
@@ -187,7 +187,7 @@ public:
 	bool operator!= (double v) const { return !(*this == v); }
 	bool operator!= (const char *v) const { return !(*this == v); }
 	bool operator!= (const StringView &v) const { return !(*this == v); }
-	bool operator!= (const BytesType &v) const { return !(*this == v); }
+	bool operator!= (const BytesView &v) const { return !(*this == v); }
 	bool operator!= (const ArrayType &v) const { return !(*this == v); }
 	bool operator!= (const DictionaryType &v) const { return !(*this == v); }
 
@@ -246,6 +246,7 @@ public:
 	void addString(const StringView &value) { addValue(Self(value)); }
 	void addString(const StringType &value) { addValue(Self(value)); }
 	void addString(StringType &&value) { addValue(Self(std::move(value))); }
+	void addBytes(const BytesView &value) { addValue(Self(value)); }
 	void addBytes(const BytesType &value) { addValue(Self(value)); }
 	void addBytes(BytesType &&value) { addValue(Self(std::move(value))); }
 	void addArray(const ArrayType &value) { addValue(Self(value)); }
@@ -701,6 +702,7 @@ bool ValueTemplate<Interface>::empty() const noexcept {
 	case Type::CHARSTRING: return strVal->empty(); break;
 	case Type::BYTESTRING: return bytesVal->empty(); break;
 	case Type::EMPTY: return true; break;
+	case Type::NONE: return true; break;
 	default: return false; break;
 	}
 	return false;
@@ -1113,62 +1115,62 @@ void ValueTemplate<Interface>::encode(Stream &stream) const {
 };
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isNull(Key &&key) const {
 	return getType(std::forward<Key>(key)) == Type::EMPTY || getType(std::forward<Key>(key)) == Type::NONE;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isBasicType(Key &&key) const {
 	const auto type = getType(std::forward<Key>(key));
 	return type != Type::ARRAY && type != Type::DICTIONARY && type != Type::NONE;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isArray(Key &&key) const {
 	return getType(std::forward<Key>(key)) == Type::ARRAY;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isDictionary(Key &&key) const {
 	return getType(std::forward<Key>(key)) == Type::DICTIONARY;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isBool(Key &&key) const {
 	return getType(std::forward<Key>(key)) == Type::BOOLEAN;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isInteger(Key &&key) const {
 	return getType(std::forward<Key>(key)) == Type::INTEGER;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isDouble(Key &&key) const {
 	return getType(std::forward<Key>(key)) == Type::DOUBLE;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isString(Key &&key) const {
 	return getType(std::forward<Key>(key)) == Type::CHARSTRING;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 bool ValueTemplate<Interface>::isBytes(Key &&key) const {
 	return getType(std::forward<Key>(key)) == Type::BYTESTRING;
 }
 
 template <typename Interface>
-template <typename Key>
+template <class Key>
 auto ValueTemplate<Interface>::getType(Key &&key) const -> Type {
 	if constexpr (std::is_integral<typename std::remove_reference<Key>::type>::value) {
 		if (_type == Type::ARRAY) {

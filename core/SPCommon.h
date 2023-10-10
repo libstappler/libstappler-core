@@ -24,9 +24,9 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_SPCOMMON_H_
 #define STAPPLER_CORE_SPCOMMON_H_
 
+#include "SPCore.h"
 #include "SPMemInterface.h"
 #include "SPMemUuid.h"
-#include "SPCore.h"
 
 namespace stappler {
 

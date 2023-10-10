@@ -761,7 +761,7 @@ VectorPath & VectorPath::addArc(const Rect& oval, float startAngle, float sweepA
 	const auto sy = ry * sinf(startAngle + sweepAngle);
 
 	moveTo(oval.origin.x + rx + x, oval.origin.y + ry + y);
-	arcTo(rx, ry, 0.0f, (sweepAngle > M_PI)?true:false, true, oval.origin.x + rx + sx, oval.origin.y + ry + sy);
+	arcTo(rx, ry, 0.0f, (sweepAngle > numbers::pi)?true:false, true, oval.origin.x + rx + sx, oval.origin.y + ry + sy);
 	return *this;
 }
 

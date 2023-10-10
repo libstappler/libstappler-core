@@ -37,6 +37,12 @@
  * MPL.
  *
  */
+
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#endif
+
 #include <stdlib.h> /* for NULL, malloc */
 #include <stdio.h>  /* for fprintf */
 #include <string.h> /* for strdup */
@@ -61,6 +67,15 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+
+#if XWIN
+#pragma clang diagnostic pop
+#endif
+
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 void *
 hnj_malloc (int size)
@@ -1357,3 +1372,7 @@ int hnj_hyphen_hyphenate3 (HyphenDict *dict,
   if (dict->utf8) return hnj_hyphen_norm(word, word_size, hyphens, rep, pos, cut);
   return 0;
 }
+
+#if XWIN
+#pragma clang diagnostic pop
+#endif

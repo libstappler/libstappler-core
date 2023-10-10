@@ -115,9 +115,17 @@
 *  Compiler Options
 **************************************/
 #ifdef _MSC_VER    /* Visual Studio */
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#endif
 #  include <intrin.h>
 #  pragma warning(disable : 4127)        /* disable: C4127: conditional expression is constant */
 #  pragma warning(disable : 4293)        /* disable: C4293: too large shift (32-bits) */
+
+#if XWIN
+#pragma clang diagnostic pop
+#endif
 #endif  /* _MSC_VER */
 
 #ifndef LZ4_FORCE_INLINE

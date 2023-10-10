@@ -59,12 +59,7 @@ struct RawEncoder : public Interface::AllocBaseType {
 	using InterfaceType = Interface;
 	using ValueType = ValueTemplate<Interface>;
 
-	enum Type {
-		Stream,
-		Bytes,
-	};
-
-	inline RawEncoder(std::ostream *stream) : stream(stream) { }
+	inline RawEncoder(std::ostream *s) : stream(s) { }
 
 	inline void writeData(const char *data, size_t size) {
 		stream->write(data, size);
@@ -99,9 +94,7 @@ struct RawEncoder : public Interface::AllocBaseType {
 	inline void onKey(const typename ValueType::StringType &str) { write(str); (*stream) << ':'; }
 	inline void onNextValue() { (*stream) << ','; }
 
-	Type type = Type::Stream;
 	std::ostream *stream = nullptr;
-	typename Interface::BytesType *bytes = nullptr;
 };
 
 template <typename Interface>

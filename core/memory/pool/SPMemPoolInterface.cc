@@ -82,11 +82,17 @@ protected:
 				abort();
 			}
 		}
+		const T &get() const {
+			if (size == 0) {
+				abort();
+			}
+			return data[size - 1];
+		}
 #else
 		void push(const T &t) { data[size ++] = t; }
 		void pop() { -- size; }
-#endif
 		const T &get() const { return data[size - 1]; }
+#endif
 	};
 
 	stack<Info> _stack;
@@ -136,29 +142,32 @@ void AllocStack::foreachInfo(void *data, bool(*cb)(void *, pool_t *, uint32_t, c
 	}
 }
 
-thread_local AllocStack tl_stack;
+static AllocStack &get_stack() {
+	static thread_local AllocStack tl_stack;
+	return tl_stack;
+}
 
 pool_t *acquire() {
-	return tl_stack.top();
+	return get_stack().top();
 }
 
 Pair<uint32_t, const void *> info() {
-	return tl_stack.info();
+	return get_stack().info();
 }
 
 void push(pool_t *p) {
-	return tl_stack.push(p);
+	return get_stack().push(p);
 }
 void push(pool_t *p, uint32_t tag, const void *ptr) {
 	setPoolInfo(p, tag, ptr);
-	return tl_stack.push(p, tag, ptr);
+	return get_stack().push(p, tag, ptr);
 }
 void pop() {
-	return tl_stack.pop();
+	return get_stack().pop();
 }
 
 void foreach_info(void *data, bool(*cb)(void *, pool_t *, uint32_t, const void *)) {
-	tl_stack.foreachInfo(data, cb);
+	get_stack().foreachInfo(data, cb);
 }
 
 static inline bool isCustom(allocator_t *alloc) {

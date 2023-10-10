@@ -24,7 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEM_H_
 #define STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEM_H_
 
-#include "SPMemStorageMem.hpp"
+#include "SPMemStorageMemImpl.h"
 #include "SPMemPointerIterator.h"
 
 namespace stappler::memory {

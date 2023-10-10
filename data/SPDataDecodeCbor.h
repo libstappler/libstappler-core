@@ -64,11 +64,6 @@ struct Decoder : public Interface::AllocBaseType {
 	template <typename Container>
 	void decodeUndefinedLength(Container &, MajorTypeEncoded rootType);
 
-	void parseNumber(ValueType &ref);
-
-	void parseValue(ValueType &current);
-	void parse(ValueType &val);
-
 	BytesViewTemplate<Endian::Network> r;
 	StringType buf;
 	ValueType *back;

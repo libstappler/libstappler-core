@@ -29,22 +29,17 @@ THE SOFTWARE.
 #include "apr_uuid.h"
 #endif
 
-#if WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <winsock.h>
-using pid_t = DWORD;
-#else
-#endif
+#include "SPPlatformUnistd.h"
 
-#include <unistd.h>
+#if WIN32
+#include <winsock.h>
+#endif
 
 namespace stappler::memory {
 
 struct UuidState {
 	UuidState() {
 		struct {
-			/* Add thread id here, if applicable, when we get to pthread or apr */
 			pid_t pid;
 			size_t threadId;
 			uint64_t time;

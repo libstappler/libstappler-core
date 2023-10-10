@@ -21,19 +21,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
+#include "SPFilesystem.h"
+
+#ifndef WIN32
+
 #include <sys/time.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <dirent.h>
 #include <utime.h>
-#include "SPFilesystem.h"
-
-#if LINUX
-#include <unistd.h>
-#endif
-
-#ifndef __MINGW32__
 
 namespace stappler::filesystem::native {
 
@@ -48,15 +46,6 @@ memory::PoolInterface::StringType posixToNative<memory::PoolInterface>(StringVie
 }
 
 template <>
-memory::PoolInterface::StringType getcwd_fn<memory::PoolInterface>() {
-	char cwd[1024] = { 0 };
-	if (getcwd(cwd, 1024 - 1) != NULL) {
-		return memory::PoolInterface::StringType((const char *)cwd);
-	}
-	return memory::PoolInterface::StringType();
-}
-
-template <>
 memory::StandartInterface::StringType nativeToPosix<memory::StandartInterface>(StringView path) {
 	return path.str<memory::StandartInterface>();
 }
@@ -64,6 +53,15 @@ memory::StandartInterface::StringType nativeToPosix<memory::StandartInterface>(S
 template <>
 memory::StandartInterface::StringType posixToNative<memory::StandartInterface>(StringView path) {
 	return path.str<memory::StandartInterface>();
+}
+
+template <>
+memory::PoolInterface::StringType getcwd_fn<memory::PoolInterface>() {
+	char cwd[1024] = { 0 };
+	if (getcwd(cwd, 1024 - 1) != NULL) {
+		return memory::PoolInterface::StringType((const char *)cwd);
+	}
+	return memory::PoolInterface::StringType();
 }
 
 template <>
@@ -79,6 +77,10 @@ memory::StandartInterface::StringType getcwd_fn<memory::StandartInterface>() {
 
 bool remove_fn(StringView path) {
 	return ::remove(SP_TERMINATED_DATA(path)) == 0;
+}
+
+bool unlink_fn(StringView path) {
+	return ::unlink(SP_TERMINATED_DATA(path)) == 0;
 }
 
 bool mkdir_fn(StringView path) {

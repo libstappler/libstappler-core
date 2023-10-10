@@ -191,7 +191,7 @@ bool write(StringView path, const uint8_t *data, size_t len);
 
 template <typename BytesView>
 inline bool write(StringView path, const BytesView &view) {
-	return write(path, (const uint8_t *)view.data(), size_t(view.size()));
+	return write(path, reinterpret_cast<const uint8_t *>(view.data()), size_t(view.size()));
 }
 
 File openForReading(StringView path);
@@ -289,6 +289,7 @@ template <typename Interface>
 auto getcwd_fn() -> typename Interface::StringType;
 
 bool remove_fn(StringView path);
+bool unlink_fn(StringView path);
 bool mkdir_fn(StringView path);
 
 bool access_fn(StringView path, Access mode);

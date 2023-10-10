@@ -138,6 +138,9 @@ public:
 	template <typename Interface, typename ... Args>
 	static auto merge(Args && ... args) -> typename Interface::template BasicStringType<CharType>;
 
+	template <typename Interface, _CharType c, typename ... Args>
+	static auto merge(Args && ... args) -> typename Interface::template BasicStringType<CharType>;
+
 	constexpr StringViewBase();
 	constexpr StringViewBase(const CharType *ptr, size_t len = maxOf<size_t>());
 	constexpr StringViewBase(const CharType *ptr, size_t pos, size_t len);
@@ -232,7 +235,7 @@ protected:
 	static size_t _size(T &&, Args && ... args);
 
 	template <typename Buf, typename T>
-	static void __merge(Buf &, const T &t);
+	static void __merge(Buf &, T &&t);
 
 	template <typename Buf>
 	static void __merge(Buf &, const CharType *);
@@ -242,6 +245,15 @@ protected:
 
 	template <typename Buf, typename T>
 	static void _merge(Buf &, T &&);
+
+	template <typename Buf, CharType C, bool Front, typename T>
+	static void __mergeWithSep(Buf &, T &&t);
+
+	template <typename Buf, _CharType C, bool Front, typename T, typename ... Args>
+	static void _mergeWithSep(Buf &, T &&, Args && ... args);
+
+	template <typename Buf, _CharType C, bool Front, typename T>
+	static void _mergeWithSep(Buf &, T &&);
 
 	template <typename ... Args> bool match (CharType c);
 };
@@ -617,6 +629,17 @@ auto StringViewBase<_CharType>::merge(Args && ... args) -> typename Interface::t
 }
 
 template <typename _CharType>
+template <typename Interface, _CharType C, typename ... Args>
+auto StringViewBase<_CharType>::merge(Args && ... args) -> typename Interface::template BasicStringType<CharType> {
+	using StringType = typename Interface::template BasicStringType<CharType>;
+
+	StringType ret; ret.reserve(_size(forward<Args>(args)...) + sizeof...(Args));
+	_mergeWithSep<StringType, C, true>(ret, forward<Args>(args)...);
+	return ret;
+}
+
+
+template <typename _CharType>
 template <typename T>
 inline size_t StringViewBase<_CharType>::__size(const T &t) {
 	return t.size();
@@ -641,28 +664,61 @@ inline size_t StringViewBase<_CharType>::_size(T &&t, Args && ... args) {
 
 template <typename _CharType>
 template <typename Buf, typename T>
-inline void StringViewBase<_CharType>::__merge(Buf &buf, const T &t) {
-	buf.append(t.data(), t.size());
+inline void StringViewBase<_CharType>::__merge(Buf &buf, T &&t) {
+	if (!t.empty()) {
+		buf.append(t.data(), t.size());
+	}
 }
 
 template <typename _CharType>
 template <typename Buf>
 inline void StringViewBase<_CharType>::__merge(Buf &buf, const CharType *c) {
-	buf.append(c);
+	if (c) {
+		buf.append(c);
+	}
 }
 
 template <typename _CharType>
 template <typename Buf, typename T, typename ... Args>
 inline void StringViewBase<_CharType>::_merge(Buf &buf, T &&t, Args && ... args) {
-	__merge(buf, t);
+	__merge(buf, std::forward<T>(t));
 	_merge(buf, forward<Args>(args)...);
 }
 
 template <typename _CharType>
 template <typename Buf, typename T>
 inline void StringViewBase<_CharType>::_merge(Buf &buf, T &&t) {
-	__merge(buf, t);
+	__merge(buf, std::forward<T>(t));
 }
+
+template <typename _CharType>
+template <typename Buf, _CharType C, bool Front, typename T>
+inline void StringViewBase<_CharType>::__mergeWithSep(Buf &buf, T &&t) {
+	Self tmp(t);
+	tmp.trimChars<typename Self::template Chars<C>>();
+	if (!tmp.empty()) {
+		if constexpr (Front) {
+			buf.append(t.data(), t.size());
+		} else {
+			buf.push_back(C);
+			buf.append(t.data(), t.size());
+		}
+	}
+}
+
+template <typename _CharType>
+template <typename Buf, _CharType C, bool Front, typename T, typename ... Args>
+inline void StringViewBase<_CharType>::_mergeWithSep(Buf &buf, T &&t, Args && ... args) {
+	__mergeWithSep<Buf, C, Front>(buf, std::forward<T>(t));
+	_mergeWithSep<Buf, C, false>(buf, std::forward<Args>(args)...);
+}
+
+template <typename _CharType>
+template <typename Buf, _CharType C, bool Front, typename T>
+inline void StringViewBase<_CharType>::_mergeWithSep(Buf &buf, T &&t) {
+	__mergeWithSep<Buf, C, Front>(buf, std::forward<T>(t));
+}
+
 
 template <typename _CharType>
 inline constexpr StringViewBase<_CharType>::StringViewBase() : BytesReader<_CharType>(nullptr, 0) { }
