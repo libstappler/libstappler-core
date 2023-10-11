@@ -73,8 +73,14 @@ THE SOFTWARE.
    //define something for Windows (32-bit and 64-bit, this part is common)
 	#ifdef _WIN64
 		#define WINDOWS 1
+		#ifndef WIN32
+			#define WIN32 1
+		#endif
 	#else
 		#define WINDOWS 1
+		#ifndef WIN32
+			#define WIN32 1
+		#endif
 	#endif
 #elif __APPLE__
 #include <TargetConditionals.h>

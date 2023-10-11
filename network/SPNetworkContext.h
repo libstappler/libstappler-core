@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 #include "SPNetworkHandle.h"
 
-#if XWIN
+#if WIN32
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define CURL_STATICLIB
 #pragma clang diagnostic push

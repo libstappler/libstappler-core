@@ -28,6 +28,11 @@ THE SOFTWARE.
 #include "SPCrypto.h"
 #include "STStorageScheme.h"
 
+#ifdef _MSC_VER
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
+#endif
+
 namespace stappler::db {
 
 AutoFieldScheme::AutoFieldScheme(const Scheme &s, ReqVec &&vec, ViewLinkageFn &&fn, ReqVec &&lvec)

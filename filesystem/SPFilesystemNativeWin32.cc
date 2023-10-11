@@ -119,10 +119,10 @@ bool unlink_fn(StringView path) {
 
 bool mkdir_fn(StringView path) {
 	memory::StandartInterface::WideStringType str = string::toUtf16<memory::StandartInterface>(posixToNative<memory::StandartInterface>(path));
-	int oldmask;
+	int oldmask, tmp;
 	_umask_s(0, &oldmask);
 	bool ret = _wmkdir((wchar_t *)str.c_str()) == 0;
-	_umask_s(oldmask, NULL);
+	_umask_s(oldmask, &tmp);
     return ret;
 }
 

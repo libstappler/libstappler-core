@@ -403,6 +403,7 @@ PrivateKey::PrivateKey(Backend b) : _valid(true), _key() {
 	auto backend = BackendCtx::get(b);
 	if (!backend) {
 		_valid = false;
+		return;
 	}
 
 	if (!backend->privInit || !backend->privInit(_key)) {
@@ -589,6 +590,7 @@ PublicKey::PublicKey(Backend b) : _valid(true), _key() {
 	auto backend = BackendCtx::get(b);
 	if (!backend) {
 		_valid = false;
+		return;
 	}
 
 	if (!backend->pubInit || !backend->pubInit(_key)) {

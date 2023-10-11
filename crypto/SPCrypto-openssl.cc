@@ -452,6 +452,58 @@ static const EVP_CIPHER *getOpenSSLCipher(BlockCipher b) {
 	return EVP_aes_256_cbc();
 }
 
+static void OpenSSL_initGost() {
+	static bool init = false;
+	if (init) {
+		return;
+	}
+
+	init = true;
+
+	ENGINE_load_gost();
+
+	auto e = ENGINE_get_pkey_meth_engine(NID_id_GostR3410_2012_256);
+	if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_256)) {
+		s_ossl_GostR3410_2012_256_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_256, 0);
+		EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_256_resign, meth);
+
+		EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_256_resign,
+				&s_ossl_GostR3410_2012_256_psign_init, &s_ossl_GostR3410_2012_256_psign);
+		EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_256_resign, s_ossl_GostR3410_2012_256_psign_init,
+				&s_ossl_GostR3410_2012_256_psign_resign);
+
+		s_ossl_GostR3410_2012_meths[0] = s_ossl_GostR3410_2012_256_resign;
+		EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_256_resign);
+	}
+	if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_512)) {
+		s_ossl_GostR3410_2012_512_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_512, 0);
+		EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_512_resign, meth);
+
+		EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_512_resign,
+				&s_ossl_GostR3410_2012_512_psign_init, &s_ossl_GostR3410_2012_512_psign);
+		EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_512_resign, s_ossl_GostR3410_2012_512_psign_init,
+				&s_ossl_GostR3410_2012_512_psign_resign);
+
+		s_ossl_GostR3410_2012_meths[1] = s_ossl_GostR3410_2012_512_resign;
+		EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_512_resign);
+	}
+	if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_256)) {
+		EVP_PKEY_asn1_add0(meth);
+	}
+	if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_512)) {
+		EVP_PKEY_asn1_add0(meth);
+	}
+
+	s_ossl_Engine = ENGINE_new();
+	ENGINE_set_id(s_ossl_Engine, ossl_engine_gost_id);
+	ENGINE_set_name(s_ossl_Engine, ossl_engine_gost_name);
+	ENGINE_set_pkey_meths(s_ossl_Engine, ossl_gost_pkey_meths);
+
+	ENGINE_register_pkey_meths(s_ossl_Engine);
+
+    ENGINE_register_all_complete();
+}
+
 static BackendCtx s_openSSLCtx = {
 	.name = Backend::OpenSSL,
 	.title = StringView("OpenSSL"),
@@ -460,49 +512,8 @@ static BackendCtx s_openSSLCtx = {
 	.initialize = [] () {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		/*ENGINE_load_gost();
-
-		auto e = ENGINE_get_pkey_meth_engine(NID_id_GostR3410_2012_256);
-		if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_256)) {
-			s_ossl_GostR3410_2012_256_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_256, 0);
-			EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_256_resign, meth);
-
-			EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_256_resign,
-					&s_ossl_GostR3410_2012_256_psign_init, &s_ossl_GostR3410_2012_256_psign);
-			EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_256_resign, s_ossl_GostR3410_2012_256_psign_init,
-					&s_ossl_GostR3410_2012_256_psign_resign);
-
-			s_ossl_GostR3410_2012_meths[0] = s_ossl_GostR3410_2012_256_resign;
-			EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_256_resign);
-		}
-		if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_512)) {
-			s_ossl_GostR3410_2012_512_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_512, 0);
-			EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_512_resign, meth);
-
-			EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_512_resign,
-					&s_ossl_GostR3410_2012_512_psign_init, &s_ossl_GostR3410_2012_512_psign);
-			EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_512_resign, s_ossl_GostR3410_2012_512_psign_init,
-					&s_ossl_GostR3410_2012_512_psign_resign);
-
-			s_ossl_GostR3410_2012_meths[1] = s_ossl_GostR3410_2012_512_resign;
-			EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_512_resign);
-		}
-		if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_256)) {
-			EVP_PKEY_asn1_add0(meth);
-		}
-		if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_512)) {
-			EVP_PKEY_asn1_add0(meth);
-		}
-
-		s_ossl_Engine = ENGINE_new();
-		ENGINE_set_id(s_ossl_Engine, ossl_engine_gost_id);
-		ENGINE_set_name(s_ossl_Engine, ossl_engine_gost_name);
-		ENGINE_set_pkey_meths(s_ossl_Engine, ossl_gost_pkey_meths);
-
-		ENGINE_register_pkey_meths(s_ossl_Engine);
-
-	    ENGINE_register_all_complete();
-		OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, NULL);*/
+		OpenSSL_initGost();
+		OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, NULL);
 		log::verbose("Crypto", "OpenSSL+gost backend loaded");
 #pragma GCC diagnostic pop
 	},

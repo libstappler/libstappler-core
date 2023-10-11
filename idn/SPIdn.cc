@@ -23,8 +23,8 @@ THE SOFTWARE.
 
 #include "SPIdn.h"
 
-#ifdef MSYS
-#include "Windows.h"
+#ifdef WIN32
+#include "SPPlatformUnistd.h"
 #include "winnls.h"
 #else
 #include "unicode/uidna.h"
@@ -52,8 +52,8 @@ auto _idnToAscii(StringView source, bool validate) -> typename Interface::String
 		}
 	}
 
-#ifdef MSYS
-	auto in_w = string::toUtf16(source);
+#ifdef WIN32
+	auto in_w = string::toUtf16<memory::StandartInterface>(source);
 	wchar_t punycode[256] = { 0 };
 	int chars = IdnToAscii(0, (const wchar_t *)in_w.data(), -1, punycode, 255);
 	if (chars) {
@@ -93,8 +93,8 @@ auto _idnToUnicode(StringView source, bool validate) -> typename Interface::Stri
 		}
 	}
 
-#ifdef MSYS
-	auto in_w = string::toUtf16(source);
+#ifdef WIN32
+	auto in_w = string::toUtf16<memory::StandartInterface>(source);
 	wchar_t unicode[256] = { 0 };
 	int chars = IdnToUnicode(0, (const wchar_t *)in_w.data(), int(in_w.size()), unicode, 255);
 	if (chars) {

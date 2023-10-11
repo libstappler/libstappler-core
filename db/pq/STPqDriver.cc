@@ -24,7 +24,12 @@ THE SOFTWARE.
 #include "STPqDriver.h"
 #include "STPqHandle.h"
 #include "STSqlHandle.h"
+#if WIN32
+#include "SPPlatformUnistd.h"
+#include <libloaderapi.h>
+#else
 #include <dlfcn.h>
+#endif
 
 namespace stappler::db::pq {
 
@@ -65,6 +70,16 @@ struct pgNotify {
 	pgNotify *next;		/* list link */
 };
 
+#if WIN32
+static FARPROC sp_dlsym(void *h, const char *name) {
+	return GetProcAddress((HMODULE)h, name);
+}
+#else
+static void *sp_dlsym(void *h, const char *name) {
+	return dlsym(h, name);
+}
+#endif
+
 struct DriverSym : AllocBase {
 	using PQnoticeProcessor = void (*) (void *arg, const char *message);
 	using PQresultStatusType = ExecStatusType (*) (const void *res);
@@ -100,36 +115,36 @@ struct DriverSym : AllocBase {
 	using PQsetNoticeProcessorType = void (*) (void *conn, PQnoticeProcessor, void *);
 
 	DriverSym(StringView name, void *d) : name(name), ptr(d) {
-		this->PQresultStatus = DriverSym::PQresultStatusType(dlsym(d, "PQresultStatus"));
-		this->PQconnectdbParams = DriverSym::PQconnectdbParamsType(dlsym(d, "PQconnectdbParams"));
-		this->PQfinish = DriverSym::PQfinishType(dlsym(d, "PQfinish"));
-		this->PQfformat = DriverSym::PQfformatType(dlsym(d, "PQfformat"));
-		this->PQgetisnull = DriverSym::PQgetisnullType(dlsym(d, "PQgetisnull"));
-		this->PQgetvalue = DriverSym::PQgetvalueType(dlsym(d, "PQgetvalue"));
-		this->PQgetlength = DriverSym::PQgetlengthType(dlsym(d, "PQgetlength"));
-		this->PQfname = DriverSym::PQfnameType(dlsym(d, "PQfname"));
-		this->PQftype = DriverSym::PQftypeType(dlsym(d, "PQftype"));
-		this->PQntuples = DriverSym::PQntuplesType(dlsym(d, "PQntuples"));
-		this->PQnfields = DriverSym::PQnfieldsType(dlsym(d, "PQnfields"));
-		this->PQcmdTuples = DriverSym::PQcmdTuplesType(dlsym(d, "PQcmdTuples"));
-		this->PQresStatus = DriverSym::PQresStatusType(dlsym(d, "PQresStatus"));
-		this->PQresultErrorMessage = DriverSym::PQresultErrorMessageType(dlsym(d, "PQresultErrorMessage"));
-		this->PQclear = DriverSym::PQclearType(dlsym(d, "PQclear"));
-		this->PQexec = DriverSym::PQexecType(dlsym(d, "PQexec"));
-		this->PQexecParams = DriverSym::PQexecParamsType(dlsym(d, "PQexecParams"));
-		this->PQsendQuery = DriverSym::PQsendQueryType(dlsym(d, "PQsendQuery"));
-		this->PQstatus = DriverSym::PQstatusType(dlsym(d, "PQstatus"));
-		this->PQerrorMessage = DriverSym::PQerrorMessageType(dlsym(d, "PQerrorMessage"));
-		this->PQreset = DriverSym::PQresetType(dlsym(d, "PQreset"));
-		this->PQtransactionStatus = DriverSym::PQtransactionStatusType(dlsym(d, "PQtransactionStatus"));
-		this->PQsetnonblocking = DriverSym::PQsetnonblockingType(dlsym(d, "PQsetnonblocking"));
-		this->PQsocket = DriverSym::PQsocketType(dlsym(d, "PQsocket"));
-		this->PQconsumeInput = DriverSym::PQconsumeInputType(dlsym(d, "PQconsumeInput"));
-		this->PQnotifies = DriverSym::PQnotifiesType(dlsym(d, "PQnotifies"));
-		this->PQfreemem = DriverSym::PQfreememType(dlsym(d, "PQfreemem"));
-		this->PQisBusy = DriverSym::PQisBusyType(dlsym(d, "PQisBusy"));
-		this->PQgetResult = DriverSym::PQgetResultType(dlsym(d, "PQgetResult"));
-		this->PQsetNoticeProcessor = DriverSym::PQsetNoticeProcessorType(dlsym(d, "PQsetNoticeProcessor"));
+		this->PQresultStatus = DriverSym::PQresultStatusType(sp_dlsym(d, "PQresultStatus"));
+		this->PQconnectdbParams = DriverSym::PQconnectdbParamsType(sp_dlsym(d, "PQconnectdbParams"));
+		this->PQfinish = DriverSym::PQfinishType(sp_dlsym(d, "PQfinish"));
+		this->PQfformat = DriverSym::PQfformatType(sp_dlsym(d, "PQfformat"));
+		this->PQgetisnull = DriverSym::PQgetisnullType(sp_dlsym(d, "PQgetisnull"));
+		this->PQgetvalue = DriverSym::PQgetvalueType(sp_dlsym(d, "PQgetvalue"));
+		this->PQgetlength = DriverSym::PQgetlengthType(sp_dlsym(d, "PQgetlength"));
+		this->PQfname = DriverSym::PQfnameType(sp_dlsym(d, "PQfname"));
+		this->PQftype = DriverSym::PQftypeType(sp_dlsym(d, "PQftype"));
+		this->PQntuples = DriverSym::PQntuplesType(sp_dlsym(d, "PQntuples"));
+		this->PQnfields = DriverSym::PQnfieldsType(sp_dlsym(d, "PQnfields"));
+		this->PQcmdTuples = DriverSym::PQcmdTuplesType(sp_dlsym(d, "PQcmdTuples"));
+		this->PQresStatus = DriverSym::PQresStatusType(sp_dlsym(d, "PQresStatus"));
+		this->PQresultErrorMessage = DriverSym::PQresultErrorMessageType(sp_dlsym(d, "PQresultErrorMessage"));
+		this->PQclear = DriverSym::PQclearType(sp_dlsym(d, "PQclear"));
+		this->PQexec = DriverSym::PQexecType(sp_dlsym(d, "PQexec"));
+		this->PQexecParams = DriverSym::PQexecParamsType(sp_dlsym(d, "PQexecParams"));
+		this->PQsendQuery = DriverSym::PQsendQueryType(sp_dlsym(d, "PQsendQuery"));
+		this->PQstatus = DriverSym::PQstatusType(sp_dlsym(d, "PQstatus"));
+		this->PQerrorMessage = DriverSym::PQerrorMessageType(sp_dlsym(d, "PQerrorMessage"));
+		this->PQreset = DriverSym::PQresetType(sp_dlsym(d, "PQreset"));
+		this->PQtransactionStatus = DriverSym::PQtransactionStatusType(sp_dlsym(d, "PQtransactionStatus"));
+		this->PQsetnonblocking = DriverSym::PQsetnonblockingType(sp_dlsym(d, "PQsetnonblocking"));
+		this->PQsocket = DriverSym::PQsocketType(sp_dlsym(d, "PQsocket"));
+		this->PQconsumeInput = DriverSym::PQconsumeInputType(sp_dlsym(d, "PQconsumeInput"));
+		this->PQnotifies = DriverSym::PQnotifiesType(sp_dlsym(d, "PQnotifies"));
+		this->PQfreemem = DriverSym::PQfreememType(sp_dlsym(d, "PQfreemem"));
+		this->PQisBusy = DriverSym::PQisBusyType(sp_dlsym(d, "PQisBusy"));
+		this->PQgetResult = DriverSym::PQgetResultType(sp_dlsym(d, "PQgetResult"));
+		this->PQsetNoticeProcessor = DriverSym::PQsetNoticeProcessorType(sp_dlsym(d, "PQsetNoticeProcessor"));
 	}
 
 	~DriverSym() { }
@@ -206,6 +221,18 @@ struct PgDriverLibStorage {
 			return &it->second;
 		}
 
+#if WIN32
+		if (auto d = LoadLibraryA((LPCSTR)target.data())) {
+			DriverSym syms(target, d);
+			if (syms) {
+				auto ret = s_driverLibs.emplace(target, std::move(syms)).first;
+				ret->second.name = ret->first;
+				return &ret->second;
+			} else {
+				FreeLibrary(d);
+			}
+		}
+#else
 		if (auto d = dlopen(target.data(), RTLD_LAZY)) {
 			DriverSym syms(target, d);
 			if (syms) {
@@ -216,6 +243,7 @@ struct PgDriverLibStorage {
 				dlclose(d);
 			}
 		}
+#endif
 		return nullptr;
 	}
 
