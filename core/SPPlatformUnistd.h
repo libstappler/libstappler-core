@@ -55,8 +55,17 @@
 #include <errno.h>
 
 #include <Windows.h>
+#include <windowsx.h>
 
 using pid_t = DWORD;
+
+#ifdef interface
+#undef interface
+#endif
+
+#ifdef DELETE
+#undef DELETE
+#endif
 
 #else
 #include <unistd.h>

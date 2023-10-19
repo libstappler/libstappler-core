@@ -38,7 +38,6 @@ auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterfa
 	if (length != 0) {
 		WideStringView appPathW(reinterpret_cast<char16_t *>(fullpath), length);
 		auto appPath = stappler::filesystem::native::nativeToPosix<Interface>(string::toUtf8<Interface>(appPathW));
-		appPath = appPath.substr(0, appPath.find_last_of("/"));
 		return appPath;
 	}
 
@@ -54,7 +53,6 @@ auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::Stri
 	if (length != 0) {
 		WideStringView appPathW(reinterpret_cast<char16_t *>(fullpath), length);
 		auto appPath = stappler::filesystem::native::nativeToPosix<Interface>(string::toUtf8<Interface>(appPathW));
-		appPath = appPath.substr(0, appPath.find_last_of("/"));
 		return appPath;
 	}
 

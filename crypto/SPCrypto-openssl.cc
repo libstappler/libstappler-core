@@ -460,6 +460,8 @@ static void OpenSSL_initGost() {
 
 	init = true;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	ENGINE_load_gost();
 
 	auto e = ENGINE_get_pkey_meth_engine(NID_id_GostR3410_2012_256);
@@ -502,6 +504,7 @@ static void OpenSSL_initGost() {
 	ENGINE_register_pkey_meths(s_ossl_Engine);
 
     ENGINE_register_all_complete();
+#pragma GCC diagnostic pop
 }
 
 static BackendCtx s_openSSLCtx = {
@@ -510,12 +513,9 @@ static BackendCtx s_openSSLCtx = {
 	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsPKCS8 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary
 			| BackendFlags::SupportsGost3410_2012,
 	.initialize = [] () {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		OpenSSL_initGost();
 		OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, NULL);
 		log::verbose("Crypto", "OpenSSL+gost backend loaded");
-#pragma GCC diagnostic pop
 	},
 	.finalize = [] () { },
 	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {

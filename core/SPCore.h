@@ -109,6 +109,11 @@ template <typename T>
 using iter_reference_t = typename T::reference;
 
 }
+
+#if WIN32
+#define __cdecl
+#endif
+
 #endif
 
 #ifndef DEBUG
@@ -198,6 +203,10 @@ using iter_reference_t = typename T::reference;
 
 #if XWIN
 #pragma clang diagnostic pop
+#endif
+
+#if WIN32
+#undef interface
 #endif
 
 #if __CDT_PARSER__

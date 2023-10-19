@@ -503,13 +503,7 @@ bool copy(StringView isource, StringView idest, bool stopOnError) {
 
 bool write(StringView ipath, const unsigned char *data, size_t len) {
 	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
-	std::ofstream f(path.data());
-	if (f.is_open()) {
-		f.write((const char *)data, len);
-		f.close();
-		return true;
-	}
-	return false;
+	return filesystem::native::write_fn(path, data, len);
 }
 
 File openForReading(StringView ipath) {

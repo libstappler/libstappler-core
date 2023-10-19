@@ -21,6 +21,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
+#if WIN32
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include "lz4/lib/lz4.cc"
 
 #if MODULE_STAPPLER_SEARCH
@@ -28,3 +33,7 @@ THE SOFTWARE.
 #endif
 
 #include "hyphen/hyphen.cc"
+
+#if WIN32
+#pragma clang diagnostic pop
+#endif

@@ -295,6 +295,12 @@ inline std::ostream & operator<<(std::ostream & stream, const Rect & obj) {
 	return stream;
 }
 
+inline std::ostream & operator<<(std::ostream & stream, const URect & obj) {
+	stream << "URect(x:" << obj.x << " y:" << obj.y
+			<< " width:" << obj.width << " height:" << obj.height << ");";
+	return stream;
+}
+
 inline std::ostream & operator<<(std::ostream & stream, const Size2 & obj) {
 	stream << "Size2(width:" << obj.width << " height:" << obj.height << ");";
 	return stream;

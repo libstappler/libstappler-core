@@ -31,7 +31,7 @@ MODULE_STAPPLER_BITMAP_LIBS += -l:libz.a -lpthread
 endif
 
 ifdef WIN32
-MODULE_STAPPLER_BITMAP_LIBS += -lz
+MODULE_STAPPLER_BITMAP_LIBS += -lz -loldnames
 endif
 
 # module name resolution

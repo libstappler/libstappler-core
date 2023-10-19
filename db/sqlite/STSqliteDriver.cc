@@ -190,6 +190,9 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 			dbname = StringView(filesystem::writablePath<Interface>(dbname)).pdup();
 			stappler::filesystem::mkdir_recursive(stappler::filepath::root(dbname), true);
 		}
+#if WIN32
+		dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
+#endif
 		if (sqlite3_open_v2(dbname.data(), &db, flags, nullptr) == SQLITE_OK) {
 			sqlite3_db_config(db, SQLITE_DBCONFIG_DQS_DDL, 0, nullptr);
 			sqlite3_db_config(db, SQLITE_DBCONFIG_DQS_DML, 0, nullptr);

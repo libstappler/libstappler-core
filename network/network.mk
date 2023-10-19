@@ -29,9 +29,9 @@ MODULE_STAPPLER_NETWORK_DEPENDS_ON := stappler_idn stappler_crypto stappler_file
 ifdef MACOS_ARCH
 MODULE_STAPPLER_NETWORK_LIBS += -framework CoreFoundation -framework SystemConfiguration -framework CoreFoundation -framework Security
 endif
-
+ 
 ifdef WIN32
-MODULE_STAPPLER_NETWORK_LIBS += -lnormaliz -loldnames
+MODULE_STAPPLER_NETWORK_LIBS += -lnormaliz -loldnames -lbcrypt
 endif
 
 # module name resolution

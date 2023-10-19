@@ -307,7 +307,8 @@ inline auto write(const ValueTemplate<Interface> &val, bool pretty = false) -> t
 }
 
 template <typename Interface>
-bool save(const ValueTemplate<Interface> &val, StringView path, bool pretty) {
+bool save(const ValueTemplate<Interface> &val, StringView ipath, bool pretty) {
+	auto path = filesystem::native::posixToNative<Interface>(ipath);
 	std::ofstream stream(path.data());
 	if (stream.is_open()) {
 		write(stream, val, pretty);

@@ -202,7 +202,7 @@ struct EncodeTraits {
 		} else {
 			auto ret = write(data, fmt);
 			if (!ret.empty()) {
-				filesystem::write(file, ret);
+				filesystem::write(path, ret);
 				return true;
 			}
 			return false;

@@ -113,17 +113,14 @@ Time Time::now() {
 #if (SPAPR)
 	return Time(apr_time_now());
 #elif (WIN32)
-    // Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
-    // This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
-    // until 00:00:00 January 1, 1970
-    static const uint64_t EPOCH = ((uint64_t) 116444736000000000ULL);
+    static const uint64_t EPOCH = ((uint64_t) 116444736000000000LL);
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);
 	uint64_t tt = ft.dwHighDateTime;
 	tt <<= 32;
 	tt |= ft.dwLowDateTime;
-	tt /= 10;
 	tt -= EPOCH;
+	tt /= 10;
 	return Time(tt);
 #else
 	struct timeval t0;
@@ -264,8 +261,24 @@ int64_t sp_time_exp_t::ltz_geti() const {
 	time_t t = time(NULL);
 	struct tm lt = {0};
 #if WIN32
+	TIME_ZONE_INFORMATION tzi;
+	GetTimeZoneInformation(&tzi);
 	localtime_s(&lt, &t);
-	return int64_t( geti() - tm_gmtoff * SP_USEC_PER_SEC );
+
+	long bias = tzi.Bias;
+	if (lt.tm_isdst) {
+		if (tzi.DaylightDate.wMonth) {
+			bias += tzi.DaylightBias;
+		} else if (tzi.StandardDate.wMonth) {
+			bias += tzi.StandardBias;
+		}
+	} else {
+		if (tzi.StandardDate.wMonth) {
+			bias += tzi.StandardBias;
+		}
+	}
+
+	return int64_t( geti() + bias * 60 * SP_USEC_PER_SEC );
 #else
 	localtime_r(&t, &lt);
 	return int64_t( geti() - lt.tm_gmtoff * SP_USEC_PER_SEC );

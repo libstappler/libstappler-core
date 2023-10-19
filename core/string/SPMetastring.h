@@ -92,16 +92,18 @@ using numeric = typename numeric_builder<num_digits (x), x>::type;
 
 namespace stappler {
 
-/*template <char ... Chars>
-inline std::basic_ostream<char> &
-operator << (std::basic_ostream<char> & os, const metastring::metastring<Chars ...> &str) {
-	auto arr = str.to_array();
-	return os.write(arr.data(), arr.size());
-}*/
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-string-literal-operator-template"
+#endif
 
 template <typename CharType, CharType ... Chars> auto operator "" _meta() {
 	return metastring::metastring<Chars ...>();
 }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 }
 

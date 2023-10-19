@@ -212,6 +212,12 @@ bool RefContainer<Item>::removeItemByTag(uint32_t tag) {
 	return false;
 }
 
+#ifdef __clang__
+// We ignore std::remove_if result becouse we dont need erase in this usecase
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-result"
+#endif
+
 template <typename Item>
 void RefContainer<Item>::removeAllItemsByTag(uint32_t tag) {
 	if (_nitems <= ReserveItems) {
@@ -269,6 +275,10 @@ bool RefContainer<Item>::cleanup() {
 		return target->empty();
 	}
 }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 template <typename Item>
 template <typename Callback>

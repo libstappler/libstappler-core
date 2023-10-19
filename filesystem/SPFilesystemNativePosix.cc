@@ -195,6 +195,16 @@ FILE *fopen_fn(StringView path, StringView mode) {
 	return fopen(SP_TERMINATED_DATA(path), SP_TERMINATED_DATA(mode));
 }
 
+bool write_fn(StringView path, const unsigned char *data, size_t len) {
+	std::ofstream f(SP_TERMINATED_DATA(path));
+	if (f.is_open()) {
+		f.write((const char *)data, len);
+		f.close();
+		return true;
+	}
+	return false;
+}
+
 #undef SP_TERMINATED_DATA
 
 }

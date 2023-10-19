@@ -248,6 +248,17 @@ FILE *fopen_fn(StringView path, StringView mode) {
 	return ret;
 }
 
+bool write_fn(StringView ipath, const unsigned char *data, size_t len) {
+	auto path = posixToNative<memory::StandartInterface>(ipath);
+	std::ofstream f(path.data());
+	if (f.is_open()) {
+		f.write((const char *)data, len);
+		f.close();
+		return true;
+	}
+	return false;
+}
+
 }
 
 #endif

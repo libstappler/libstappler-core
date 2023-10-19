@@ -305,6 +305,8 @@ bool rename_fn(StringView source, StringView dest);
 
 FILE *fopen_fn(StringView, StringView mode);
 
+bool write_fn(StringView, const unsigned char *data, size_t len);
+
 }
 
 namespace stappler::filesystem {

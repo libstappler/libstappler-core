@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include "SPTime.h"
 #include "SPValid.h"
 #include "SPCrypto.h"
+#include "SPFilesystem.h"
 
 #if MODULE_STAPPLER_BITMAP
 #include "SPBitmap.h"
@@ -242,7 +243,7 @@ HANDLE_NAME(bool, reset, Method method, StringView url) { return Handle_reset(*t
 HANDLE_NAME_CONST(long, getResponseCode) { return process.responseCode; }
 HANDLE_NAME_CONST(long, getErrorCode) { return process.errorCode; }
 HANDLE_NAME_CONST(StringView, getError) { return process.error; }
-HANDLE_NAME(void, setCookieFile, StringView str) { process.cookieFile = str.str<HANDLE_INTERFACE>(); }
+HANDLE_NAME(void, setCookieFile, StringView str) { process.cookieFile = filesystem::native::posixToNative<HANDLE_INTERFACE>(str); }
 HANDLE_NAME(void, setUserAgent, StringView str) { send.userAgent = str.str<HANDLE_INTERFACE>(); }
 HANDLE_NAME(void, setUrl, StringView str) { send.url = str.str<HANDLE_INTERFACE>(); }
 HANDLE_NAME(void, clearHeaders) { send.headers.clear(); }
@@ -308,7 +309,7 @@ HANDLE_NAME(bool, reset, Method method, StringView url) { return Handle_reset(*t
 HANDLE_NAME_CONST(long, getResponseCode) { return process.responseCode; }
 HANDLE_NAME_CONST(long, getErrorCode) { return process.errorCode; }
 HANDLE_NAME_CONST(StringView, getError) { return process.error; }
-HANDLE_NAME(void, setCookieFile, StringView str) { process.cookieFile = str.str<HANDLE_INTERFACE>(); }
+HANDLE_NAME(void, setCookieFile, StringView str) { process.cookieFile = filesystem::native::posixToNative<HANDLE_INTERFACE>(str); }
 HANDLE_NAME(void, setUserAgent, StringView str) { send.userAgent = str.str<HANDLE_INTERFACE>(); }
 HANDLE_NAME(void, setUrl, StringView str) { send.url = str.str<HANDLE_INTERFACE>(); }
 HANDLE_NAME(void, clearHeaders) { send.headers.clear(); }

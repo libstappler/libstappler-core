@@ -2171,10 +2171,10 @@ Gost3411_512::Buf Gost3411_512::make(const CoderSource &source, const StringView
 
 Gost3411_512::Buf Gost3411_512::hmac(const CoderSource &data, const CoderSource &key) {
 	Buf ret;
-	std::array<uint8_t, Length> keyData = { 0 };
+	std::array<uint8_t, Length * 2> keyData = { 0 };
 
 	Gost3411_512 hashCtx;
-    if (key.size() > Length) {
+    if (key.size() > Length * 2) {
     	hashCtx.update(key).final(keyData.data());
     } else {
     	memcpy(keyData.data(), key.data(), key.size());
@@ -2224,10 +2224,10 @@ Gost3411_256::Buf Gost3411_256::make(const CoderSource &source, const StringView
 
 Gost3411_256::Buf Gost3411_256::hmac(const CoderSource &data, const CoderSource &key) {
 	Buf ret;
-	std::array<uint8_t, Length> keyData = { 0 };
+	std::array<uint8_t, Length * 2> keyData = { 0 };
 
 	Gost3411_256 hashCtx;
-    if (key.size() > Length) {
+    if (key.size() > Length * 2) {
     	hashCtx.update(key).final(keyData.data());
     } else {
     	memcpy(keyData.data(), key.data(), key.size());
@@ -2248,7 +2248,7 @@ Gost3411_256::Buf Gost3411_256::hmac(const CoderSource &data, const CoderSource 
 }
 
 Gost3411_256::Gost3411_256() { gost3411_hash_init(&ctx, 256); }
-Gost3411_256 & Gost3411_256::init() { gost3411_hash_init(&ctx, 512); return *this; }
+Gost3411_256 & Gost3411_256::init() { gost3411_hash_init(&ctx, 256); return *this; }
 
 Gost3411_256 & Gost3411_256::update(const uint8_t *ptr, size_t len) {
 	if (len) {

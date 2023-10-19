@@ -59,7 +59,8 @@ struct Encoder : public Interface::AllocBaseType {
 	}
 
 	Encoder(StringView filename) : type(File) {
-		file = new std::ofstream(filename.data(), std::ios::binary);
+		auto path = filesystem::native::posixToNative<Interface>(filename);
+		file = new std::ofstream(path.data(), std::ios::binary);
 		if (isOpen()) {
 			cbor::_writeId(*this);
 		}
