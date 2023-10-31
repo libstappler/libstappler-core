@@ -147,7 +147,7 @@ public:
 	Rect getViewBox() const { return _viewBox; }
 	const Interface::MapType<String, Rc<VectorPath>> &getPaths() const;
 
-	Rc<VectorPath> copyPath(StringView, const Rc<VectorPath> &);
+	Rc<VectorPath> copyPath(StringView);
 
 	uint16_t getNextId();
 
@@ -246,7 +246,7 @@ protected:
 	void copy();
 	void markCopyOnWrite();
 
-	Rc<VectorPath> copyPath(StringView, const Rc<VectorPath> &);
+	Rc<VectorPath> copyPath(StringView);
 
 	bool _dirty = false;
 	bool _copyOnWrite = false;
@@ -256,10 +256,16 @@ protected:
 
 template <typename Callback>
 void VectorImageData::draw(const Callback &cb) const {
-	for (auto &it : _order) {
-		auto pathIt = _paths.find(it.id);
-		if (pathIt != _paths.end()) {
-			cb(*pathIt->second, it.cacheId, it.mat);
+	if (!_order.empty()) {
+		for (auto &it : _order) {
+			auto pathIt = _paths.find(it.id);
+			if (pathIt != _paths.end()) {
+				cb(*pathIt->second, it.cacheId, it.mat);
+			}
+		}
+	} else {
+		for (auto &it : _paths) {
+			cb(*it.second, StringView(), Mat4());
 		}
 	}
 }

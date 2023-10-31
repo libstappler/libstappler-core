@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define STAPPLER_DATA_SPDATAENCODESERENITY_H_
 
 #include "SPDataValue.h"
+#include "SPFilesystem.h"
 
 namespace stappler::data::serenity {
 

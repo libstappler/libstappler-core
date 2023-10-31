@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define STAPPLER_DATA_SPDATAENCODEJSON_H_
 
 #include "SPDataValue.h"
+#include "SPFilesystem.h"
 
 namespace stappler::data::json {
 
@@ -76,7 +77,11 @@ struct RawEncoder : public Interface::AllocBaseType {
 	inline void write(nullptr_t) { writeData("null", "null"_len); }
 	inline void write(bool value) { writeData((value)?"true":"false"); }
 	inline void write(int64_t value) { (*stream) << value; }
-	inline void write(double value) { (*stream) << std::setprecision(std::numeric_limits<double>::max_digits10) << value; }
+	inline void write(double value) {
+		// default stream output strips '.0' at the end, that broke CBOR compatibility
+		std::array<char, string::DOUBLE_MAX_DIGITS> buf = { 0 };
+		stream->write(buf.data(), string::_dtoa(value, buf.data(), buf.size()));
+	}
 
 	inline void write(const typename ValueType::StringType &str) {
 		encodeString(*stream, str);
@@ -102,7 +107,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	using InterfaceType = Interface;
 	using ValueType = ValueTemplate<Interface>;
 
-	PrettyEncoder(std::ostream *stream, bool timeMarkers = false) : timeMarkers(timeMarkers), stream(stream) { }
+	PrettyEncoder(std::ostream *s, bool tM = false) : timeMarkers(tM), stream(s) { }
 
 	void write(nullptr_t) { (*stream) << "null"; offsetted = false; }
 	void write(bool value) { (*stream) << ((value)?"true":"false"); offsetted = false; }
@@ -118,7 +123,12 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 			(*stream) << " /* " << Time::microseconds(value).toHttp<Interface>() << " */";
 		}
 	}
-	void write(double value) { (*stream) << std::setprecision(std::numeric_limits<double>::max_digits10) << value; offsetted = false; }
+	void write(double value) {
+		// default stream output strips '.0' at the end, that broke CBOR compatibility
+		std::array<char, string::DOUBLE_MAX_DIGITS> buf = { 0 };
+		stream->write(buf.data(), string::_dtoa(value, buf.data(), buf.size()));
+		offsetted = false;
+	}
 
 	void write(const typename ValueType::StringType &str) {
 		encodeString(*stream, str);

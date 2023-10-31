@@ -165,7 +165,7 @@ public:
 	bool is(const CharType *c) const;
 	bool is(const Self &c) const;
 
-	template <CharType C> bool is() const;
+	template <_CharType C> bool is() const;
 	template <CharGroupId G> bool is() const;
 	template <typename M> bool is() const;
 
@@ -177,7 +177,7 @@ public:
 	auto str() const -> typename Interface::template BasicStringType<CharType>;
 
 	Self & operator ++ ();
-	Self & operator ++ (int);
+	Self operator ++ (int);
 	Self & operator += (size_t l);
 
 	Self begin() const;
@@ -190,7 +190,7 @@ public:
 		return hash::hash64((const char *)this->data(), this->size() * sizeof(CharType));
 	}
 
-	uint64_t hash32() const {
+	uint32_t hash32() const {
 		return hash::hash32((const char *)this->data(), uint32_t(this->size() * sizeof(CharType)));
 	}
 
@@ -246,7 +246,7 @@ protected:
 	template <typename Buf, typename T>
 	static void _merge(Buf &, T &&);
 
-	template <typename Buf, CharType C, bool Front, typename T>
+	template <typename Buf, _CharType C, bool Front, typename T>
 	static void __mergeWithSep(Buf &, T &&t);
 
 	template <typename Buf, _CharType C, bool Front, typename T, typename ... Args>
@@ -261,7 +261,7 @@ protected:
 class StringViewUtf8 : public BytesReader<char> {
 public:
 	using Self = StringViewUtf8;
-	using MatchCharType = char16_t;
+	using MatchCharType = char32_t;
 	using CharType = char;
 	using value_type = char;
 	using TraitsType = typename std::char_traits<char>;
@@ -326,24 +326,25 @@ public:
 
 	bool is(const char &c) const;
 	bool is(const char16_t &c) const;
+	bool is(const char32_t &c) const;
 	bool is(const char *c) const;
 	bool is(const Self &c) const;
 
 	template <char16_t C> bool is() const;
+	template <char32_t C> bool is() const;
 	template <CharGroupId G> bool is() const;
 	template <typename M> bool is() const;
 
 	Self sub(size_t pos = 0, size_t len = maxOf<size_t>()) const { return StringViewUtf8(*this, pos, len); }
 
-	template <typename Interface>
-	auto letter() const -> typename Interface::StringType;
+	Self letter() const;
 
 	template <typename Interface>
 	auto str() const -> typename Interface::StringType;
 
 	void offset(size_t l);
 	Self & operator ++ ();
-	Self & operator ++ (int);
+	Self operator ++ (int);
 	Self & operator += (size_t l);
 
 	bool isSpace() const;
@@ -364,11 +365,11 @@ public:
 	operator StringViewBase<char> () const;
 
 	uint64_t hash() const {
-		return hash::hash64((const char *)data(), size() * sizeof(CharType));
+		return hash::hash64(data(), size() * sizeof(CharType));
 	}
 
 	uint64_t hash32() const {
-		return hash::hash32((const char *)data(), uint32_t(size() * sizeof(CharType)));
+		return hash::hash32(data(), uint32_t(size() * sizeof(CharType)));
 	}
 
 public:
@@ -400,25 +401,11 @@ public:
 
 protected: // char-matching inline functions
     template <typename ...Args> bool rv_match_utf8 (const CharType *ptr, size_t len, uint8_t &offset);
-	template <typename ...Args> bool match (char16_t c);
+	template <typename ...Args> bool match (MatchCharType c);
 };
 
 using StringView = StringViewBase<char>;
 using WideStringView = StringViewBase<char16_t>;
-
-// Experimental: using callbacks instead of stream for << with StringViews
-// useful for custom output function within libraries
-
-template <typename Char>
-inline auto operator<<(const Callback<void(StringViewBase<Char>)> &cb, int64_t) -> const Callback<void(StringViewBase<Char>)> &;
-template <typename Char>
-inline auto operator<<(const Callback<void(StringViewBase<Char>)> &cb, uint64_t) -> const Callback<void(StringViewBase<Char>)> &;
-template <typename Char>
-inline auto operator<<(const Callback<void(StringViewBase<Char>)> &cb, StringViewBase<Char> str) -> const Callback<void(StringViewBase<Char>)> &;
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, int64_t) -> const Callback<void(StringViewUtf8)> &;
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, uint64_t) -> const Callback<void(StringViewUtf8)> &;
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, StringViewUtf8 str) -> const Callback<void(StringViewUtf8)> &;
 
 }
 
@@ -440,20 +427,28 @@ inline int compareCaseInsensivive(const L &l, const R &r);
 
 template<typename _CharT>
 constexpr size_t length(const _CharT *__p) {
-	size_t __i = 0;
-	while (__p[__i] != _CharT()) {
-		++__i;
+	if (!__p) {
+		return 0;
 	}
-	return __i;
+
+	return std::char_traits<_CharT>::length(__p);
 }
 
 template<typename _CharT>
 constexpr size_t length(const _CharT *__p, size_t max) {
-	size_t __i = 0;
-	while (__i < max && __p[__i] != _CharT()) {
-		++__i;
+	if (!__p) {
+		return 0;
 	}
-	return __i;
+
+	if (max == maxOf<size_t>()) {
+		return std::char_traits<_CharT>::length(__p);
+	} else {
+		size_t __i = 0;
+		while (__i < max && __p[__i] != _CharT()) {
+			++__i;
+		}
+		return __i;
+	}
 }
 
 }
@@ -739,10 +734,6 @@ template <typename _CharType>
 inline constexpr StringViewBase<_CharType>::StringViewBase(const Self &ptr, size_t len)
 : BytesReader<_CharType>(ptr.data(), min(len, ptr.size())) { }
 
-template <>
-constexpr inline StringViewBase<char>::StringViewBase(const char *ptr, size_t len)
-: BytesReader<char>(ptr, ptr ? (len == maxOf<size_t>())?std::char_traits<char>::length(ptr):len : 0) { }
-
 template <typename _CharType>
 StringViewBase<_CharType>::StringViewBase(const PoolString &str)
 : StringViewBase(str.data(), str.size()) { }
@@ -834,11 +825,12 @@ auto StringViewBase<_CharType>::operator ++ () -> Self & {
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::operator ++ (int) -> Self & {
+auto StringViewBase<_CharType>::operator ++ (int) -> Self {
+	auto tmp = *this;
 	if (!this->empty()) {
 		this->ptr ++; this->len --;
 	}
-	return *this;
+	return tmp;
 }
 
 template <typename _CharType>
@@ -1142,7 +1134,10 @@ inline bool StringViewUtf8::is(const char &c) const {
 	return len > 0 && *ptr == c;
 }
 inline bool StringViewUtf8::is(const char16_t &c) const {
-	return len > 0 && len >= unicode::utf8_length_data[((const uint8_t *)ptr)[0]] && unicode::utf8Decode(ptr) == c;
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == c;
+}
+inline bool StringViewUtf8::is(const char32_t &c) const {
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == c;
 }
 inline bool StringViewUtf8::is(const char *c) const {
 	return prefix(c, std::char_traits<char>::length(c));
@@ -1153,25 +1148,29 @@ inline bool StringViewUtf8::is(const Self &c) const {
 
 template <char16_t C>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[((const uint8_t *)ptr)[0]] && unicode::utf8Decode(ptr) == C;
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == C;
+}
+
+template <char32_t C>
+inline bool StringViewUtf8::is() const {
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == C;
 }
 
 template <CharGroupId G>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[((const uint8_t *)ptr)[0]] && chars::CharGroup<char16_t, G>::match(unicode::utf8Decode(ptr));
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && chars::CharGroup<MatchCharType, G>::match(unicode::utf8Decode32(ptr));
 }
 
 template <typename M>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[((const uint8_t *)ptr)[0]] && M::match(unicode::utf8Decode(ptr));
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && M::match(unicode::utf8Decode32(ptr));
 }
 
-template <typename Interface>
-inline auto StringViewUtf8::letter() const -> typename Interface::StringType {
+inline auto StringViewUtf8::letter() const -> Self {
 	if (this->len > 0) {
-		return typename Interface::StringType(this->ptr, std::min(this->len, size_t( unicode::utf8_length_data[((const uint8_t *)ptr)[0]] )));
+		return Self(this->ptr, std::min(this->len, size_t( unicode::utf8_length_data[uint8_t(*ptr)] )));
 	}
-	return typename Interface::StringType();
+	return Self();
 }
 template <typename Interface>
 inline auto StringViewUtf8::str() const -> typename Interface::StringType {
@@ -1196,14 +1195,15 @@ inline void StringViewUtf8::offset(size_t l) {
 }
 inline auto StringViewUtf8::operator ++ () -> Self & {
 	if (len > 0) {
-		auto l = std::min(size_t( unicode::utf8_length_data[((const uint8_t *)ptr)[0]] ), len);
+		auto l = std::min(size_t( unicode::utf8_length_data[uint8_t(*ptr)] ), len);
 		ptr += l; len -= l;
 	}
 	return *this;
 }
-inline auto StringViewUtf8::operator ++ (int) -> Self & {
+inline auto StringViewUtf8::operator ++ (int) -> Self {
+	auto tmp = *this;
 	++ (*this);
-	return *this;
+	return tmp;
 }
 inline auto StringViewUtf8::operator += (size_t l) -> Self & {
 	offset(l);
@@ -1212,7 +1212,7 @@ inline auto StringViewUtf8::operator += (size_t l) -> Self & {
 
 inline bool StringViewUtf8::isSpace() const {
 	auto tmp = *this;
-	tmp.skipChars<chars::CharGroup<char16_t, CharGroupId::WhiteSpace>>();
+	tmp.skipChars<WhiteSpace>();
 	return tmp.empty();
 }
 
@@ -1236,7 +1236,7 @@ inline auto StringViewUtf8::operator -= (const Self &other) -> Self & {
 	return *this;
 }
 inline auto StringViewUtf8::operator * () const -> MatchCharType {
-	return unicode::utf8Decode(ptr);
+	return unicode::utf8Decode32(ptr);
 }
 
 template <typename Callback>
@@ -1244,8 +1244,8 @@ inline void StringViewUtf8::foreach(const Callback &cb) {
 	auto p = ptr;
 	const auto e = ptr + len;
 	while (p < e) {
-		const uint8_t mask = unicode::utf8_length_mask[((const uint8_t *)p)[0]];
-		const uint8_t len = unicode::utf8_length_data[((const uint8_t *)p)[0]];
+		const uint8_t mask = unicode::utf8_length_mask[uint8_t(*p)];
+		const uint8_t len = unicode::utf8_length_data[uint8_t(*p)];
 		uint32_t ret = *p++ & mask;
 		for (uint8_t c = 1; c < len; ++c) {
 			const auto ch =  *p++;
@@ -1256,7 +1256,7 @@ inline void StringViewUtf8::foreach(const Callback &cb) {
 			ret <<= 6;
 			ret |= (ch & 0x3f);
 		}
-		cb(char16_t(ret));
+		cb(MatchCharType(ret));
 	}
 }
 
@@ -1266,7 +1266,7 @@ inline size_t StringViewUtf8::code_size() const {
 	const auto e = ptr + len;
 	while (p < e) {
 		++ ret;
-		p += unicode::utf8_length_data[((const uint8_t *)p)[0]];
+		p += unicode::utf8_length_data[uint8_t(*p)];
 	}
 	return ret;
 }
@@ -1304,7 +1304,7 @@ template<typename ... Args>
 inline void StringViewUtf8::skipChars() {
 	uint8_t clen = 0;
 	size_t offset = 0;
-	while (len > offset && match<Args...>(unicode::utf8Decode(ptr + offset, clen)) && clen > 0) {
+	while (len > offset && match<Args...>(unicode::utf8Decode32(ptr + offset, clen)) && clen > 0) {
 		offset += clen;
 	}
 	auto off = std::min(offset, len);
@@ -1316,7 +1316,7 @@ template<typename ... Args>
 inline void StringViewUtf8::skipUntil() {
 	uint8_t clen = 0;
 	size_t offset = 0;
-	while (len > offset && !match<Args...>(unicode::utf8Decode(ptr + offset, clen)) && clen > 0) {
+	while (len > offset && !match<Args...>(unicode::utf8Decode32(ptr + offset, clen)) && clen > 0) {
 		offset += clen;
 	}
 	auto off = std::min(offset, len);
@@ -1442,7 +1442,7 @@ template  <typename ...Args>
 inline bool StringViewUtf8::rv_match_utf8 (const CharType *ptr, size_t len, uint8_t &offset) {
 	while (len > 0) {
 		if (!unicode::isUtf8Surrogate(ptr[len - 1])) {
-			return match<Args...>(unicode::utf8Decode(ptr + len - 1, offset));
+			return match<Args...>(unicode::utf8Decode32(ptr + len - 1, offset));
 		} else {
 			-- len;
 		}
@@ -1452,18 +1452,20 @@ inline bool StringViewUtf8::rv_match_utf8 (const CharType *ptr, size_t len, uint
 }
 
 template <typename ...Args>
-inline bool StringViewUtf8::match (char16_t c) {
-	return chars::Compose<char16_t, Args...>::match(c);
+inline bool StringViewUtf8::match (MatchCharType c) {
+	return chars::Compose<MatchCharType, Args...>::match(c);
 }
 
+// Callback output API - Callback - StringViewBase<char>
+
 inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, const char *str) -> const Callback<void(StringViewBase<char>)> & {
-	cb(StringView(str));
+	cb(StringViewBase<char>(str));
 	return cb;
 }
 
 template <size_t N>
 inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, const char str[N]) -> const Callback<void(StringViewBase<char>)> & {
-	cb(StringView(str, N));
+	cb(StringViewBase<char>(str, N));
 	return cb;
 }
 
@@ -1473,17 +1475,47 @@ inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, StringVie
 }
 
 inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, double d) -> const Callback<void(StringViewBase<char>)> & {
-	return cb << StringViewBase<char>(std::to_string(d));
+	std::array<char, string::DOUBLE_MAX_DIGITS> buf = { 0 };
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data(), ret);
+}
+
+inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, float f) -> const Callback<void(StringViewBase<char>)> & {
+	return cb << double(f);
 }
 
 inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, int64_t i) -> const Callback<void(StringViewBase<char>)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char>(buf.data(), string::_to_decimal(i, buf.data()));
+	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf = { 0 };
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, uint64_t i) -> const Callback<void(StringViewBase<char>)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char>(buf.data(), string::_to_decimal(i, buf.data()));
+	std::array<char, std::numeric_limits<uint64_t>::digits10 + 2> buf = { 0 };
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
+}
+
+inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, int32_t f) -> const Callback<void(StringViewBase<char>)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, uint32_t f) -> const Callback<void(StringViewBase<char>)> & {
+	return cb << uint64_t(f);
+}
+
+
+// Callback output API - Callback - StringViewBase<char16_t>
+
+inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, const char16_t *str) -> const Callback<void(StringViewBase<char16_t>)> & {
+	cb(StringViewBase<char16_t>(str));
+	return cb;
+}
+
+template <size_t N>
+inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, const char16_t str[N]) -> const Callback<void(StringViewBase<char16_t>)> & {
+	cb(StringViewBase<char16_t>(str, N));
+	return cb;
 }
 
 inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, StringViewBase<char16_t> str) -> const Callback<void(StringViewBase<char16_t>)> & {
@@ -1491,14 +1523,48 @@ inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, Strin
 	return cb;
 }
 
+inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, double d) -> const Callback<void(StringViewBase<char16_t>)> & {
+	std::array<char16_t, string::DOUBLE_MAX_DIGITS> buf = { 0 };
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data(), ret);
+}
+
+inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, float f) -> const Callback<void(StringViewBase<char16_t>)> & {
+	return cb << double(f);
+}
+
 inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, int64_t i) -> const Callback<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char16_t>(buf.data(), string::_to_decimal(i, buf.data()));
+	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf = { 0 };
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, uint64_t i) -> const Callback<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char16_t>(buf.data(), string::_to_decimal(i, buf.data()));
+	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf = { 0 };
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
+}
+
+inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, int32_t f) -> const Callback<void(StringViewBase<char16_t>)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, uint32_t f) -> const Callback<void(StringViewBase<char16_t>)> & {
+	return cb << uint64_t(f);
+}
+
+
+// Callback output API - Callback - StringViewUtf8
+
+inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, const char *str) -> const Callback<void(StringViewUtf8)> & {
+	cb(StringViewUtf8(str));
+	return cb;
+}
+
+template <size_t N>
+inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, const char str[N]) -> const Callback<void(StringViewUtf8)> & {
+	cb(StringViewUtf8(str, N));
+	return cb;
 }
 
 inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, StringViewUtf8 str) -> const Callback<void(StringViewUtf8)> & {
@@ -1506,24 +1572,47 @@ inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, StringViewUtf8 
 	return cb;
 }
 
+inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, double d) -> const Callback<void(StringViewUtf8)> & {
+	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data(), ret);
+}
+
+inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, float f) -> const Callback<void(StringViewUtf8)> & {
+	return cb << double(f);
+}
+
 inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, int64_t i) -> const Callback<void(StringViewUtf8)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewUtf8(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, uint64_t i) -> const Callback<void(StringViewUtf8)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewUtf8(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
 }
 
+inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, int32_t f) -> const Callback<void(StringViewUtf8)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, uint32_t f) -> const Callback<void(StringViewUtf8)> & {
+	return cb << uint64_t(f);
+}
+
+
+// std::function output API - std::function - StringViewBase<char>
+
 inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, const char *str) -> const std::function<void(StringViewBase<char>)> & {
-	cb(StringView(str));
+	cb(StringViewBase<char>(str));
 	return cb;
 }
 
 template <size_t N>
 inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, const char str[N]) -> const std::function<void(StringViewBase<char>)> & {
-	cb(StringView(str, N));
+	cb(StringViewBase<char>(str, N));
 	return cb;
 }
 
@@ -1533,17 +1622,47 @@ inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, Stri
 }
 
 inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, double d) -> const std::function<void(StringViewBase<char>)> & {
-	return cb << StringViewBase<char>(std::to_string(d));
+	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data(), ret);
+}
+
+inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, float f) -> const std::function<void(StringViewBase<char>)> & {
+	return cb << double(f);
 }
 
 inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, int64_t i) -> const std::function<void(StringViewBase<char>)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char>(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, uint64_t i) -> const std::function<void(StringViewBase<char>)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char>(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
+}
+
+inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, int32_t f) -> const std::function<void(StringViewBase<char>)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, uint32_t f) -> const std::function<void(StringViewBase<char>)> & {
+	return cb << uint64_t(f);
+}
+
+
+// std::function output API - std::function - StringViewBase<char16_t>
+
+inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, const char16_t *str) -> const std::function<void(StringViewBase<char16_t>)> & {
+	cb(StringViewBase<char16_t>(str));
+	return cb;
+}
+
+template <size_t N>
+inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, const char16_t str[N]) -> const std::function<void(StringViewBase<char16_t>)> & {
+	cb(StringViewBase<char16_t>(str, N));
+	return cb;
 }
 
 inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, StringViewBase<char16_t> str) -> const std::function<void(StringViewBase<char16_t>)> & {
@@ -1551,14 +1670,48 @@ inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, 
 	return cb;
 }
 
+inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, double d) -> const std::function<void(StringViewBase<char16_t>)> & {
+	std::array<char16_t, string::DOUBLE_MAX_DIGITS> buf;
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data(), ret);
+}
+
+inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, float f) -> const std::function<void(StringViewBase<char16_t>)> & {
+	return cb << double(f);
+}
+
 inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, int64_t i) -> const std::function<void(StringViewBase<char16_t>)> & {
 	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char16_t>(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, uint64_t i) -> const std::function<void(StringViewBase<char16_t>)> & {
 	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char16_t>(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
+}
+
+inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, int32_t f) -> const std::function<void(StringViewBase<char16_t>)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, uint32_t f) -> const std::function<void(StringViewBase<char16_t>)> & {
+	return cb << uint64_t(f);
+}
+
+
+// std::function output API - std::function - StringViewUtf8
+
+inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, const char *str) -> const std::function<void(StringViewUtf8)> & {
+	cb(StringViewUtf8(str));
+	return cb;
+}
+
+template <size_t N>
+inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, const char str[N]) -> const std::function<void(StringViewUtf8)> & {
+	cb(StringViewUtf8(str, N));
+	return cb;
 }
 
 inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, StringViewUtf8 str) -> const std::function<void(StringViewUtf8)> & {
@@ -1566,24 +1719,47 @@ inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, StringView
 	return cb;
 }
 
+inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, double d) -> const std::function<void(StringViewUtf8)> & {
+	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data(), ret);
+}
+
+inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, float f) -> const std::function<void(StringViewUtf8)> & {
+	return cb << double(f);
+}
+
 inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, int64_t i) -> const std::function<void(StringViewUtf8)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewUtf8(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, uint64_t i) -> const std::function<void(StringViewUtf8)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewUtf8(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
 }
 
+inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, int32_t f) -> const std::function<void(StringViewUtf8)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, uint32_t f) -> const std::function<void(StringViewUtf8)> & {
+	return cb << uint64_t(f);
+}
+
+
+// memory::function output API - memory::function - StringViewBase<char>
+
 inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, const char *str) -> const memory::function<void(StringViewBase<char>)> & {
-	cb(StringView(str));
+	cb(StringViewBase<char>(str));
 	return cb;
 }
 
 template <size_t N>
 inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, const char str[N]) -> const memory::function<void(StringViewBase<char>)> & {
-	cb(StringView(str, N));
+	cb(StringViewBase<char>(str, N));
 	return cb;
 }
 
@@ -1593,17 +1769,47 @@ inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, S
 }
 
 inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, double d) -> const memory::function<void(StringViewBase<char>)> & {
-	return cb << StringViewBase<char>(std::to_string(d));
+	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data(), ret);
+}
+
+inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, float f) -> const memory::function<void(StringViewBase<char>)> & {
+	return cb << double(f);
 }
 
 inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, int64_t i) -> const memory::function<void(StringViewBase<char>)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char>(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, uint64_t i) -> const memory::function<void(StringViewBase<char>)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char>(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
+}
+
+inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, int32_t f) -> const memory::function<void(StringViewBase<char>)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, uint32_t f) -> const memory::function<void(StringViewBase<char>)> & {
+	return cb << uint64_t(f);
+}
+
+
+// memory::function output API - memory::function - StringViewBase<char16_t>
+
+inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, const char16_t *str) -> const memory::function<void(StringViewBase<char16_t>)> & {
+	cb(StringViewBase<char16_t>(str));
+	return cb;
+}
+
+template <size_t N>
+inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, const char16_t str[N]) -> const memory::function<void(StringViewBase<char16_t>)> & {
+	cb(StringViewBase<char16_t>(str, N));
+	return cb;
 }
 
 inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, StringViewBase<char16_t> str) -> const memory::function<void(StringViewBase<char16_t>)> & {
@@ -1611,14 +1817,48 @@ inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &c
 	return cb;
 }
 
+inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, double d) -> const memory::function<void(StringViewBase<char16_t>)> & {
+	std::array<char16_t, string::DOUBLE_MAX_DIGITS> buf;
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data(), ret);
+}
+
+inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, float f) -> const memory::function<void(StringViewBase<char16_t>)> & {
+	return cb << double(f);
+}
+
 inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, int64_t i) -> const memory::function<void(StringViewBase<char16_t>)> & {
 	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char16_t>(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, uint64_t i) -> const memory::function<void(StringViewBase<char16_t>)> & {
 	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewBase<char16_t>(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
+}
+
+inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, int32_t f) -> const memory::function<void(StringViewBase<char16_t>)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, uint32_t f) -> const memory::function<void(StringViewBase<char16_t>)> & {
+	return cb << uint64_t(f);
+}
+
+
+// memory::function output API - memory::function - StringViewUtf8
+
+inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, const char *str) -> const memory::function<void(StringViewUtf8)> & {
+	cb(StringViewUtf8(str));
+	return cb;
+}
+
+template <size_t N>
+inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, const char str[N]) -> const memory::function<void(StringViewUtf8)> & {
+	cb(StringViewUtf8(str, N));
+	return cb;
 }
 
 inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, StringViewUtf8 str) -> const memory::function<void(StringViewUtf8)> & {
@@ -1626,14 +1866,34 @@ inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, StringV
 	return cb;
 }
 
+inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, double d) -> const memory::function<void(StringViewUtf8)> & {
+	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
+	auto ret = string::_dtoa(d, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data(), ret);
+}
+
+inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, float f) -> const memory::function<void(StringViewUtf8)> & {
+	return cb << double(f);
+}
+
 inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, int64_t i) -> const memory::function<void(StringViewUtf8)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewUtf8(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
 }
 
 inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, uint64_t i) -> const memory::function<void(StringViewUtf8)> & {
 	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	return cb << StringViewUtf8(buf.data(), string::_to_decimal(i, buf.data()));
+	auto ret = string::_itoa(i, buf.data(), buf.size());
+	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
+}
+
+inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, int32_t f) -> const memory::function<void(StringViewUtf8)> & {
+	return cb << int64_t(f);
+}
+
+inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, uint32_t f) -> const memory::function<void(StringViewUtf8)> & {
+	return cb << uint64_t(f);
 }
 
 }
@@ -1676,8 +1936,8 @@ inline int compareCaseInsensivive(const L &l, const R &r) {
 	auto rEnd = r.data() + r.size();
 
 	while (lPtr < lEnd && rPtr < rEnd) {
-		auto lc = string::tolower(unicode::utf8Decode(lPtr, __l_off));
-		auto rc = string::tolower(unicode::utf8Decode(rPtr, __r_off));
+		auto lc = string::tolower(unicode::utf8Decode32(lPtr, __l_off));
+		auto rc = string::tolower(unicode::utf8Decode32(rPtr, __r_off));
 		if (lc != rc) {
 			ret =  (lc < rc)?-1:1;
 			break;

@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SPBytesView.h"
 #include "SPBuffer.h"
 #include "SPTime.h"
+#include "SPLog.h"
 #include "zip.h"
 
 namespace stappler {
@@ -115,12 +116,13 @@ ZipArchive<Interface>::ZipArchive(BytesView b) {
 		case ZIP_SOURCE_TELL:
 			return d->_data.size();
 			break; /* get read position */
-		case ZIP_SOURCE_SUPPORTS:
-			return zip_source_make_command_bitmap(ZIP_SOURCE_OPEN, ZIP_SOURCE_READ, ZIP_SOURCE_CLOSE, ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR,
-					ZIP_SOURCE_SEEK, ZIP_SOURCE_TELL, ZIP_SOURCE_SUPPORTS, ZIP_SOURCE_BEGIN_WRITE, ZIP_SOURCE_COMMIT_WRITE,
+		case ZIP_SOURCE_SUPPORTS: {
+			auto supports = zip_source_make_command_bitmap(ZIP_SOURCE_OPEN, ZIP_SOURCE_READ, ZIP_SOURCE_CLOSE, ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR,
+					ZIP_SOURCE_FREE, ZIP_SOURCE_SEEK, ZIP_SOURCE_TELL, ZIP_SOURCE_SUPPORTS, ZIP_SOURCE_BEGIN_WRITE, ZIP_SOURCE_COMMIT_WRITE,
 					ZIP_SOURCE_ROLLBACK_WRITE, ZIP_SOURCE_SEEK_WRITE, ZIP_SOURCE_TELL_WRITE, ZIP_SOURCE_REMOVE, ZIP_SOURCE_WRITE);
+			return supports;
 			break;   /* check whether source supports command */
-
+		}
 		case ZIP_SOURCE_BEGIN_WRITE:
 			d->_buffer.clear();
 			d->_buffer = d->_data;
@@ -144,7 +146,12 @@ ZipArchive<Interface>::ZipArchive(BytesView b) {
 		return -1;
 	}, this, nullptr);
 
-	_handle = zip_open_from_source(source, ZIP_CREATE, nullptr);
+	zip_error_t err;
+
+	_handle = zip_open_from_source(source, ZIP_CREATE | ZIP_TRUNCATE, &err);
+	if (!_handle) {
+		log::warn("ZipArchive", "Fail to create archive: ", err.str);
+	}
 }
 
 template <typename Interface>
@@ -209,7 +216,8 @@ bool ZipArchive<Interface>::addFile(StringView name, StringView data, bool uncom
 
 template <typename Interface>
 auto ZipArchive<Interface>::save() -> ZipArchive<Interface>::Buffer {
-	if (zip_close(_handle) < 0) {
+	auto err = zip_close(_handle);
+	if (err < 0) {
 		zip_discard(_handle);
 		return Buffer();
 	}

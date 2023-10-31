@@ -229,8 +229,6 @@ protected:// CRUD functions
 protected:
 	void initScheme();
 
-	Set<const Field *> getFieldSet(const Field &, std::initializer_list<StringView>) const;
-
 	void addView(const Scheme *, const Field *);
 	void addAutoField(const Scheme *, const Field *f, const AutoFieldScheme &);
 	void addParent(const Scheme *, const Field *);
@@ -252,7 +250,7 @@ protected:
 
 	// returns:
 	// - true if field was successfully removed
-	// - null of false if field was not removed, we should abort transaction
+	// - null or false if field was not removed, we should abort transaction
 	// - value, that will be sent to finalizeField if all fields will be removed
 	Value removeField(const Transaction &, Value &, const Field &, const Value &old);
 	void finalizeField(const Transaction &, const Field &, const Value &old);
@@ -334,9 +332,9 @@ inline auto Scheme::get(Storage &&s, _Value &&v, SpanView<const Field *> fields,
 	return Worker(*this, std::forward<Storage>(s)).get(std::forward<_Value>(v), fields, flags);
 }
 
-template <typename Storage>
-inline auto Scheme::foreach(Storage &&s, const Query &q, const Callback<bool(Value &)> &cb, UpdateFlags flags) const -> bool {
-	return Worker(*this, std::forward<Storage>(s)).foreach(q, cb, flags);
+template <typename T>
+inline auto Scheme::foreach(T &&s, const Query &q, const Callback<bool(Value &)> &cb, UpdateFlags flags) const -> bool {
+	return Worker(*this, std::forward<T>(s)).foreach(q, cb, flags);
 }
 
 template <typename T, typename ... Args>

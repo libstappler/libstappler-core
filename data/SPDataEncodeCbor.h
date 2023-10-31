@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 #include "SPDataCbor.h"
 #include "SPDataValue.h"
+#include "SPFilesystem.h"
 
 namespace stappler::data::cbor {
 

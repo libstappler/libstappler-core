@@ -195,7 +195,11 @@ inline void split(StringView str, const Callback<void(StringView)> &cb) {
 template <typename Interface>
 auto replace(StringView path, StringView source, StringView dest) -> typename Interface::StringType {
 	if (path.starts_with(source)) {
-		return filepath::merge<Interface>(dest, path.sub(source.size()));
+		if (dest.empty()) {
+			return path.sub(source.size()).str<Interface>();
+		} else {
+			return filepath::merge<Interface>(dest, path.sub(source.size()));
+		}
 	}
 	return path.str<Interface>();
 }

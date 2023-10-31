@@ -1467,6 +1467,26 @@ HalfEdge *Tesselator::Data::getFirstEdge(Vertex *v) const {
 	return e;
 }
 
+static bool Tesselator_checkConnectivity(HalfEdge *eOrg) {
+	if constexpr (TessVerbose != VerboseFlag::None) {
+		auto eOrgTmp = eOrg;
+		auto n = 0;
+		while (n < 100) {
+			eOrgTmp = eOrgTmp->_originNext;
+			if (eOrgTmp == eOrg) {
+				break;
+			}
+			++ n;
+		}
+
+		if (n >= 100) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 	if (std::find(_protectedVertexes.begin(), _protectedVertexes.end(), org) != _protectedVertexes.end()) {
 		return true;
@@ -1496,7 +1516,7 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 			auto rLeftPrev = r->getLeftLoopPrev();
 
 			rOriginPrev->_originNext = r->_originNext;
-			rLeftPrev->_leftNext = r->_leftNext;
+			rLeftPrev->_leftNext = rOriginPrev;
 		}
 
 		r->_originNext = lNext; r->sym()->_leftNext = l;
@@ -1581,7 +1601,7 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 	do {
 		auto eMergeNext = eMerge->_originNext;
 
-		if (eMerge->sym()->vertex == org->_uniqueIdx) {
+		if (eMerge->sym()->vertex == org->_uniqueIdx && eMergeNext->_originNext == eMerge) {
 			org->_edge = removeEdge(eMerge);
 			releaseVertex(merge);
 			if constexpr (TessVerbose == VerboseFlag::Full) {
@@ -1593,6 +1613,10 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 		eMerge = eMergeNext;
 	} while (eMerge != eMergeEnd);
 
+	if (!Tesselator_checkConnectivity(org->_edge)) {
+		log::error("geom::Tesselator", "Pizdets");
+	}
+
 	do {
 		auto eMergeNext = eMerge->_originNext;
 
@@ -1603,6 +1627,15 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 			auto rA = EdgeAngle(eOrg->getNormVec(), eMerge->getNormVec());
 			if (EdgeAngleIsBelowTolerance(rA, _mathTolerance)) {
 				auto tmpOrg = mergeEdges(eOrg, eMerge);
+
+				/*if (eMerge == eMerge->_originNext) {
+					std::cout << "Final:\n\t" << *eMerge << "\n";
+				}*/
+
+				if (!Tesselator_checkConnectivity(org->_edge)) {
+					log::error("geom::Tesselator", "Pizdets");
+				}
+
 				eMerge->origin = eOrg->origin;
 				eMerge->vertex = eOrg->vertex;
 				eOrg = tmpOrg;
@@ -1613,7 +1646,30 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 					std::cout << "Insert next:\n\t" << *eOrg << "\n\t" << *eMerge << "\n";
 				}
 
+				/*if (eMerge == eMerge->_originNext) {
+					std::cout << "Final:\n\t" << *eMerge << "\n";
+				}
+
+				std::cout << "Final2:"
+						<< "\n\tnext-next: " << *eMergeNext->_originNext
+						<< "\n\tnext: " << *eMergeNext
+						<< "\n\tmerge: " << *eMerge
+						<< "\n\tprev: " << *eMerge->getOriginPrev()
+						<< "\n";*/
 				auto tmpOrg = insertNext(eOrg, eMerge);
+
+				/*std::cout << "Final3:\n\tmerge: " << *eMergeNext
+						<< "\n\tnext: " << *eMergeNext->_originNext
+						<< "\n\tprev: " << *eMergeNext->getOriginPrev()
+						<< "\n";*/
+				if (eMergeNext->_originNext == eMerge) {
+					std::cout << "Final4:\n\t" << *eMerge << "\n";
+				}
+
+				if (!Tesselator_checkConnectivity(org->_edge)) {
+					log::error("geom::Tesselator", "Pizdets");
+				}
+
 				eMerge->origin = eOrg->origin;
 				eMerge->vertex = eOrg->vertex;
 				eOrg = tmpOrg;
@@ -1631,16 +1687,26 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 		eMerge = eMergeNext;
 	} while (eMerge != eMergeEnd);
 
+	if (!Tesselator_checkConnectivity(org->_edge)) {
+		log::error("geom::Tesselator", "Pizdets");
+	}
+
 	if (merge->_queueHandle != maxOf<QueueHandle>()) {
 		_vertexQueue->remove(merge->_queueHandle);
 		merge->_queueHandle = maxOf<QueueHandle>();
 	}
+
 	releaseVertex(merge);
 
 	// remove degenerates
 
 	// remove ears - edge cycles on same vertex
 	auto eOrgEnd = eOrg = org->_edge;
+
+	if (!Tesselator_checkConnectivity(eOrg)) {
+		log::error("geom::Tesselator", "Pizdets");
+	}
+
 	do {
 		if constexpr (TessVerbose != VerboseFlag::None) {
 			std::cout << TessVerbose << "\t\tRemoveEars: " << *eOrg << "\n";
@@ -1691,6 +1757,7 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 					_eventVertex = nullptr;
 				}
 			}
+
 			releaseVertex(vertex);
 
 			if (eOrg == eOrgEnd || eOrgJoin == eOrgEnd) {
@@ -1704,7 +1771,7 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 				}
 
 				org->_edge = nullptr;
-				std::cout << "Pizdets\n";
+				log::error("geom::Tesselator", "Pizdets");
 				return false;
 			}
 		}
@@ -1716,9 +1783,11 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 		std::cout << "\tResult (pre): " << eOrg->vertex << "\n";
 		org->foreach([&] (const HalfEdge &e) {
 			std::cout << "\t\t" << e << "\n";
-			e.foreachOnFace([&] (const HalfEdge &e) {
-				std::cout << "\t\t\t" << e << "\n";
-			});
+			if constexpr (TessVerbose == VerboseFlag::Full) {
+				e.foreachOnFace([&] (const HalfEdge &e) {
+					std::cout << "\t\t\t" << e << "\n";
+				});
+			}
 		});
 	}
 
@@ -1812,9 +1881,11 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 		std::cout << "\tResult (post): " << eOrg->vertex << "\n";
 		org->foreach([&] (const HalfEdge &e) {
 			std::cout << "\t\t" << e << "\n";
-			e.foreachOnFace([&] (const HalfEdge &e) {
-				std::cout << "\t\t\t" << e << "\n";
-			});
+			if constexpr (TessVerbose == VerboseFlag::Full) {
+				e.foreachOnFace([&] (const HalfEdge &e) {
+					std::cout << "\t\t\t" << e << "\n";
+				});
+			}
 		});
 	}
 
@@ -1994,12 +2065,21 @@ bool Tesselator::Data::processEdgeOverlap(Vertex *org, HalfEdge *e1, HalfEdge *e
 		std::cout << "Overlap: " << *e2 << "\n";
 	}
 
-	auto vOrg = _vertexes[e1->sym()->vertex];
+	auto vOrgIdx = e1->sym()->vertex;
+	auto vOrg = _vertexes[vOrgIdx];
 
 	_protectedEdges.emplace_back(e2->sym());
 	_protectedEdges.emplace_back(e1->sym());
 
 	if (vOrg != vMerge) {
+		if (std::find(_protectedVertexes.begin(), _protectedVertexes.end(), vOrg) != _protectedVertexes.end()) {
+			return false;
+		}
+
+		if (std::find(_protectedVertexes.begin(), _protectedVertexes.end(), vMerge) != _protectedVertexes.end()) {
+			return false;
+		}
+
 		mergeVertexes(vOrg, vMerge);
 
 		_protectedEdges.pop_back();

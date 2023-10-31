@@ -392,14 +392,18 @@ inline int64_t _readInt(BytesViewTemplate<Endian::Network> &r) {
 	return 0;
 }
 
-inline float _readNumber(BytesViewTemplate<Endian::Network> &r) {
+inline double _readNumber(BytesViewTemplate<Endian::Network> &r) {
 	uint8_t type = r.readUnsigned();
 	MajorTypeEncoded majorType = (MajorTypeEncoded)(type & toInt(Flags::MajorTypeMaskEncoded));;
 	type = type & toInt(Flags::AdditionalInfoMask);
 
 	switch(majorType) {
-	case MajorTypeEncoded::Unsigned: return _readIntValue(r, type); break;
-	case MajorTypeEncoded::Negative: return (-1 - _readIntValue(r, type)); break;
+	case MajorTypeEncoded::Unsigned:
+		return _readIntValue(r, type);
+		break;
+	case MajorTypeEncoded::Negative:
+		return (-1 - static_cast<int64_t>(_readIntValue(r, type)));
+		break;
 	case MajorTypeEncoded::Simple:
 		if (type == toInt(Flags::AdditionalFloat16Bit)) {
 			return r.readFloat16();
@@ -411,7 +415,7 @@ inline float _readNumber(BytesViewTemplate<Endian::Network> &r) {
 		break;
 	default: break;
 	}
-	return 0.0f;
+	return 0.0;
 }
 
 }

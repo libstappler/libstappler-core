@@ -1029,47 +1029,54 @@ Interface::BytesType VectorPath::encode() const {
 
 Interface::StringType VectorPath::toString(bool newline) const {
 	Interface::StringStreamType stream;
-	stream << std::setprecision(std::numeric_limits<double>::max_digits10);
+
+	auto streamL = [&] (StringView str) {
+		stream << str;
+	};
+
+	Callback<void(StringView)> streamCb(streamL);
+
+	//stream << std::setprecision(std::numeric_limits<double>::max_digits10);
 	auto d = _points.data();
 	for (auto &it : _commands) {
 		switch (it) {
 		case Command::MoveTo:
 			if (newline && d != _points.data()) {
-				stream << "\n";
+				streamCb << "\n";
 			}
-			stream << "M " << d[0].p.x << "," << d[0].p.y << " ";
+			streamCb << "M " << d[0].p.x << "," << d[0].p.y << " ";
 			++ d;
 			break;
 		case Command::LineTo:
-			stream << "L " << d[0].p.x << "," << d[0].p.y << " ";
+			streamCb << "L " << d[0].p.x << "," << d[0].p.y << " ";
 			++ d;
 			break;
 		case Command::QuadTo:
-			stream << "Q " << d[0].p.x << "," << d[0].p.y << " "
+			streamCb << "Q " << d[0].p.x << "," << d[0].p.y << " "
 					<< d[1].p.x << "," << d[1].p.y << " ";
 			d += 2;
 			break;
 		case Command::CubicTo:
-			stream << "C " << d[0].p.x << "," << d[0].p.y << " "
+			streamCb << "C " << d[0].p.x << "," << d[0].p.y << " "
 					<< d[1].p.x << "," << d[1].p.y << " "
 					<< d[2].p.x << "," << d[2].p.y << " ";
 			d += 3;
 			break;
 		case Command::ArcTo:
-			stream << "A " << d[0].p.x << "," << d[0].p.y << " "
-					<< d[2].f.v << " " << int(d[2].f.a) << " " << int(d[2].f.b) << " "
+			streamCb << "A " << d[0].p.x << "," << d[0].p.y << " "
+					<< d[2].f.v << " " << int32_t(d[2].f.a) << " " << int32_t(d[2].f.b) << " "
 					<< d[1].p.x << "," << d[1].p.y << " ";
 			d += 3;
 			break;
 		case Command::ClosePath:
-			stream << "Z ";
+			streamCb << "Z ";
 			break;
 		default: break;
 		}
 	}
 
 	if (newline) {
-		stream << "\n";
+		streamCb << "\n";
 	}
 
 	return stream.str();

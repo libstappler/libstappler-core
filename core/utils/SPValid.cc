@@ -263,8 +263,9 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 }
 
 template <typename Interface>
-static bool _validateEmail(typename Interface::StringType &str) {
-	string::StringTraits<Interface>::trim(str);
+static bool _validateEmail(typename Interface::StringType &istr) {
+	StringView str(istr);
+	str.trimChars<StringView::WhiteSpace>();
 	if (str.empty()) {
 		return false;
 	}
@@ -272,7 +273,7 @@ static bool _validateEmail(typename Interface::StringType &str) {
 	if (str.back() == ')') {
 		auto pos = str.rfind('(');
 		if (pos != Interface::StringType::npos) {
-			str.erase(str.begin() + pos, str.end());
+			str = str.sub(0, pos);
 		} else {
 			return false;
 		}
@@ -280,7 +281,7 @@ static bool _validateEmail(typename Interface::StringType &str) {
 
 	typename Interface::StringType ret; ret.reserve(str.size());
 	if (_validateEmailData<Interface>(str, &ret)) {
-		str = std::move(ret);
+		istr = std::move(ret);
 		return true;
 	}
 	return false;

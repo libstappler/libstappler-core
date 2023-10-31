@@ -537,8 +537,14 @@ bool TaskQueue::cancelWorkers() {
 }
 
 void TaskQueue::performAll(Flags flags) {
-	spawnWorkers(flags | Flags::Cancelable);
-	waitForAll();
+	if (!_context) {
+		if (!spawnWorkers(flags | Flags::Cancelable)) {
+			return;
+		}
+	}
+	if (!waitForAll()) {
+		return;
+	}
 	cancelWorkers();
 }
 

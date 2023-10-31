@@ -540,7 +540,6 @@ template <typename Interface>
 bool ValueTemplate<Interface>::operator== (const Self& v) const {
 	if (this == &v) return true;
 	if (v._type != this->_type) return false;
-	if (this->isNull()) return true;
 	switch (_type) {
 		case Type::INTEGER: return v.intVal == this->intVal; break;
 		case Type::BOOLEAN: return v.boolVal == this->boolVal; break;
@@ -549,8 +548,12 @@ bool ValueTemplate<Interface>::operator== (const Self& v) const {
 		case Type::DOUBLE: return fabs(v.doubleVal - this->doubleVal) <= DBL_EPSILON; break;
 		case Type::ARRAY: return compare(*(this->arrayVal), *(v.arrayVal)); break;
 		case Type::DICTIONARY: return compare(*(this->dictVal), *(v.dictVal)); break;
+		case Type::EMPTY:
+		case Type::NONE:
+			return true;
+			break;
 		default:
-		break;
+			break;
 	};
 
 	return false;

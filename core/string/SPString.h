@@ -28,12 +28,13 @@ THE SOFTWARE.
 
 namespace stappler::string {
 
-size_t getUtf16Length(char32_t);
+inline size_t getUtf16Length(char32_t c) { return unicode::utf16EncodeLength(c); }
 size_t getUtf16Length(const StringView &str);
 size_t getUtf16HtmlLength(const StringView &str);
-size_t getUtf8Length(const WideStringView &str);
 
-Pair<char16_t, uint8_t> read(const char *);
+inline size_t getUtf8Length(char32_t c) { return unicode::utf8EncodeLength(c); }
+inline size_t getUtf8Length(char16_t c) { return unicode::utf8EncodeLength(c); }
+size_t getUtf8Length(const WideStringView &str);
 
 char charToKoi8r(char16_t c);
 
@@ -82,8 +83,14 @@ struct InterfaceForString<const typename memory::PoolInterface::WideStringType> 
 };
 
 
-char16_t utf8Decode(char_const_ptr_ref_t utf8);
-char16_t utf8HtmlDecode(char_const_ptr_ref_t utf8);
+inline char32_t utf8Decode32(char_const_ptr_ref_t ptr) {
+	uint8_t len = 0;
+	auto ret = unicode::utf8Decode32(ptr, len);
+	ptr += len;
+	return ret;
+}
+
+char32_t utf8HtmlDecode32(char_const_ptr_ref_t utf8);
 
 bool isValidUtf8(StringView);
 
@@ -100,9 +107,6 @@ template <typename StringType>
 inline uint8_t utf16Encode(StringType &str, char32_t c);
 
 inline uint8_t utf16Encode(std::basic_ostream<char16_t> &str, char32_t c) SPINLINE;
-
-template <typename StringType, typename Interface = typename InterfaceForString<StringType>::Type>
-StringType &trim(StringType & str);
 
 template <typename StringType, typename Interface = typename InterfaceForString<StringType>::Type>
 StringType &tolower(StringType & str);
@@ -147,19 +151,13 @@ template <typename Interface>
 auto toUtf8(char16_t c) -> typename Interface::StringType;
 
 template <typename Interface>
+auto toUtf8(char32_t c) -> typename Interface::StringType;
+
+template <typename Interface>
 auto toKoi8r(const WideStringView &data) -> typename Interface::StringType;
 
 template <typename T>
 void split(const StringView &str, const StringView &delim, T && callback);
-
-uint8_t footprint_3(char16_t);
-uint8_t footprint_4(char16_t);
-
-template <typename Interface>
-auto footprint(const StringView &str) -> typename Interface::BytesType;
-
-template <typename Interface>
-auto footprint(const WideStringView &str) -> typename Interface::BytesType;
 
 template <typename Interface>
 struct StringTraits : public Interface {
@@ -176,17 +174,15 @@ struct StringTraits : public Interface {
 	template <typename T>
 	static void split(const String &str, const String &delim, T && callback);
 
-	static WideString &trim(WideString & str);
-	static String &trim(String &s);
-
 	static String urlencode(const StringView &data);
 	static String urldecode(const StringView &str);
 
 	static WideString toUtf16(char32_t);
 	static WideString toUtf16(const StringView &str);
 	static WideString toUtf16Html(const StringView &str);
-	static String toUtf8(const WideStringView &str);
+	static String toUtf8(char32_t c);
 	static String toUtf8(char16_t c);
+	static String toUtf8(const WideStringView &str);
 
 	static String toKoi8r(const WideStringView &str);
 
@@ -413,11 +409,6 @@ inline auto toStringConcat(const Container &c, const Sep &s) -> StringType {
 namespace stappler::string {
 
 template <typename StringType, typename Interface>
-inline StringType &trim(StringType & str) {
-	return StringTraits<Interface>::trim(str);
-}
-
-template <typename StringType, typename Interface>
 inline StringType &tolower(StringType & str) {
 	return StringTraits<Interface>::tolower(str);
 }
@@ -483,6 +474,11 @@ inline auto toUtf8(char16_t c) -> typename Interface::StringType {
 }
 
 template <typename Interface>
+inline auto toUtf8(char32_t c) -> typename Interface::StringType {
+	return StringTraits<Interface>::toUtf8(c);
+}
+
+template <typename Interface>
 inline auto toKoi8r(const WideStringView &data) -> typename Interface::StringType {
 	return StringTraits<Interface>::toKoi8r(data);
 }
@@ -501,25 +497,6 @@ inline void split(const StringView &str, const StringView &delim, T && callback)
 	}
 }
 
-size_t _footprint_size(const StringView &str);
-size_t _footprint_size(const WideStringView &str);
-void _make_footprint(const StringView &str, uint8_t *buf);
-void _make_footprint(const WideStringView &str, uint8_t *buf);
-
-template <typename Interface>
-inline auto footprint(const StringView &str) -> typename Interface::BytesType {
-	typename Interface::BytesType ret; ret.resize(_footprint_size(str));
-	_make_footprint(str, ret.data());
-	return ret;
-}
-
-template <typename Interface>
-inline auto footprint(const WideStringView &str) -> typename Interface::BytesType {
-	typename Interface::BytesType ret; ret.resize(_footprint_size(str));
-	_make_footprint(str, ret.data());
-	return ret;
-}
-
 template <typename Interface>
 template <typename T>
 void StringTraits<Interface>::split(const String &str, const String &delim, T && callback) {
@@ -533,54 +510,6 @@ void StringTraits<Interface>::split(const String &str, const String &delim, T &&
 	if (start < str.length()) {
 		callback(CharReaderBase(str.data() + start, str.size() - start));
 	}
-}
-
-template <typename Interface>
-auto StringTraits<Interface>::trim(String &s) -> String & {
-	if (s.empty()) {
-		return s;
-	}
-	auto ptr = s.c_str();
-	size_t len = s.length();
-
-	size_t loffset = 0;
-	size_t roffset = 0;
-
-	char16_t c; uint8_t off;
-	std::tie(c, off) = string::read(ptr);
-	while (c && isspace(c)) {
-		ptr += off;
-		len -= off;
-		loffset += off;
-		std::tie(c, off) = string::read(ptr);
-	}
-
-	if (len == 0) {
-		s = "";
-		return s;
-	} else {
-		off = 0;
-		do {
-			roffset += off;
-			off = 1;
-			while (unicode::isUtf8Surrogate(ptr[len - roffset - off])) {
-				off ++;
-			}
-		} while (isspace(&ptr[len - roffset - off]));
-	}
-
-	if (loffset > 0 || roffset > 0) {
-		s.assign(s.data() + loffset, len - roffset);
-	}
-	return s;
-}
-
-template <typename Interface>
-auto StringTraits<Interface>::trim(WideString &s) -> WideString & {
-	if (s.empty()) {
-		return s;
-	}
-	return ltrim(rtrim(s));
 }
 
 template <typename Interface>
@@ -646,10 +575,20 @@ auto StringTraits<Interface>::toUtf16(const StringView &utf8_str) -> WideString 
 	const auto size = string::getUtf16Length(utf8_str);
 	WideString utf16_str; utf16_str.reserve(size);
 
-	auto ptr = (char_const_ptr_t)utf8_str.data();
+	auto ptr = char_const_ptr_t(utf8_str.data());
 	auto end = ptr + utf8_str.size();
 	while (ptr < end) {
-		utf16_str.push_back(char16_t(utf8Decode(ptr)));
+		auto c = utf8Decode32(ptr);
+		if (c < 0xD800) {
+			utf16_str.push_back(char16_t(c));
+		} else if (c <= 0xDFFF) {
+			// do nothing, wrong encoding
+		} else if (c < 0x10000) {
+			utf16_str.push_back(char16_t(c));
+		} else {
+			utf16_str.push_back(char16_t(((0b1111'1111'1100'0000'0000 & c) >> 10) + 0xD800));
+			utf16_str.push_back(char16_t(((0b0000'0000'0011'1111'1111 & c) >> 00) + 0xDC00));
+		}
 	}
 
     return utf16_str;
@@ -660,10 +599,20 @@ auto StringTraits<Interface>::toUtf16Html(const StringView &utf8_str) -> WideStr
 	const auto size = string::getUtf16HtmlLength(utf8_str);
 	WideString utf16_str; utf16_str.reserve(size);
 
-	auto ptr = (char_const_ptr_t)utf8_str.data();
+	auto ptr = char_const_ptr_t(utf8_str.data());
 	auto end = ptr + utf8_str.size();
 	while (ptr < end) {
-		utf16_str.push_back(char16_t(utf8HtmlDecode(ptr)));
+		auto c = utf8HtmlDecode32(ptr);
+		if (c < 0xD800) {
+			utf16_str.push_back(char16_t(c));
+		} else if (c <= 0xDFFF) {
+			// do nothing, wrong encoding
+		} else if (c < 0x10000) {
+			utf16_str.push_back(char16_t(c));
+		} else {
+			utf16_str.push_back(char16_t(((0b1111'1111'1100'0000'0000 & c) >> 10) + 0xD800));
+			utf16_str.push_back(char16_t(((0b0000'0000'0011'1111'1111 & c) >> 00) + 0xDC00));
+		}
 	}
 
 	return utf16_str;
@@ -685,7 +634,16 @@ auto StringTraits<Interface>::toUtf8(const WideStringView &str) -> String {
 
 template <typename Interface>
 auto StringTraits<Interface>::toUtf8(char16_t c) -> String {
-	return toUtf8(WideStringView(&c, 1));
+	String ret; ret.reserve(unicode::utf8EncodeLength(c));
+	utf8Encode(ret, c);
+	return ret;
+}
+
+template <typename Interface>
+auto StringTraits<Interface>::toUtf8(char32_t c) -> String {
+	String ret; ret.reserve(unicode::utf8EncodeLength(c));
+	utf8Encode(ret, c);
+	return ret;
 }
 
 template <typename Interface>

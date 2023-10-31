@@ -147,8 +147,12 @@ static StorageRoot defaultRoot;
 static StorageRoot *s_root = &defaultRoot;
 
 void setStorageRoot(StorageRoot *root) {
-	SPASSERT(s_root == &defaultRoot, "Root redefinition is forbidden");
-	s_root = root;
+	if (root != nullptr) {
+		//SPASSERT(s_root == &defaultRoot, "Root redefinition is forbidden");
+		s_root = root;
+	} else {
+		s_root = &defaultRoot;
+	}
 }
 
 namespace messages {

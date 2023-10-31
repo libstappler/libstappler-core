@@ -670,7 +670,11 @@ Driver *Driver::open(StringView path, const void *external) {
 Driver::Driver(StringView path, const void *external) : _external(external) {
 	StringView name;
 	if (path.empty() || path == "pgsql") {
+#if WIN32
+		name = StringView("libpq.dll");
+#else
 		name = StringView("libpq.so");
+#endif
 	}
 
 	if (auto l = PgDriverLibStorage::getInstance()->openLib(name)) {

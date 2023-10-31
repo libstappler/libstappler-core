@@ -350,6 +350,155 @@ struct CharGroup<char16_t, GroupId::TextPunctuation> : Compose<char16_t,
 		, u'_', u'+', u'[', u']', u'«', u'»'>
 > { };
 
+// char32_t
+
+template <>
+struct CharGroup<char32_t, GroupId::PunctuationBasic> : Compose<char32_t,
+		Range<char32_t, U'\u0021', U'\u002F'>,
+		Range<char32_t, U'\u003A', U'\u0040'>,
+		Range<char32_t, U'\u005B', U'\u0060'>,
+		Range<char32_t, U'\u007B', U'\u007E'>,
+		Range<char32_t, U'\u00A1', U'\u00BF'>,
+		Chars<char32_t, U'\u00AD', U'\u2013', U'\u2014', U'\u2019', U'\u201c', U'\u201d', U'\u2116'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Numbers> : Compose<char32_t, Range<char32_t, U'0', U'9'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Latin> : Compose<char32_t,
+		Range<char32_t, U'A', U'Z'>,
+		Range<char32_t, U'a', U'z'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Cyrillic> : Compose<char32_t,
+		Range<char32_t, U'А', U'Я'>,
+		Range<char32_t, U'а', U'я'>,
+		Chars<char32_t, U'Ё', U'ё'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Currency> : Compose<char32_t, Range<char32_t, U'\u20A0', U'\u20BE'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::GreekBasic> : Compose<char32_t,
+	Range<char32_t, U'\u0391', U'\u03AB'>,
+	Range<char32_t, U'\u03B1', U'\u03CB'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Math> : Compose<char32_t, Range<char32_t, U'\u2200', U'\u22FF'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Arrows> : Compose<char32_t, Range<char32_t, U'\u2190', U'\u21FF'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Fractionals> : Compose<char32_t, Range<char32_t, U'\u2150', U'\u215F'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::LatinSuppl1> : Compose<char32_t, Range<char32_t, U'\u00C0', U'\u00FF'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::PunctuationAdvanced> : Compose<char32_t,
+		Range<char32_t, U'\u0021', U'\u002F'>,
+		Range<char32_t, U'\u003A', U'\u0040'>,
+		Range<char32_t, U'\u005B', U'\u0060'>,
+		Range<char32_t, U'\u007B', U'\u007F'>,
+		Range<char32_t, U'\u00A1', U'\u00BF'>,
+		Range<char32_t, U'\u2010', U'\u201F'>,
+		Range<char32_t, U'\u2024', U'\u2027'>,
+		Range<char32_t, U'\u2030', U'\u203D'>,
+		Chars<char32_t, U'\u2013', U'\u2014', U'\u2019', U'\u201c', U'\u201d', U'\u2116'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::GreekAdvanced> : Compose<char32_t,
+		Range<char32_t, U'\u0391', U'\u03AB'>,
+		Range<char32_t, U'\u03B1', U'\u03CB'>,
+		Range<char32_t, U'\u0370', U'\u0377'>,
+		Range<char32_t, U'\u037A', U'\u037F'>,
+		Range<char32_t, U'\u0384', U'\u038A'>,
+		Range<char32_t, U'\u038E', U'\u0390'>,
+		Range<char32_t, U'\u03AC', U'\u03B0'>,
+		Range<char32_t, U'\u03CC', U'\u03FF'>,
+		Chars<char32_t, U'\u038C'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::WhiteSpace> : Compose<char32_t,
+		Range<char32_t, U'\u0009', U'\u000D'>,
+		Range<char32_t, U'\u2000', U'\u200D'>,
+		Chars<char32_t, U'\u0020', U'\u0085', U'\u00A0', U'\u1680', U'\u2028', U'\u2029',
+				 U'\u202F', U'\u205F', U'\u2060', U'\u3000', U'\uFEFF', U'\uFFFF'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Controls> : Compose<char32_t, Range<char32_t, U'\u0001', U'\u0020'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::NonPrintable> : Compose<char32_t,
+		Range<char32_t, U'\u0001', U'\u0020'>,
+		Range<char32_t, U'\u2000', U'\u200D'>,
+		Chars<char32_t, U'\u0020', U'\u0085', U'\u00A0', U'\u1680', U'\u2028', U'\u2029',
+				 U'\u202F', U'\u205F', U'\u2060', U'\u3000', U'\uFEFF', U'\uFFFF'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::LatinLowercase> : Compose<char32_t, Range<char32_t, U'a', U'z'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::LatinUppercase> : Compose<char32_t, Range<char32_t, U'A', U'Z'> > { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Alphanumeric> : Compose<char32_t,
+		Range<char32_t, U'0', U'9'>,
+		Range<char32_t, U'A', U'Z'>,
+		Range<char32_t, U'a', U'z'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Hexadecimial> : Compose<char32_t,
+		Range<char32_t, U'0', U'9'>,
+		Range<char32_t, U'A', U'F'>,
+		Range<char32_t, U'a', U'f'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::Base64> : Compose<char32_t,
+		Range<char32_t, U'0', U'9'>,
+		Range<char32_t, U'A', U'Z'>,
+		Range<char32_t, U'a', U'z'>,
+		Chars<char32_t, U'=', U'/', U'+', U'-', U'_'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::BreakableWhiteSpace> : Compose<char32_t,
+		Range<char32_t, U'\u0009', U'\u000D'>,
+		Range<char32_t, U'\u2000', U'\u200D'>,
+		Chars<char32_t, U'\u0020', U'\u0085', U'\u1680', U'\u2028', U'\u2029',
+				 U'\u205F', U'\u2060', U'\u3000', U'\uFEFF'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::OpticalAlignmentSpecial> : Compose<char32_t,
+		Chars<char32_t, U'(', U'[', U'{', U'"', U'\'', U'\\', U'<', U'«', U'„', U'.', U',', U'\u00AD', U'-'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::OpticalAlignmentBullet> : Compose<char32_t,
+		Range<char32_t, U'0', U'9'>,
+		Chars<char32_t, U'—', U'–', U'―', U'•', U'‣', U'⁃', U'-', U'*', U'◦', U'■', U'.', U',', U')'>
+> { };
+
+template <>
+struct CharGroup<char32_t, GroupId::TextPunctuation> : Compose<char32_t,
+		Chars<char32_t, U'=', U'/', U'(', U')', U'.', U',', U'-', U'\'', U'"'
+		, U':', U';', U'?', U'!', U'@', U'#', U'$', U'%', U'^', U'*', U'\\'
+		, U'_', U'+', U'[', U']', U'«', U'»'>
+> { };
+
+
 class MatchTraits {
 public:
 	template <typename CharType, CharType ... Args>

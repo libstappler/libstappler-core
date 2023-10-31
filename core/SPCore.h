@@ -68,6 +68,14 @@ THE SOFTWARE.
 #define MODULE_STAPPLER_SEARCH 1
 #define MODULE_STAPPLER_SQL 1
 #define MODULE_STAPPLER_DB 1
+#define MODULE_STAPPLER_ZIP 1
+
+#define MODULE_XENOLITH_CORE 1
+#define MODULE_XENOLITH_APPLICATION 1
+#define MODULE_XENOLITH_BACKEND_VK 1
+#define MODULE_XENOLITH_BACKEND_VKGUI 1
+#define MODULE_XENOLITH_RENDERER_BASIC2D 1
+#define MODULE_XENOLITH_RENDERER_MATERIAL2D 1
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
    //define something for Windows (32-bit and 64-bit, this part is common)

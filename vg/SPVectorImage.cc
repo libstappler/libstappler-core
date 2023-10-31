@@ -433,7 +433,7 @@ void VectorPathRef::setImage(VectorImage *image) {
 void VectorPathRef::copy() {
 	if (_copyOnWrite) {
 		if (_image) {
-			_path = _image->copyPath(_id, _path);
+			_path = _image->copyPath(_id);
 		}
 		_copyOnWrite = false;
 	}
@@ -493,7 +493,7 @@ const Interface::MapType<Interface::StringType, Rc<VectorPath>> &VectorImageData
 	return _paths;
 }
 
-Rc<VectorPath> VectorImageData::copyPath(StringView str, const Rc<VectorPath> &path) {
+Rc<VectorPath> VectorImageData::copyPath(StringView str) {
 	auto it = _paths.find(str);
 	if (it != _paths.end()) {
 		it->second = Rc<VectorPath>::alloc(*it->second);
@@ -509,6 +509,12 @@ uint16_t VectorImageData::getNextId() {
 }
 
 Rc<VectorPath> VectorImageData::addPath(StringView id, StringView cache, VectorPath &&path, Mat4 mat) {
+	String idStr;
+	if (id.empty()) {
+		idStr = mem_std::toString("auto-", getNextId());
+		id = idStr;
+	}
+
 	Rc<VectorPath> ret;
 	auto it = _paths.find(id);
 	if (it == _paths.end()) {
@@ -832,9 +838,9 @@ void VectorImage::markCopyOnWrite() {
 	}
 }
 
-Rc<VectorPath> VectorImage::copyPath(StringView str, const Rc<VectorPath> &path) {
+Rc<VectorPath> VectorImage::copyPath(StringView str) {
 	copy();
-	return _data->copyPath(str, path);
+	return _data->copyPath(str);
 }
 
 }

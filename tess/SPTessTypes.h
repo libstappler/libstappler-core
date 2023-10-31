@@ -387,7 +387,7 @@ SP_ATTR_OPTIMIZE_INLINE_FN static inline float EdgeAngle(const Vec2 &from, const
 	auto toA = EdgeAngle(to);
 
 	if (std::isnan(fromA) || std::isnan(toA)) {
-		std::cout << "EdgeAngle (NaN): " << from << " " << to << "\n";
+		std::cerr << "EdgeAngle (NaN): " << from << " " << to << "\n";
 		return 0.0f;
 	}
 

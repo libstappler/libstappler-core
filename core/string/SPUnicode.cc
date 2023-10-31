@@ -24,6 +24,13 @@ THE SOFTWARE.
 #include "SPUnicode.h"
 #include "SPString.h"
 
+#if WIN32
+#include "SPPlatformUnistd.h"
+#include <libloaderapi.h>
+#else
+#include <dlfcn.h>
+#endif
+
 namespace stappler::string {
 
 static const char * const sp_uppercase_set = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
@@ -143,17 +150,6 @@ void tolower_buf(char16_t *str, size_t len) {
 	}
 }
 
-char16_t utf8Decode(char_const_ptr_ref_t ptr) {
-	uint8_t len = 0;
-	auto ret = unicode::utf8Decode(ptr, len);
-	ptr += len;
-	if (len > 3) {
-		// non-UCS2 char
-		return u' ';
-	}
-	return ret;
-}
-
 template <class T> static inline T Utf8NextChar(T p) {
 	return (p + unicode::utf8_length_data[((const uint8_t *)p)[0]]);
 }
@@ -163,12 +159,13 @@ template <class T> static inline T Utf8NextChar(T p, size_t &counter) {
 	counter += 1;
 	return (p + l);
 }
-static char16_t Utf8DecodeHtml(char_const_ptr_t ptr, uint32_t len) {
+
+static char32_t Utf8DecodeHtml32(char_const_ptr_t ptr, uint32_t len) {
 	if (ptr[0] == '#') {
 		if (len > 1 && (ptr[1] == 'x' || ptr[1] == 'X')) {
-			return (char16_t)strtol((char_const_ptr_t)(ptr + 2), nullptr, 16);
+			return (char32_t)strtol((char_const_ptr_t)(ptr + 2), nullptr, 16);
 		}
-		return (char16_t)strtol((char_const_ptr_t)(ptr + 1), nullptr, 10);
+		return (char32_t)strtol((char_const_ptr_t)(ptr + 1), nullptr, 10);
 	} else if (strncmp((char_const_ptr_t)ptr, "amp", len) == 0) {
 		return '&';
 	} else if (strncmp((char_const_ptr_t)ptr, "nbsp", len) == 0) {
@@ -182,31 +179,31 @@ static char16_t Utf8DecodeHtml(char_const_ptr_t ptr, uint32_t len) {
 	} else if (strncmp((char_const_ptr_t)ptr, "gt", len) == 0) {
 		return '>';
 	} else if (strncmp((char_const_ptr_t)ptr, "shy", len) == 0) {
-		return (char16_t)0x00AD;
+		return (char32_t)0x00AD;
 	}
 	return 0;
 }
 
-char16_t utf8HtmlDecode(char_const_ptr_ref_t utf8) {
+char32_t utf8HtmlDecode32(char_const_ptr_ref_t utf8) {
 	if (utf8[0] == '&') {
 		uint32_t len = 0;
 		while (utf8[len] && utf8[len] != ';' && len < 10) {
 			len ++;
 		}
 
-		char16_t c = 0;
+		char32_t c = 0;
 		if (utf8[len] == ';' && len > 2) {
-			c = Utf8DecodeHtml(utf8 + 1, len - 2);
+			c = Utf8DecodeHtml32(utf8 + 1, len - 2);
 		}
 
 		if (c == 0) {
-			return utf8Decode(utf8);
+			return utf8Decode32(utf8);
 		} else {
 			utf8 += (len + 1);
 			return c;
 		}
 	} else {
-		return utf8Decode(utf8);
+		return utf8Decode32(utf8);
 	}
 }
 
@@ -246,55 +243,13 @@ bool isValidUtf8(StringView r) {
 	return true;
 }
 
-bool isspace(char ch) {
-	return ::isspace(ch) != 0;
-}
-
-bool isspace(char16_t ch) {
-    return  (ch >= 0x0009 && ch <= 0x000D) || ch == 0x0020 || ch == 0x0085 || ch == 0x00A0 || ch == 0x1680
-    || (ch >= 0x2000 && ch <= 0x200A) || ch == 0x2028 || ch == 0x2029 || ch == 0x202F
-    ||  ch == 0x205F || ch == 0x3000 || ch == 0xFFFF;
-}
-
-bool isspace(const char *ch) {
-	if (ch[0] == 0) {
-		return false;
-	}
-
-	uint8_t first = reinterpretValue<uint8_t>(ch[0]);
-	if (first <= 127) {
-		return isspace((char)(ch[0] & 0xFF));
-	} else {
-		return isspace(unicode::utf8Decode(ch));
-	}
-}
-
-Pair<char16_t, uint8_t> read(char_const_ptr_t ptr) {
-	uint8_t mask = unicode::utf8_length_mask[ ((const uint8_t *)ptr)[0] ];
-	uint8_t len = unicode::utf8_length_data[ ((const uint8_t *)ptr)[0] ];
-	uint32_t ret = ptr[0] & mask;
-	for (uint8_t c = 1; c < len; ++c) {
-		if ((ptr[c] & 0xc0) != 0x80) { ret = 0; break; }
-		ret <<= 6; ret |= (ptr[c] & 0x3f);
-	}
-	return pair((char16_t)ret, len);
-}
-
-size_t getUtf16Length(char32_t ch) {
-	if (ch > 0xFFFF) {
-		return 2;
-	} else {
-		return 1;
-	}
-}
-
 size_t getUtf16Length(const StringView &input) {
 	size_t counter = 0;
 	char_const_ptr_t ptr = input.data();
 	const char_const_ptr_t end = ptr + input.size();
 	while (ptr < end && *ptr != 0) {
-		ptr += unicode::utf8_length_data[ ((const uint8_t *)ptr)[0] ];
-		++ counter;
+		counter += unicode::utf16_length_data[ uint8_t(*ptr) ];
+		ptr += unicode::utf8_length_data[ uint8_t(*ptr) ];
 	};
 	return counter;
 }
@@ -316,12 +271,12 @@ size_t getUtf16HtmlLength(const StringView &input) {
 			} else if (ptr[len] == 0) {
 				ptr += len;
 			} else {
-				ptr += unicode::utf8_length_data[ ((const uint8_t *)ptr)[0] ];
-				++ counter;
+				counter += unicode::utf16_length_data[ uint8_t(*ptr) ];
+				ptr += unicode::utf8_length_data[ uint8_t(*ptr) ];
 			}
 		} else {
-			ptr += unicode::utf8_length_data[ ((const uint8_t *)ptr)[0] ];
-			++ counter;
+			counter += unicode::utf16_length_data[ uint8_t(*ptr) ];
+			ptr += unicode::utf8_length_data[ uint8_t(*ptr) ];
 		}
 	};
 	return counter;
@@ -332,7 +287,14 @@ size_t getUtf8Length(const WideStringView &str) {
 	const char16_t *end = ptr + str.size();
 	size_t ret = 0;
 	while (ptr < end) {
-		ret += unicode::utf8EncodeLength(*ptr++);
+		auto c = *ptr++;
+		if (c >= 0xD800 && c <= 0xDFFF) {
+			// surrogates is 4-byte
+			ret += 4;
+			++ ptr;
+		} else {
+			ret += unicode::utf8EncodeLength(c);
+		}
 	}
 	return ret;
 }
@@ -432,5 +394,16 @@ char charToKoi8r(char16_t c) {
 	}
 	return ' ';
 }
+
+/*struct UnicodeInterface {
+	UnicodeInterface() {
+		auto lib = ::dlopen("icu", RTLD_LAZY);
+		if (lib) {
+			std::cout << "icu found\n";
+		}
+	}
+};
+
+UnicodeInterface iface;*/
 
 }

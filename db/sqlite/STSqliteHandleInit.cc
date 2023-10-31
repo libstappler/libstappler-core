@@ -1113,7 +1113,7 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 	TableRec::writeCompareResult(*this, stream, requiredTables, existedTables, s);
 
 	if (!stream.empty()) {
-		std::cout << stream.weak() << "\n";
+		// std::cout << stream.weak() << "\n";
 		if (!performSimpleQuery(stream.weak())) {
 			endTransaction();
 			return false;
