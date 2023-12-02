@@ -146,7 +146,8 @@ public:
 	PrivateKey(const PrivateKey &) = delete;
 	PrivateKey& operator=(const PrivateKey &) = delete;
 
-	bool generate(KeyBits = KeyBits::_2048);
+	bool generate(KeyType type = KeyType::RSA);
+	bool generate(KeyBits = KeyBits::_2048, KeyType type = KeyType::RSA);
 
 	bool import(BytesView, const CoderSource & passwd = CoderSource());
 
@@ -169,6 +170,7 @@ public:
 
 	bool fingerprint(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &) const;
 
+	bool isGenerateSupported(KeyType) const;
 	bool isSupported(KeyFormat) const;
 
 	bool encrypt(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &);

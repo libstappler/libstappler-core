@@ -50,6 +50,8 @@ int gost_ec_point_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n,
                       const EC_POINT *q, const BIGNUM *m, BN_CTX *ctx);
 }
 
+#define EVP_PKEY_CTRL_GOST_PARAMSET (EVP_PKEY_ALG_CTRL+1)
+
 namespace stappler::crypto {
 
 static uint8_t * writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwork exp);
@@ -511,7 +513,7 @@ static BackendCtx s_openSSLCtx = {
 	.name = Backend::OpenSSL,
 	.title = StringView("OpenSSL"),
 	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsPKCS8 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary
-			| BackendFlags::SupportsGost3410_2012,
+			| BackendFlags::SupportsGost3410_2012 | BackendFlags::SupportsGost3412_2015,
 	.initialize = [] () {
 		OpenSSL_initGost();
 		OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, NULL);
@@ -734,7 +736,7 @@ static BackendCtx s_openSSLCtx = {
 			ctx.keyCtx = nullptr;
 		}
 	},
-	.privGen = [] (KeyContext &ctx, KeyBits bits) -> bool {
+	.privGen = [] (KeyContext &ctx, KeyBits bits, KeyType type) -> bool {
 		EVP_PKEY_CTX *kctx = nullptr;
 		auto finalize = [&] (bool value) {
 			if (kctx) {
@@ -748,19 +750,53 @@ static BackendCtx s_openSSLCtx = {
 			return value;
 		};
 
-		kctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-		if (!kctx) {
-			return finalize(false);
-		}
+		if (type == KeyType::RSA) {
+			kctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+			if (!kctx) {
+				return finalize(false);
+			}
 
-		if (!EVP_PKEY_keygen_init(kctx)) {
-			return finalize(false);
-		}
+			if (!EVP_PKEY_keygen_init(kctx)) {
+				return finalize(false);
+			}
 
-		switch (bits) {
-		case KeyBits::_1024: if (!EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, 1024)) { return finalize(false); } break;
-		case KeyBits::_2048: if (!EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, 2048)) { return finalize(false); } break;
-		case KeyBits::_4096: if (!EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, 4096)) { return finalize(false); } break;
+			switch (bits) {
+			case KeyBits::_1024: if (!EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, 1024)) { return finalize(false); } break;
+			case KeyBits::_2048: if (!EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, 2048)) { return finalize(false); } break;
+			case KeyBits::_4096: if (!EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, 4096)) { return finalize(false); } break;
+			}
+		} else if (type == KeyType::GOST3410_2012_256) {
+			kctx = EVP_PKEY_CTX_new_id(NID_id_GostR3410_2012_256, NULL);
+			if (!kctx) {
+				return finalize(false);
+			}
+
+			EVP_PKEY_paramgen_init(kctx);
+
+			EVP_PKEY_CTX_ctrl(kctx, NID_id_GostR3410_2012_256, EVP_PKEY_OP_PARAMGEN, EVP_PKEY_CTRL_GOST_PARAMSET,
+					NID_id_tc26_gost_3410_2012_256_paramSetA, NULL);
+
+			if (!EVP_PKEY_keygen_init(kctx)) {
+				return finalize(false);
+			}
+
+		} else if (type == KeyType::GOST3410_2012_512) {
+			kctx = EVP_PKEY_CTX_new_id(NID_id_GostR3410_2012_512, NULL);
+			if (!kctx) {
+				return finalize(false);
+			}
+
+			EVP_PKEY_paramgen_init(kctx);
+
+			EVP_PKEY_CTX_ctrl(kctx, NID_id_GostR3410_2012_512, EVP_PKEY_OP_PARAMGEN, EVP_PKEY_CTRL_GOST_PARAMSET,
+					NID_id_tc26_gost_3410_2012_512_paramSetA, NULL);
+
+			if (!EVP_PKEY_keygen_init(kctx)) {
+				return finalize(false);
+			}
+		} else {
+			log::error("Crypto-openssl", "Unsupported key type for keygen");
+			return finalize(false);
 		}
 
 		EVP_PKEY *ret = nullptr;
@@ -931,8 +967,9 @@ static BackendCtx s_openSSLCtx = {
 			return false;
 		}
 
-		if (i2b_PublicKey_bio(bp, static_cast<const EVP_PKEY *>(privKey.keyCtx))) {
-			target.keyCtx = b2i_PublicKey_bio(bp);
+		auto size = i2d_PUBKEY_bio(bp, static_cast<const EVP_PKEY *>(privKey.keyCtx));
+		if (size > 0) {
+			target.keyCtx = d2i_PUBKEY_bio(bp, NULL);
 			target.type = getOpenSSLKeyType(EVP_PKEY_get_id(static_cast<EVP_PKEY *>(target.keyCtx)));
 		}
 

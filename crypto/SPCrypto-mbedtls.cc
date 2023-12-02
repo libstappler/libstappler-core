@@ -244,7 +244,12 @@ static BackendCtx s_mbedTLSCtx = {
 	.privFree = [] (KeyContext &ctx) {
 		mbedtls_pk_free(reinterpret_cast<mbedtls_pk_context *>(&ctx));
 	},
-	.privGen = [] (KeyContext &ctx, KeyBits bits) -> bool {
+	.privGen = [] (KeyContext &ctx, KeyBits bits, KeyType type) -> bool {
+		if (type != KeyType::RSA) {
+			log::error("Crypto-mbedtls", "Unsupported key type for keygen");
+			return false;
+		}
+
 		int nbits = 0;
 
 		switch (bits) {

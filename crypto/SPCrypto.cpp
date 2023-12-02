@@ -48,7 +48,7 @@ struct BackendCtx {
 	bool (*privInit) (KeyContext &ctx) = nullptr;
 	void (*privFree) (KeyContext &ctx) = nullptr;
 
-	bool (*privGen) (KeyContext &ctx, KeyBits) = nullptr;
+	bool (*privGen) (KeyContext &ctx, KeyBits, KeyType) = nullptr;
 	bool (*privImport) (KeyContext &ctx, BytesView data, const CoderSource &passwd) = nullptr;
 	bool (*privExportPem) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) = nullptr;
 	bool (*privExportDer) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) = nullptr;
@@ -431,13 +431,17 @@ PrivateKey::~PrivateKey() {
 	}
 }
 
-bool PrivateKey::generate(KeyBits bits) {
+bool PrivateKey::generate(KeyType type) {
+	return generate(KeyBits::_4096, type);
+}
+
+bool PrivateKey::generate(KeyBits bits, KeyType type) {
 	if (!_valid) {
 		return false;
 	}
 
 	auto backend = static_cast<BackendCtx *>(_key.backendCtx);
-	if (backend && backend->privGen && backend->privGen(_key, bits)) {
+	if (backend && backend->privGen && backend->privGen(_key, bits, type)) {
 		_loaded = true;
 		return true;
 	}
@@ -548,6 +552,27 @@ bool PrivateKey::fingerprint(const Callback<void(const uint8_t *, size_t)> &cb, 
 		return true;
 	}
 
+	return false;
+}
+
+bool PrivateKey::isGenerateSupported(KeyType type) const {
+	auto backend = static_cast<BackendCtx *>(_key.backendCtx);
+	switch (type) {
+	case KeyType::RSA:
+		return (backend->flags & BackendFlags::SecureLibrary) != BackendFlags::None;
+		break;
+	case KeyType::GOST3410_2012_256:
+	case KeyType::GOST3410_2012_512:
+		return (backend->flags & BackendFlags::SupportsGost3410_2012) != BackendFlags::None;
+		break;
+
+	case KeyType::Unknown:
+	case KeyType::DSA:
+	case KeyType::ECDSA:
+	case KeyType::EDDSA_ED448:
+		return false;
+		break;
+	}
 	return false;
 }
 

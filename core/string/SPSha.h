@@ -50,9 +50,6 @@ struct CoderSource {
 	template <size_t Size>
 	CoderSource(const std::array<uint8_t, Size> &d) : _data(d.data(), Size) { }
 
-	template <typename Container>
-	CoderSource(const Container &d) : _data((const uint8_t *)d.data(), d.size()) { }
-
 	CoderSource() { }
 
 	BytesViewTemplate<Endian::Network> _data;

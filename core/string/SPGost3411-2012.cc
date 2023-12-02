@@ -28,8 +28,6 @@
 #include "SPByteOrder.h"
 #include "SPGost3411-2012.h"
 
-#include <emmintrin.h>
-
 #include "simde/x86/sse2.h"
 
 # if defined(__GNUC__) || defined(__clang__)

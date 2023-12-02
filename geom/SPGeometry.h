@@ -259,6 +259,25 @@ struct UVec2 {
 	constexpr bool operator!=(const UVec2 &) const = default;
 };
 
+struct UVec3 {
+	uint32_t x;
+	uint32_t y;
+	uint32_t z;
+
+	constexpr bool operator==(const UVec3 &) const = default;
+	constexpr bool operator!=(const UVec3 &) const = default;
+};
+
+struct UVec4 {
+	uint32_t x;
+	uint32_t y;
+	uint32_t z;
+	uint32_t w;
+
+	constexpr bool operator==(const UVec4 &) const = default;
+	constexpr bool operator!=(const UVec4 &) const = default;
+};
+
 struct URect {
 	uint32_t x = 0;
 	uint32_t y = 0;

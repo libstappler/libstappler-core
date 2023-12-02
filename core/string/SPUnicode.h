@@ -350,6 +350,7 @@ inline uint8_t utf16Encode(memory::u16string &str, char32_t c) {
 	}
 }
 
+template <typename std::enable_if<std::is_class<std::ctype<char16_t>>::value>::type* = nullptr>
 inline uint8_t utf16Encode(std::basic_ostream<char16_t> &out, char32_t c) {
 	if (c < 0xD800) {
 		out << char16_t(c);

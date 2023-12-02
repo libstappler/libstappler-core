@@ -250,7 +250,7 @@ static BackendCtx s_gnuTLSCtx = {
 	.name = Backend::GnuTLS,
 	.title = StringView("GnuTLS"),
 	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsPKCS8 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary
-		| BackendFlags::SupportsGost3410_2012,
+		| BackendFlags::SupportsGost3410_2012 | BackendFlags::SupportsGost3412_2015,
 	.initialize = [] () {
 		log::verbose("Crypto", "GnuTLS backend loaded: ", gnutls_check_version("3.0.0"));
 		/*gnutls_global_set_log_level(9);
@@ -412,14 +412,32 @@ static BackendCtx s_gnuTLSCtx = {
 	.privFree = [] (KeyContext &ctx) {
 		gnutls_privkey_deinit( static_cast<gnutls_privkey_t>(ctx.keyCtx) );
 	},
-	.privGen = [] (KeyContext &ctx, KeyBits bits) -> bool {
+	.privGen = [] (KeyContext &ctx, KeyBits bits, KeyType type) -> bool {
 		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 
 		int err = 0;
-		switch (bits) {
-		case KeyBits::_1024: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 1024, 0); break;
-		case KeyBits::_2048: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 2048, 0); break;
-		case KeyBits::_4096: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 4096, 0); break;
+
+		switch (type) {
+		case KeyType::Unknown:
+		case KeyType::DSA:
+		case KeyType::ECDSA:
+		case KeyType::EDDSA_ED448:
+			log::error("Crypto-gnutls", "Unsupported key type for keygen");
+			return false;
+			break;
+		case KeyType::GOST3410_2012_256:
+			err = gnutls_privkey_generate(key, GNUTLS_PK_GOST_12_256, 512, 0);
+			break;
+		case KeyType::GOST3410_2012_512:
+			err = gnutls_privkey_generate(key, GNUTLS_PK_GOST_12_512, 512, 0);
+			break;
+		case KeyType::RSA:
+			switch (bits) {
+			case KeyBits::_1024: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 1024, 0); break;
+			case KeyBits::_2048: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 2048, 0); break;
+			case KeyBits::_4096: err = gnutls_privkey_generate(key, GNUTLS_PK_RSA, 4096, 0); break;
+			}
+			break;
 		}
 
 		if (err == GNUTLS_E_SUCCESS) {

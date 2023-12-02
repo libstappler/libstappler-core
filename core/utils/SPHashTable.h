@@ -409,6 +409,9 @@ public:
 	}
 
 	iterator erase(iterator iter) {
+		if (this->count == 0) {
+			return end();
+		}
 		ValueType *old = *iter._bucket;
 		*iter._bucket = (*iter._bucket)->next;
 		old->next = this->free;
@@ -425,6 +428,9 @@ public:
 			iter.next();
 		}
 
+		if (this->count == 0) {
+			return end();
+		}
 		return iter;
 	}
 

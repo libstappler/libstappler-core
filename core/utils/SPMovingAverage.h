@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace stappler::math {
 
-template <size_t Count, typename T = float>
+template <uint64_t Count, typename T = float>
 class MovingAverage {
 public:
 	void dropValues() {

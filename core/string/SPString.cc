@@ -84,10 +84,12 @@ inline size_t unsigned_to_decimal(Char *out, IntType value, size_t size) {
 
 namespace dtoa {
 
+#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) && defined(__x86_64__)
 namespace gcc_ints {
     __extension__ typedef __int128 int128;
     __extension__ typedef unsigned __int128 uint128;
 }
+#endif
 
 #define UINT64_C2(h, l) ((static_cast<uint64_t>(h) << 32) | static_cast<uint64_t>(l))
 
