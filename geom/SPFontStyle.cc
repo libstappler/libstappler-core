@@ -283,6 +283,63 @@ FontParameters FontParameters::getSmallCaps() const {
 	return ret;
 }
 
+FontSpecializationVector FontVariations::getSpecialization(const FontSpecializationVector &vec) const {
+	FontSpecializationVector ret = vec;
+	if ((axisMask & FontVariableAxis::Weight) != FontVariableAxis::None) {
+		ret.fontWeight = weight.clamp(vec.fontWeight);
+	} else {
+		ret.fontWeight = weight.min;
+	}
+	if ((axisMask & FontVariableAxis::Stretch) != FontVariableAxis::None) {
+		ret.fontStretch = stretch.clamp(vec.fontStretch);
+	} else {
+		ret.fontStretch = stretch.min;
+	}
+	if ((axisMask & FontVariableAxis::Grade) != FontVariableAxis::None) {
+		ret.fontGrade = grade.clamp(vec.fontGrade);
+	} else {
+		ret.fontGrade = grade.min;
+	}
+
+	switch (vec.fontStyle.get()) {
+	case FontStyle::Normal.get():
+		// we should have 0 on italic and slant
+		if (italic.min == 0 && slant.min <= FontStyle::Normal && slant.max >= FontStyle::Normal) {
+			ret.fontStyle = FontStyle::Normal;
+		} else {
+			if (italic.min > 0) {
+				ret.fontStyle = FontStyle::Italic;
+			} else {
+				ret.fontStyle = slant.clamp(FontStyle::Normal);
+			}
+		}
+		break;
+	case FontStyle::Italic.get():
+		// try true italic or slant emulation
+		if (italic.min > 0) {
+			ret.fontStyle = FontStyle::Italic;
+		} else {
+			ret.fontStyle = slant.clamp(FontStyle::Oblique);
+		}
+		break;
+	default:
+		if ((axisMask & FontVariableAxis::Slant) != FontVariableAxis::None) {
+			ret.fontStyle = slant.clamp(vec.fontStyle);
+		} else if ((axisMask & FontVariableAxis::Italic) != FontVariableAxis::None && italic.min != italic.max) {
+			ret.fontStyle = FontStyle::Italic;
+		} else {
+			if (italic.min == 1) {
+				ret.fontStyle = FontStyle::Italic;
+			} else {
+				ret.fontStyle = slant.min;
+			}
+		}
+		break;
+	}
+
+	return ret;
+}
+
 struct LayoutNodeMemory;
 
 struct LayoutNodeMemoryStorage {

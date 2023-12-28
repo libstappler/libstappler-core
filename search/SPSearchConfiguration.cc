@@ -147,8 +147,7 @@ static bool stemWordDefault(Language lang, StemmerEnv *env, ParserToken tok, Str
 						}
 					}
 				}
-				string::tolower(str);
-				cb(str);
+				cb(string::tolower<Interface>(StringView(str)));
 				return true;
 			}
 		}

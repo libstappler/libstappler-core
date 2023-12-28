@@ -74,7 +74,7 @@ template <typename ReaderType, typename StringReader = StringViewUtf8,
 		html::Tag<StringReader>,
 		typename ReaderType::Tag
 	>::type>
-void parse(ReaderType &r, const StringReader &s, bool rootOnly = true, bool lowercase = true);
+void parse(ReaderType &r, const StringReader &s, bool rootOnly = true);
 
 template <typename T>
 struct ParserTraits {
@@ -91,24 +91,29 @@ struct ParserTraits {
 	InvokerCallTest_MakeCallTest(onReadTagName, success, failure);
 	InvokerCallTest_MakeCallTest(onReadAttributeName, success, failure);
 	InvokerCallTest_MakeCallTest(onReadAttributeValue, success, failure);
-	InvokerCallTest_MakeCallTest(shouldLowercaseTokens, success, failure);
 	InvokerCallTest_MakeCallTest(shouldParseTag, success, failure);
+
+	InvokerCallTest_MakeCallTest(onSchemeTag, success, failure); // tags like <?tag ""?> or <!TAG tag>
+	InvokerCallTest_MakeCallTest(onCommentTag, success, failure); // tags like <!-- -->
+	InvokerCallTest_MakeCallTest(onTagAttributeList, success, failure); // string with all attributes
+
+	InvokerCallTest_MakeCallTest(readTagContent, success, failure); // replace default content reader
 };
 
 template <typename StringReader>
-auto Tag_readName(StringReader &is, bool keepClean = false) -> StringReader;
+auto Tag_readName(StringReader &is) -> StringReader;
 
 template <typename StringReader>
-auto Tag_readAttrName(StringReader &s, bool keepClean = false) -> StringReader;
+auto Tag_readAttrName(StringReader &s) -> StringReader;
 
 template <typename StringReader>
-auto Tag_readAttrValue(StringReader &s, bool keepClean = false) -> StringReader;
+auto Tag_readAttrValue(StringReader &s) -> StringReader;
 
 template <typename __StringReader>
 struct Tag {
 	using StringReader = __StringReader;
 
-	Tag(const StringReader &name) : name(name) {
+	Tag(const StringReader &n) : name(n) {
 		if (name.is('!')) {
 			closable = false;
 		}
@@ -122,9 +127,12 @@ struct Tag {
 	void setHasContent(bool v) { content = v; }
 	bool hasContent() const { return content; }
 
+	bool isNestedTagsAllowed() const { return nestedTagsAllowed; }
+
 	StringReader name;
 	bool closable = true;
 	bool content = false;
+	bool nestedTagsAllowed = true;
 };
 
 template <typename ReaderType, typename __StringReader = StringViewUtf8,
@@ -151,9 +159,6 @@ struct Parser {
 
 	Parser(ReaderType &r) : reader(&r) {
 		tagStack.reserve_block_optimal();
-		if constexpr (Traits::shouldLowercaseTokens) {
-			lowercase = reader->shouldLowercaseTokens(*this);
-		}
 	}
 
 	inline void cancel() {
@@ -161,10 +166,26 @@ struct Parser {
 		canceled = true;
 	}
 
+	template <CharType C>
+	void skipQuoted() {
+		if (current.template is<C>()) {
+			++ current;
+		}
+		while (!current.empty() && !current.template is<C>()) {
+			current.template skipUntil<Chars<CharType('\\'), C>>();
+			if (current.is('\\')) {
+				current += 2;
+			}
+		}
+		if (current.template is<C>()) {
+			++ current;
+		}
+	}
+
 	bool parse(const StringReader &r, bool rootOnly) {
 		current = r;
 		while (!current.empty()) {
-			auto prefix = current.template readUntil<LtChar>(); // move to next tag
+			auto prefix = readTagContent();
 			if (!prefix.empty()) {
 				if (!tagStack.empty()) {
 					tagStack.back().setHasContent(true);
@@ -187,17 +208,11 @@ struct Parser {
 
 				auto tag = current.template readUntil<Chars<CharType('>')>>();
 				if (!tag.empty() && current.is('>') && !tagStack.empty()) {
+					tag.template trimChars<typename StringReader::WhiteSpace>();
 					auto it = tagStack.end();
 					do {
 						-- it;
 						auto &name = it->getName();
-						if (lowercase) {
-							if constexpr (sizeof(OrigCharType) == 2) {
-								string::tolower_buf((char16_t *)tag.data(), tag.size());
-							} else {
-								string::tolower_buf((char *)tag.data(), tag.size());
-							}
-						}
 						if (tag.size() == name.size() && tag.compare(name.data(), name.size())) {
 							// close all tag after <tag>
 							auto nit = tagStack.end();
@@ -232,27 +247,22 @@ struct Parser {
 
 				if constexpr (sizeof(OrigCharType) == 2) {
 					if (name.prefix(u"!--", u"!--"_len)) { // process comment
-						current.skipUntilString(u"-->", false);
-						continue;
-					}
-
-					if (name.is(u'?')) { // found processing-instruction
-						current.skipUntilString(u"?>", false);
+						current.skipUntilString(u"-->", true);
+						onCommentTag(StringReader(name.data() + u"!--"_len,  current.data() - name.data() - u"!--"_len));
+						current += u"!--"_len;
 						continue;
 					}
 				} else {
 					if (name.prefix("!--", "!--"_len)) { // process comment
-						current.skipUntilString("-->", false);
-						continue;
-					}
-
-					if (name.is('?')) { // found processing-instruction
-						current.skipUntilString("?>", false);
+						current.skipUntilString("-->", true);
+						auto tmp = StringReader(name.data() + "!--"_len, current.data() - name.data() - "!--"_len);
+						onCommentTag(tmp);
+						current += "!--"_len;
 						continue;
 					}
 				}
 
-				if (name.is('!')) {
+				if (name.is('!') || name.is('?')) {
 					StringReader cdata;
 					if constexpr (sizeof(OrigCharType) == 2) {
 						if (current.starts_with(u"CDATA[")) {
@@ -280,8 +290,19 @@ struct Parser {
 						}
 						continue;
 					} else {
-						current.template skipUntil<Chars<CharType('>')>>();
+						current.template skipChars<typename StringReader::WhiteSpace>();
+						auto tmp = current;
+						while (!current.empty() && !current.is('>')) {
+							current.template skipUntil<Chars<CharType('>'), CharType('"'), CharType('\'')>>();
+							if (current.is('\'')) {
+								skipQuoted<CharType('\'')>();
+							} else if (current.is('"')) {
+								skipQuoted<CharType('"')>();
+							}
+						}
 						if (current.is('>')) {
+							auto tag = StringReader(tmp.data(), current.data() - tmp.data());
+							onSchemeTag(name, tag);
 							++ current;
 						}
 						continue;
@@ -291,6 +312,7 @@ struct Parser {
 				TagType tag(name);
 				onBeginTag(tag);
 
+				StringReader attrStart = current;
 				StringReader attrName;
 				StringReader attrValue;
 				while (!current.empty() && !current.is('>') && !current.is('/')) {
@@ -305,6 +327,9 @@ struct Parser {
 					attrValue = onReadAttributeValue(current);
 					onTagAttribute(tag, attrName, attrValue);
 				}
+
+				attrStart = StringReader(attrStart.data(), current.data() - attrStart.data());
+				onTagAttributeList(tag, attrStart);
 
 				if (current.is('/')) {
 					tag.setClosable(false);
@@ -366,13 +391,48 @@ struct Parser {
 		return !canceled;
 	}
 
+	StringReader readTagContent() {
+		auto tmp = current;
+
+		if constexpr (Traits::readTagContent) {
+			if (!tagStack.empty()) {
+				reader->readTagContent(*this, tagStack.back(), current);
+				return StringReader(tmp.data(), current.data() - tmp.data());
+			}
+		}
+
+		bool nestedAllowed = true;
+		if (!tagStack.empty()) {
+			nestedAllowed = tagStack.back().isNestedTagsAllowed();
+		}
+
+		while (!current.empty() && !current.is('<')) {
+			current.template skipUntil<Chars<CharType('<'), CharType('\''), CharType('"')>>(); // move to next tag
+			if (current.is('\'')) {
+				skipQuoted<CharType('\'')>();
+			} else if (current.is('"')) {
+				skipQuoted<CharType('"')>();
+			} else if (!nestedAllowed && current.is('<')) {
+				if (current[1] == '/') {
+					auto tag = current.sub(2);
+					if (tag.starts_with(tagStack.back().name) && tag[tagStack.back().name.size()] == '>') {
+						break;
+					}
+				}
+				++ current;
+			}
+		}
+
+		return StringReader(tmp.data(), current.data() - tmp.data());
+	}
+
 	inline StringReader onReadTagName(StringReader &str) {
 		if constexpr (Traits::onReadTagName) {
 			StringReader ret(str);
 			reader->onReadTagName(*this, ret);
 			return ret;
 		} else {
-			return Tag_readName(str, !lowercase);
+			return Tag_readName(str);
 		}
 	}
 
@@ -382,7 +442,7 @@ struct Parser {
 			reader->onReadAttributeName(*this, ret);
 			return ret;
 		} else {
-			return Tag_readAttrName(str, !lowercase);
+			return Tag_readAttrName(str);
 		}
 	}
 
@@ -392,7 +452,7 @@ struct Parser {
 			reader->onReadAttributeValue(*this, ret);
 			return ret;
 		} else {
-			return Tag_readAttrValue(str, !lowercase);
+			return Tag_readAttrValue(str);
 		}
 	}
 
@@ -421,8 +481,16 @@ struct Parser {
 		if constexpr (Traits::shouldParseTag) { return reader->shouldParseTag(*this, tag); }
 		return true;
 	}
+	inline void onSchemeTag(StringReader &name, StringReader &value) {
+		if constexpr (Traits::onSchemeTag) { return reader->onSchemeTag(*this, name, value); }
+	}
+	inline void onCommentTag(StringReader &comment) {
+		if constexpr (Traits::onCommentTag) { return reader->onCommentTag(*this, comment); }
+	}
+	inline void onTagAttributeList(TagType &tag, StringReader &data) {
+		if constexpr (Traits::onTagAttributeList) { reader->onTagAttributeList(*this, tag, data); }
+	}
 
-	bool lowercase = true;
 	bool canceled = false;
 	ReaderType *reader;
 	StringReader current;
@@ -430,9 +498,8 @@ struct Parser {
 };
 
 template <typename ReaderType, typename StringReader, typename TagType>
-void parse(ReaderType &r, const StringReader &s, bool rootOnly, bool lowercase) {
+void parse(ReaderType &r, const StringReader &s, bool rootOnly) {
 	html::Parser<ReaderType, StringReader, TagType> p(r);
-	p.lowercase = lowercase;
 	p.parse(s, rootOnly);
 }
 

@@ -40,7 +40,7 @@ using HtmlIdentifier8 = chars::Compose<char,
 >;
 
 
-template <> StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is, bool keepClean) {
+template <> StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is) {
 	StringViewUtf8 s = is;
 	s.skipUntil<HtmlIdentifier16, StringViewUtf8::MatchChars<'>', '?'>>();
 	if (s.is("!--")) {
@@ -50,9 +50,6 @@ template <> StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is, bool
 		return ret;
 	}
 	StringViewUtf8 name(s.readChars<HtmlIdentifier16, StringViewUtf8::MatchChars<'?'>>());
-	if (!keepClean) {
-		string::tolower_buf((char *)name.data(), name.size());
-	}
 	if (name.size() > 1 && name.back() == '/') {
 		name.set(name.data(), name.size() - 1);
 		is += (is.size() - s.size() - 1);
@@ -63,16 +60,13 @@ template <> StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is, bool
 	return name;
 }
 
-template <> StringViewUtf8 Tag_readAttrName<StringViewUtf8>(StringViewUtf8 &s, bool keepClean) {
+template <> StringViewUtf8 Tag_readAttrName<StringViewUtf8>(StringViewUtf8 &s) {
 	s.skipUntil<HtmlIdentifier16>();
 	StringViewUtf8 name(s.readChars<HtmlIdentifier16>());
-	if (!keepClean) {
-		string::tolower_buf((char *)name.data(), name.size());
-	}
 	return name;
 }
 
-template <> StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s, bool keepClean) {
+template <> StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s) {
 	s.skipChars<StringViewUtf8::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier16>();
@@ -108,7 +102,7 @@ template <> StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s, 
 }
 
 
-template <> StringView Tag_readName<StringView>(StringView &is, bool keepClean) {
+template <> StringView Tag_readName<StringView>(StringView &is) {
 	StringView s = is;
 	s.skipUntil<HtmlIdentifier8, StringView::MatchChars<'>', '?'>>();
 	if (s.is("!--")) {
@@ -118,9 +112,6 @@ template <> StringView Tag_readName<StringView>(StringView &is, bool keepClean) 
 		return ret;
 	}
 	StringView name(s.readChars<HtmlIdentifier8, StringView::MatchChars<'?'>>());
-	if (!keepClean) {
-		string::tolower_buf((char *)name.data(), name.size());
-	}
 	if (name.size() > 1 && name.back() == '/') {
 		name.set(name.data(), name.size() - 1);
 		is += (is.size() - s.size() - 1);
@@ -131,16 +122,13 @@ template <> StringView Tag_readName<StringView>(StringView &is, bool keepClean) 
 	return name;
 }
 
-template <> StringView Tag_readAttrName<StringView>(StringView &s, bool keepClean) {
+template <> StringView Tag_readAttrName<StringView>(StringView &s) {
 	s.skipUntil<HtmlIdentifier8>();
 	StringView name(s.readChars<HtmlIdentifier8>());
-	if (!keepClean) {
-		string::tolower_buf((char *)name.data(), name.size());
-	}
 	return name;
 }
 
-template <> StringView Tag_readAttrValue<StringView>(StringView &s, bool keepClean) {
+template <> StringView Tag_readAttrValue<StringView>(StringView &s) {
 	s.skipChars<StringView::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier8>();
@@ -176,7 +164,7 @@ template <> StringView Tag_readAttrValue<StringView>(StringView &s, bool keepCle
 }
 
 
-template <> WideStringView Tag_readName<WideStringView>(WideStringView &is, bool keepClean) {
+template <> WideStringView Tag_readName<WideStringView>(WideStringView &is) {
 	WideStringView s = is;
 	s.skipUntil<HtmlIdentifier16, WideStringView::MatchChars<u'>', u'?'>>();
 	if (s.is(u"!--")) {
@@ -186,9 +174,6 @@ template <> WideStringView Tag_readName<WideStringView>(WideStringView &is, bool
 		return ret;
 	}
 	WideStringView name(s.readChars<HtmlIdentifier16, WideStringView::MatchChars<u'?'>>());
-	if (!keepClean) {
-		string::tolower_buf((char16_t *)name.data(), name.size());
-	}
 	if (name.size() > 1 && name.back() == '/') {
 		name.set(name.data(), name.size() - 1);
 		is += (is.size() - s.size() - 1);
@@ -199,16 +184,13 @@ template <> WideStringView Tag_readName<WideStringView>(WideStringView &is, bool
 	return name;
 }
 
-template <> WideStringView Tag_readAttrName<WideStringView>(WideStringView &s, bool keepClean) {
+template <> WideStringView Tag_readAttrName<WideStringView>(WideStringView &s) {
 	s.skipUntil<HtmlIdentifier16>();
 	WideStringView name(s.readChars<HtmlIdentifier16>());
-	if (!keepClean) {
-		string::tolower_buf((char16_t *)name.data(), name.size());
-	}
 	return name;
 }
 
-template <> WideStringView Tag_readAttrValue<WideStringView>(WideStringView &s, bool keepClean) {
+template <> WideStringView Tag_readAttrValue<WideStringView>(WideStringView &s) {
 	s.skipChars<WideStringView::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier16>();

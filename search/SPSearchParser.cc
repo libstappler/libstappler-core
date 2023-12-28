@@ -955,30 +955,14 @@ bool stemWord(StringView word, const Callback<void(StringView)> &cb, Language la
 }
 
 String normalizeWord(const StringView &str) {
-	String ret; ret.reserve(str.size());
-	auto ptr = str.data();
-	while (ptr < str.data() + str.size()) {
-		if (*ptr & (0x80)) {
-			uint8_t len = unicode::utf8_length_data[((const uint8_t *)ptr)[0]];
-			for (uint8_t i = 0; i < len; ++ i) {
-				ret.emplace_back(*ptr);
-				++ ptr;
-			}
-
-			if (len == 2) {
-				if (ret[ret.size() - 2] == char(0xC2) && ret[ret.size() - 1] == char(0xAD)) {
-					ret.pop_back();
-					ret.pop_back();
-				} else {
-					string::tolower(ret[ret.size() - 2], ret[ret.size() - 1]);
-				}
-			}
-		} else {
-			ret.emplace_back(::tolower(*ptr));
-			++ ptr;
+	auto tmp = string::tolower<Interface>(string::toUtf16<Interface>(str));
+	WideString filtered;
+	for (auto &it : tmp) {
+		if (it != char16_t(0xAD)) {
+			filtered.emplace_back(it);
 		}
 	}
-	return ret;
+	return string::toUtf8<Interface>(filtered);
 }
 
 SearchQuery::SearchQuery(StringView w, size_t off, StringView source) : offset(off), value(w.str<memory::PoolInterface>()), source(source) { }

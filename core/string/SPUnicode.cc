@@ -33,12 +33,6 @@ THE SOFTWARE.
 
 namespace stappler::string {
 
-static const char * const sp_uppercase_set = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
-static const char * const sp_lowercase_set = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-
-static const char16_t * const sp_uppercase_set_16 = u"АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
-static const char16_t * const sp_lowercase_set_16 = u"абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-
 SPUNUSED inline size_t Utf8CharLength(const uint8_t *ptr, uint8_t &mask);
 
 static inline void sp_str_replace(const char *target, const char *str, char &b, char &c) {
@@ -52,101 +46,6 @@ static inline void sp_str_replace(const char *target, const char *str, char &b, 
 			return;
 		}
 		++ i; ++ str;
-	}
-}
-
-void toupper(char &b, char &c) {
-	sp_str_replace(sp_uppercase_set, sp_lowercase_set, b, c);
-}
-
-void tolower(char &b, char &c) {
-	sp_str_replace(sp_lowercase_set, sp_uppercase_set, b, c);
-}
-
-char16_t tolower(char16_t c) {
-	if (c < 128) {
-		return (char16_t) ::tolower(c);
-	} else {
-		size_t index = 0;
-		const char16_t *str = sp_uppercase_set_16;
-		while (*str != 0) {
-			if (*str == c) {
-				return sp_lowercase_set_16[index];
-			}
-			index ++;
-			str ++;
-		}
-		return c;
-	}
-}
-
-char16_t toupper(char16_t c) {
-	if (c < 128) {
-		return (char16_t) ::toupper(c);
-	} else {
-		size_t index = 0;
-		const char16_t *str = sp_lowercase_set_16;
-		while (*str != 0) {
-			if (*str == c) {
-				return sp_uppercase_set_16[index];
-			}
-			index ++;
-			str ++;
-		}
-		return c;
-	}
-}
-
-void toupper_buf(char *str, size_t len) {
-	if (len == maxOf<size_t>()) {
-		len = std::char_traits<char>::length(str);
-	}
-
-	char b = 0, c = 0;
-	for (size_t i = 0; i < len; i++) {
-		b = c;
-		c = str[i];
-		if (b & (0x80)) {
-			toupper(str[i-1], str[i]);
-		} else {
-			str[i] = ::toupper(c);
-		}
-	}
-}
-
-void tolower_buf(char *str, size_t len) {
-	if (len == maxOf<size_t>()) {
-		len = std::char_traits<char>::length(str);
-	}
-
-	char b = 0, c = 0;
-	for (size_t i = 0; i < len; i++) {
-		b = c;
-		c = str[i];
-		if (b & (0x80)) {
-			tolower(str[i-1], str[i]);
-		} else {
-			str[i] = ::tolower(c);
-		}
-	}
-}
-void toupper_buf(char16_t *str, size_t len) {
-	if (len == maxOf<size_t>()) {
-		len = std::char_traits<char16_t>::length(str);
-	}
-
-	for (size_t i = 0; i < len; i++) {
-		str[i] = string::toupper(str[i]);
-	}
-}
-
-void tolower_buf(char16_t *str, size_t len) {
-	if (len == maxOf<size_t>()) {
-		len = std::char_traits<char16_t>::length(str);
-	}
-
-	for (size_t i = 0; i < len; i++) {
-		str[i] = string::tolower(str[i]);
 	}
 }
 
@@ -265,6 +164,7 @@ size_t getUtf16HtmlLength(const StringView &input) {
 				len ++;
 			}
 
+
 			if (ptr[len] == ';' && len > 2) {
 				counter ++;
 				ptr += len;
@@ -277,6 +177,35 @@ size_t getUtf16HtmlLength(const StringView &input) {
 		} else {
 			counter += unicode::utf16_length_data[ uint8_t(*ptr) ];
 			ptr += unicode::utf8_length_data[ uint8_t(*ptr) ];
+		}
+	};
+	return counter;
+}
+
+size_t getUtf8HtmlLength(const StringView &input) {
+	size_t counter = 0;
+	char_const_ptr_t ptr = input.data();
+	const char_const_ptr_t end = ptr + input.size();
+	while (ptr < end && *ptr != 0) {
+		if (ptr[0] == '&') {
+			uint8_t len = 0;
+			while (ptr[len] && ptr[len] != ';' && len < 10) {
+				len ++;
+			}
+
+			if (ptr[len] == ';' && len > 2) {
+				auto c = Utf8DecodeHtml32(ptr + 1, len - 2);
+				counter += unicode::utf8EncodeLength(c);
+				ptr += len;
+			} else if (ptr[len] == 0) {
+				ptr += len;
+			} else {
+				counter += 1;
+				ptr += 1;
+			}
+		} else {
+			counter += 1;
+			ptr += 1;
 		}
 	};
 	return counter;

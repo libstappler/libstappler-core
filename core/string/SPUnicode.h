@@ -377,6 +377,14 @@ constexpr inline bool isUtf8Surrogate(char c) {
 // A part of SPString.h header placed here, to be available in utilities,
 // that included by SPString.h (like StringView)
 
+namespace stappler::platform {
+
+char32_t tolower(char32_t c);
+char32_t toupper(char32_t c);
+char32_t totitle(char32_t c);
+
+}
+
 namespace stappler::string {
 
 using char_ptr_t = char *;
@@ -388,16 +396,9 @@ using char_const_ptr_const_ref_t = const char_const_ptr_t &;
 
 static constexpr size_t DOUBLE_MAX_DIGITS = 27;
 
-void toupper(char &b, char &c);
-void tolower(char &b, char &c);
-
-char16_t toupper(char16_t);
-char16_t tolower(char16_t);
-
-void toupper_buf(char *, size_t len = maxOf<size_t>());
-void tolower_buf(char *, size_t len = maxOf<size_t>());
-void toupper_buf(char16_t *, size_t len = maxOf<size_t>());
-void tolower_buf(char16_t *, size_t len = maxOf<size_t>());
+inline char32_t tolower(char32_t c) { return platform::tolower(c); }
+inline char32_t toupper(char32_t c) { return platform::toupper(c); }
+inline char32_t totitle(char32_t c) { return platform::totitle(c); }
 
 // fast itoa implementation
 // data will be written at the end of buffer, no trailing zero (do not try to use strlen on it!)

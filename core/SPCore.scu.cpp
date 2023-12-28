@@ -46,6 +46,9 @@ THE SOFTWARE.
 #include "SPRef.cc"
 #include "SPTime.cc"
 
+#include "platform/SPCore-linux.cc"
+#include "platform/SPCore-android.cc"
+
 #ifdef MODULE_STAPPLER_DATA
 #include "SPData.cc"
 #include "SPDataUrlencoded.cc"
@@ -53,10 +56,6 @@ THE SOFTWARE.
 
 #include "SPUrl.cc"
 #include "SPValid.cc"
-
-#ifdef MODULE_STAPPLER_IDN
-#include "SPIdn.cc"
-#endif
 
 #ifdef MODULE_STAPPLER_SQL
 #include "SPSql.cc"

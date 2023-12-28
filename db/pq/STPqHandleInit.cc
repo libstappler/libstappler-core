@@ -565,7 +565,7 @@ Map<StringView, TableRec> TableRec::parse(const BackendInterface::Config &cfg,
 
 					table.pkey.emplace_back(toString(source, "_id"));
 					table.pkey.emplace_back(toString(target, "_id"));
-					tables.emplace(StringView(stappler::string::tolower(name)).pdup(), std::move(table));
+					tables.emplace(StringView(stappler::string::tolower<Interface>(name)).pdup(), std::move(table));
 				}
 			} else if (type == db::Type::Array) {
 				auto slot = static_cast<const db::FieldArray *>(f.getSlot());

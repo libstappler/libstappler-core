@@ -330,7 +330,6 @@ public:
 	bool is(const char *c) const;
 	bool is(const Self &c) const;
 
-	template <char16_t C> bool is() const;
 	template <char32_t C> bool is() const;
 	template <CharGroupId G> bool is() const;
 	template <typename M> bool is() const;
@@ -358,7 +357,7 @@ public:
 	MatchCharType operator * () const;
 
 	template <typename Callback>
-	void foreach(const Callback &cb);
+	void foreach(const Callback &cb) const;
 
 	size_t code_size() const;
 
@@ -1146,11 +1145,6 @@ inline bool StringViewUtf8::is(const Self &c) const {
 	return prefix(c.data(), c.size());
 }
 
-template <char16_t C>
-inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == C;
-}
-
 template <char32_t C>
 inline bool StringViewUtf8::is() const {
 	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == C;
@@ -1240,7 +1234,7 @@ inline auto StringViewUtf8::operator * () const -> MatchCharType {
 }
 
 template <typename Callback>
-inline void StringViewUtf8::foreach(const Callback &cb) {
+inline void StringViewUtf8::foreach(const Callback &cb) const {
 	auto p = ptr;
 	const auto e = ptr + len;
 	while (p < e) {

@@ -68,8 +68,8 @@ static bool detectSvg(StringView str, uint32_t &w, uint32_t &h) {
 		uint32_t height = 0;
 		while (!found && !str.empty()) {
 			str.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-			auto key = html::Tag_readAttrName(str, true);
-			auto value = html::Tag_readAttrValue(str, true);
+			auto key = html::Tag_readAttrName(str);
+			auto value = html::Tag_readAttrValue(str);
 			if (!key.empty() && !value.empty()) {
 				if (key == "xmlns") {
 					if (value.is("http://www.w3.org/2000/svg")) {

@@ -33,7 +33,7 @@ namespace stappler::geom {
 using EnumSize = uint8_t;
 
 struct Metric {
-	enum Units {
+	enum Units : EnumSize {
 		Percent,
 		Px,
 		Em,
@@ -311,6 +311,34 @@ struct FontParameters : FontSpecializationVector {
 
 	inline bool operator == (const FontParameters &other) const = default;
 	inline bool operator != (const FontParameters &other) const = default;
+};
+
+struct FontVariations {
+	template <typename T>
+	struct Variations {
+		T min;
+		T max;
+
+		Variations &operator=(const T &v) {
+			min = v;
+			max = v;
+			return *this;
+		}
+
+		T clamp(T val) const {
+			return math::clamp(val, min, max);
+		}
+	};
+
+	FontVariableAxis axisMask = FontVariableAxis::None;
+	Variations<FontWeight> weight = Variations<FontWeight>{FontWeight::Normal, FontWeight::Normal};
+	Variations<FontStretch> stretch = Variations<FontStretch>{FontStretch::Normal, FontStretch::Normal};
+	Variations<FontStyle> slant = Variations<FontStyle>{FontStyle::Normal, FontStyle::Normal};
+	Variations<uint32_t> opticalSize = Variations<uint32_t>{0, 0};
+	Variations<uint32_t> italic = Variations<uint32_t>{0, 0};
+	Variations<FontGrade> grade = Variations<FontGrade>{FontGrade::Normal, FontGrade::Normal};
+
+	FontSpecializationVector getSpecialization(const FontSpecializationVector &vec) const;
 };
 
 constexpr FontStretch FontStretch::UltraCondensed = FontStretch(50 << 1);

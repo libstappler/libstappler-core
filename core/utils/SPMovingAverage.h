@@ -43,10 +43,8 @@ public:
 		size_t c = 0;
 		T s = 0;
 		for (size_t i = 0; i < min(Count, _current); i++) {
-			if (_values[i] != 0) {
-				s += _values[i];
-				++ c;
-			}
+			s += _values[i];
+			++ c;
 		}
 		return s / c;
 	}

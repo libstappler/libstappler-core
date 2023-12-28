@@ -26,6 +26,28 @@ THE SOFTWARE.
 
 #include "SPSha.h"
 
+namespace stappler::platform {
+
+template <typename Interface>
+auto tolower(StringView) -> typename Interface::StringType;
+
+template <typename Interface>
+auto toupper(StringView) -> typename Interface::StringType;
+
+template <typename Interface>
+auto totitle(StringView) -> typename Interface::StringType;
+
+template <typename Interface>
+auto tolower(WideStringView) -> typename Interface::WideStringType;
+
+template <typename Interface>
+auto toupper(WideStringView) -> typename Interface::WideStringType;
+
+template <typename Interface>
+auto totitle(WideStringView) -> typename Interface::WideStringType;
+
+}
+
 namespace stappler::string {
 
 inline size_t getUtf16Length(char32_t c) { return unicode::utf16EncodeLength(c); }
@@ -34,6 +56,7 @@ size_t getUtf16HtmlLength(const StringView &str);
 
 inline size_t getUtf8Length(char32_t c) { return unicode::utf8EncodeLength(c); }
 inline size_t getUtf8Length(char16_t c) { return unicode::utf8EncodeLength(c); }
+size_t getUtf8HtmlLength(const StringView &str);
 size_t getUtf8Length(const WideStringView &str);
 
 char charToKoi8r(char16_t c);
@@ -127,6 +150,12 @@ template <typename Interface>
 auto tolower(const WideStringView & str) -> typename Interface::WideStringType;
 
 template <typename Interface>
+auto totitle(const StringView & str) -> typename Interface::StringType;
+
+template <typename Interface>
+auto totitle(const WideStringView & str) -> typename Interface::WideStringType;
+
+template <typename Interface>
 auto urlencode(const StringView &data) -> typename Interface::StringType;
 
 template <typename Storage>
@@ -160,6 +189,32 @@ template <typename T>
 void split(const StringView &str, const StringView &delim, T && callback);
 
 template <typename Interface>
+auto decodeHtml(const StringView &data) -> typename Interface::StringType;
+
+template <typename Container>
+void apply(Container &c, const Callback<void(typename Container::value_type &)> &cb) {
+	for (auto &it : c) {
+		cb(it);
+	}
+}
+
+// fast tolower for C locale
+template <typename Container>
+void apply_tolower(Container &c) {
+	apply(c, [] (typename Container::value_type &ch) {
+		ch = std::tolower(ch, std::locale());
+	});
+}
+
+// fast toupper for C locale
+template <typename Container>
+void apply_toupper(Container &c) {
+	apply(c, [] (typename Container::value_type &ch) {
+		ch = std::toupper(ch, std::locale());
+	});
+}
+
+template <typename Interface>
 struct StringTraits : public Interface {
 	using String = typename Interface::StringType;
 	using WideString = typename Interface::WideStringType;
@@ -186,17 +241,15 @@ struct StringTraits : public Interface {
 
 	static String toKoi8r(const WideStringView &str);
 
-	static WideString &tolower(WideString &str);
-	static WideString &toupper(WideString &str);
-
-	static String &tolower(String &str);
-	static String &toupper(String &str);
-
 	static WideString tolower(const WideStringView &str);
 	static WideString toupper(const WideStringView &str);
+	static WideString totitle(const WideStringView &str);
 
 	static String tolower(const StringView &str);
 	static String toupper(const StringView &str);
+	static String totitle(const StringView &str);
+
+	static String decodeHtml(const StringView &);
 
 	static bool isUrlencodeChar(char c);
 };
@@ -439,6 +492,16 @@ auto tolower(const WideStringView & str) -> typename Interface::WideStringType {
 }
 
 template <typename Interface>
+auto totitle(const StringView & str) -> typename Interface::StringType {
+	return StringTraits<Interface>::totitle(str);
+}
+
+template <typename Interface>
+auto totitle(const WideStringView & str) -> typename Interface::WideStringType {
+	return StringTraits<Interface>::totitle(str);
+}
+
+template <typename Interface>
 inline auto urlencode(const StringView &data) -> typename Interface::StringType {
 	return StringTraits<Interface>::urlencode(data);
 }
@@ -481,6 +544,11 @@ inline auto toUtf8(char32_t c) -> typename Interface::StringType {
 template <typename Interface>
 inline auto toKoi8r(const WideStringView &data) -> typename Interface::StringType {
 	return StringTraits<Interface>::toKoi8r(data);
+}
+
+template <typename Interface>
+inline auto decodeHtml(const StringView &data) -> typename Interface::StringType {
+	return StringTraits<Interface>::decodeHtml(data);
 }
 
 template <typename T>
@@ -658,77 +726,53 @@ auto StringTraits<Interface>::toKoi8r(const WideStringView &str) -> String {
 }
 
 template <typename Interface>
-auto StringTraits<Interface>::tolower(WideString &str) -> WideString & {
-	for (auto &it : str) {
-		it = string::tolower(it);
-	}
-	return str;
-}
-
-template <typename Interface>
-auto StringTraits<Interface>::toupper(WideString &str) -> WideString & {
-	for (auto &it : str) {
-		it = string::toupper(it);
-	}
-	return str;
-}
-
-template <typename Interface>
-auto StringTraits<Interface>::tolower(String &str) -> String & {
-	char b = 0, c = 0;
-	for (size_t i = 0; i < str.size(); i++) {
-		b = c;
-		c = str[i];
-		if (b & (0x80)) {
-			string::tolower(str[i-1], str[i]);
-		} else {
-			str[i] = ::tolower(c);
-		}
-	}
-	return str;
-}
-
-template <typename Interface>
-auto StringTraits<Interface>::toupper(String &str) -> String & {
-	char b = 0, c = 0;
-	for (size_t i = 0; i < str.size(); i++) {
-		b = c;
-		c = str[i];
-		if (b & (0x80)) {
-			string::toupper(str[i-1], str[i]);
-		} else {
-			str[i] = ::toupper(c);
-		}
-	}
-	return str;
-}
-
-template <typename Interface>
 auto StringTraits<Interface>::tolower(const WideStringView &str) -> WideString {
-	WideString buf(str.str<Interface>());
-	tolower(buf);
-	return buf;
+	return platform::tolower<Interface>(str);
 }
 
 template <typename Interface>
 auto StringTraits<Interface>::toupper(const WideStringView &str) -> WideString {
-	WideString buf(str.str<Interface>());
-	toupper(buf);
-	return buf;
+	return platform::toupper<Interface>(str);
+}
+
+template <typename Interface>
+auto StringTraits<Interface>::totitle(const WideStringView &str) -> WideString {
+	return platform::totitle<Interface>(str);
 }
 
 template <typename Interface>
 auto StringTraits<Interface>::tolower(const StringView &str) -> String {
-	String buf(str.str<Interface>());
-	tolower(buf);
-	return buf;
+	return platform::tolower<Interface>(str);
 }
 
 template <typename Interface>
 auto StringTraits<Interface>::toupper(const StringView &str) -> String {
-	String buf(str.str<Interface>());
-	toupper(buf);
-	return buf;
+	return platform::toupper<Interface>(str);
+}
+
+template <typename Interface>
+auto StringTraits<Interface>::totitle(const StringView &str) -> String {
+	return platform::totitle<Interface>(str);
+}
+
+template <typename Interface>
+auto StringTraits<Interface>::decodeHtml(const StringView &utf8_str) -> String {
+	const auto size = string::getUtf8HtmlLength(utf8_str);
+	String result_str; result_str.reserve(size);
+
+	auto ptr = char_const_ptr_t(utf8_str.data());
+	auto end = ptr + utf8_str.size();
+	while (ptr < end) {
+		if (*ptr == '&') {
+			auto c = utf8HtmlDecode32(ptr);
+			unicode::utf8Encode(result_str, c);
+		} else {
+			result_str.emplace_back(*ptr);
+			++ ptr;
+		}
+	}
+
+	return result_str;
 }
 
 template <typename Interface>

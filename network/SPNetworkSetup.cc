@@ -81,7 +81,7 @@ static size_t _writeHeaders(char *data, size_t size, size_t nmemb, void *userptr
 				name.trimChars<StringView::WhiteSpace>();
 				reader.trimChars<StringView::WhiteSpace>();
 
-				auto nameStr = name.str<Interface>(); string::tolower(nameStr);
+				auto nameStr = string::tolower<Interface>(name);
 				auto valueStr = reader.str<Interface>();
 
 				if (task->receive.headerCallback) {
