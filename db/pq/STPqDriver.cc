@@ -24,12 +24,7 @@ THE SOFTWARE.
 #include "STPqDriver.h"
 #include "STPqHandle.h"
 #include "STSqlHandle.h"
-#if WIN32
-#include "SPPlatformUnistd.h"
-#include <libloaderapi.h>
-#else
-#include <dlfcn.h>
-#endif
+#include "SPDso.h"
 
 namespace stappler::db::pq {
 
@@ -70,16 +65,6 @@ struct pgNotify {
 	pgNotify *next;		/* list link */
 };
 
-#if WIN32
-static FARPROC sp_dlsym(void *h, const char *name) {
-	return GetProcAddress((HMODULE)h, name);
-}
-#else
-static void *sp_dlsym(void *h, const char *name) {
-	return dlsym(h, name);
-}
-#endif
-
 struct DriverSym : AllocBase {
 	using PQnoticeProcessor = void (*) (void *arg, const char *message);
 	using PQresultStatusType = ExecStatusType (*) (const void *res);
@@ -114,37 +99,37 @@ struct DriverSym : AllocBase {
 	using PQgetResultType = void *(*) (void *conn);
 	using PQsetNoticeProcessorType = void (*) (void *conn, PQnoticeProcessor, void *);
 
-	DriverSym(StringView name, void *d) : name(name), ptr(d) {
-		this->PQresultStatus = DriverSym::PQresultStatusType(sp_dlsym(d, "PQresultStatus"));
-		this->PQconnectdbParams = DriverSym::PQconnectdbParamsType(sp_dlsym(d, "PQconnectdbParams"));
-		this->PQfinish = DriverSym::PQfinishType(sp_dlsym(d, "PQfinish"));
-		this->PQfformat = DriverSym::PQfformatType(sp_dlsym(d, "PQfformat"));
-		this->PQgetisnull = DriverSym::PQgetisnullType(sp_dlsym(d, "PQgetisnull"));
-		this->PQgetvalue = DriverSym::PQgetvalueType(sp_dlsym(d, "PQgetvalue"));
-		this->PQgetlength = DriverSym::PQgetlengthType(sp_dlsym(d, "PQgetlength"));
-		this->PQfname = DriverSym::PQfnameType(sp_dlsym(d, "PQfname"));
-		this->PQftype = DriverSym::PQftypeType(sp_dlsym(d, "PQftype"));
-		this->PQntuples = DriverSym::PQntuplesType(sp_dlsym(d, "PQntuples"));
-		this->PQnfields = DriverSym::PQnfieldsType(sp_dlsym(d, "PQnfields"));
-		this->PQcmdTuples = DriverSym::PQcmdTuplesType(sp_dlsym(d, "PQcmdTuples"));
-		this->PQresStatus = DriverSym::PQresStatusType(sp_dlsym(d, "PQresStatus"));
-		this->PQresultErrorMessage = DriverSym::PQresultErrorMessageType(sp_dlsym(d, "PQresultErrorMessage"));
-		this->PQclear = DriverSym::PQclearType(sp_dlsym(d, "PQclear"));
-		this->PQexec = DriverSym::PQexecType(sp_dlsym(d, "PQexec"));
-		this->PQexecParams = DriverSym::PQexecParamsType(sp_dlsym(d, "PQexecParams"));
-		this->PQsendQuery = DriverSym::PQsendQueryType(sp_dlsym(d, "PQsendQuery"));
-		this->PQstatus = DriverSym::PQstatusType(sp_dlsym(d, "PQstatus"));
-		this->PQerrorMessage = DriverSym::PQerrorMessageType(sp_dlsym(d, "PQerrorMessage"));
-		this->PQreset = DriverSym::PQresetType(sp_dlsym(d, "PQreset"));
-		this->PQtransactionStatus = DriverSym::PQtransactionStatusType(sp_dlsym(d, "PQtransactionStatus"));
-		this->PQsetnonblocking = DriverSym::PQsetnonblockingType(sp_dlsym(d, "PQsetnonblocking"));
-		this->PQsocket = DriverSym::PQsocketType(sp_dlsym(d, "PQsocket"));
-		this->PQconsumeInput = DriverSym::PQconsumeInputType(sp_dlsym(d, "PQconsumeInput"));
-		this->PQnotifies = DriverSym::PQnotifiesType(sp_dlsym(d, "PQnotifies"));
-		this->PQfreemem = DriverSym::PQfreememType(sp_dlsym(d, "PQfreemem"));
-		this->PQisBusy = DriverSym::PQisBusyType(sp_dlsym(d, "PQisBusy"));
-		this->PQgetResult = DriverSym::PQgetResultType(sp_dlsym(d, "PQgetResult"));
-		this->PQsetNoticeProcessor = DriverSym::PQsetNoticeProcessorType(sp_dlsym(d, "PQsetNoticeProcessor"));
+	DriverSym(StringView n, Dso &&d) : name(n), ptr(move(d)) {
+		this->PQresultStatus = ptr.sym<DriverSym::PQresultStatusType>("PQresultStatus");
+		this->PQconnectdbParams = ptr.sym<DriverSym::PQconnectdbParamsType>("PQconnectdbParams");
+		this->PQfinish = ptr.sym<DriverSym::PQfinishType>("PQfinish");
+		this->PQfformat = ptr.sym<DriverSym::PQfformatType>("PQfformat");
+		this->PQgetisnull = ptr.sym<DriverSym::PQgetisnullType>("PQgetisnull");
+		this->PQgetvalue = ptr.sym<DriverSym::PQgetvalueType>("PQgetvalue");
+		this->PQgetlength = ptr.sym<DriverSym::PQgetlengthType>("PQgetlength");
+		this->PQfname = ptr.sym<DriverSym::PQfnameType>("PQfname");
+		this->PQftype = ptr.sym<DriverSym::PQftypeType>("PQftype");
+		this->PQntuples = ptr.sym<DriverSym::PQntuplesType>("PQntuples");
+		this->PQnfields = ptr.sym<DriverSym::PQnfieldsType>("PQnfields");
+		this->PQcmdTuples = ptr.sym<DriverSym::PQcmdTuplesType>("PQcmdTuples");
+		this->PQresStatus = ptr.sym<DriverSym::PQresStatusType>("PQresStatus");
+		this->PQresultErrorMessage = ptr.sym<DriverSym::PQresultErrorMessageType>("PQresultErrorMessage");
+		this->PQclear = ptr.sym<DriverSym::PQclearType>("PQclear");
+		this->PQexec = ptr.sym<DriverSym::PQexecType>("PQexec");
+		this->PQexecParams = ptr.sym<DriverSym::PQexecParamsType>("PQexecParams");
+		this->PQsendQuery = ptr.sym<DriverSym::PQsendQueryType>("PQsendQuery");
+		this->PQstatus = ptr.sym<DriverSym::PQstatusType>("PQstatus");
+		this->PQerrorMessage = ptr.sym<DriverSym::PQerrorMessageType>("PQerrorMessage");
+		this->PQreset = ptr.sym<DriverSym::PQresetType>("PQreset");
+		this->PQtransactionStatus = ptr.sym<DriverSym::PQtransactionStatusType>("PQtransactionStatus");
+		this->PQsetnonblocking = ptr.sym<DriverSym::PQsetnonblockingType>("PQsetnonblocking");
+		this->PQsocket = ptr.sym<DriverSym::PQsocketType>("PQsocket");
+		this->PQconsumeInput = ptr.sym<DriverSym::PQconsumeInputType>("PQconsumeInput");
+		this->PQnotifies = ptr.sym<DriverSym::PQnotifiesType>("PQnotifies");
+		this->PQfreemem = ptr.sym<DriverSym::PQfreememType>("PQfreemem");
+		this->PQisBusy = ptr.sym<DriverSym::PQisBusyType>("PQisBusy");
+		this->PQgetResult = ptr.sym<DriverSym::PQgetResultType>("PQgetResult");
+		this->PQsetNoticeProcessor = ptr.sym<DriverSym::PQsetNoticeProcessorType>("PQsetNoticeProcessor");
 	}
 
 	~DriverSym() { }
@@ -161,8 +146,11 @@ struct DriverSym : AllocBase {
 		return true;
 	}
 
+	DriverSym(DriverSym &&) = default;
+	DriverSym &operator=(DriverSym &&) = default;
+
 	StringView name;
-	void *ptr = nullptr;
+	Dso ptr;
 	PQconnectdbParamsType PQconnectdbParams = nullptr;
 	PQfinishType PQfinish = nullptr;
 	PQresultStatusType PQresultStatus = nullptr;
@@ -199,7 +187,7 @@ struct DriverSym : AllocBase {
 struct DriverHandle {
 	void *conn;
 	const Driver *driver;
-	void *padding;
+	Time ctime;
 	pool_t *pool;
 };
 
@@ -221,29 +209,15 @@ struct PgDriverLibStorage {
 			return &it->second;
 		}
 
-#if WIN32
-		if (auto d = LoadLibraryA((LPCSTR)target.data())) {
-			DriverSym syms(target, d);
+		if (auto d = Dso(target)) {
+			DriverSym syms(target, move(d));
 			if (syms) {
-				auto ret = s_driverLibs.emplace(target, std::move(syms)).first;
+				auto ret = s_driverLibs.emplace(target, move(syms)).first;
 				ret->second.name = ret->first;
 				return &ret->second;
-			} else {
-				FreeLibrary(d);
 			}
 		}
-#else
-		if (auto d = dlopen(target.data(), RTLD_LAZY)) {
-			DriverSym syms(target, d);
-			if (syms) {
-				auto ret = s_driverLibs.emplace(target, std::move(syms)).first;
-				ret->second.name = ret->first;
-				return &ret->second;
-			} else {
-				dlclose(d);
-			}
-		}
-#endif
+
 		return nullptr;
 	}
 
@@ -463,6 +437,10 @@ void Driver::finish(Handle h) const {
 }
 
 bool Driver::isValid(Handle handle) const {
+	if (!handle.get()) {
+		return false;
+	}
+
 	auto conn = getConnection(handle);
 	if (conn.get()) {
 		return isValid(conn);
@@ -482,6 +460,11 @@ bool Driver::isValid(Connection conn) const {
 
 bool Driver::isIdle(Connection conn) const {
 	return getTransactionStatus(conn) == TransactionStatus::Idle;
+}
+
+Time Driver::getConnectionTime(Handle handle) const {
+	auto db = (DriverHandle *)handle.get();
+	return db->ctime;
 }
 
 int Driver::listenForNotifications(Handle handle) const {
@@ -684,6 +667,20 @@ Driver::Driver(StringView path, const void *external) : _external(external) {
 			PgDriverLibStorage::getInstance()->closeLib(_handle);
 			_handle = nullptr;
 		});
+	} else {
+#if WIN32
+		name = StringView("libpq.5.dll");
+#else
+		name = StringView("libpq.so.5");
+#endif
+		if (auto l = PgDriverLibStorage::getInstance()->openLib(name)) {
+			_handle = l;
+
+			pool::cleanup_register(pool::acquire(), [this] {
+				PgDriverLibStorage::getInstance()->closeLib(_handle);
+				_handle = nullptr;
+			});
+		}
 	}
 }
 
@@ -1028,6 +1025,7 @@ Driver::Handle Driver::doConnect(const char * const *keywords, const char * cons
 	auto h = (DriverHandle *)pool::palloc(p, sizeof(DriverHandle));
 	h->pool = p;
 	h->driver = this;
+	h->ctime = Time::now();
 	h->conn = (_handle->PQconnectdbParams(keywords, values, expand_dbname));
 
 	if (h->conn) {

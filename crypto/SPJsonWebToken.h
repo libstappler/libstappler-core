@@ -405,8 +405,8 @@ auto JsonWebToken<Interface>::exportSigned(SigAlg alg, const crypto::PrivateKey 
 	default: break;
 	}
 
-	if (pk.sign([&] (const uint8_t *sign, size_t len) {
-		data = string::ToStringTraits<Interface>::toString(data, ".", base64url::encode<Interface>(BytesView(sign, len)));
+	if (pk.sign([&] (BytesView sign) {
+		data = string::ToStringTraits<Interface>::toString(data, ".", base64url::encode<Interface>(sign));
 	}, data, algo)) {
 		return data;
 	}
@@ -588,8 +588,8 @@ template <typename Interface>
 auto AesToken<Interface>::encryptAes(const crypto::BlockKey256 &key, const Value &val) const -> Bytes {
 	auto d = data::write<Interface>(val, data::EncodeFormat::CborCompressed);
 	Bytes out;
-	crypto::encryptBlock(key, d, [&] (const uint8_t *data, size_t len) {
-		out = BytesView(data, len).bytes<Interface>();
+	crypto::encryptBlock(key, d, [&] (BytesView data) {
+		out = data.bytes<Interface>();
 	});
 	return out;
 }
@@ -597,8 +597,8 @@ auto AesToken<Interface>::encryptAes(const crypto::BlockKey256 &key, const Value
 template <typename Interface>
 auto AesToken<Interface>::decryptAes(const crypto::BlockKey256 &key, BytesView val) -> Value {
 	Value out;
-	crypto::decryptBlock(key, val, [&] (const uint8_t *data, size_t len) {
-		out = data::read<Interface>(BytesView(data, len));
+	crypto::decryptBlock(key, val, [&] (BytesView data) {
+		out = data::read<Interface>(data);
 	});
 	return out;
 }

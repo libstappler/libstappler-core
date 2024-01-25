@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace stappler::db {
 
-bool StorageRoot::isDebugEnabled() const {
+/*bool StorageRoot::isDebugEnabled() const {
 	return _debug;
 }
 
@@ -97,7 +97,7 @@ Adapter StorageRoot::getAdapterFromContext() {
 }
 
 void StorageRoot::scheduleAyncDbTask(const stappler::Callback<Function<void(const Transaction &)>(stappler::memory::pool_t *)> &setupCb) {
-	/*if (auto serv = stellator::server()) {
+	if (auto serv = stellator::server()) {
 		stellator::Task::perform(serv, [&] (stellator::Task &task) {
 			auto cb = setupCb(task.pool());
 			task.addExecuteFn([cb = std::move(cb)] (const stellator::Task &task) -> bool {
@@ -110,7 +110,7 @@ void StorageRoot::scheduleAyncDbTask(const stappler::Callback<Function<void(cons
 				return true;
 			});
 		});
-	}*/
+	}
 }
 
 bool StorageRoot::isAdministrative() const {
@@ -141,104 +141,92 @@ internals::RequestData StorageRoot::getRequestData() const {
 
 int64_t StorageRoot::getUserIdFromContext() const {
 	return 0;
-}
-
-static StorageRoot defaultRoot;
-static StorageRoot *s_root = &defaultRoot;
-
-void setStorageRoot(StorageRoot *root) {
-	if (root != nullptr) {
-		//SPASSERT(s_root == &defaultRoot, "Root redefinition is forbidden");
-		s_root = root;
-	} else {
-		s_root = &defaultRoot;
-	}
-}
+}*/
 
 namespace messages {
 
 bool isDebugEnabled() {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->isDebugEnabled();
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->isDebugEnabled();
 }
 
 void setDebugEnabled(bool v) {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->setDebugEnabled(v);
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->setDebugEnabled(v);
 }
 
 void _addErrorMessage(Value &&data) {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->addErrorMessage(std::move(data));
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->addErrorMessage(std::move(data));
 }
 
 void _addDebugMessage(Value &&data) {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->addDebugMessage(std::move(data));
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->addDebugMessage(std::move(data));
 }
 
 void broadcast(const Value &val) {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->broadcast(val);
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->broadcast(val);
 }
 
 void broadcast(const Bytes &val) {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->broadcast(val);
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->broadcast(val);
 }
 
 }
 
 Transaction Transaction::acquire(const Adapter &adapter) {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->acquireTransaction(adapter);
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->acquireTransaction(adapter);
 }
 
 namespace internals {
 
 Adapter getAdapterFromContext() {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->getAdapterFromContext();
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->getAdapterFromContext();
 }
 
 void scheduleAyncDbTask(const stappler::Callback<Function<void(const Transaction &)>(stappler::memory::pool_t *)> &setupCb) {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->scheduleAyncDbTask(setupCb);
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->scheduleAyncDbTask(setupCb);
 }
 
 bool isAdministrative() {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->isAdministrative();
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->isAdministrative();
 }
 
 String getDocuemntRoot() {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->getDocuemntRoot();
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->getDocuemntRoot();
 }
 
 const Scheme *getFileScheme() {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->getFileScheme();
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->getFileScheme();
 }
 
 const Scheme *getUserScheme() {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->getUserScheme();
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->getUserScheme();
 }
 
 InputFile *getFileFromContext(int64_t id) {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->getFileFromContext(id);
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->getFileFromContext(id);
 }
 
 RequestData getRequestData() {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->getRequestData();
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->getRequestData();
 }
 
 int64_t getUserIdFromContext() {
-	SPASSERT(s_root, "Root should be defined before any stellator storage ops");
-	return s_root->getUserIdFromContext();
+	SPASSERT(tl_root, "Root should be defined before any stellator storage ops");
+	return tl_root->getUserIdFromContext();
 }
 
 }

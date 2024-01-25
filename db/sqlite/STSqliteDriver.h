@@ -48,6 +48,8 @@ public:
 	virtual bool isValid(Connection) const override;
 	virtual bool isIdle(Connection) const override;
 
+	virtual Time getConnectionTime(Handle) const override;
+
 	virtual bool isNotificationsSupported() const override { return false; }
 
 	StringView getDbName(Handle) const;

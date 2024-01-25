@@ -572,6 +572,7 @@ Map<StringView, TableRec> TableRec::parse(const BackendInterface::Config &cfg,
 				if (slot->tfield && slot->tfield.isSimpleLayout()) {
 
 					String name = toString(it.first, "_f_", fit.first);
+					string::apply_tolower_c(name);
 					auto & source = it.first;
 
 					TableRec table;

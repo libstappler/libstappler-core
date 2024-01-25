@@ -88,14 +88,46 @@ using stappler::makeSpanView;
 template <typename Callback>
 inline auto perform(const Callback &cb, memory::pool_t *p) {
 	struct Context {
-		Context(memory::pool_t *p) {
-			memory::pool::push(p);
+		Context(memory::pool_t *pool) : _pool(pool) {
+			memory::pool::push(_pool);
 		}
 		~Context() {
 			memory::pool::pop();
 		}
 
-		memory::pool_t *pool = nullptr;
+		memory::pool_t *_pool = nullptr;
+	} holder(p);
+	return cb();
+}
+
+template <typename Callback>
+inline auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr) {
+	struct Context {
+		Context(memory::pool_t *pool, uint32_t t, void *p) : _pool(pool) {
+			memory::pool::push(_pool, t, p);
+		}
+		~Context() {
+			memory::pool::pop();
+		}
+
+		memory::pool_t *_pool = nullptr;
+	} holder(p, tag, ptr);
+	return cb();
+}
+
+template <typename Callback>
+inline auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr) {
+	struct Context {
+		Context(memory::pool_t *pool)
+		: _pool(pool ? memory::pool::create(pool) :  memory::pool::create(memory::pool::acquire())) {
+			memory::pool::push(_pool);
+		}
+		~Context() {
+			memory::pool::pop();
+			memory::pool::destroy(_pool);
+		}
+
+		memory::pool_t *_pool = nullptr;
 	} holder(p);
 	return cb();
 }
@@ -180,14 +212,31 @@ using stappler::makeSpanView;
 template <typename Callback>
 inline auto perform(const Callback &cb, memory::pool_t *p) {
 	struct Context {
-		Context(memory::pool_t *p) {
-			memory::pool::push(p);
+		Context(memory::pool_t *pool) : _pool(pool) {
+			memory::pool::push(_pool);
 		}
 		~Context() {
 			memory::pool::pop();
 		}
 
-		memory::pool_t *pool = nullptr;
+		memory::pool_t *_pool = nullptr;
+	} holder(p);
+	return cb();
+}
+
+template <typename Callback>
+inline auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr) {
+	struct Context {
+		Context(memory::pool_t *pool)
+		: _pool(pool ? memory::pool::create(pool) :  memory::pool::create(memory::pool::acquire())) {
+			memory::pool::push(_pool);
+		}
+		~Context() {
+			memory::pool::pop();
+			memory::pool::destroy(_pool);
+		}
+
+		memory::pool_t *_pool = nullptr;
 	} holder(p);
 	return cb();
 }

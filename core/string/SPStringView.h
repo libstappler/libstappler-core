@@ -30,69 +30,6 @@ THE SOFTWARE.
 
 namespace stappler {
 
-using const_char_ptr = const char *;
-using const_char16_ptr = const char16_t *;
-
-template <typename T>
-inline auto StringView_readNumber(const_char_ptr &ptr, size_t &len, int base) -> Result<T> {
-	char * ret = nullptr;
-	char buf[32] = { 0 }; // int64_t/scientific double character length max
-	size_t m = min(size_t(31), len);
-	memcpy(buf, (const void *)ptr, m);
-
-	auto val = StringToNumber<T>(buf, &ret, base);
-	if (*ret == 0) {
-		ptr += m; len -= m;
-	} else if (ret && ret != buf) {
-		len -= ret - buf; ptr += ret - buf;
-	} else {
-		return Result<T>();
-	}
-	return Result<T>(val);
-}
-
-template <typename T>
-inline auto StringView_readNumber(const_char16_ptr &ptr, size_t &len, int base) -> Result<T> {
-	char * ret = nullptr;
-	char buf[32] = { 0 }; // int64_t/scientific double character length max
-	size_t m = min(size_t(31), len);
-	size_t i = 0;
-	for (; i < m; i++) {
-		char16_t c = ptr[i];
-		if (c < 127) {
-			buf[i] = c;
-		} else {
-			break;
-		}
-	}
-
-	auto val = StringToNumber<T>(buf, &ret, base);
-	if (*ret == 0) {
-		ptr += i; len -= i;
-	} else if (ret) {
-		len -= ret - buf; ptr += ret - buf;
-	} else if (ret && ret != buf) {
-		len -= ret - buf; ptr += ret - buf;
-	} else {
-		return Result<T>();
-	}
-	return Result<T>(val);
-}
-
-template <typename CharType>
-struct ReaderClassBase {
-	template <CharType ... Args>
-	using Chars = chars::Chars<CharType, Args...>;
-
-	template <CharType First, CharType Last>
-	using Range = chars::Chars<CharType, First, Last>;
-
-	using GroupId = CharGroupId;
-
-	template <GroupId G>
-	using Group = chars::CharGroup<CharType, G>;
-};
-
 // Fast reader for char string
 // Matching function based on templates
 //
@@ -172,6 +109,9 @@ public:
 	Self sub(size_t pos = 0, size_t len = maxOf<size_t>()) const { return StringViewBase(*this, pos, len); }
 
 	Self pdup(memory::pool_t * = nullptr) const;
+
+	Self ptolower_c(memory::pool_t * = nullptr) const;
+	Self ptoupper_c(memory::pool_t * = nullptr) const;
 
 	template <typename Interface>
 	auto str() const -> typename Interface::template BasicStringType<CharType>;
@@ -408,6 +348,27 @@ using WideStringView = StringViewBase<char16_t>;
 
 }
 
+namespace stappler::platform {
+
+template <typename Interface>
+auto tolower(StringView) -> typename Interface::StringType;
+
+template <typename Interface>
+auto toupper(StringView) -> typename Interface::StringType;
+
+template <typename Interface>
+auto totitle(StringView) -> typename Interface::StringType;
+
+template <typename Interface>
+auto tolower(WideStringView) -> typename Interface::WideStringType;
+
+template <typename Interface>
+auto toupper(WideStringView) -> typename Interface::WideStringType;
+
+template <typename Interface>
+auto totitle(WideStringView) -> typename Interface::WideStringType;
+
+}
 
 namespace stappler::string {
 
@@ -692,10 +653,19 @@ inline void StringViewBase<_CharType>::__mergeWithSep(Buf &buf, T &&t) {
 	tmp.trimChars<typename Self::template Chars<C>>();
 	if (!tmp.empty()) {
 		if constexpr (Front) {
-			buf.append(t.data(), t.size());
+			tmp = Self(t);
+			tmp.backwardSkipChars<typename Self::template Chars<C>>();
+
+			buf.append(tmp.data(), tmp.size());
 		} else {
-			buf.push_back(C);
-			buf.append(t.data(), t.size());
+			tmp = Self(t);
+			tmp.trimChars<typename Self::template Chars<C>>();
+
+			if (!buf.empty()) {
+				buf.push_back(C);
+			}
+
+			buf.append(tmp.data(), tmp.size());
 		}
 	}
 }
@@ -806,6 +776,34 @@ auto StringViewBase<_CharType>::pdup(memory::pool_t *p) const -> Self {
 }
 
 template <typename _CharType>
+auto StringViewBase<_CharType>::ptolower_c(memory::pool_t *p) const -> Self {
+	if (!p) {
+		p = memory::pool::acquire();
+	}
+	auto buf = (_CharType *)memory::pool::palloc(p, (this->size() + 1) * sizeof(_CharType));
+	memcpy(buf, this->data(), this->size() * sizeof(_CharType));
+	for (size_t i = 0; i < this->size(); ++ i) {
+		buf[i] = std::tolower(buf[i], std::locale());
+	}
+	buf[this->size()] = 0;
+	return Self(buf, this->size());
+}
+
+template <typename _CharType>
+auto StringViewBase<_CharType>::ptoupper_c(memory::pool_t *p) const -> Self {
+	if (!p) {
+		p = memory::pool::acquire();
+	}
+	auto buf = (_CharType *)memory::pool::palloc(p, (this->size() + 1) * sizeof(_CharType));
+	memcpy(buf, this->data(), this->size() * sizeof(_CharType));
+	for (size_t i = 0; i < this->size(); ++ i) {
+		buf[i] = std::toupper(buf[i], std::locale());
+	}
+	buf[this->size()] = 0;
+	return Self(buf, this->size());
+}
+
+template <typename _CharType>
 template <typename Interface>
 auto StringViewBase<_CharType>::str() const -> typename Interface::template BasicStringType<CharType> {
 	if (this->ptr && this->len > 0) {
@@ -903,7 +901,7 @@ auto StringViewBase<_CharType>::readFloat() -> Result<float> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = StringView_readNumber<float>(targetPtr, targetLen, 0);
+	auto ret = string::readNumber<float>(targetPtr, targetLen, 0);
 	this->ptr = targetPtr; this->len = targetLen;
 	return ret;
 }
@@ -913,7 +911,7 @@ auto StringViewBase<_CharType>::readDouble() -> Result<double> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = StringView_readNumber<double>(targetPtr, targetLen, 0);
+	auto ret = string::readNumber<double>(targetPtr, targetLen, 0);
 	this->ptr = targetPtr; this->len = targetLen;
 	return ret;
 }
@@ -923,7 +921,7 @@ auto StringViewBase<_CharType>::readInteger(int base) -> Result<int64_t> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = StringView_readNumber<int64_t>(targetPtr, targetLen, base);
+	auto ret = string::readNumber<int64_t>(targetPtr, targetLen, base);
 	this->ptr = targetPtr; this->len = targetLen;
 	return ret;
 }
@@ -1273,7 +1271,7 @@ inline Result<float> StringViewUtf8::readFloat() {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = StringView_readNumber<float>(targetPtr, targetLen, 0);
+	auto ret = string::readNumber<float>(targetPtr, targetLen, 0);
 	this->ptr = targetPtr; this->len = targetLen;
 	return ret;
 }
@@ -1281,7 +1279,7 @@ inline Result<double> StringViewUtf8::readDouble() {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = StringView_readNumber<double>(targetPtr, targetLen, 0);
+	auto ret = string::readNumber<double>(targetPtr, targetLen, 0);
 	this->ptr = targetPtr; this->len = targetLen;
 	return ret;
 }
@@ -1289,7 +1287,7 @@ inline Result<int64_t> StringViewUtf8::readInteger(int base) {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = StringView_readNumber<int64_t>(targetPtr, targetLen, base);
+	auto ret = string::readNumber<int64_t>(targetPtr, targetLen, base);
 	this->ptr = targetPtr; this->len = targetLen;
 	return ret;
 }

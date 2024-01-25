@@ -394,11 +394,15 @@ using char_const_ptr_t = const char *;
 using char_const_ptr_ref_t = char_const_ptr_t &;
 using char_const_ptr_const_ref_t = const char_const_ptr_t &;
 
+using const_char_ptr = const char *;
+using const_char16_ptr = const char16_t *;
+
 static constexpr size_t DOUBLE_MAX_DIGITS = 27;
 
 inline char32_t tolower(char32_t c) { return platform::tolower(c); }
 inline char32_t toupper(char32_t c) { return platform::toupper(c); }
 inline char32_t totitle(char32_t c) { return platform::totitle(c); }
+
 
 // fast itoa implementation
 // data will be written at the end of buffer, no trailing zero (do not try to use strlen on it!)
@@ -410,12 +414,55 @@ size_t _itoa(uint64_t number, char* buffer, size_t bufSize);
 size_t _itoa(int64_t number, char16_t* buffer, size_t bufSize);
 size_t _itoa(uint64_t number, char16_t* buffer, size_t bufSize);
 
+
 // fast dtoa implementation
 // data will be written from beginning, no trailing zero (do not try to use strlen on it!)
 // designed to be used with StringView: StringView(buf, ret)
 
 size_t _dtoa(double number, char* buffer, size_t bufSize);
 size_t _dtoa(double number, char16_t* buffer, size_t bufSize);
+
+
+// read number from string and offset pointers
+
+template <typename T>
+inline auto readNumber(const_char_ptr &ptr, size_t &len, int base) -> Result<T> {
+	const char *source = ptr;
+	char * ret = nullptr;
+	auto val = StringToNumber<T>(source, &ret, base);
+	if (ret && ret != source) {
+		len -= ret - source; ptr += ret - source;
+	} else {
+		return Result<T>();
+	}
+	return Result<T>(val);
+}
+
+template <typename T>
+inline auto readNumber(const_char16_ptr &ptr, size_t &len, int base) -> Result<T> {
+	char * ret = nullptr;
+	char buf[32] = { 0 }; // int64_t/scientific double character length max
+	size_t m = min(size_t(31), len);
+	size_t i = 0;
+	for (; i < m; i++) {
+		char16_t c = ptr[i];
+		if (c < 127) {
+			buf[i] = c;
+		} else {
+			break;
+		}
+	}
+
+	auto val = StringToNumber<T>(buf, &ret, base);
+	if (*ret == 0) {
+		ptr += i; len -= i;
+	} else if (ret && ret != buf) {
+		len -= ret - buf; ptr += ret - buf;
+	} else {
+		return Result<T>();
+	}
+	return Result<T>(val);
+}
 
 }
 

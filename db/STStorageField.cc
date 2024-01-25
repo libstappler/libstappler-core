@@ -450,8 +450,8 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 				if (StringView(str).starts_with("ssh-")) {
 					crypto::PublicKey key;
 					if (key.importOpenSSH(str)) {
-						return key.exportDer([&] (const uint8_t *bytes, size_t size) {
-							val.setBytes(BytesView(bytes, size));
+						return key.exportDer([&] (BytesView bytes) {
+							val.setBytes(bytes);
 						});
 					}
 					return false;
@@ -462,8 +462,8 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 					return false;
 				}
 
-				return pk.exportDer([&] (const uint8_t *bytes, size_t size) {
-					val.setBytes(BytesView(bytes, size));
+				return pk.exportDer([&] (BytesView bytes) {
+					val.setBytes(bytes);
 				});
 			}
 		} else if (val.isBytes()) {
@@ -474,8 +474,8 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 					return false;
 				}
 
-				return pk.exportDer([&] (const uint8_t *bytes, size_t size) {
-					val.setBytes(BytesView(bytes, size));
+				return pk.exportDer([&] (BytesView bytes) {
+					val.setBytes(bytes);
 				});
 			}
 

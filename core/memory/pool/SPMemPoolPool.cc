@@ -52,7 +52,7 @@ void *Pool::alloc(size_t &sizeInBytes) {
 void Pool::free(void *ptr, size_t sizeInBytes) {
 	if (sizeInBytes >= BlockThreshold) {
 		std::unique_lock<Pool> lock(*this);
-		allocmngr.free(ptr, sizeInBytes, [] (void *p, size_t s) { return((Pool *)p)->palloc(s); });
+		allocmngr.free(ptr, sizeInBytes, [] (void *p, size_t s) { return((Pool *)p)->palloc_self(s); });
 	}
 }
 
@@ -108,6 +108,23 @@ void *Pool::palloc(size_t in_size) {
 	active->insert(node);
 
 	return mem;
+}
+
+void *Pool::palloc_self(size_t in_size) {
+	void *mem;
+	auto size = SPALIGN_DEFAULT(in_size);
+	if (size < in_size) {
+		return nullptr;
+	}
+
+	/* If the active node has enough bytes left, use it. */
+	if (size <= self->free_space()) {
+		mem = self->first_avail;
+		self->first_avail += size;
+		return mem;
+	}
+
+	return palloc(in_size);
 }
 
 void *Pool::calloc(size_t count, size_t eltsize) {

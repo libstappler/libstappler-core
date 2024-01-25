@@ -31,6 +31,8 @@ namespace stappler::network {
 template <typename Interface>
 class Handle : private HandleData<Interface> {
 public:
+	using Method = network::Method;
+
 	using DataType = HandleData<Interface>;
 
 	using DataType::Vector;

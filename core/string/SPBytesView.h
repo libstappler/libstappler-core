@@ -101,6 +101,8 @@ public:
 	StringView readString(); // read null-terminated string
 	StringView readString(size_t s); // read fixed-size string
 
+	StringView toStringView() const;
+
 	template<Endian OtherEndianess = Endianess>
 	auto readBytes(size_t s) -> BytesViewTemplate<OtherEndianess>; // read fixed-size string
 };
@@ -340,6 +342,11 @@ auto BytesViewTemplate<Endianess>::readString(size_t s) -> StringView {
 	StringView ret((const char *)ptr, s);
 	ptr += s; len -= s;
 	return ret;
+}
+
+template <Endian Endianess>
+auto BytesViewTemplate<Endianess>::toStringView() const -> StringView {
+	return StringView((const char *)ptr, len);
 }
 
 template <Endian Endianess>

@@ -39,8 +39,8 @@ struct BackendCtx {
 	void (*initialize) () = nullptr;
 	void (*finalize) () = nullptr;
 
-	bool (*encryptBlock) (const BlockKey256 &key, BytesView d, const Callback<void(const uint8_t *, size_t)> &cb) = nullptr;
-	bool (*decryptBlock) (const BlockKey256 &key, BytesView d, const Callback<void(const uint8_t *, size_t)> &cb) = nullptr;
+	bool (*encryptBlock) (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) = nullptr;
+	bool (*decryptBlock) (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) = nullptr;
 
 	bool (*hash256) (Sha256::Buf &, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func);
 	bool (*hash512) (Sha512::Buf &, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func);
@@ -50,24 +50,24 @@ struct BackendCtx {
 
 	bool (*privGen) (KeyContext &ctx, KeyBits, KeyType) = nullptr;
 	bool (*privImport) (KeyContext &ctx, BytesView data, const CoderSource &passwd) = nullptr;
-	bool (*privExportPem) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) = nullptr;
-	bool (*privExportDer) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) = nullptr;
+	bool (*privExportPem) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) = nullptr;
+	bool (*privExportDer) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) = nullptr;
 	bool (*privExportPublic) (KeyContext &target, const KeyContext &privKey) = nullptr;
-	bool (*privSign) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data, SignAlgorithm algo) = nullptr;
+	bool (*privSign) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data, SignAlgorithm algo) = nullptr;
 	bool (*privVerify) (const KeyContext &ctx, const CoderSource &data, BytesView signature, SignAlgorithm algo) = nullptr;
-	bool (*privEncrypt) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) = nullptr;
-	bool (*privDecrypt) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) = nullptr;
-	bool (*privFingerprint) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) = nullptr;
+	bool (*privEncrypt) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) = nullptr;
+	bool (*privDecrypt) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) = nullptr;
+	bool (*privFingerprint) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) = nullptr;
 
 	bool (*pubInit) (KeyContext &ctx) = nullptr;
 	void (*pubFree) (KeyContext &ctx) = nullptr;
 
 	bool (*pubImport) (KeyContext &ctx, BytesView data) = nullptr;
 	bool (*pubImportOpenSSH) (KeyContext &ctx, StringView data) = nullptr;
-	bool (*pubExportPem) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) = nullptr;
-	bool (*pubExportDer) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) = nullptr;
+	bool (*pubExportPem) (const KeyContext &ctx, const Callback<void(BytesView)> &cb) = nullptr;
+	bool (*pubExportDer) (const KeyContext &ctx, const Callback<void(BytesView)> &cb) = nullptr;
 	bool (*pubVerify) (const KeyContext &ctx, const CoderSource &data, BytesView signature, SignAlgorithm algo) = nullptr;
-	bool (*pubEncrypt) (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) = nullptr;
+	bool (*pubEncrypt) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) = nullptr;
 };
 
 struct BackendCtxRef {
@@ -214,12 +214,12 @@ static SignAlgorithm getSignForBlockCipher(const PrivateKey &key) {
 	return SignAlgorithm::RSA_SHA512;
 }
 
-bool encryptBlock(const BlockKey256 &key, BytesView data, const Callback<void(const uint8_t *, size_t)> &cb) {
+bool encryptBlock(const BlockKey256 &key, BytesView data, const Callback<void(BytesView)> &cb) {
 	auto b = findBackendForBlock(key.cipher);
 	return b->encryptBlock(key, data, cb);
 }
 
-bool encryptBlock(Backend b, const BlockKey256 &key, BytesView data, const Callback<void(const uint8_t *, size_t)> &cb) {
+bool encryptBlock(Backend b, const BlockKey256 &key, BytesView data, const Callback<void(BytesView)> &cb) {
 	auto backend = BackendCtx::get(b);
 	if (!backend || !backend->encryptBlock) {
 		return false;
@@ -227,12 +227,12 @@ bool encryptBlock(Backend b, const BlockKey256 &key, BytesView data, const Callb
 	return backend->encryptBlock(key, data, cb);
 }
 
-bool decryptBlock(const BlockKey256 &key, BytesView data, const Callback<void(const uint8_t *, size_t)> &cb) {
+bool decryptBlock(const BlockKey256 &key, BytesView data, const Callback<void(BytesView)> &cb) {
 	auto b = findBackendForBlock(key.cipher);
 	return b->decryptBlock(key, data, cb);
 }
 
-bool decryptBlock(Backend b, const BlockKey256 &key, BytesView data, const Callback<void(const uint8_t *, size_t)> &cb) {
+bool decryptBlock(Backend b, const BlockKey256 &key, BytesView data, const Callback<void(BytesView)> &cb) {
 	auto backend = BackendCtx::get(b);
 	if (!backend || !backend->decryptBlock) {
 		return false;
@@ -266,22 +266,22 @@ BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher b, 
 		switch (b) {
 		case BlockCipher::AES_CBC:
 		case BlockCipher::AES_CFB8:
-			pkey.sign([&] (const uint8_t *ptr, size_t s) {
+			pkey.sign([&] (BytesView data) {
 				ret.version = version;
-				ret.data = hash256(pkey.getBackend(), CoderSource(BytesView(ptr, s)), HashFunction::SHA_2);
+				ret.data = hash256(pkey.getBackend(), CoderSource(data), HashFunction::SHA_2);
 			}, hash, getSignForBlockCipher(pkey));
 			break;
 		case BlockCipher::Gost3412_2015_CTR_ACPKM:
-			pkey.fingerprint([&] (const uint8_t *ptr, size_t s) {
+			pkey.fingerprint([&] (BytesView data) {
 				ret.version = version;
-				ret.data = Gost3411_256::hmac(hash, BytesView(ptr, s));;
+				ret.data = Gost3411_256::hmac(hash, data);
 			}, hash);
 			break;
 		}
 	} else if (version == 1) {
-		if (!pkey.sign([&] (const uint8_t *ptr, size_t s) {
-			s = std::min(s, size_t(256));
-			ret.data = hash256(pkey.getBackend(), CoderSource(BytesView(ptr, s)), HashFunction::SHA_2);
+		if (!pkey.sign([&] (BytesView data) {
+			auto s = std::min(data.size(), size_t(256));
+			ret.data = hash256(pkey.getBackend(), CoderSource(BytesView(data, s)), HashFunction::SHA_2);
 			ret.version = version;
 		}, hash, getSignForBlockCipher(pkey))) {
 			ret.version = 0;
@@ -431,6 +431,39 @@ PrivateKey::~PrivateKey() {
 	}
 }
 
+PrivateKey::PrivateKey(PrivateKey &&other) {
+	_key = other._key;
+	_valid = other._valid;
+	_loaded = other._loaded;
+
+	other._valid = false;
+	other._loaded = false;
+	other._key.cryptoCtx = nullptr;
+	other._key.keyCtx = nullptr;
+	other._key.backendCtx = nullptr;
+}
+
+PrivateKey& PrivateKey::operator=(PrivateKey &&other) {
+	if (_valid) {
+		auto backend = static_cast<BackendCtx *>(_key.backendCtx);
+		if (backend && backend->privFree) {
+			backend->privFree(_key);
+			_valid = false;
+		}
+	}
+
+	_key = other._key;
+	_valid = other._valid;
+	_loaded = other._loaded;
+
+	other._valid = false;
+	other._loaded = false;
+	other._key.cryptoCtx = nullptr;
+	other._key.keyCtx = nullptr;
+	other._key.backendCtx = nullptr;
+	return *this;
+}
+
 bool PrivateKey::generate(KeyType type) {
 	return generate(KeyBits::_4096, type);
 }
@@ -472,7 +505,7 @@ Backend PrivateKey::getBackend() const {
 	return backend->name;
 }
 
-bool PrivateKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) const {
+bool PrivateKey::exportPem(const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -490,11 +523,11 @@ bool PrivateKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb, Ke
 	return false;
 }
 
-bool PrivateKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &passPhrase) const {
+bool PrivateKey::exportPem(const Callback<void(BytesView)> &cb, const CoderSource &passPhrase) const {
 	return exportPem(cb, KeyFormat::PKCS8, passPhrase);
 }
 
-bool PrivateKey::exportDer(const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) const {
+bool PrivateKey::exportDer(const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -512,11 +545,11 @@ bool PrivateKey::exportDer(const Callback<void(const uint8_t *, size_t)> &cb, Ke
 	return false;
 }
 
-bool PrivateKey::exportDer(const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &passPhrase) const {
+bool PrivateKey::exportDer(const Callback<void(BytesView)> &cb, const CoderSource &passPhrase) const {
 	return exportDer(cb, KeyFormat::PKCS8, passPhrase);
 }
 
-bool PrivateKey::sign(const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data, SignAlgorithm algo) const {
+bool PrivateKey::sign(const Callback<void(BytesView)> &cb, const CoderSource &data, SignAlgorithm algo) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -542,7 +575,7 @@ bool PrivateKey::verify(const CoderSource &data, BytesView signature, SignAlgori
 	return false;
 }
 
-bool PrivateKey::fingerprint(const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) const {
+bool PrivateKey::fingerprint(const Callback<void(BytesView)> &cb, const CoderSource &data) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -585,7 +618,7 @@ bool PrivateKey::isSupported(KeyFormat fmt) const {
 	return false;
 }
 
-bool PrivateKey::encrypt(const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+bool PrivateKey::encrypt(const Callback<void(BytesView)> &cb, const CoderSource &data) {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -598,7 +631,7 @@ bool PrivateKey::encrypt(const Callback<void(const uint8_t *, size_t)> &cb, cons
 	return false;
 }
 
-bool PrivateKey::decrypt(const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+bool PrivateKey::decrypt(const Callback<void(BytesView)> &cb, const CoderSource &data) {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -652,11 +685,44 @@ PublicKey::PublicKey(const PrivateKey &priv) : _valid(false) {
 PublicKey::~PublicKey() {
 	if (_valid) {
 		auto backend = static_cast<BackendCtx *>(_key.backendCtx);
-		if (backend && backend->privFree) {
-			backend->privFree(_key);
+		if (backend && backend->pubFree) {
+			backend->pubFree(_key);
 			_valid = false;
 		}
 	}
+}
+
+PublicKey::PublicKey(PublicKey &&other) {
+	_key = other._key;
+	_valid = other._valid;
+	_loaded = other._loaded;
+
+	other._valid = false;
+	other._loaded = false;
+	other._key.cryptoCtx = nullptr;
+	other._key.keyCtx = nullptr;
+	other._key.backendCtx = nullptr;
+}
+
+PublicKey& PublicKey::operator=(PublicKey &&other) {
+	if (_valid) {
+		auto backend = static_cast<BackendCtx *>(_key.backendCtx);
+		if (backend && backend->pubFree) {
+			backend->pubFree(_key);
+			_valid = false;
+		}
+	}
+
+	_key = other._key;
+	_valid = other._valid;
+	_loaded = other._loaded;
+
+	other._valid = false;
+	other._loaded = false;
+	other._key.cryptoCtx = nullptr;
+	other._key.keyCtx = nullptr;
+	other._key.backendCtx = nullptr;
+	return *this;
 }
 
 bool PublicKey::import(BytesView data) {
@@ -692,7 +758,7 @@ Backend PublicKey::getBackend() const {
 	return backend->name;
 }
 
-bool PublicKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb) const {
+bool PublicKey::exportPem(const Callback<void(BytesView)> &cb) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -705,7 +771,7 @@ bool PublicKey::exportPem(const Callback<void(const uint8_t *, size_t)> &cb) con
 	return false;
 }
 
-bool PublicKey::exportDer(const Callback<void(const uint8_t *, size_t)> &cb) const {
+bool PublicKey::exportDer(const Callback<void(BytesView)> &cb) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -731,7 +797,7 @@ bool PublicKey::verify(const CoderSource &data, BytesView signature, SignAlgorit
 	return false;
 }
 
-bool PublicKey::encrypt(const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+bool PublicKey::encrypt(const Callback<void(BytesView)> &cb, const CoderSource &data) {
 	if (!_loaded || !_valid) {
 		return false;
 	}

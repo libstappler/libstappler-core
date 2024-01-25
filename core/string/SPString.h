@@ -26,28 +26,6 @@ THE SOFTWARE.
 
 #include "SPSha.h"
 
-namespace stappler::platform {
-
-template <typename Interface>
-auto tolower(StringView) -> typename Interface::StringType;
-
-template <typename Interface>
-auto toupper(StringView) -> typename Interface::StringType;
-
-template <typename Interface>
-auto totitle(StringView) -> typename Interface::StringType;
-
-template <typename Interface>
-auto tolower(WideStringView) -> typename Interface::WideStringType;
-
-template <typename Interface>
-auto toupper(WideStringView) -> typename Interface::WideStringType;
-
-template <typename Interface>
-auto totitle(WideStringView) -> typename Interface::WideStringType;
-
-}
-
 namespace stappler::string {
 
 inline size_t getUtf16Length(char32_t c) { return unicode::utf16EncodeLength(c); }
@@ -200,16 +178,16 @@ void apply(Container &c, const Callback<void(typename Container::value_type &)> 
 
 // fast tolower for C locale
 template <typename Container>
-void apply_tolower(Container &c) {
-	apply(c, [] (typename Container::value_type &ch) {
+void apply_tolower_c(Container &c) {
+	stappler::string::apply(c, [] (typename Container::value_type &ch) {
 		ch = std::tolower(ch, std::locale());
 	});
 }
 
 // fast toupper for C locale
 template <typename Container>
-void apply_toupper(Container &c) {
-	apply(c, [] (typename Container::value_type &ch) {
+void apply_toupper_c(Container &c) {
+	stappler::string::apply(c, [] (typename Container::value_type &ch) {
 		ch = std::toupper(ch, std::locale());
 	});
 }

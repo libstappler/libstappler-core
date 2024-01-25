@@ -324,15 +324,4 @@ char charToKoi8r(char16_t c) {
 	return ' ';
 }
 
-/*struct UnicodeInterface {
-	UnicodeInterface() {
-		auto lib = ::dlopen("icu", RTLD_LAZY);
-		if (lib) {
-			std::cout << "icu found\n";
-		}
-	}
-};
-
-UnicodeInterface iface;*/
-
 }

@@ -24,6 +24,8 @@
 
 #if ANDROID
 
+#include "SPDso.h"
+
 #include <unicode/uchar.h>
 #include <unicode/urename.h>
 #include <unicode/ustring.h>
@@ -287,7 +289,7 @@ namespace i18n {
 	static JavaVM *s_vm = nullptr;
 	static int32_t s_sdk = 0;
 	static thread_local IcuJave tl_interface;
-	static void *s_icu = nullptr;
+	static Dso s_icu;
 
 	static int32_t (*tolower_fn) (int32_t) = nullptr;
 	static int32_t (*toupper_fn) (int32_t) = nullptr;
@@ -329,20 +331,20 @@ namespace i18n {
 		s_vm = vm;
 		s_sdk = sdk;
 
-		s_icu = ::dlopen("libicu.so", RTLD_LAZY);
+		s_icu = Dso("libicu.so");
 		if (s_icu) {
-			tolower_fn = reinterpret_cast<decltype(tolower_fn)>(dlsym(s_icu, "u_tolower"));
-			toupper_fn = reinterpret_cast<decltype(toupper_fn)>(dlsym(s_icu, "u_toupper"));
-			totitle_fn = reinterpret_cast<decltype(totitle_fn)>(dlsym(s_icu, "u_totitle"));
-			strToLower_fn = reinterpret_cast<decltype(strToLower_fn)>(dlsym(s_icu, "u_strToLower"));
-			strToUpper_fn = reinterpret_cast<decltype(strToUpper_fn)>(dlsym(s_icu, "u_strToUpper"));
-			strToTitle_fn = reinterpret_cast<decltype(strToTitle_fn)>(dlsym(s_icu, "u_strToTitle"));
+			tolower_fn = s_icu.sym<decltype(tolower_fn)>("u_tolower");
+			toupper_fn = s_icu.sym<decltype(toupper_fn)>("u_toupper");
+			totitle_fn = s_icu.sym<decltype(totitle_fn)>("u_totitle");
+			strToLower_fn = s_icu.sym<decltype(strToLower_fn)>("u_strToLower");
+			strToUpper_fn = s_icu.sym<decltype(strToUpper_fn)>("u_strToUpper");
+			strToTitle_fn = s_icu.sym<decltype(strToTitle_fn)>("u_strToTitle");
 		}
 	}
 
 	void finalizeJava() {
 		s_vm = nullptr;
-		::dlclose(s_icu);
+		s_icu.close();
 	}
 
 	static char32_t tolower(char32_t c) {

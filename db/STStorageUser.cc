@@ -29,14 +29,14 @@ THE SOFTWARE.
 
 namespace stappler::db {
 
-User *User::create(const Adapter &a, const StringView &name, const StringView &password) {
+User *User::create(const Transaction &a, const StringView &name, const StringView &password) {
 	return create(a, Value{
 		std::make_pair("name", Value(name)),
 		std::make_pair("password", Value(password)),
 	});
 }
 
-User *User::setup(const Adapter &a, const StringView &name, const StringView &password) {
+User *User::setup(const Transaction &a, const StringView &name, const StringView &password) {
 	auto s = internals::getUserScheme();
 	if (Worker(*s, a).asSystem().count() == 0) {
 		return create(a, Value{
@@ -47,7 +47,7 @@ User *User::setup(const Adapter &a, const StringView &name, const StringView &pa
 	}
 	return nullptr;
 }
-User *User::create(const Adapter &a, Value &&val) {
+User *User::create(const Transaction &a, Value &&val) {
 	auto s = internals::getUserScheme();
 
 	auto d = Worker(*s, a).asSystem().create(val);
@@ -82,6 +82,41 @@ User *User::get(const Adapter &a, uint64_t oid) {
 }
 
 User *User::get(const Adapter &a, const Scheme &s, uint64_t oid) {
+	auto d = Worker(s, a).asSystem().get(oid);
+	if (d.isDictionary()) {
+		return new User(std::move(d), s);
+	}
+	return nullptr;
+}
+
+User *User::get(const Transaction &a, const StringView &name, const StringView &password) {
+	auto s = internals::getUserScheme();
+	return get(a, *s, name, password);
+}
+
+User *User::get(const Transaction &a, const Scheme &scheme, const StringView &name, const StringView &password) {
+	return a.getAdapter().authorizeUser(Auth(scheme), name, password);
+}
+
+User *User::get(const Transaction &a, const Scheme &scheme, const BytesView &key) {
+	for (auto &it : scheme.getFields()) {
+		if (it.second.getType() == db::Type::Bytes && it.second.getTransform() == db::Transform::PublicKey && it.second.isIndexed()) {
+			auto d = Worker(scheme, a).asSystem().select(db::Query().select(it.second.getName(), Value(key)));
+			if (d.isArray() && d.size() == 1) {
+				return new User(std::move(d.getValue(0)), scheme);
+			}
+			break;
+		}
+	}
+	return nullptr;
+}
+
+User *User::get(const Transaction &a, uint64_t oid) {
+	auto s = internals::getUserScheme();
+	return get(a, *s, oid);
+}
+
+User *User::get(const Transaction &a, const Scheme &s, uint64_t oid) {
 	auto d = Worker(s, a).asSystem().get(oid);
 	if (d.isDictionary()) {
 		return new User(std::move(d), s);

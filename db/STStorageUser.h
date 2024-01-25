@@ -30,9 +30,9 @@ namespace stappler::db {
 
 class User : public Object {
 public:
-	static User *create(const Adapter &, const StringView &name, const StringView &password);
-	static User *setup(const Adapter &, const StringView &name, const StringView &password);
-	static User *create(const Adapter &, Value &&);
+	static User *create(const Transaction &, const StringView &name, const StringView &password);
+	static User *setup(const Transaction &, const StringView &name, const StringView &password);
+	static User *create(const Transaction &, Value &&);
 
 	static User *get(const Adapter &, const StringView &name, const StringView &password);
 	static User *get(const Adapter &, const Scheme &scheme, const StringView &name, const StringView &password);
@@ -40,6 +40,13 @@ public:
 
 	static User *get(const Adapter &, uint64_t oid);
 	static User *get(const Adapter &, const Scheme &scheme, uint64_t oid);
+
+	static User *get(const Transaction &, const StringView &name, const StringView &password);
+	static User *get(const Transaction &, const Scheme &scheme, const StringView &name, const StringView &password);
+	static User *get(const Transaction &, const Scheme &scheme, const BytesView &key);
+
+	static User *get(const Transaction &, uint64_t oid);
+	static User *get(const Transaction &, const Scheme &scheme, uint64_t oid);
 
 	User(Value &&, const Scheme &);
 

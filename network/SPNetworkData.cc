@@ -99,15 +99,15 @@ static bool Handle_setPrivateKeyAuth(HandleData<Interface> &iface, const crypto:
 	}
 
 	bool ret = false;
-	pub.exportDer([&] (const uint8_t *pub, size_t pubLen) {
-		pk.sign([&] (const uint8_t *sign, size_t signLen) {
+	pub.exportDer([&] (BytesView pub) {
+		pk.sign([&] (BytesView sign) {
 			iface.auth.data = base64::encode<Interface>(data::write(data::ValueTemplate<Interface>({
-				data::ValueTemplate<Interface>(BytesView(pub, pubLen)),
-				data::ValueTemplate<Interface>(BytesView(sign, signLen))
+				data::ValueTemplate<Interface>(pub),
+				data::ValueTemplate<Interface>(sign)
 			})));
 			iface.auth.authMethod = AuthMethod::PKey;
 			ret = true;
-		}, BytesView(pub, pubLen), crypto::SignAlgorithm::RSA_SHA512);
+		}, pub, crypto::SignAlgorithm::RSA_SHA512);
 	});
 	return ret;
 }

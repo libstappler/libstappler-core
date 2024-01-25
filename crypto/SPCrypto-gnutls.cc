@@ -81,7 +81,7 @@ static void hook_gnutls_mpi_bprint_size(const mpz_t *a, uint8_t *buf, size_t siz
 	}
 }
 
-static bool hook_gnutls_sign_gost(gnutls_privkey_t key, BytesView hash, const Callback<void(const uint8_t *, size_t)> &cb) {
+static bool hook_gnutls_sign_gost(gnutls_privkey_t key, BytesView hash, const Callback<void(BytesView)> &cb) {
 	gnutls_ecc_curve_t c;
 	gnutls_digest_algorithm_t digest;
 	gnutls_gost_paramset_t paramset;
@@ -133,7 +133,7 @@ static bool hook_gnutls_sign_gost(gnutls_privkey_t key, BytesView hash, const Ca
 	hook_gnutls_mpi_bprint_size(&sig.s, data, intsize);
 	hook_gnutls_mpi_bprint_size(&sig.r, data + intsize, intsize);
 
-	cb(data, intsize * 2);
+	cb(BytesView(data, intsize * 2));
 
 	dsa_signature_clear(&sig);
 	ecc_scalar_clear(&priv);
@@ -262,7 +262,7 @@ static BackendCtx s_gnuTLSCtx = {
 	.finalize = [] () {
 		gnutls_global_deinit();
 	},
-	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
+	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) -> bool {
 		auto cipherBlockSize = getBlockSize(key.cipher);
 		auto algo = getGnuTLSAlgo(key.cipher);
 
@@ -308,10 +308,10 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 
 		gnutls_cipher_deinit(aes);
-		cb(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize);
+		cb(BytesView(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize));
 		return true;
 	},
-	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
+	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(BytesView)> &cb) -> bool {
 		auto info = getBlockInfo(b);
 		auto cipherBlockSize = getBlockSize(info.cipher);
 		auto algo = getGnuTLSAlgo(info.cipher);
@@ -347,7 +347,7 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 
 		gnutls_cipher_deinit(aes);
-		cb(output, info.dataSize);
+		cb(BytesView(output, info.dataSize));
 		return true;
 	},
 	.hash256 = [] (Sha256::Buf &buf, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func) -> bool {
@@ -468,7 +468,7 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 		return false;
 	},
-	.privExportPem = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
+	.privExportPem = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
 		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 		bool success = false;
 		gnutls_datum_t out;
@@ -480,7 +480,7 @@ static BackendCtx s_gnuTLSCtx = {
 					log::error("Crypto", "Password-encoding is not supported for PKCS1");
 				}
 				if (gnutls_x509_privkey_export2(pk, GNUTLS_X509_FMT_PEM, &out) == GNUTLS_E_SUCCESS) {
-					cb(out.data, out.size);
+					cb(BytesView(out.data, out.size));
 					gnutls_free(out.data);
 					success = true;
 				}
@@ -491,13 +491,13 @@ static BackendCtx s_gnuTLSCtx = {
 					memcpy(buf, passPhrase.data(), passPhrase.size());
 					buf[passPhrase.size()] = 0;
 					if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_PEM, buf, 0, &out) == GNUTLS_E_SUCCESS) {
-						cb(out.data, out.size);
+						cb(BytesView(out.data, out.size));
 						gnutls_free(out.data);
 						success = true;
 					}
 				} else {
 					if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_PEM, nullptr, 0, &out) == GNUTLS_E_SUCCESS) {
-						cb(out.data, out.size);
+						cb(BytesView(out.data, out.size));
 						gnutls_free(out.data);
 						success = true;
 					}
@@ -508,7 +508,7 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 		return success;
 	},
-	.privExportDer = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
+	.privExportDer = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
 		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 		bool success = false;
 		gnutls_datum_t out;
@@ -520,7 +520,7 @@ static BackendCtx s_gnuTLSCtx = {
 					log::error("Crypto", "Password-encoding is not supported for PKCS1");
 				}
 				if (gnutls_x509_privkey_export2(pk, GNUTLS_X509_FMT_DER, &out) == GNUTLS_E_SUCCESS) {
-					cb(out.data, out.size);
+					cb(BytesView(out.data, out.size));
 					gnutls_free(out.data);
 					success = true;
 				}
@@ -531,13 +531,13 @@ static BackendCtx s_gnuTLSCtx = {
 					memcpy(buf, passPhrase.data(), passPhrase.size());
 					buf[passPhrase.size()] = 0;
 					if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_DER, buf, 0, &out) == GNUTLS_E_SUCCESS) {
-						cb(out.data, out.size);
+						cb(BytesView(out.data, out.size));
 						gnutls_free(out.data);
 						success = true;
 					}
 				} else {
 					if (gnutls_x509_privkey_export2_pkcs8(pk, GNUTLS_X509_FMT_DER, nullptr, 0, &out) == GNUTLS_E_SUCCESS) {
-						cb(out.data, out.size);
+						cb(BytesView(out.data, out.size));
 						gnutls_free(out.data);
 						success = true;
 					}
@@ -563,7 +563,7 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 		return false;
 	},
-	.privSign = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data, SignAlgorithm algo) {
+	.privSign = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data, SignAlgorithm algo) {
 		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 
 		gnutls_datum_t dataToSign;
@@ -573,7 +573,7 @@ static BackendCtx s_gnuTLSCtx = {
 		gnutls_datum_t signature;
 
 		if (gnutls_privkey_sign_data2(key, getGnuTLSAlgo(algo), 0, &dataToSign, &signature) == GNUTLS_E_SUCCESS) {
-			cb(signature.data, signature.size);
+			cb(BytesView(signature.data, signature.size));
 			gnutls_free(signature.data);
 			return true;
 		}
@@ -603,7 +603,7 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 		return success;
 	},
-	.privEncrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privEncrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 		bool success = false;
 
@@ -620,7 +620,7 @@ static BackendCtx s_gnuTLSCtx = {
 
 				err = gnutls_pubkey_encrypt_data(pubkey, 0, &dataToEncrypt, &output);
 				if (err == GNUTLS_E_SUCCESS) {
-					cb(output.data, output.size);
+					cb(BytesView(output.data, output.size));
 					gnutls_free(output.data);
 					success = true;
 				}
@@ -631,7 +631,7 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 		return success;
 	},
-	.privDecrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privDecrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		auto key = static_cast<gnutls_privkey_t>(ctx.keyCtx);
 
 		gnutls_datum_t dataToDecrypt;
@@ -642,13 +642,13 @@ static BackendCtx s_gnuTLSCtx = {
 
 		auto err = gnutls_privkey_decrypt_data(key, 0, &dataToDecrypt, &output);
 		if (err == GNUTLS_E_SUCCESS) {
-			cb(output.data, output.size);
+			cb(BytesView(output.data, output.size));
 			gnutls_free(output.data);
 			return true;
 		}
 		return false;
 	},
-	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		switch (ctx.type) {
 		case KeyType::RSA:
 		case KeyType::DSA:
@@ -777,23 +777,23 @@ static BackendCtx s_gnuTLSCtx = {
 		}
 		return false;
 	},
-	.pubExportPem = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) {
+	.pubExportPem = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb) {
 		auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
 
 		gnutls_datum_t out;
 		if (gnutls_pubkey_export2(key, GNUTLS_X509_FMT_PEM, &out) == GNUTLS_E_SUCCESS) {
-			cb(out.data, out.size);
+			cb(BytesView(out.data, out.size));
 			gnutls_free(out.data);
 			return true;
 		}
 		return false;
 	},
-	.pubExportDer = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) {
+	.pubExportDer = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb) {
 		auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
 
 		gnutls_datum_t out;
 		if (gnutls_pubkey_export2(key, GNUTLS_X509_FMT_DER, &out) == GNUTLS_E_SUCCESS) {
-			cb(out.data, out.size);
+			cb(BytesView(out.data, out.size));
 			gnutls_free(out.data);
 			return true;
 		}
@@ -811,7 +811,7 @@ static BackendCtx s_gnuTLSCtx = {
 
 		return gnutls_pubkey_verify_data2(key, getGnuTLSAlgo(algo), 0, &inputData, &signatureData) >= 0;
 	},
-	.pubEncrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.pubEncrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		auto key = static_cast<gnutls_pubkey_t>(ctx.keyCtx);
 
 		gnutls_datum_t dataToEncrypt;
@@ -821,7 +821,7 @@ static BackendCtx s_gnuTLSCtx = {
 		gnutls_datum_t output;
 
 		if (gnutls_pubkey_encrypt_data(key, 0, &dataToEncrypt, &output) == GNUTLS_E_SUCCESS) {
-			cb(output.data, output.size);
+			cb(BytesView(output.data, output.size));
 			gnutls_free(output.data);
 			return true;
 		}

@@ -35,7 +35,7 @@ namespace stappler::vg {
 
 // to prevent math errors on relative values we use double for SVG reader
 // Path itself uses single-word float for performance
-class SVGPathReader : public ReaderClassBase<char> {
+class SVGPathReader {
 public:
 #if MODULE_STAPPLER_FILESYSTEM
 	static bool readFile(VectorPath *p, const StringView &str) {
@@ -48,11 +48,11 @@ public:
 			}
 
 			r.skipString("<path ");
-			StringView pathContent = r.readUntil<Chars<'>'>>();
+			StringView pathContent = r.readUntil<StringView::Chars<'>'>>();
 			pathContent.skipUntilString("d=\"");
 			if (r.is("d=\"")) {
 				r.skipString("d=\"");
-				return readPath(p, pathContent.readUntil<Chars<'"'>>());
+				return readPath(p, pathContent.readUntil<StringView::Chars<'"'>>());
 			}
 		}
 		return false;
@@ -457,7 +457,7 @@ protected:
 		return true;
 	}
 
-	bool readWhitespace() { return reader.readChars<Group<GroupId::WhiteSpace>>().size() != 0; }
+	bool readWhitespace() { return reader.readChars<StringView::WhiteSpace>().size() != 0; }
 
 	bool readCommaWhitespace() {
 		if (reader >= 1) {

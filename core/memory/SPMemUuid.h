@@ -99,6 +99,10 @@ struct uuid : AllocPool {
 		return _uuid;
 	}
 
+	BytesView view() const {
+		return BytesView(_uuid);
+	}
+
 	const uint8_t *data() const { return _uuid.data(); }
 	size_t size() const { return 16; }
 

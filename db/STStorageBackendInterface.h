@@ -95,7 +95,7 @@ public:
 	virtual void makeSessionsCleanup() { }
 
 	// force broadcast data processing
-	virtual int64_t processBroadcasts(const Callback<void(stappler::BytesView)> &, int64_t value) { return 0; }
+	virtual int64_t processBroadcasts(const Callback<void(BytesView)> &, int64_t value) { return 0; }
 
 	// perform select operation with result cursor callback
 	// fields will not be resolved in this case, you should call `decode` or `toData` from result manually

@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -146,6 +146,9 @@ public:
 	PrivateKey(const PrivateKey &) = delete;
 	PrivateKey& operator=(const PrivateKey &) = delete;
 
+	PrivateKey(PrivateKey &&);
+	PrivateKey& operator=(PrivateKey &&);
+
 	bool generate(KeyType type = KeyType::RSA);
 	bool generate(KeyBits = KeyBits::_2048, KeyType type = KeyType::RSA);
 
@@ -159,22 +162,22 @@ public:
 
 	operator bool () const { return _valid && _loaded; }
 
-	bool exportPem(const Callback<void(const uint8_t *, size_t)> &, KeyFormat = KeyFormat::PKCS8, const CoderSource &passPhrase = StringView()) const;
-	bool exportPem(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &passPhrase) const;
+	bool exportPem(const Callback<void(BytesView)> &, KeyFormat = KeyFormat::PKCS8, const CoderSource &passPhrase = StringView()) const;
+	bool exportPem(const Callback<void(BytesView)> &, const CoderSource &passPhrase) const;
 
-	bool exportDer(const Callback<void(const uint8_t *, size_t)> &, KeyFormat = KeyFormat::PKCS8, const CoderSource &passPhrase = StringView()) const;
-	bool exportDer(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &passPhrase) const;
+	bool exportDer(const Callback<void(BytesView)> &, KeyFormat = KeyFormat::PKCS8, const CoderSource &passPhrase = StringView()) const;
+	bool exportDer(const Callback<void(BytesView)> &, const CoderSource &passPhrase) const;
 
-	bool sign(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &, SignAlgorithm = SignAlgorithm::RSA_SHA512) const;
+	bool sign(const Callback<void(BytesView)> &, const CoderSource &, SignAlgorithm = SignAlgorithm::RSA_SHA512) const;
 	bool verify(const CoderSource &data, BytesView signature, SignAlgorithm) const;
 
-	bool fingerprint(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &) const;
+	bool fingerprint(const Callback<void(BytesView)> &, const CoderSource &) const;
 
 	bool isGenerateSupported(KeyType) const;
 	bool isSupported(KeyFormat) const;
 
-	bool encrypt(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &);
-	bool decrypt(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &);
+	bool encrypt(const Callback<void(BytesView)> &, const CoderSource &);
+	bool decrypt(const Callback<void(BytesView)> &, const CoderSource &);
 
 protected:
 	bool _loaded = false;
@@ -193,6 +196,9 @@ public:
 	PublicKey(const PublicKey &) = delete;
 	PublicKey& operator=(const PublicKey &) = delete;
 
+	PublicKey(PublicKey &&);
+	PublicKey& operator=(PublicKey &&);
+
 	bool import(BytesView);
 	bool importOpenSSH(StringView);
 
@@ -202,12 +208,12 @@ public:
 
 	operator bool () const { return _valid && _loaded; }
 
-	bool exportPem(const Callback<void(const uint8_t *, size_t)> &) const; // only pkcs8
-	bool exportDer(const Callback<void(const uint8_t *, size_t)> &) const; // only pkcs8
+	bool exportPem(const Callback<void(BytesView)> &) const; // only pkcs8
+	bool exportDer(const Callback<void(BytesView)> &) const; // only pkcs8
 
 	bool verify(const CoderSource &data, BytesView signature, SignAlgorithm) const;
 
-	bool encrypt(const Callback<void(const uint8_t *, size_t)> &, const CoderSource &);
+	bool encrypt(const Callback<void(BytesView)> &, const CoderSource &);
 
 protected:
 	bool _loaded = false;
@@ -232,11 +238,11 @@ void listBackends(const Callback<void(Backend, StringView, BackendFlags)> &);
 
 bool isPemKey(BytesView data);
 
-bool encryptBlock(const BlockKey256 &, BytesView, const Callback<void(const uint8_t *, size_t)> &);
-bool encryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(const uint8_t *, size_t)> &);
+bool encryptBlock(const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
+bool encryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
 
-bool decryptBlock(const BlockKey256 &, BytesView, const Callback<void(const uint8_t *, size_t)> &);
-bool decryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(const uint8_t *, size_t)> &);
+bool decryptBlock(const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
+bool decryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
 
 BlockKey256 makeBlockKey(Backend, BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
 BlockKey256 makeBlockKey(BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);

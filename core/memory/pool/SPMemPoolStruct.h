@@ -161,6 +161,7 @@ struct Pool {
 	void free(void *ptr, size_t sizeInBytes);
 
 	void *palloc(size_t);
+	void *palloc_self(size_t);
 	void *calloc(size_t count, size_t eltsize);
 
 	void *pmemdup(const void *m, size_t n);

@@ -520,7 +520,7 @@ static BackendCtx s_openSSLCtx = {
 		log::verbose("Crypto", "OpenSSL+gost backend loaded");
 	},
 	.finalize = [] () { },
-	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
+	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) -> bool {
 		auto cipherBlockSize = getBlockSize(key.cipher);
 		auto cipher = getOpenSSLCipher(key.cipher);
 
@@ -591,10 +591,10 @@ static BackendCtx s_openSSLCtx = {
 			}
 		}
 
-		cb(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize);
+		cb(BytesView(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize));
 		return finalize(true);
 	},
-	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
+	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(BytesView)> &cb) -> bool {
 		auto info = getBlockInfo(b);
 		auto cipherBlockSize = getBlockSize(info.cipher);
 		auto cipher = getOpenSSLCipher(info.cipher);
@@ -645,7 +645,7 @@ static BackendCtx s_openSSLCtx = {
 
 		EVP_DecryptFinal(de, out, &outSize); // gives false-positive error
 
-		cb(output, info.dataSize);
+		cb(BytesView(output, info.dataSize));
 		return finalize(true);
 	},
 	.hash256 = [] (Sha256::Buf &buf, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func) -> bool {
@@ -860,7 +860,7 @@ static BackendCtx s_openSSLCtx = {
 		}
 		return finalize(false);
 	},
-	.privExportPem = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
+	.privExportPem = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
 		BIO *bp = nullptr;
 		auto key = static_cast<const EVP_PKEY *>(ctx.keyCtx);
 
@@ -905,13 +905,13 @@ static BackendCtx s_openSSLCtx = {
 		char *buf = nullptr;
 		size_t len = BIO_get_mem_data(bp, &buf);
 		if (len > 0) {
-			cb(reinterpret_cast<uint8_t *>(buf), len);
+			cb(BytesView(reinterpret_cast<uint8_t *>(buf), len));
 			return finalize(true);
 		}
 
 		return finalize(false);
 	},
-	.privExportDer = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
+	.privExportDer = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
 		BIO *bp = nullptr;
 		auto key = static_cast<const EVP_PKEY *>(ctx.keyCtx);
 
@@ -955,7 +955,7 @@ static BackendCtx s_openSSLCtx = {
 		char *buf = nullptr;
 		size_t len = BIO_get_mem_data(bp, &buf);
 		if (len > 0) {
-			cb(reinterpret_cast<uint8_t *>(buf), len);
+			cb(BytesView(reinterpret_cast<uint8_t *>(buf), len));
 			return finalize(true);
 		}
 
@@ -976,7 +976,7 @@ static BackendCtx s_openSSLCtx = {
 		BIO_free(bp);
 		return target.keyCtx != nullptr;
 	},
-	.privSign = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data, SignAlgorithm algo) {
+	.privSign = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data, SignAlgorithm algo) {
 		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
 		EVP_MD_CTX *mdctx =  EVP_MD_CTX_create();
 		EVP_PKEY_CTX *pctx = nullptr;
@@ -1041,7 +1041,7 @@ static BackendCtx s_openSSLCtx = {
 			sigdata = static_cast<unsigned char *>(OPENSSL_malloc(sizeof(unsigned char) * siglen));
 			if (sigdata) {
 				if (1 == EVP_DigestSignFinal(mdctx, sigdata, &siglen)) {
-					cb(sigdata, siglen);
+					cb(BytesView(sigdata, siglen));
 					return cleanup(true);
 				}
 			}
@@ -1108,7 +1108,7 @@ static BackendCtx s_openSSLCtx = {
 
 		return cleanup(false);
 	},
-	.privEncrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privEncrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
 		auto pctx = EVP_PKEY_CTX_new(key, nullptr);
 
@@ -1156,11 +1156,11 @@ static BackendCtx s_openSSLCtx = {
 			return cleanup(false);
 		}
 
-		cb(static_cast<uint8_t *>(out), outlen);
+		cb(BytesView(static_cast<uint8_t *>(out), outlen));
 
 		return cleanup(true);
 	},
-	.privDecrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privDecrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
 		auto pctx = EVP_PKEY_CTX_new(key, nullptr);
 
@@ -1208,11 +1208,11 @@ static BackendCtx s_openSSLCtx = {
 			return cleanup(false);
 		}
 
-		cb(static_cast<uint8_t *>(out), outlen);
+		cb(BytesView(static_cast<uint8_t *>(out), outlen));
 
 		return cleanup(true);
 	},
-	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
 		bool success = false;
 		switch (ctx.type) {
@@ -1344,7 +1344,7 @@ static BackendCtx s_openSSLCtx = {
 		}
 		return false;
 	},
-	.pubExportPem = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) {
+	.pubExportPem = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb) {
 		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
 		BIO *bp = nullptr;
 
@@ -1370,13 +1370,13 @@ static BackendCtx s_openSSLCtx = {
 			uint8_t buf[len];
 
 			if (BIO_read(bp, buf, len)) {
-				cb(buf, len);
+				cb(BytesView(buf, len));
 				return finalize(true);
 			}
 		}
 		return finalize(false);
 	},
-	.pubExportDer = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) {
+	.pubExportDer = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb) {
 		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
 		BIO *bp = nullptr;
 
@@ -1403,7 +1403,7 @@ static BackendCtx s_openSSLCtx = {
 			uint8_t buf[len];
 
 			if (BIO_read(bp, buf, len)) {
-				cb(buf, len);
+				cb(BytesView(buf, len));
 				return finalize(true);
 			}
 		}
@@ -1469,7 +1469,7 @@ static BackendCtx s_openSSLCtx = {
 
 		return cleanup(false);
 	},
-	.pubEncrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.pubEncrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		auto key = static_cast<EVP_PKEY *>(ctx.keyCtx);
 		auto pctx = EVP_PKEY_CTX_new(key, nullptr);
 
@@ -1517,7 +1517,7 @@ static BackendCtx s_openSSLCtx = {
 			return cleanup(false);
 		}
 
-		cb(static_cast<uint8_t *>(out), outlen);
+		cb(BytesView(static_cast<uint8_t *>(out), outlen));
 
 		return cleanup(true);
 	}

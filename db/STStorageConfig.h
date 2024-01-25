@@ -38,11 +38,7 @@ THE SOFTWARE.
 
 #include "SPFilesystem.h"
 
-namespace stappler::db {
-
-class StorageRoot;
-
-namespace config {
+namespace stappler::db::config {
 
 constexpr auto getMaxAuthTime() { return 720_sec; }
 constexpr auto getMaxLoginFailure() { return 4; }
@@ -78,10 +74,6 @@ constexpr auto getUploadTmpImagePrefix() { return "sa.image"; }
 constexpr auto getStorageBroadcastChannelName() { return "serenity_broadcast"; }
 
 constexpr uint16_t getResourceResolverMaxDepth() { return 4; }
-
-}
-
-void setStorageRoot(StorageRoot *);
 
 }
 

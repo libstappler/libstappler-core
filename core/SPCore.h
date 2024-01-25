@@ -179,6 +179,7 @@ using iter_reference_t = typename T::reference;
 #include <limits.h>
 #include <stddef.h>
 
+#include <tuple>
 #include <string>
 #include <vector>
 #include <functional>

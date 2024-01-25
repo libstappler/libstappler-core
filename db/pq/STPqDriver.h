@@ -71,6 +71,8 @@ public:
 	virtual bool isValid(Connection) const override;
 	virtual bool isIdle(Connection) const override;
 
+	virtual Time getConnectionTime(Handle) const override;
+
 	virtual int listenForNotifications(Handle) const override;
 	virtual bool consumeNotifications(Handle, const Callback<void(StringView)> &) const override;
 

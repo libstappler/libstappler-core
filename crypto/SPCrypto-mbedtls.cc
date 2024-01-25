@@ -89,7 +89,7 @@ static BackendCtx s_mbedTLSCtx = {
 		log::verbose("Crypto", "MbedTLS backend loaded");
 	},
 	.finalize = [] () { },
-	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
+	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) -> bool {
 		auto cipherBlockSize = getBlockSize(key.cipher);
 
 		uint64_t dataSize = d.size();
@@ -140,10 +140,10 @@ static BackendCtx s_mbedTLSCtx = {
 			}
 		}
 
-		cb(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize);
+		cb(BytesView(output, blockSize + sizeof(BlockCryptoHeader) - cipherBlockSize));
 		return true;
 	},
-	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(const uint8_t *, size_t)> &cb) -> bool {
+	.decryptBlock = [] (const BlockKey256 &key, BytesView b, const Callback<void(BytesView)> &cb) -> bool {
 		bool success = false;
 		auto info = getBlockInfo(b);
 		auto cipherBlockSize = getBlockSize(info.cipher);
@@ -175,7 +175,7 @@ static BackendCtx s_mbedTLSCtx = {
 		}
 		mbedtls_aes_free( &aes );
 		if (success) {
-			cb(output, info.dataSize);
+			cb(BytesView(output, info.dataSize));
 		}
 		return success;
 	},
@@ -340,7 +340,7 @@ static BackendCtx s_mbedTLSCtx = {
 		ctx.type = getMbedTLSKeyType(mbedtls_pk_get_type(key));
 		return true;
 	},
-	.privExportPem = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
+	.privExportPem = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
 		uint8_t buf[MBEDTLS_KEY_BUFFER_SIZE];
 		int ret = -1;
 
@@ -353,12 +353,12 @@ static BackendCtx s_mbedTLSCtx = {
 			}
 			ret = mbedtls_pk_write_key_pem(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
 			if (ret > 0) {
-				cb(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret);
+				cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
 				return true;
 			} else if (ret == 0) {
 				auto len = strlen(reinterpret_cast<char *>(buf));
 				if (len < MBEDTLS_KEY_BUFFER_SIZE) {
-					cb(buf, len);
+					cb(BytesView(buf, len));
 					return true;
 				}
 			}
@@ -367,7 +367,7 @@ static BackendCtx s_mbedTLSCtx = {
 			log::warn("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1");
 			ret = mbedtls_pk_write_key_pem(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
 			if (ret > 0) {
-				cb(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret);
+				cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
 				return true;
 			}
 			break;
@@ -375,7 +375,7 @@ static BackendCtx s_mbedTLSCtx = {
 
 		return false;
 	},
-	.privExportDer = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
+	.privExportDer = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
 		uint8_t buf[MBEDTLS_KEY_BUFFER_SIZE];
 		int ret = -1;
 
@@ -388,7 +388,7 @@ static BackendCtx s_mbedTLSCtx = {
 			}
 			ret = mbedtls_pk_write_key_der(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
 			if (ret > 0) {
-				cb(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret);
+				cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
 				return true;
 			}
 			break;
@@ -396,7 +396,7 @@ static BackendCtx s_mbedTLSCtx = {
 			log::warn("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1");
 			ret = mbedtls_pk_write_key_der(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
 			if (ret > 0) {
-				cb(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret);
+				cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
 				return true;
 			}
 			break;
@@ -427,7 +427,7 @@ static BackendCtx s_mbedTLSCtx = {
 		}
 		return false;
 	},
-	.privSign = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data, SignAlgorithm algo) {
+	.privSign = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data, SignAlgorithm algo) {
 		EntropyContext entropy;
 		if (!entropy) {
 			return false;
@@ -445,7 +445,7 @@ static BackendCtx s_mbedTLSCtx = {
 
 			if (mbedtls_pk_sign(key, mbedtls_md_type_t(MBEDTLS_MD_SHA256), hash.data(), hash.size(),
 					buf, MBEDTLS_PK_SIGNATURE_MAX_SIZE, &writeSize, mbedtls_ctr_drbg_random, &entropy.ctr_drbg) == 0) {
-				cb(buf, writeSize);
+				cb(BytesView(buf, writeSize));
 				return true;
 			}
 
@@ -457,7 +457,7 @@ static BackendCtx s_mbedTLSCtx = {
 
 			if (mbedtls_pk_sign(key, mbedtls_md_type_t(MBEDTLS_MD_SHA512), hash.data(), hash.size(),
 					buf, MBEDTLS_PK_SIGNATURE_MAX_SIZE, &writeSize, mbedtls_ctr_drbg_random, &entropy.ctr_drbg) == 0) {
-				cb(buf, writeSize);
+				cb(BytesView(buf, writeSize));
 				return true;
 			}
 
@@ -497,7 +497,7 @@ static BackendCtx s_mbedTLSCtx = {
 		}
 		return false;
 	},
-	.privEncrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privEncrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		EntropyContext entropy;
 		if (!entropy) {
 			return false;
@@ -510,13 +510,13 @@ static BackendCtx s_mbedTLSCtx = {
 		auto key = const_cast<mbedtls_pk_context *>(reinterpret_cast<const mbedtls_pk_context *>(&ctx));
 
 		if (mbedtls_pk_encrypt(key, data.data(), data.size(), buf, &writeSize, bufSize, mbedtls_ctr_drbg_random, &entropy.ctr_drbg) == 0) {
-			cb(buf, writeSize);
+			cb(BytesView(buf, writeSize));
 			return true;
 		}
 
 		return false;
 	},
-	.privDecrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privDecrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		EntropyContext entropy;
 		if (!entropy) {
 			return false;
@@ -529,13 +529,13 @@ static BackendCtx s_mbedTLSCtx = {
 		auto key = const_cast<mbedtls_pk_context *>(reinterpret_cast<const mbedtls_pk_context *>(&ctx));
 
 		if (mbedtls_pk_decrypt(key, data.data(), data.size(), buf, &writeSize, bufSize, mbedtls_ctr_drbg_random, &entropy.ctr_drbg) == 0) {
-			cb(buf, writeSize);
+			cb(BytesView(buf, writeSize));
 			return true;
 		}
 
 		return false;
 	},
-	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.privFingerprint = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		switch (ctx.type) {
 		case KeyType::RSA:
 		case KeyType::DSA:
@@ -638,7 +638,7 @@ static BackendCtx s_mbedTLSCtx = {
 
 		return false;
 	},
-	.pubExportPem = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) {
+	.pubExportPem = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb) {
 		auto key = const_cast<mbedtls_pk_context *>(reinterpret_cast<const mbedtls_pk_context *>(&ctx));
 
 		uint8_t buf[MBEDTLS_KEY_BUFFER_SIZE];
@@ -646,19 +646,19 @@ static BackendCtx s_mbedTLSCtx = {
 
 		ret = mbedtls_pk_write_pubkey_pem(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
 		if (ret > 0) {
-			cb(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret);
+			cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
 			return true;
 		} else if (ret == 0) {
 			auto len = strlen(reinterpret_cast<char *>(buf));
 			if (len < MBEDTLS_KEY_BUFFER_SIZE) {
-				cb(buf, len);
+				cb(BytesView(buf, len));
 				return true;
 			}
 		}
 
 		return false;
 	},
-	.pubExportDer = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb) {
+	.pubExportDer = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb) {
 		auto key = reinterpret_cast<const mbedtls_pk_context *>(&ctx);
 
 		uint8_t buf[MBEDTLS_KEY_BUFFER_SIZE];
@@ -666,7 +666,7 @@ static BackendCtx s_mbedTLSCtx = {
 
 		ret = mbedtls_pk_write_pubkey_der(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
 		if (ret > 0) {
-			cb(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret);
+			cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
 			return true;
 		}
 
@@ -700,7 +700,7 @@ static BackendCtx s_mbedTLSCtx = {
 		}
 		return false;
 	},
-	.pubEncrypt = [] (const KeyContext &ctx, const Callback<void(const uint8_t *, size_t)> &cb, const CoderSource &data) {
+	.pubEncrypt = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) {
 		EntropyContext entropy;
 		if (!entropy) {
 			return false;
@@ -713,7 +713,7 @@ static BackendCtx s_mbedTLSCtx = {
 		auto key = const_cast<mbedtls_pk_context *>(reinterpret_cast<const mbedtls_pk_context *>(&ctx));
 
 		if (mbedtls_pk_encrypt(key, data.data(), data.size(), buf, &writeSize, bufSize, mbedtls_ctr_drbg_random, &entropy.ctr_drbg) == 0) {
-			cb(buf, writeSize);
+			cb(BytesView(buf, writeSize));
 			return true;
 		}
 

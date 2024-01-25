@@ -35,6 +35,7 @@ struct DriverHandle {
 	StringView name;
 	sqlite3_stmt *oidQuery = nullptr;
 	int64_t userId = 0;
+	Time ctime;
 };
 
 Driver *Driver::open(StringView path) {
@@ -225,6 +226,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 			h->driver = this;
 			h->conn = db;
 			h->name = dbname.pdup(p);
+			h->ctime = Time::now();
 
 			StringView str("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
 
@@ -281,6 +283,11 @@ bool Driver::isValid(Connection) const {
 
 bool Driver::isIdle(Connection) const {
 	return true;
+}
+
+Time Driver::getConnectionTime(Handle handle) const {
+	auto db = (DriverHandle *)handle.get();
+	return db->ctime;
 }
 
 StringView Driver::getDbName(Handle h) const {

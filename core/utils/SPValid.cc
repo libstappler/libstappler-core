@@ -385,7 +385,7 @@ void makeRandomBytes_buf(uint8_t * buf, size_t count) {
 	auto bytesInRand = 0;
 	size_t tmp = RAND_MAX;
 	while (tmp > 255) {
-		++ tmp;
+		++ bytesInRand;
 		tmp /= 256;
 	}
 

@@ -45,6 +45,7 @@ THE SOFTWARE.
 #include "SPLog.cc"
 #include "SPRef.cc"
 #include "SPTime.cc"
+#include "SPDso.cc"
 
 #include "platform/SPCore-linux.cc"
 #include "platform/SPCore-android.cc"

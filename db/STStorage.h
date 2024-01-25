@@ -33,7 +33,6 @@ namespace stappler::db {
 
 using namespace mem_pool;
 
-class StorageRoot;
 struct InputFile;
 
 class Adapter;
@@ -75,7 +74,7 @@ struct RequestData {
 
 Adapter getAdapterFromContext();
 
-void scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(memory::pool_t *)> &setupCb);
+void scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb);
 
 bool isAdministrative();
 
@@ -205,7 +204,7 @@ void local(Args && ...args) {
 }
 
 // Default StorageRoot class is partially operational, requires customization for real systems
-class StorageRoot {
+/*class StorageRoot {
 public:
 	virtual ~StorageRoot() { }
 
@@ -242,7 +241,7 @@ protected:
 	mutable std::mutex _debugMutex;
 	std::atomic<bool> _debug = false;
 };
-
+*/
 
 struct InputConfig {
 	enum class Require {
@@ -252,13 +251,6 @@ struct InputConfig {
 		Body = 4,
 		FilesAsData = 8,
 	};
-
-	InputConfig() = default;
-	InputConfig(const InputConfig &) = default;
-	InputConfig & operator=(const InputConfig &) = default;
-
-	InputConfig(InputConfig &&) = default;
-	InputConfig & operator=(InputConfig &&) = default;
 
 	void updateLimits(const Map<String, Field> &vec);
 

@@ -55,6 +55,8 @@ public:
 	virtual bool isValid(Connection) const = 0;
 	virtual bool isIdle(Connection) const = 0;
 
+	virtual Time getConnectionTime(Handle) const = 0;
+
 	virtual int listenForNotifications(Handle) const { return -1; }
 	virtual bool consumeNotifications(Handle, const Callback<void(StringView)> &) const { return true; }
 

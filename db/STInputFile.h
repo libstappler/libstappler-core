@@ -56,10 +56,10 @@ struct InputFile : public AllocBase {
 	int64_t negativeId() const { return - id - 1; }
 
 	InputFile(const InputFile &) = delete;
-	InputFile(InputFile &&) = delete;
+	InputFile(InputFile &&) = default;
 
 	InputFile &operator=(const InputFile &) = delete;
-	InputFile &operator=(InputFile &&) = delete;
+	InputFile &operator=(InputFile &&) = default;
 };
 
 }
