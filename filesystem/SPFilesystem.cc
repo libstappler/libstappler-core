@@ -37,9 +37,9 @@ SPUNUSED static bool inAppBundle(StringView path);
 
 namespace stappler::filesystem {
 
-File File::open_tmp(const char *prefix, bool delOnClose) {
-	if (prefix == nullptr) {
-		prefix = "sa.tmp";
+File File::open_tmp(StringView prefix, bool delOnClose) {
+	if (prefix.empty()) {
+		prefix = StringView("sa.tmp");
 	}
 
 #if WIN32
@@ -50,8 +50,8 @@ File File::open_tmp(const char *prefix, bool delOnClose) {
 	size_t len = strlen(tmp);
 	strcpy(&buf[0], tmp);
 	strcpy(&buf[len], "/");
-	strcpy(&buf[len + 1], prefix);
-	len += strlen(prefix);
+	strncpy(&buf[len + 1], prefix.data(), prefix.size());
+	len += prefix.size();
 	strcpy(&buf[len + 1], "XXXXXX");
 
 	if (auto fd = ::mkstemp(buf)) {

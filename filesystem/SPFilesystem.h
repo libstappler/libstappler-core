@@ -56,7 +56,7 @@ public:
 	using streamsize = std::streamsize;
 	using int_type = typename traits_type::int_type;
 
-	static File open_tmp(const char *prefix, bool delOnClose = true);
+	static File open_tmp(StringView prefix, bool delOnClose = true);
 
 	File();
 	explicit File(FILE *, Flags = Flags::None);
