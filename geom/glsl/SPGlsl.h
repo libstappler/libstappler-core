@@ -40,7 +40,7 @@
 #define SP_GLSL_IN
 #define SP_GLSL_INLINE inline
 
-namespace stappler::glsl {
+namespace STAPPLER_VERSIONIZED stappler::glsl {
 
 using vec2 = geom::Vec2;
 using vec3 = geom::Vec3;

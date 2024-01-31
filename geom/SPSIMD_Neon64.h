@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include "SPSIMD_Sse.h"
 #include "simde/arm/neon.h"
 
-namespace stappler::simd::neon64 {
+namespace STAPPLER_VERSIONIZED stappler::simd::neon64 {
 
 #if SP_GEOM_DEFAULT_SIMD == SP_GEOM_DEFAULT_SIMD_NEON64
 using f32x4 = float32x4_t;

@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 #include "SPRef.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 using SubscriptionId = ValueWrapper<uint64_t, class SubscriptionIdClassFlag>;
 
@@ -323,13 +323,13 @@ T *Binding<T>::get() const {
 
 }
 
-namespace stappler::mem_std {
+namespace STAPPLER_VERSIONIZED stappler::mem_std {
 
 using Subscription = stappler::SubscriptionTemplate<memory::StandartInterface>;
 
 }
 
-namespace stappler::mem_pool {
+namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
 using Subscription = stappler::SubscriptionTemplate<memory::PoolInterface>;
 

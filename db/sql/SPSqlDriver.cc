@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPPqDriver.h"
 #include "SPSqliteDriver.h"
 
-namespace stappler::db::sql {
+namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, const void *external) {
 	Driver *ret = nullptr;

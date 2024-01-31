@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include "SPCommon.h"
 #include "SPBuffer.h"
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 size_t read(const Producer &from, const Callback<void(const Buffer &)> &);
 size_t read(const Producer &from, const Buffer &, const Callback<void(const Buffer &)> &);

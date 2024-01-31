@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 #define SP_MEM_RBTREE_DEBUG 0
 
-namespace stappler::memory::rbtree {
+namespace STAPPLER_VERSIONIZED stappler::memory::rbtree {
 
 enum NodeColor : uintptr_t {
 	Red = 0,
@@ -1189,7 +1189,7 @@ protected:
 
 #if SP_MEM_RBTREE_DEBUG
 
-namespace stappler::memory::rbtree {
+namespace STAPPLER_VERSIONIZED stappler::memory::rbtree {
 
 class TreeDebug {
 public:

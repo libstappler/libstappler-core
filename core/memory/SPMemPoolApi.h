@@ -26,15 +26,15 @@ THE SOFTWARE.
 
 #include "SPMemPoolInterface.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
-using namespace stappler::mempool::base;
+using namespace mempool::base;
 
 static constexpr int SUCCESS = 0;
 
 namespace pool {
 
-using namespace stappler::mempool::base::pool;
+using namespace mempool::base::pool;
 
 template<typename _Pool = pool_t *>
 class context {

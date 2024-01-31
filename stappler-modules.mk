@@ -21,6 +21,9 @@
 # current dir
 STAPPLER_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
+STAPPLER_VERSION_NUMBER := 1
+STAPPLER_VERSION_BUILD := 1
+
 STAPPLER_CRYPTO_DEFAULT ?= openssl
 
 include $(STAPPLER_MODULE_DIR)/core/core.mk

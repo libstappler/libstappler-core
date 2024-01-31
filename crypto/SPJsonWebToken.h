@@ -35,7 +35,7 @@ THE SOFTWARE.
 #include "SPCrypto.h"
 #include "SPGost3411-2012.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename Interface>
 struct JsonWebToken {
@@ -100,7 +100,7 @@ public:
 	using Value = data::ValueTemplate<Interface>;
 
 	template <typename T>
-	using Function = typename Interface::FunctionType<T>;
+	using Function = typename Interface::template FunctionType<T>;
 
 	struct Keys {
 		crypto::PublicKey *pub;

@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPTessSimd.hpp"
 #include "SPVec4.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 constexpr size_t getMaxRecursionDepth() { return 16; }
 

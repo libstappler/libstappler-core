@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPFilepath.h"
 #include "SPLog.h" // for SPASSERT
 
-namespace stappler::bitmap {
+namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
 enum class ResampleFilter {
 	Box, // "box"
@@ -434,13 +434,13 @@ bool BitmapTemplate<Interface>::loadData(BytesView d, const StrideFn &strideFn) 
 
 }
 
-namespace stappler::mem_std {
+namespace STAPPLER_VERSIONIZED stappler::mem_std {
 
 using Bitmap = bitmap::BitmapTemplate<memory::StandartInterface>;
 
 }
 
-namespace stappler::mem_pool {
+namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
 using Bitmap = bitmap::BitmapTemplate<memory::PoolInterface>;
 

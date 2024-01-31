@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPRef.h"
 
-namespace stappler::thread {
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadInfo {
 	static constexpr uint32_t mainThreadId = maxOf<uint32_t>() - 1;

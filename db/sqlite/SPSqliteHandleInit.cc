@@ -23,7 +23,7 @@
 
 #include "SPSqliteHandle.h"
 
-namespace stappler::db::sqlite {
+namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 constexpr static uint32_t getDefaultFunctionVersion() { return 10; }
 

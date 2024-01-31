@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPVectorPath.h"
 #include "SPData.h"
 
-namespace stappler::vg {
+namespace STAPPLER_VERSIONIZED stappler::vg {
 
 #define SP_PATH_LOG(...)
 //#define SP_PATH_LOG(...) stappler::log::format(log::Debug, "Path Debug", __VA_ARGS__)

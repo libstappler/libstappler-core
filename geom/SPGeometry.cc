@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPGeometry.h"
 #include "SPMat4.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 bool Rect::containsPoint(const Vec2& point) const {
 	bool bRet = false;

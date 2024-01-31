@@ -23,7 +23,7 @@
 #include "SPFontStyle.h"
 #include "SPMemory.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 constexpr uint32_t LAYOUT_PADDING  = 1;
 

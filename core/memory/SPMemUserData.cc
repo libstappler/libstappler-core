@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPMemUserData.h"
 
-namespace stappler::memory::pool {
+namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
 struct Pool_StoreHandle : AllocPool {
 	void *pointer;

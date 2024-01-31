@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPSearchIndex.h"
 #include "SPString.h"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 bool SearchIndex::init(const TokenizerCallback &tcb) {
 	_tokenizer = tcb;

@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPMemRbtree.h"
 #include "SPMemStringStream.h"
 
-namespace stappler::memory::rbtree {
+namespace STAPPLER_VERSIONIZED stappler::memory::rbtree {
 
 NodeBase * NodeBase::increment(NodeBase *c) {
 	if (c->right) {

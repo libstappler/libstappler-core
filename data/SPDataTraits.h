@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
-namespace stappler::data {
+namespace STAPPLER_VERSIONIZED stappler::data {
 
 template <typename T>
 struct StreamTraits {

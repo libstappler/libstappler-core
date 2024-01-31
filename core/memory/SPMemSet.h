@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemRbtree.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template <typename Value, typename Comp = std::less<>>
 class set : public AllocPool {

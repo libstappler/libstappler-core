@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include <dlfcn.h>
 #endif
 
-namespace stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 SPUNUSED inline size_t Utf8CharLength(const uint8_t *ptr, uint8_t &mask);
 

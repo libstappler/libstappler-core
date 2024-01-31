@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPString.h"
 #include "SPStringView.h"
 
-namespace stappler::html {
+namespace STAPPLER_VERSIONIZED stappler::html {
 
 /* Reader sample:
 struct Reader {

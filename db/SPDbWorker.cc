@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPDbScheme.h"
 #include "SPValid.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 Conflict Conflict::update(StringView f) {
 	return Conflict(f, Query::Select(), Conflict::Flags::WithoutCondition);

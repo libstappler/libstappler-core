@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPDbBackendInterface.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 class ApplicationInterface {
 public:

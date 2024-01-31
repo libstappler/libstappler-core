@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPSqlHandle.h"
 #include "SPDso.h"
 
-namespace stappler::db::pq {
+namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
 constexpr static auto LIST_DB_TYPES = "SELECT oid, typname, typcategory FROM pg_type WHERE typcategory = 'B'"
 		" OR typcategory = 'D' OR typcategory = 'I' OR typcategory = 'N' OR typcategory = 'S' OR typcategory = 'U';";
@@ -943,7 +943,7 @@ struct apr_dbd_t {
     apr_dbd_transaction_t *trans;
 };
 
-namespace stappler::db::pq {
+namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
 Driver::Handle Driver::doConnect(const char * const *keywords, const char * const *values, int expand_dbname) const {
 	auto p = pool::acquire();
@@ -1019,7 +1019,7 @@ Driver::Connection Driver::getConnection(Handle _h) const {
 
 #else
 
-namespace stappler::db::pq {
+namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
 Driver::Handle Driver::doConnect(const char * const *keywords, const char * const *values, int expand_dbname) const {
 	auto p = pool::acquire();

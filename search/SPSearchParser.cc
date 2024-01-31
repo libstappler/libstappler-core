@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPSearchConfiguration.h"
 #include "SPSnowballStopwords.cc"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 struct StemmerEnv {
 	using symbol = unsigned char;

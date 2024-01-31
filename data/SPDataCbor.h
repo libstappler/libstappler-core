@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPBytesView.h"
 #include "SPHalfFloat.h"
 
-namespace stappler::data::cbor {
+namespace STAPPLER_VERSIONIZED stappler::data::cbor {
 
 enum class MajorType : uint8_t {
 	Unsigned	= 0,

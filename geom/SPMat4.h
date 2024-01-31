@@ -29,7 +29,7 @@ This file was modified for stappler project
 #include "SPVec3.h"
 #include "SPVec4.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 /**
  * Defines a 4 x 4 floating point matrix representing a 3D transformation.

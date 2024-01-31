@@ -27,7 +27,7 @@
 #include "SPString.h"
 #include "SPPlatformUnistd.h"
 
-namespace stappler::filesystem::platform {
+namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 template <>
 auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {

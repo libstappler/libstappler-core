@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "SPVec2.h"
 #include "SPVec3.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 struct Size2 {
 	static const Size2 ZERO;

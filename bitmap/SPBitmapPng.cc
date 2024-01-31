@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPFilesystem.h"
 #include "png.h"
 
-namespace stappler::bitmap::png {
+namespace STAPPLER_VERSIONIZED stappler::bitmap::png {
 
 struct ReadState {
 	const uint8_t *data = nullptr;

@@ -27,7 +27,7 @@
 
 #include <dlfcn.h>
 
-namespace stappler::dso {
+namespace STAPPLER_VERSIONIZED stappler::dso {
 
 static void * dso_open(StringView name, DsoFlags flags, const char **err) {
 	void *h = nullptr;
@@ -72,7 +72,7 @@ static void * dso_sym(void *h, StringView name, const char **err) {
 #include "SPPlatformUnistd.h"
 #include <libloaderapi.h>
 
-namespace stappler::dso {
+namespace STAPPLER_VERSIONIZED stappler::dso {
 
 static constexpr const char *WIN_FAIL_TO_LOAD = "Fail to load dynamic object";
 static constexpr const char *WIN_SYMBOL_NOT_FOUND = "Fail to find symbol in dynamic object";
@@ -94,7 +94,7 @@ static void * dso_open(StringView name, DsoFlags flags, const char **err) {
 static void dso_close(DsoFlags flags, void *handle) {
 	if (handle) {
 		if ((flags & DsoFlags::Self) == DsoFlags::None) {
-			FreeLibrary(HMODULE(d));
+			FreeLibrary(HMODULE(handle));
 		}
 	}
 }
@@ -104,14 +104,14 @@ static void * dso_sym(void *h, StringView name, const char **err) {
 	if (!s) {
 		*err = WIN_SYMBOL_NOT_FOUND;
 	}
-	return s;
+	return (void *)s;
 }
 
 }
 
 #endif
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 static constexpr const char *ERROR_MOVED_OUT = "Object was moved out";
 static constexpr const char *ERROR_NOT_LOADED = "Object was not loaded";

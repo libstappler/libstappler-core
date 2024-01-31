@@ -52,7 +52,7 @@ int gost_ec_point_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n,
 
 #define EVP_PKEY_CTRL_GOST_PARAMSET (EVP_PKEY_ALG_CTRL+1)
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 static uint8_t * writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwork exp);
 static void fillCryptoBlockHeader(uint8_t *buf, const BlockKey256 &key, BytesView d);

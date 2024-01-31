@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPPqHandle.h"
 
-namespace stappler::db::pq {
+namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
 struct ExecParamData {
 	std::array<const char *, 64> values;

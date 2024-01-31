@@ -24,7 +24,7 @@ This file was modified for stappler project
 #include "SPVec3.h"
 #include "SPGeometry.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 Vec3::Vec3(const Size3 &s) : x(s.width), y(s.height), z(s.depth) { }
 

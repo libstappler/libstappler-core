@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPUrlTld.hpp"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 using Scheme =  chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>, chars::Chars<char, '+', '-', '.'>>;
 using Ipv6 =  chars::Compose<char, chars::CharGroup<char, CharGroupId::Hexadecimial>, chars::Chars<char, ':'>>;

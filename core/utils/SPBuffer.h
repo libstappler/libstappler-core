@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPUnicode.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename Interface>
 class BufferTemplate : public Interface::AllocBaseType {
@@ -312,7 +312,7 @@ protected:
 
 }
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 template <typename Interface>
 struct BufferTraits<stappler::BufferTemplate<Interface>> {

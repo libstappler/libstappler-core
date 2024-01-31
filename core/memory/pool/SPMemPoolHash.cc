@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPMemPoolStruct.h"
 #include "SPTime.h"
 
-namespace stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
 constexpr auto INITIAL_MAX = 15; /* tunable == 2^n - 1 */
 

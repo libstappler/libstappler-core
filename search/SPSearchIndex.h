@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPRef.h"
 #include "SPSearchDistance.h"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 class SearchIndex : public Ref {
 public:

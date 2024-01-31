@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPThread.h"
 #include <chrono>
 
-namespace stappler::thread {
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
 SPUNUSED static uint32_t getNextThreadId();
 

@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "SPTime.h"
 #include "SPDataTraits.h"
 
-namespace stappler::data {
+namespace STAPPLER_VERSIONIZED stappler::data {
 
 template <typename Interface> class JsonBuffer;
 template <typename Interface> class CborBuffer;
@@ -61,7 +61,7 @@ class ValueTemplate;
 }
 
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template <typename Interface>
 struct mem_sso_test<data::ValueTemplate<Interface>> {
@@ -71,7 +71,7 @@ struct mem_sso_test<data::ValueTemplate<Interface>> {
 }
 
 
-namespace stappler::data {
+namespace STAPPLER_VERSIONIZED stappler::data {
 
 template <typename Interface>
 class ValueTemplate : public Interface::AllocBaseType {

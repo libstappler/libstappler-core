@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPCore.h"
 
-namespace stappler::halffloat {
+namespace STAPPLER_VERSIONIZED stappler::halffloat {
 
 // see https://en.wikipedia.org/wiki/Half_precision_floating-point_format
 

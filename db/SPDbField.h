@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDbBackendInterface.h"
 #include "SPDbQueryList.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 template <typename F, typename V>
 struct FieldOption;

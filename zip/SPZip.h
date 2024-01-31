@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "SPLog.h"
 #include "zip.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename Interface>
 class ZipArchive : public Interface::AllocBaseType {

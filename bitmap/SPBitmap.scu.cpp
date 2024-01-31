@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPBitmapPng.cc"
 #include "SPBitmapWebp.cc"
 
-namespace stappler::bitmap {
+namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
 static BitmapFormat s_defaultFormats[toInt(FileFormat::Custom)] = {
 	BitmapFormat(FileFormat::Png, &png::isPng, &png::getPngImageSize

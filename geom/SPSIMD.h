@@ -71,7 +71,7 @@ THE SOFTWARE.
 #include "SPSIMD_Neon.h"
 #include "SPSIMD_Neon64.h"
 
-namespace stappler::simd {
+namespace STAPPLER_VERSIONIZED stappler::simd {
 
 using f32x4 = SP_GEOM_DEFAULT_SIMD_NAMESPACE::f32x4;
 

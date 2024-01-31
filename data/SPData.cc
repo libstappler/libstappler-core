@@ -36,10 +36,10 @@ THE SOFTWARE.
 #include "brotli/encode.h"
 #include "brotli/decode.h"
 #else
-#warning Module 'common_brotli_lib' is not enabled, data::Value built without Brotli compression support
+#warning Module 'stappler_brotli_lib' is not enabled, data::Value built without Brotli compression support
 #endif
 
-namespace stappler::data {
+namespace STAPPLER_VERSIONIZED stappler::data {
 
 EncodeFormat EncodeFormat::CborCompressed(EncodeFormat::Cbor, EncodeFormat::LZ4HCCompression);
 EncodeFormat EncodeFormat::JsonCompressed(EncodeFormat::Json, EncodeFormat::LZ4HCCompression);

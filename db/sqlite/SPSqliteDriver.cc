@@ -25,7 +25,7 @@
 #include "SPSqliteHandle.h"
 #include "sqlite3.h"
 
-namespace stappler::db::sqlite {
+namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 struct DriverHandle {
 	sqlite3 *conn;

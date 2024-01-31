@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPTessTypes.h"
 #include "SPTessSimd.hpp"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 static constexpr VerboseFlag TessVerbose = VerboseFlag::None;
 

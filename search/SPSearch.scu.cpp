@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "SPSearchParser.cc"
 #include "SPSearchUrl.cc"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 static StemmerEnv *Configuration_makeLocalConfig(StemmerEnv *orig) {
 	auto p = memory::pool::acquire();

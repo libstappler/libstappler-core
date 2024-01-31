@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPDbQueryList.h"
 #include "SPDbTransaction.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 enum class UpdateFlags : uint32_t {
 	None = 0,

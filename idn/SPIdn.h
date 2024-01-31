@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPStringView.h"
 
-namespace stappler::idn {
+namespace STAPPLER_VERSIONIZED stappler::idn {
 
 template <typename Interface>
 auto toAscii(StringView, bool validate = true) -> typename Interface::StringType;

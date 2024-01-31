@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPSearchParser.h"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 class Configuration : public memory::AllocPool {
 public:

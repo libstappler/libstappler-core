@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPRef.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename Item>
 struct RefContainer {

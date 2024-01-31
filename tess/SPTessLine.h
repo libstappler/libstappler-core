@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPTess.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 enum class LineCup {
 	Butt,

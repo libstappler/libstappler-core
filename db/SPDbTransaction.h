@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPDbField.h"
 #include "SPDbQueryList.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 enum class AccessRoleId {
 	Nobody = 0,

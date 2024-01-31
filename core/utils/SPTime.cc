@@ -37,7 +37,7 @@ inline time_t _time() {
 	return time(NULL);
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 static constexpr uint64_t SP_USEC_PER_SEC(1000000);
 
@@ -110,9 +110,7 @@ TimeInterval & TimeInterval::operator= (nullptr_t) {
 
 
 Time Time::now() {
-#if (SPAPR)
-	return Time(apr_time_now());
-#elif (WIN32)
+#if (WIN32)
     static const uint64_t EPOCH = ((uint64_t) 116444736000000000LL);
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);

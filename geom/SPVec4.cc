@@ -23,7 +23,7 @@ This file was modified for stappler project
 
 #include "SPVec4.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 float Vec4::angle(const Vec4& v1, const Vec4& v2) {
 	const float dx = v1.w * v2.x - v1.x * v2.w - v1.y * v2.z + v1.z * v2.y;

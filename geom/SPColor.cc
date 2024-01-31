@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPColor.h"
 #include "SPString.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 #define MD_COLOR_SPEC_COMPONENT(Name, Id, Value, Index, Group) \
 	Color Color::Name ## _ ## Id(0x ## Value, Group * 16 + Index); \

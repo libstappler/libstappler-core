@@ -24,7 +24,7 @@ This file was modified for stappler project
 #include "SPQuaternion.h"
 #include "SPMat4.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 static void Quaternion_slerp(float q1x, float q1y, float q1z, float q1w, float q2x, float q2y, float q2z, float q2w, float t,
 		float* dstx, float* dsty, float* dstz, float* dstw) {

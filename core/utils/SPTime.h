@@ -26,9 +26,9 @@ THE SOFTWARE.
 
 #include "SPStringView.h"
 
-#define SP_COMPILE_TIME (::stappler::Time::fromCompileTime(__DATE__, __TIME__))
+#define SP_COMPILE_TIME (STAPPLER_VERSIONIZED_NAMESPACE::Time::fromCompileTime(__DATE__, __TIME__))
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 class Time;
 

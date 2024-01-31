@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDataValue.h"
 #include "SPFilesystem.h"
 
-namespace stappler::data::json {
+namespace STAPPLER_VERSIONIZED stappler::data::json {
 
 template <typename StringType>
 inline void encodeString(std::ostream &stream, const StringType &str) {

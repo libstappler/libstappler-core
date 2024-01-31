@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include <backtrace.h>
 #endif
 
-namespace stappler::mempool::base::pool {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
 static constexpr size_t SP_ALLOC_STACK_SIZE = 256;
 
@@ -171,7 +171,7 @@ void foreach_info(void *data, bool(*cb)(void *, pool_t *, uint32_t, const void *
 }
 
 static inline bool isCustom(allocator_t *alloc) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (alloc && *((uintptr_t *)alloc) == custom::POOL_MAGIC) {
 			return true;
 		} else {
@@ -182,7 +182,7 @@ static inline bool isCustom(allocator_t *alloc) {
 }
 
 static inline bool isCustom(pool_t *p) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (p && *((uintptr_t *)p) == custom::POOL_MAGIC) {
 			return true;
 		} else {
@@ -200,7 +200,7 @@ typedef struct apr_pool_t apr_pool_t;
 
 using apr_status_t = int;
 
-namespace stappler::mempool::apr {
+namespace STAPPLER_VERSIONIZED stappler::mempool::apr {
 
 using allocator_t = apr_allocator_t;
 using status_t = apr_status_t;
@@ -209,7 +209,7 @@ using cleanup_fn = status_t(*)(void *);
 
 }
 
-namespace stappler::mempool::apr::allocator {
+namespace STAPPLER_VERSIONIZED stappler::mempool::apr::allocator {
 
 SPUNUSED static allocator_t *create();
 SPUNUSED static allocator_t *create(void *mutex);
@@ -220,7 +220,7 @@ SPUNUSED static void max_free_set(allocator_t *alloc, size_t size);
 
 }
 
-namespace stappler::mempool::apr::pool {
+namespace STAPPLER_VERSIONIZED stappler::mempool::apr::pool {
 
 SPUNUSED static void initialize();
 SPUNUSED static void terminate();
@@ -252,10 +252,10 @@ SPUNUSED static const char *get_tag(pool_t *pool);
 }
 
 
-namespace stappler::mempool::base::allocator {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base::allocator {
 
 allocator_t *create(bool custom) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!custom) {
 			return (allocator_t *)apr::allocator::create();
 		}
@@ -264,7 +264,7 @@ allocator_t *create(bool custom) {
 }
 
 allocator_t *create(void *mutex) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		return (allocator_t *)apr::allocator::create(mutex);
 	}
 	abort(); // custom allocator with mutex is not available
@@ -281,7 +281,7 @@ allocator_t *createWithMmap(uint32_t initialPages) {
 }
 
 void destroy(allocator_t *alloc) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (pool::isCustom(alloc)) {
 			delete (custom::Allocator *)alloc;
 		} else {
@@ -293,7 +293,7 @@ void destroy(allocator_t *alloc) {
 }
 
 void owner_set(allocator_t *alloc, pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (pool::isCustom(alloc)) {
 			if (pool::isCustom(pool)) {
 				((custom::Allocator *)alloc)->owner = (custom::Pool *)pool;
@@ -309,7 +309,7 @@ void owner_set(allocator_t *alloc, pool_t *pool) {
 }
 
 pool_t * owner_get(allocator_t *alloc) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!pool::isCustom(alloc)) {
 			return (pool_t *)apr::allocator::owner_get((apr::allocator_t *)alloc);
 		}
@@ -318,7 +318,7 @@ pool_t * owner_get(allocator_t *alloc) {
 }
 
 void max_free_set(allocator_t *alloc, size_t size) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (pool::isCustom(alloc)) {
 			((custom::Allocator *)alloc)->set_max(size);
 		} else {
@@ -331,7 +331,7 @@ void max_free_set(allocator_t *alloc, size_t size) {
 
 }
 
-namespace stappler::mempool::base::pool {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
 static std::atomic<size_t> s_activePools = 0;
 static std::atomic<bool> s_poolDebug = 0;
@@ -460,17 +460,17 @@ SPUNUSED static void popPoolInfo(pool_t *pool) {
 }
 
 void initialize() {
-	if constexpr (apr::SPAprDefined) { apr::pool::initialize(); }
+	if constexpr (apr::SP_APR_COMPATIBLE) { apr::pool::initialize(); }
 	custom::initialize();
 }
 
 void terminate() {
-	if constexpr (apr::SPAprDefined) { apr::pool::terminate(); }
+	if constexpr (apr::SP_APR_COMPATIBLE) { apr::pool::terminate(); }
 	custom::terminate();
 }
 
 pool_t *create(PoolFlags flags) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if ((flags & PoolFlags::Custom) == PoolFlags::None) {
 			return pushPoolInfo((pool_t *)apr::pool::create());
 		}
@@ -479,7 +479,7 @@ pool_t *create(PoolFlags flags) {
 }
 
 pool_t *create(allocator_t *alloc, PoolFlags flags) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (isCustom(alloc)) {
 			return pushPoolInfo((pool_t *)custom::Pool::create((custom::Allocator *)alloc, flags));
 		} else if ((flags & PoolFlags::ThreadSafePool) == PoolFlags::None) {
@@ -493,7 +493,7 @@ pool_t *create(allocator_t *alloc, PoolFlags flags) {
 
 // creates managed pool (managed by root, if parent in mullptr)
 pool_t *create(pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return pushPoolInfo((pool_t *)apr::pool::create((apr::pool_t *)pool));
 		}
@@ -503,26 +503,26 @@ pool_t *create(pool_t *pool) {
 
 // creates unmanaged pool
 pool_t *createTagged(const char *tag, PoolFlags flags) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if ((flags & PoolFlags::Custom) == PoolFlags::None) {
 			return pushPoolInfo((pool_t *)apr::pool::createTagged(tag));
 		}
 	}
 	if (auto ret = custom::Pool::create(nullptr, flags)) {
-		ret->tag = tag;
+		ret->allocmngr.name = tag;
 		return pushPoolInfo((pool_t *)ret);
 	}
 	return nullptr;
 }
 
 pool_t *createTagged(pool_t *p, const char *tag) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(p)) {
 			return pushPoolInfo((pool_t *)apr::pool::createTagged((apr::pool_t *)p, tag));
 		}
 	}
 	if (auto ret = custom::create((custom::Pool *)p)) {
-		ret->tag = tag;
+		ret->allocmngr.name = tag;
 		return pushPoolInfo((pool_t *)ret);
 	}
 	return nullptr;
@@ -530,7 +530,7 @@ pool_t *createTagged(pool_t *p, const char *tag) {
 
 void destroy(pool_t *p) {
 	popPoolInfo(p);
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(p)) {
 			apr::pool::destroy((apr::pool_t *)p);
 		} else {
@@ -542,7 +542,7 @@ void destroy(pool_t *p) {
 }
 
 void clear(pool_t *p) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(p)) {
 			apr::pool::clear((apr::pool_t *)p);
 		} else {
@@ -554,7 +554,7 @@ void clear(pool_t *p) {
 }
 
 void *alloc(pool_t *pool, size_t &size) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::alloc((apr::pool_t *)pool, size);
 		}
@@ -563,7 +563,7 @@ void *alloc(pool_t *pool, size_t &size) {
 }
 
 void *palloc(pool_t *pool, size_t size) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::palloc((apr::pool_t *)pool, size);
 		}
@@ -572,7 +572,7 @@ void *palloc(pool_t *pool, size_t size) {
 }
 
 void *calloc(pool_t *pool, size_t count, size_t eltsize) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::calloc((apr::pool_t *)pool, count, eltsize);
 		}
@@ -581,7 +581,7 @@ void *calloc(pool_t *pool, size_t count, size_t eltsize) {
 }
 
 void free(pool_t *pool, void *ptr, size_t size) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			apr::pool::free((apr::pool_t *)pool, ptr, size);
 			return;
@@ -591,7 +591,7 @@ void free(pool_t *pool, void *ptr, size_t size) {
 }
 
 void cleanup_kill(pool_t *pool, void *ptr, cleanup_fn cb) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			apr::pool::cleanup_kill((apr::pool_t *)pool, ptr, cb);
 			return;
@@ -601,7 +601,7 @@ void cleanup_kill(pool_t *pool, void *ptr, cleanup_fn cb) {
 }
 
 void cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			apr::pool::cleanup_register((apr::pool_t *)pool, ptr, cb);
 			return;
@@ -611,7 +611,7 @@ void cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 }
 
 status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::userdata_set(data, key, cb, (apr::pool_t *)pool);
 		}
@@ -620,7 +620,7 @@ status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *
 }
 
 status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::userdata_setn(data, key, cb, (apr::pool_t *)pool);
 		}
@@ -629,7 +629,7 @@ status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t 
 }
 
 status_t userdata_get(void **data, const char *key, pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::userdata_get(data, key, (apr::pool_t *)pool);
 		}
@@ -638,7 +638,7 @@ status_t userdata_get(void **data, const char *key, pool_t *pool) {
 }
 
 status_t userdata_get(void **data, const char *key, size_t klen, pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			if (key[klen]) {
 				return apr::pool::userdata_get(data, key, (apr::pool_t *)pool);
@@ -655,7 +655,7 @@ status_t userdata_get(void **data, const char *key, size_t klen, pool_t *pool) {
 
 // debug counters
 size_t get_allocated_bytes(pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::get_allocated_bytes((apr::pool_t *)pool);
 		}
@@ -664,7 +664,7 @@ size_t get_allocated_bytes(pool_t *pool) {
 }
 
 size_t get_return_bytes(pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::get_return_bytes((apr::pool_t *)pool);
 		}
@@ -673,7 +673,7 @@ size_t get_return_bytes(pool_t *pool) {
 }
 
 allocator_t *get_allocator(pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return (allocator_t *)apr::pool::get_allocator((apr::pool_t *)pool);
 		}
@@ -682,7 +682,7 @@ allocator_t *get_allocator(pool_t *pool) {
 }
 
 void *pmemdup(pool_t *pool, const void *m, size_t n) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::pmemdup((apr::pool_t *)pool, m, n);
 		}
@@ -691,7 +691,7 @@ void *pmemdup(pool_t *pool, const void *m, size_t n) {
 }
 
 char *pstrdup(pool_t *pool, const char *s) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			return apr::pool::pstrdup((apr::pool_t *)pool, s);
 		}
@@ -700,7 +700,7 @@ char *pstrdup(pool_t *pool, const char *s) {
 }
 
 bool isThreadSafeForAllocations(pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (isCustom(pool)) {
 			return ((custom::Pool *)pool)->threadSafe;
 		}
@@ -711,7 +711,7 @@ bool isThreadSafeForAllocations(pool_t *pool) {
 }
 
 bool isThreadSafeAsParent(pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (isCustom(pool)) {
 			return ((custom::Pool *)pool)->allocator->mutex != nullptr;
 		} else {
@@ -723,19 +723,19 @@ bool isThreadSafeAsParent(pool_t *pool) {
 }
 
 const char *get_tag(pool_t *pool) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (isCustom(pool)) {
-			return ((custom::Pool *)pool)->tag;
+			return ((custom::Pool *)pool)->allocmngr.name;
 		} else {
 			return apr::pool::get_tag((apr::pool_t *)pool);
 		}
 	} else {
-		return ((custom::Pool *)pool)->tag;
+		return ((custom::Pool *)pool)->allocmngr.name;
 	}
 }
 
 void setPoolInfo(pool_t *pool, uint32_t tag, const void *ptr) {
-	if constexpr (apr::SPAprDefined) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
 			apr::pool::setPoolInfo((apr::pool_t *)pool, tag, ptr);
 			return;

@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPSql.h"
 
-namespace stappler::sql {
+namespace STAPPLER_VERSIONIZED stappler::sql {
 
 Pair<StringView, bool> encodeComparation(Comparation cmp) {
 	bool isTwoArgs = false;

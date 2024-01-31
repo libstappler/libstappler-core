@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPGeometry.h"
 #include "SPVec2.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 struct Padding {
 	float top = 0.0f;

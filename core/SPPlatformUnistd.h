@@ -56,6 +56,7 @@
 
 #include <Windows.h>
 #include <windowsx.h>
+#include <wincrypt.h>
 
 using pid_t = DWORD;
 

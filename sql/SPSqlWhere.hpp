@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 #include "SPSql.h"
 
-namespace stappler::sql {
+namespace STAPPLER_VERSIONIZED stappler::sql {
 
 template <typename Stream>
 static inline void Query_writeOperator(Stream &stream, Operator op) {

@@ -44,7 +44,7 @@ THE SOFTWARE.
 #pragma clang diagnostic pop
 #endif
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 template <typename Interface>
 struct Context {

@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPSqlHandle.h"
 #include "SPDbScheme.h"
 
-namespace stappler::db::sql {
+namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 SPUNUSED static void Handle_writeSelectViewDataQuery(SqlQuery &q, const db::Scheme &s, uint64_t oid, const db::FieldView &f, const Value &data);
 

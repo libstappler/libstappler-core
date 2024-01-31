@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "SPData.h"
 #endif
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 struct UrlView {
 	enum class UrlToken {

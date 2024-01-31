@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPRef.h"
 #include "SPVec2.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 struct HalfEdge;
 

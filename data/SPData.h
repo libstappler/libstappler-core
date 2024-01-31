@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDataDecode.h"
 #include "SPDataEncode.h"
 
-namespace stappler::data {
+namespace STAPPLER_VERSIONIZED stappler::data {
 
 // command line options parsing
 //

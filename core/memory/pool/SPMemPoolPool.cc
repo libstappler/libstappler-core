@@ -25,13 +25,13 @@ THE SOFTWARE.
 #include "SPMemPoolStruct.h"
 #include "SPMemPoolApi.h"
 
-namespace stappler::mempool::base::pool {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
 SPUNUSED static void popPoolInfo(pool_t *pool);
 
 }
 
-namespace stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
 SPUNUSED static Allocator *s_global_allocator = nullptr;
 SPUNUSED static Pool *s_global_pool = nullptr;
@@ -456,8 +456,8 @@ void initialize() {
 			s_global_allocator = new Allocator();
 		}
 		s_global_pool = Pool::create(s_global_allocator);
-		s_global_pool->tag = "Global";
-#ifndef SPAPR
+		s_global_pool->allocmngr.name = "Global";
+#ifndef MODULE_STAPPLER_APR
 		stappler::memory::pool::push(s_global_pool);
 #endif
 	}
@@ -465,7 +465,7 @@ void initialize() {
 
 void terminate() {
 	if (s_global_init.fetch_sub(1) == 1) {
-#ifndef SPAPR
+#ifndef MODULE_STAPPLER_APR
 		stappler::memory::pool::pop();
 #endif
 		Pool::destroy(s_global_pool);

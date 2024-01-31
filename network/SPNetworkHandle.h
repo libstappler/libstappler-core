@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPNetworkData.h"
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 template <typename Interface>
 class Handle : private HandleData<Interface> {
@@ -126,13 +126,13 @@ protected:
 
 }
 
-namespace stappler::mem_std {
+namespace STAPPLER_VERSIONIZED stappler::mem_std {
 
 using NetworkHandle = network::Handle<memory::StandartInterface>;
 
 }
 
-namespace stappler::mem_pool {
+namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
 using NetworkHandle = network::Handle<memory::PoolInterface>;
 

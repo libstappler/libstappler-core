@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPDataValue.h"
 #include "SPFilesystem.h"
 
-namespace stappler::data::cbor {
+namespace STAPPLER_VERSIONIZED stappler::data::cbor {
 
 template <typename Interface>
 struct Encoder : public Interface::AllocBaseType {

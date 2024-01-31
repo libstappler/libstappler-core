@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDataDecodeJson.h"
 #include "SPDataValue.h"
 
-namespace stappler::data::serenity {
+namespace STAPPLER_VERSIONIZED stappler::data::serenity {
 
 template <typename Interface>
 struct Decoder : public Interface::AllocBaseType {

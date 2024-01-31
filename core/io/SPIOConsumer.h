@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPIOCommon.h"
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 struct ConsumerTraitsStream {
 	using stream_type = std::basic_ostream<char>;

@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPCore.h"
 #include "SPMemAlloc.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 bool AllocPool::isCustomPool(pool_t *p) {
 	if (p && *((uint64_t *)p) == stappler::mempool::custom::POOL_MAGIC) {

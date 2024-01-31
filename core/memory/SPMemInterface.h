@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include "SPMemStringStream.h"
 #include "SPMemVector.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 struct PoolInterface : public memory::AllocPool {
 	using AllocBaseType = memory::AllocPool;
@@ -86,7 +86,7 @@ struct StandartInterface : public memory::AllocBase {
 
 }
 
-namespace stappler::traits {
+namespace STAPPLER_VERSIONIZED stappler::traits {
 
 template <typename StringType>
 struct SelectStringStream;
@@ -114,7 +114,7 @@ struct SelectStringStream<memory::basic_string<char16_t>> {
 
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename T>
 using Callback = memory::callback<T>;

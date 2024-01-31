@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDbBackendInterface.h"
 #include "SPDbWorker.h"
 
-namespace stappler::db::sql {
+namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 class SqlQuery : public stappler::sql::Query<db::Binder, Interface> {
 public:

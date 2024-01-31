@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPDbFieldPoint.h"
 #include "SPDbScheme.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 bool FieldPoint::transformValue(const db::Scheme &, const Value &obj, Value &val, bool isCreate) const {
 	if (val.isArray() && val.size() == 2 && val.isDouble(0) && val.isDouble(1)) {

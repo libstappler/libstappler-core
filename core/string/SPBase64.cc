@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPString.h"
 
-namespace stappler::base64 {
+namespace STAPPLER_VERSIONIZED stappler::base64 {
 
 using Reader = BytesViewNetwork;
 
@@ -217,7 +217,7 @@ size_t decode(uint8_t *buf, size_t bsize, const CoderSource &source) {
 
 }
 
-namespace stappler::base64url {
+namespace STAPPLER_VERSIONIZED stappler::base64url {
 
 using Reader = BytesViewNetwork;
 
@@ -309,7 +309,7 @@ size_t encode(char *buf, size_t bsize, const CoderSource &source) {
 
 }
 
-namespace stappler::base16 {
+namespace STAPPLER_VERSIONIZED stappler::base16 {
 
 using Reader = BytesViewNetwork;
 

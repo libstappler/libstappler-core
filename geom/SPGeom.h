@@ -25,7 +25,7 @@
 
 #include "SPCommon.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 namespace {
 

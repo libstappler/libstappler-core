@@ -28,7 +28,7 @@
 
 #define SP_PRIORITY_QUEUE_RANGE_DEBUG 0
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 void PriorityQueue_lock_noOp(void *);
 void PriorityQueue_lock_std_mutex(void *);

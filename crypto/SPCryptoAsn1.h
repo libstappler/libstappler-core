@@ -25,7 +25,7 @@
 
 #include "SPCommon.h"
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 template <typename T>
 struct Asn1DecoderTraits {

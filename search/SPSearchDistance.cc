@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPSearchDistance.h"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 Distance::Storage Distance::Storage::merge(const Storage &first, const Storage &last) {
 	Distance::Storage ret(first);

@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPSha.h"
 
-namespace stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 inline size_t getUtf16Length(char32_t c) { return unicode::utf16EncodeLength(c); }
 size_t getUtf16Length(const StringView &str);
@@ -180,7 +180,7 @@ void apply(Container &c, const Callback<void(typename Container::value_type &)> 
 template <typename Container>
 void apply_tolower_c(Container &c) {
 	stappler::string::apply(c, [] (typename Container::value_type &ch) {
-		ch = std::tolower(ch, std::locale());
+		ch = std::tolower(ch);
 	});
 }
 
@@ -188,7 +188,7 @@ void apply_tolower_c(Container &c) {
 template <typename Container>
 void apply_toupper_c(Container &c) {
 	stappler::string::apply(c, [] (typename Container::value_type &ch) {
-		ch = std::toupper(ch, std::locale());
+		ch = std::toupper(ch);
 	});
 }
 
@@ -310,7 +310,7 @@ struct ToStringTraits<memory::PoolInterface> {
 }
 
 
-namespace stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 using Sha256 = crypto::Sha256;
 using Sha512 = crypto::Sha512;
@@ -330,7 +330,7 @@ inline int64_t stdlibHashSigned(const StringType &key) { return reinterpretValue
 }
 
 
-namespace stappler::base16 {
+namespace STAPPLER_VERSIONIZED stappler::base16 {
 
 const char *charToHex(const char &c, bool upper = false);
 uint8_t hexToChar(const char &c);
@@ -356,7 +356,7 @@ size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 }
 
 
-namespace stappler::base64 {
+namespace STAPPLER_VERSIONIZED stappler::base64 {
 
 size_t encodeSize(size_t);
 size_t decodeSize(size_t);
@@ -379,7 +379,7 @@ size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 }
 
 
-namespace stappler::base64url {
+namespace STAPPLER_VERSIONIZED stappler::base64url {
 
 size_t encodeSize(size_t);
 size_t decodeSize(size_t);
@@ -402,7 +402,7 @@ size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 }
 
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template<typename Container, typename StreamType>
 inline void toStringStreamConcat(StreamType &stream, const Container &c) {
@@ -437,7 +437,7 @@ inline auto toStringConcat(const Container &c, const Sep &s) -> StringType {
 }
 
 
-namespace stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 template <typename StringType, typename Interface>
 inline StringType &tolower(StringType & str) {
@@ -880,7 +880,7 @@ inline uint8_t utf16Encode(std::basic_ostream<char16_t> &str, char32_t c) {
 
 }
 
-namespace stappler::base64 {
+namespace STAPPLER_VERSIONIZED stappler::base64 {
 
 auto __encode_pool(const CoderSource &source) -> typename memory::PoolInterface::StringType;
 auto __encode_std(const CoderSource &source) -> typename memory::StandartInterface::StringType;
@@ -900,7 +900,7 @@ inline auto decode<memory::StandartInterface>(const CoderSource &source) -> type
 
 }
 
-namespace stappler::base64url {
+namespace STAPPLER_VERSIONIZED stappler::base64url {
 
 inline size_t encodeSize(size_t l) { return base64::encodeSize(l); }
 inline size_t decodeSize(size_t l) { return base64::decodeSize(l); }
@@ -928,7 +928,7 @@ inline size_t decode(uint8_t *buf, size_t bsize, const CoderSource &source) {
 }
 
 
-namespace stappler::mem_pool {
+namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
 using String = stappler::memory::string;
 using WideString = stappler::memory::u16string;
@@ -967,7 +967,7 @@ using to_string::toString;
 
 }
 
-namespace stappler::mem_std {
+namespace STAPPLER_VERSIONIZED stappler::mem_std {
 
 using String = std::string;
 using WideString = std::u16string;

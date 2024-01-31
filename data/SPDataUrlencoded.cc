@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPValid.h"
 #include "SPData.h"
 
-namespace stappler::data {
+namespace STAPPLER_VERSIONIZED stappler::data {
 
 using NextToken = chars::Chars<char, '=', '&', ';', '[', ']', '+', '%'>;
 using NextKey = chars::Chars<char, '&', ';', '+'>;

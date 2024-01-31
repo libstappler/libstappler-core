@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPBytesView.h"
 #include "SPFilesystem.h"
 
-namespace stappler::bitmap {
+namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
 const BitmapFormat &getDefaultFormat(uint32_t);
 static std::unique_lock<std::mutex> lockFormatList();

@@ -25,17 +25,13 @@ THE SOFTWARE.
 #include "SPString.h"
 #include "SPTime.h"
 
-#if SPAPR
-#include "apr_uuid.h"
-#endif
-
 #include "SPPlatformUnistd.h"
 
 #if WIN32
 #include <winsock.h>
 #endif
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 struct UuidState {
 	UuidState() {

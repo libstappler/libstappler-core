@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPBytesReader.h"
 #include "SPUnicode.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 // Fast reader for char string
 // Matching function based on templates
@@ -348,7 +348,7 @@ using WideStringView = StringViewBase<char16_t>;
 
 }
 
-namespace stappler::platform {
+namespace STAPPLER_VERSIONIZED stappler::platform {
 
 template <typename Interface>
 auto tolower(StringView) -> typename Interface::StringType;
@@ -370,7 +370,7 @@ auto totitle(WideStringView) -> typename Interface::WideStringType;
 
 }
 
-namespace stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 template <typename L, typename R, typename CharType
 	= typename std::enable_if<
@@ -414,7 +414,7 @@ constexpr size_t length(const _CharT *__p, size_t max) {
 }
 
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename C> inline std::basic_ostream<C> &
 operator << (std::basic_ostream<C> & os, const StringViewBase<C> & str) {
@@ -513,6 +513,95 @@ operator < (const StringViewBase<C> &l, const typename memory::PoolInterface::Ba
 
 template <typename C> inline bool
 operator <= (const StringViewBase<C> &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) <= 0; }
+
+
+template <typename C> inline bool
+operator > (const StringViewUtf8 &l, const StringViewUtf8 &r) { return string::compare(l, r) > 0; }
+
+template <typename C> inline bool
+operator >= (const StringViewUtf8 &l, const StringViewUtf8 &r) { return string::compare(l, r) >= 0; }
+
+template <typename C> inline bool
+operator < (const StringViewUtf8 &l, const StringViewUtf8 &r) { return string::compare(l, r) < 0; }
+
+template <typename C> inline bool
+operator <= (const StringViewUtf8 &l, const StringViewUtf8 &r) { return string::compare(l, r) <= 0; }
+
+
+template <typename C> inline bool
+operator == (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return StringViewUtf8(l) == r; }
+
+template <typename C> inline bool
+operator != (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return StringViewUtf8(l) != r; }
+
+template <typename C> inline bool
+operator > (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) > 0; }
+
+template <typename C> inline bool
+operator >= (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) >= 0; }
+
+template <typename C> inline bool
+operator < (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) < 0; }
+
+template <typename C> inline bool
+operator <= (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) <= 0; }
+
+
+template <typename C> inline bool
+operator == (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return l == StringViewUtf8(r); }
+
+template <typename C> inline bool
+operator != (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return l != StringViewUtf8(r); }
+
+template <typename C> inline bool
+operator > (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) > 0; }
+
+template <typename C> inline bool
+operator >= (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) >= 0; }
+
+template <typename C> inline bool
+operator < (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) < 0; }
+
+template <typename C> inline bool
+operator <= (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) <= 0; }
+
+
+template <typename C> inline bool
+operator == (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return StringViewUtf8(l) == r; }
+
+template <typename C> inline bool
+operator != (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return StringViewUtf8(l) != r; }
+
+template <typename C> inline bool
+operator > (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) > 0; }
+
+template <typename C> inline bool
+operator >= (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) >= 0; }
+
+template <typename C> inline bool
+operator < (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) < 0; }
+
+template <typename C> inline bool
+operator <= (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) <= 0; }
+
+
+template <typename C> inline bool
+operator == (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return l == StringViewUtf8(r); }
+
+template <typename C> inline bool
+operator != (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return l != StringViewUtf8(r); }
+
+template <typename C> inline bool
+operator > (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) > 0; }
+
+template <typename C> inline bool
+operator >= (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) >= 0; }
+
+template <typename C> inline bool
+operator < (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) < 0; }
+
+template <typename C> inline bool
+operator <= (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) <= 0; }
 
 
 template <typename C> inline typename memory::StandartInterface::BasicStringType<C>
@@ -1891,7 +1980,7 @@ inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, uint32_
 }
 
 
-namespace stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 template <typename L, typename R, typename CharType>
 inline int compare(const L &l, const R &r) {
@@ -1956,28 +2045,28 @@ inline int compareCaseInsensivive(const L &l, const R &r) {
 namespace std {
 
 template <>
-struct hash<stappler::StringView> {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::StringView> {
 	hash() { }
 
-	size_t operator() (const stappler::StringView &value) const noexcept {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::StringView &value) const noexcept {
 		return hash<string_view>()(string_view(value.data(), value.size()));
 	}
 };
 
 template <>
-struct hash<stappler::StringViewUtf8> {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::StringViewUtf8> {
 	hash() { }
 
-	size_t operator() (const stappler::StringViewUtf8 &value) const noexcept {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::StringViewUtf8 &value) const noexcept {
 		return hash<string_view>()(string_view(value.data(), value.size()));
 	}
 };
 
 template <>
-struct hash<stappler::WideStringView> {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::WideStringView> {
 	hash() { }
 
-	size_t operator() (const stappler::WideStringView &value) const noexcept {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::WideStringView &value) const noexcept {
 		return hash<u16string_view>()(u16string_view(value.data(), value.size()));
 	}
 };

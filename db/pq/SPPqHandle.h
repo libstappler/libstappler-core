@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPSqlHandle.h"
 #include "SPDbScheme.h"
 
-namespace stappler::db::pq {
+namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
 enum class TransactionLevel {
 	ReadCommited,

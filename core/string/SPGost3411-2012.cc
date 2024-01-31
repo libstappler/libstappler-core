@@ -293,7 +293,7 @@
 
 #endif
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 static const union uint512_u _buffer0 = {{ 0x0ULL, 0x0ULL, 0x0ULL,
 	0x0ULL, 0x0ULL, 0x0ULL, 0x0ULL, 0x0ULL }};

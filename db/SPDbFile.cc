@@ -35,7 +35,7 @@ THE SOFTWARE.
 #include "SPBitmap.h"
 #endif
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 String File::getFilesystemPath(const ApplicationInterface *app, uint64_t oid) {
 	return toString(app->getDocuemntRoot(), "/uploads/", oid);

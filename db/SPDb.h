@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "SPData.h"
 #include "SPDbConfig.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 using namespace mem_pool;
 

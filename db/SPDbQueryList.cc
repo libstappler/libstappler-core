@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPDbScheme.h"
 #include "SPValid.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 static const Field *getFieldFormMap(const Map<String, Field> &fields, const StringView &name) {
 	auto it = fields.find(name);

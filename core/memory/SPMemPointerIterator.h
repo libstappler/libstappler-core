@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPCore.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template<class Type, class Pointer, class Reference>
 class pointer_iterator {

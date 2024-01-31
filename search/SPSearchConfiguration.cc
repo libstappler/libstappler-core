@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPValid.h"
 #include <inttypes.h>
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 static StemmerEnv *Configuration_makeLocalConfig(StemmerEnv *orig);
 static void Stemmer_Reader_run(StringView origin, Function<void(const StringView &, const Callback<void()> &cancelCb)> &&cb);

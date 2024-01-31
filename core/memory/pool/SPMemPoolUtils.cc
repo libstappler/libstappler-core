@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPMemPoolStruct.h"
 
-namespace stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
 void AllocManager::reset(void *p) {
 	memset(this, 0, sizeof(AllocManager));

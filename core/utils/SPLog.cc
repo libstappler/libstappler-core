@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include <android/log.h>
 #endif
 
-namespace stappler::log {
+namespace STAPPLER_VERSIONIZED stappler::log {
 
 static const constexpr int MAX_LOG_FUNC = 16;
 

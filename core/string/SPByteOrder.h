@@ -49,7 +49,7 @@ THE SOFTWARE.
 // prior to 4.8, gcc did not provide __builtin_bswap16 on some platforms so we emulate it
 // see http://gcc.gnu.org/bugzilla/show_bug.cgi?id=52624
 // Clang has a similar problem, but their feature test macros make it easier to detect
-namespace stappler::byteorder {
+namespace STAPPLER_VERSIONIZED stappler::byteorder {
 # if (defined(__clang__) && __has_builtin(__builtin_bswap16)) \
   || (defined(__GNUC__) &&(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))
 static SPINLINE inline uint16_t bswap16(uint16_t x) { return __builtin_bswap16(x); }
@@ -65,7 +65,7 @@ static SPINLINE inline uint64_t bswap64(uint64_t x) { return __builtin_bswap64(x
 //  don't check for obsolete forms defined(linux) and defined(__linux) on the theory that
 //  compilers that predefine only these are so old that byteswap.h probably isn't present.
 # include <byteswap.h>
-namespace stappler::byteorder {
+namespace STAPPLER_VERSIONIZED stappler::byteorder {
 static SPINLINE inline uint16_t bswap16(uint16_t x) { return bswap_16(x); }
 static SPINLINE inline uint32_t bswap32(uint32_t x) { return bswap_32(x); }
 static SPINLINE inline uint64_t bswap64(uint64_t x) { return bswap_64(x); }
@@ -75,13 +75,13 @@ static SPINLINE inline uint64_t bswap64(uint64_t x) { return bswap_64(x); }
 //  Microsoft documents these as being compatible since Windows 95 and specificly
 //  lists runtime library support since Visual Studio 2003 (aka 7.1).
 # include <cstdlib>
-namespace stappler::byteorder {
+namespace STAPPLER_VERSIONIZED stappler::byteorder {
 static SPINLINE inline uint16_t bswap16(uint16_t x) { return _byteswap_ushort(x); }
 static SPINLINE inline uint32_t bswap32(uint32_t x) { return _byteswap_ulong(x); }
 static SPINLINE inline uint64_t bswap64(uint64_t x) { return _byteswap_uint64(x); }
 }
 #else
-namespace stappler::byteorder {
+namespace STAPPLER_VERSIONIZED stappler::byteorder {
 static SPINLINE inline uint16_t bswap16(uint16_t x) {
 	return (x & 0xFF) << 8 | ((x >> 8) & 0xFF);
 }
@@ -105,9 +105,9 @@ static SPINLINE inline uint64_t bswap64(uint64_t x) {
 }
 #endif
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
-#if __cpp_lib_endian == 201907L
+#if __cpp_lib_endian >= 201907L
 enum class Endian {
 	Big,
 	Little,
@@ -131,7 +131,7 @@ enum class Endian {
 
 }
 
-namespace stappler::byteorder {
+namespace STAPPLER_VERSIONIZED stappler::byteorder {
 
 enum class ShouldSwap {
 	NoSwap,

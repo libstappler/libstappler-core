@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPBitmap.h"
 #endif
 
-namespace stappler::vg {
+namespace STAPPLER_VERSIONIZED stappler::vg {
 
 bool VectorPathRef::init(VectorImage *image, const String &id, const Rc<VectorPath> &path) {
 	_image = image;

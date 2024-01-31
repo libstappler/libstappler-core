@@ -33,7 +33,7 @@ THE SOFTWARE.
 #include <dirent.h>
 #include <utime.h>
 
-namespace stappler::filesystem::native {
+namespace STAPPLER_VERSIONIZED stappler::filesystem::native {
 
 template <>
 memory::PoolInterface::StringType nativeToPosix<memory::PoolInterface>(StringView path) {

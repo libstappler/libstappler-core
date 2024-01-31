@@ -30,26 +30,16 @@ THE SOFTWARE.
  * precompiled-header compilation optimization
  * (if no other specific precompiled header needed)
  *
- * SPAPR or SPDEFAULT defines base toolkit for library
- * If SPAPR defined, Apache Portable Runtime library will be used
- * Otherwise - Platform implementation of STL will be used
- *
  * Some header-only STL features (like std::numeric_limits) will be
  * used in both cases
  */
-
-#ifndef SPAPR
-#ifndef SPDEFAULT
-#define SPDEFAULT 1
-#endif
-#endif
 
 #ifdef __MINGW32__
 #define _POSIX_THREAD_SAFE_FUNCTIONS 1
 #endif
 
-#if __CDT_PARSER__
 // IDE-specific definition
+#if __CDT_PARSER__ // Eclipse CDT parser
 
 // enable all modules
 
@@ -122,7 +112,7 @@ using iter_reference_t = typename T::reference;
 #define __cdecl
 #endif
 
-#endif
+#endif // __CDT_PARSER__
 
 #ifndef DEBUG
 #ifndef NDEBUG
@@ -130,7 +120,7 @@ using iter_reference_t = typename T::reference;
 #endif
 #endif
 
-
+// Enable default <=> operator if we can
 #if __cpp_impl_three_way_comparison >= 201711
 #define SP_THREE_WAY_COMPARISON_TYPE(Type) auto operator<=>(const Type&) const = default;
 #define SP_THREE_WAY_COMPARISON_FRIEND(Type) friend auto operator<=>(const Type&, const Type &) = default;
@@ -143,8 +133,10 @@ using iter_reference_t = typename T::reference;
 #define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type)
 #endif
 
+// we want _Float16 and _Float64
 #define __STDC_WANT_IEC_60559_TYPES_EXT__ 1
 
+// Suppress windows warnings for cross-compilation with clang
 #if XWIN
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonportable-include-path"
@@ -156,9 +148,19 @@ using iter_reference_t = typename T::reference;
 #pragma clang diagnostic ignored "-Wunused-local-typedef"
 #endif
 
+// Suppress windows MIN/MAX macro
+// Actually, windows-specific includes should be only in SPPlatformUnistd.h with proper filters for macro leaking
 #if WIN32
 #define NOMINMAX 1
 #define _USE_MATH_DEFINES 1
+#endif
+
+#ifndef STAPPLER_VERSION_PREFIX
+#define STAPPLER_VERSIONIZED
+#define STAPPLER_VERSIONIZED_NAMESPACE ::stappler
+#else
+#define STAPPLER_VERSIONIZED STAPPLER_VERSION_PREFIX::
+#define STAPPLER_VERSIONIZED_NAMESPACE ::STAPPLER_VERSION_PREFIX::stappler
 #endif
 
 #include <type_traits>
@@ -206,18 +208,16 @@ using iter_reference_t = typename T::reference;
 #include <compare>
 #include <bitset>
 
-#if (LINUX)
-#include <pwd.h>
-#endif
-
 #if XWIN
 #pragma clang diagnostic pop
 #endif
 
+// suppress common macro leak
 #if WIN32
 #undef interface
 #endif
 
+// IDE-specific standart library mods
 #if __CDT_PARSER__
 #define SPUNUSED __attribute__((unused))
 #define SPINLINE
@@ -252,11 +252,12 @@ _LIBCPP_END_NAMESPACE_STD
 }
 #endif
 
-#else
+#else // __CDT_PARSER__
 #define SPUNUSED [[maybe_unused]]
 #define SPINLINE __attribute__((always_inline))
-#endif
+#endif // __CDT_PARSER__
 
+// GCC-specific formatting attribute
 #if defined(__GNUC__) && (__GNUC__ >= 4)
 #define SPPRINTF(formatPos, argPos) __attribute__((__format__(printf, formatPos, argPos)))
 #elif defined(__has_attribute)
@@ -268,14 +269,6 @@ _LIBCPP_END_NAMESPACE_STD
 #endif
 
 #define SP_EXTERN_C			extern "C"
-
-#if __MINGW32__
-#define _spMain(argc, argv) wmain(int argc, const char16_t *argv[])
-using _spChar = char16_t;
-#else
-#define _spMain(argc, argv) main(int argc, const char *argv[])
-using _spChar = char;
-#endif
 
 /*
  *   User Defined literals
@@ -290,6 +283,15 @@ using _spChar = char;
  */
 
 #include "SPHash.h"
+
+namespace STAPPLER_VERSIONIZED stappler {
+
+using std::forward;
+using std::move;
+using std::min;
+using std::max;
+
+using nullptr_t = std::nullptr_t;
 
 namespace numbers {
 template<typename T> inline constexpr T pi_v =
@@ -330,18 +332,6 @@ constexpr unsigned long long int operator"" _KiB ( unsigned long long int val ) 
 constexpr char16_t operator"" _c16 (unsigned long long int val) { return (char16_t)val; }
 constexpr char operator"" _c8 (unsigned long long int val) { return (char)val; }
 
-constexpr uint64_t operator"" _usec ( unsigned long long int val ) { return val * 1000'000; }
-constexpr uint64_t operator"" _msec ( unsigned long long int val ) { return val * 1000; }
-constexpr uint64_t operator"" _mksec ( unsigned long long int val ) { return val; }
-
-namespace stappler {
-
-using std::forward;
-using std::move;
-using std::min;
-using std::max;
-
-using nullptr_t = std::nullptr_t;
 
 /*
  *   Misc templates
@@ -673,13 +663,17 @@ struct Result {
 	public: \
 		static constexpr bool Name = sizeof(CallTest_ ## Name<T>(0)) == sizeof(success);
 
+const char * getStapplerVersionString();
+uint32_t getStapplerVersionNumber();
+uint32_t getStapplerVersionBuild();
+
 }
 
 /*
  * 		Extra math functions
  */
 
-namespace stappler::math {
+namespace STAPPLER_VERSIONIZED stappler::math {
 
 constexpr float MATH_FLOAT_SMALL = 1.0e-37f;
 constexpr float MATH_TOLERANCE = 2e-37f;
@@ -790,10 +784,10 @@ constexpr auto to_deg(T val) -> T {
 namespace std {
 
 template <typename Value, typename Flag>
-struct hash<stappler::ValueWrapper<Value, Flag>> {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::ValueWrapper<Value, Flag>> {
 	hash() { }
 
-	size_t operator() (const stappler::ValueWrapper<Value, Flag> &value) const noexcept {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::ValueWrapper<Value, Flag> &value) const noexcept {
 		return hash<Value>()(value.get());
 	}
 };

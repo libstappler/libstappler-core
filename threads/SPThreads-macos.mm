@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #if (MACOS)
 
-namespace stappler::thread {
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadCallbacks {
 	void (*init) (void *);

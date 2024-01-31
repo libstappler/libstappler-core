@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPMemString.h"
 #include "SPMemVector.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template <typename Key, typename Value, typename Comp = std::less<>>
 class dict : public AllocPool {

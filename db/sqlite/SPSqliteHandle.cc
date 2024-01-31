@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPSqliteDriver.h"
 #include "sqlite3.h"
 
-namespace stappler::db::sqlite {
+namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 static std::mutex s_logMutex;
 

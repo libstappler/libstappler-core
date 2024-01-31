@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDbScheme.h"
 #include "SPDbWorker.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 Transaction::Op Transaction::getTransactionOp(Action a) {
 	switch (a) {

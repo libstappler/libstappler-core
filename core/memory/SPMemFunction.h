@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemAlloc.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 // Function - реализация std::function, использующая память из pool_t
 // some sources from https://github.com/prograholic/blog/blob/master/cxx_function/main.cpp

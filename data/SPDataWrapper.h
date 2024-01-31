@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPDataValue.h"
 
-namespace stappler::data {
+namespace STAPPLER_VERSIONIZED stappler::data {
 
 template <typename Interface>
 class WrapperTemplate : public Interface::AllocBaseType {

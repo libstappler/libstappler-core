@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "SPData.h"
 #include <variant>
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 #if LINUX
 static constexpr auto DefaultCertPath = "/etc/ssl/certs/";

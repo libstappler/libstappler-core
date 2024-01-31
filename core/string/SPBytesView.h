@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPHalfFloat.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <Endian Endianess = Endian::Network>
 class BytesViewTemplate : public BytesReader<uint8_t> {

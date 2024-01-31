@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPDataValue.h"
 
-namespace stappler::data::json {
+namespace STAPPLER_VERSIONIZED stappler::data::json {
 
 inline StringView decodeNumber(StringView &r, bool &isFloat) {
 	auto tmp = r;

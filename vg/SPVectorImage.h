@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPVectorPath.h"
 
-namespace stappler::vg {
+namespace STAPPLER_VERSIONIZED stappler::vg {
 
 class VectorImage;
 

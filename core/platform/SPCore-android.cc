@@ -32,7 +32,7 @@
 
 #include <jni.h>
 
-namespace stappler::platform {
+namespace STAPPLER_VERSIONIZED stappler::platform {
 
 struct IcuJave {
 	bool attached = false;

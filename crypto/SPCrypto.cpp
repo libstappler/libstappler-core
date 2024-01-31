@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPMemory.h"
 #include "SPGost3411-2012.h"
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 struct BackendCtx {
 	static BackendCtx *get(Backend);

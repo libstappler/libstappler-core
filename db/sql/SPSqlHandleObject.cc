@@ -22,9 +22,10 @@ THE SOFTWARE.
 **/
 
 #include "SPSqlHandle.h"
+#include "SPSqlDriver.h"
 #include "SPDbScheme.h"
 
-namespace stappler::db::sql {
+namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 static bool Handle_hasPostUpdate(const Value &idata, const Map<String, db::Field> &fields) {
 	auto check = [&] (const Value &data) {

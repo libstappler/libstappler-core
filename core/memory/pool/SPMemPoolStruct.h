@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemPoolConfig.h"
 
-namespace stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
 struct MemAddr {
 	uint32_t size = 0;
@@ -40,6 +40,7 @@ struct AllocManager {
 	MemAddr *buffered = nullptr;
 	MemAddr *free_buffered = nullptr;
 
+	const char *name = nullptr;
 	uint32_t tag = 0;
 	const void *ptr = 0;
 
@@ -90,7 +91,7 @@ struct Cleanup {
 struct Allocator {
 	using AllocMutex = std::recursive_mutex;
 
-#if SPAPR
+#if MODULE_STAPPLER_APR
 	uintptr_t magic = POOL_MAGIC; // used to detect stappler allocators
 #endif
 	uint32_t last = 0; // largest used index into free
@@ -128,10 +129,9 @@ struct Allocator {
 };
 
 struct Pool {
-#if SPAPR
+#if MODULE_STAPPLER_APR
 	uint64_t magic = POOL_MAGIC; // used to detect stappler pools
 #endif
-	const char *tag = nullptr;
 	Pool *parent = nullptr;
 	Pool *child = nullptr;
 	Pool *sibling = nullptr;

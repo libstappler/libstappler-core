@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPIO.h"
 #include "SPBytesView.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 struct CoderSource {
 	CoderSource(const uint8_t *d, size_t len) : _data(d, len) { }
@@ -120,7 +120,7 @@ struct CoderSource {
 }
 
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 constexpr uint8_t HMAC_I_PAD = 0x36;
 constexpr uint8_t HMAC_O_PAD = 0x5C;
@@ -128,6 +128,43 @@ constexpr uint8_t HMAC_O_PAD = 0x5C;
 #ifndef SP_SECURE_KEY
 constexpr auto SP_SECURE_KEY = "Nev3rseenany0nesoequalinth1sscale";
 #endif
+
+/* SHA-1 160-bit context
+ * designed for chain use: Sha1().update(input).final() */
+struct Sha1 {
+	struct _Ctx {
+		uint32_t digest[5];
+		uint32_t count_lo, count_hi;
+		uint32_t data[16];
+		int32_t local;
+	};
+
+	constexpr static uint32_t Length = 20;
+	using Buf = std::array<uint8_t, Length>;
+
+	static Buf make(const CoderSource &, const StringView &salt = StringView());
+	static Buf hmac(const CoderSource &data, const CoderSource &key);
+
+	template <typename ... Args>
+	static Buf perform(Args && ... args);
+
+	Sha1();
+	Sha1 & init();
+
+	Sha1 & update(const uint8_t *, size_t);
+	Sha1 & update(const CoderSource &);
+
+	template  <typename T, typename ... Args>
+	void _update(T && t, Args && ... args);
+
+	template  <typename T>
+	void _update(T && t);
+
+	Buf final();
+	void final(uint8_t *);
+
+	_Ctx ctx;
+};
 
 /* SHA-2 512-bit context
  * designed for chain use: Sha512().update(input).final() */
@@ -243,7 +280,7 @@ inline void Sha256::_update(T && t) {
 }
 
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 template <>
 struct ProducerTraits<CoderSource> {

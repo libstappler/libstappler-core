@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemStorageMem.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 struct char_pointer_test;
 template<typename T> struct is_char_pointer {};
@@ -928,6 +928,8 @@ using weak_string = const string;
 
 }
 
+namespace STAPPLER_VERSIONIZED stappler {
+
 inline stappler::memory::basic_string<char> operator"" _weak ( const char* str, size_t len) {
 	stappler::memory::basic_string<char> ret;
 	if (str) {
@@ -936,26 +938,28 @@ inline stappler::memory::basic_string<char> operator"" _weak ( const char* str, 
 	return ret;
 }
 
+}
+
 namespace std {
 
 template<>
-struct hash<stappler::memory::basic_string<char>> {
-	size_t operator() (const stappler::memory::basic_string<char> & s) const noexcept {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::memory::basic_string<char>> {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::memory::basic_string<char> & s) const noexcept {
 		if (sizeof(size_t) == 8) {
-			return stappler::hash::hash64(s.data(), s.size());
+			return STAPPLER_VERSIONIZED_NAMESPACE::hash::hash64(s.data(), s.size());
 		} else {
-			return stappler::hash::hash32(s.data(), s.size());
+			return STAPPLER_VERSIONIZED_NAMESPACE::hash::hash32(s.data(), s.size());
 		}
 	}
 };
 
 template<>
-struct hash<stappler::memory::basic_string<char16_t>> {
-	size_t operator() (const stappler::memory::basic_string<char16_t> & s) const noexcept {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::memory::basic_string<char16_t>> {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::memory::basic_string<char16_t> & s) const noexcept {
 		if (sizeof(size_t) == 8) {
-			return stappler::hash::hash64((char *)s.data(), s.size() * sizeof(char16_t));
+			return STAPPLER_VERSIONIZED_NAMESPACE::hash::hash64((char *)s.data(), s.size() * sizeof(char16_t));
 		} else {
-			return stappler::hash::hash32((char *)s.data(), s.size() * sizeof(char16_t));
+			return STAPPLER_VERSIONIZED_NAMESPACE::hash::hash32((char *)s.data(), s.size() * sizeof(char16_t));
 		}
 	}
 };

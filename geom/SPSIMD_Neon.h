@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include "SPSIMD_Sse.h"
 #include "simde/arm/neon.h"
 
-namespace stappler::simd::neon {
+namespace STAPPLER_VERSIONIZED stappler::simd::neon {
 
 using f32x4 = simde__m128;
 

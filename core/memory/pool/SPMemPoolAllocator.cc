@@ -26,7 +26,7 @@ THE SOFTWARE.
 #if LINUX
 #include <sys/mman.h>
 
-namespace stappler::mempool::base {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base {
 
 static std::atomic<size_t> s_mappedRegions = 0;
 
@@ -54,7 +54,7 @@ int sp_munmap(void *addr, size_t length) {
 }
 #else
 
-namespace stappler::mempool::base {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base {
 
 size_t get_mapped_regions_count() {
 	return 0;
@@ -72,7 +72,7 @@ int sp_munmap(void *addr, size_t length) {
 
 #endif
 
-namespace stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
 static std::atomic<size_t> s_nAllocators = 0;
 

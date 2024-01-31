@@ -24,7 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_UTILS_SPURLTLD_HPP_
 #define STAPPLER_CORE_UTILS_SPURLTLD_HPP_
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 static const char *s_IdnTld[] = {
 // Generic IDN TLD

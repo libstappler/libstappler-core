@@ -25,7 +25,7 @@
 
 #include "SPSha.h"
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 union alignas(16) uint512_u {
     unsigned long long QWORD[8];

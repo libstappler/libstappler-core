@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 #if (ANDROID)
 
-namespace stappler::thread {
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadCallbacks;
 

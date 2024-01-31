@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
 
-namespace stappler::filepath {
+namespace STAPPLER_VERSIONIZED stappler::filepath {
 
 SPUNUSED static bool inAppBundle(StringView path) {
 	if (filepath::isAbsolute(path)) {

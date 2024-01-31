@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 #define SPCHARMATCHING_LOG(...)
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 enum class CharGroupId : uint32_t {
 	// displayable groups
@@ -74,7 +74,7 @@ bool inCharGroupMask(CharGroupId mask, char16_t);
 }
 
 
-namespace stappler::chars {
+namespace STAPPLER_VERSIONIZED stappler::chars {
 
 template <typename CharType>
 bool isupper(CharType);

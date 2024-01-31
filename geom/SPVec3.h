@@ -28,7 +28,7 @@ This file was modified for stappler project
 #include "SPSIMD.h"
 #include "SPVec2.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 class Mat4;
 class Quaternion;

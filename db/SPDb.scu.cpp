@@ -50,7 +50,7 @@ THE SOFTWARE.
 #include "SPDbUser.cc"
 #include "SPDbWorker.cc"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 InputFile::InputFile(String &&name, String && type, String && enc, String && orig, size_t s, int64_t id)
 : name(std::move(name)), type(std::move(type)), encoding(std::move(enc))

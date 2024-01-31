@@ -38,7 +38,7 @@ THE SOFTWARE.
 #define SP_SIMD_SSE_LOAD_VEC4(vec)			simde_mm_load_ps(&vec.x)
 #endif
 
-namespace stappler::simd::sse {
+namespace STAPPLER_VERSIONIZED stappler::simd::sse {
 
 using f32x4 = simde__m128;
 

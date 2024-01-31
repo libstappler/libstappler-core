@@ -29,13 +29,13 @@ THE SOFTWARE.
 #include <unistd.h>
 #endif
 
-namespace stappler::filepath {
+namespace STAPPLER_VERSIONIZED stappler::filepath {
 
 SPUNUSED static bool inAppBundle(StringView path);
 
 }
 
-namespace stappler::filesystem {
+namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
 File File::open_tmp(StringView prefix, bool delOnClose) {
 	if (prefix.empty()) {

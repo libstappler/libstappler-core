@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPDbQueryList.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 class Auth : public AllocBase {
 public:

@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPHashTable.h"
 #include <bit>
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename Value>
 struct PriorityListEntry : memory::AllocPool {

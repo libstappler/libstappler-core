@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPCommon.h"
 #include "SPSearchDistance.h"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 // from https://github.com/Martinsos/edlib
 

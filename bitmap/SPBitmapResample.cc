@@ -15,7 +15,7 @@
 #include "SPBitmap.h"
 #include "SPLog.h"
 
-namespace stappler::bitmap {
+namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
 #define RESAMPLER_DEBUG_OPS 0
 

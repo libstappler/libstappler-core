@@ -26,15 +26,15 @@ THE SOFTWARE.
 
 #include "SPCore.h"
 
-namespace stappler::mempool::apr {
-#if SPAPR
-static constexpr int SPAprDefined = 1;
+namespace STAPPLER_VERSIONIZED stappler::mempool::apr {
+#if MODULE_STAPPLER_APR
+static constexpr int SP_APR_COMPATIBLE = 1;
 #else
-static constexpr int SPAprDefined = 0;
+static constexpr int SP_APR_COMPATIBLE = 0;
 #endif
 }
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template <typename Sig>
 class function;
@@ -42,7 +42,7 @@ class function;
 }
 
 
-namespace stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
 using Status = int;
 
@@ -74,7 +74,7 @@ enum class PoolFlags {
 	None = 0,
 	ThreadSafePool = 1 | 2,
 	ThreadSafeAllocator = 2,
-	Custom = apr::SPAprDefined ? 4 : 0,
+	Custom = apr::SP_APR_COMPATIBLE ? 4 : 0,
 
 	Default = ThreadSafeAllocator,
 };

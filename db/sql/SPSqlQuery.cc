@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPSqlHandle.h"
 #include "SPDbScheme.h"
 
-namespace stappler::db::sql {
+namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 SqlQuery::SqlQuery(db::QueryInterface *iface, ApplicationInterface *app) {
 	binder.setInterface(iface);

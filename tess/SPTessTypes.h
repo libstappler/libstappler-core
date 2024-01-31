@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPVec4.h"
 #include "SPTess.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 struct Vertex;
 struct FaceEdge;

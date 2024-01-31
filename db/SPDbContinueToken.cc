@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPDbContinueToken.h"
 #include "SPDbScheme.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 ContinueToken::ContinueToken(const StringView &field, size_t count, bool reverse)
 : field(field.str<Interface>()), count(count), flags(Initial) {

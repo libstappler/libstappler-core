@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include <fcntl.h>
 #include <sys/mman.h>
 
-namespace stappler::filesystem::platform {
+namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 struct ArchiveFile {
 	using String = memory::StandartInterface::StringType;

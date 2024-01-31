@@ -25,7 +25,7 @@
 
 #include "SPStringView.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 enum class DsoFlags : uint32_t {
 	None = 0,

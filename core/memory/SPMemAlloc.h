@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemPoolApi.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 struct AllocBase {
 	void * operator new (size_t size) noexcept { return ::operator new(size); }

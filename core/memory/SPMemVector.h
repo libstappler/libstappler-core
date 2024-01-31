@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemStorageMem.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template <typename Type>
 class vector : public AllocPool {

@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPDbWorker.h"
 #include "SPValid.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 User *User::create(const Transaction &a, const StringView &name, const StringView &password) {
 	return create(a, Value{

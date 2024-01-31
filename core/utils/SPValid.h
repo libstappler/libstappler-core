@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPBytesView.h"
 
-namespace stappler::valid {
+namespace STAPPLER_VERSIONIZED stappler::valid {
 
 /** Identifier starts with [a-zA-Z_] and can contain [a-zA-Z0-9_\-.@] */
 bool validateIdentifier(StringView str);

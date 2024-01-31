@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPCommon.h"
 
-namespace stappler::memory::pool {
+namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
 void store(pool_t *, void *ptr, const StringView &key, memory::function<void()> && = nullptr);
 

@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPMemStorageMemImpl.h"
 #include "SPMemPointerIterator.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template <typename Type>
 struct mem_sso_test {

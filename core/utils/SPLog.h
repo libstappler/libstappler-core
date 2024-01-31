@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPRef.h"
 
-namespace stappler::log {
+namespace STAPPLER_VERSIONIZED stappler::log {
 
 enum LogType {
 	Verbose,
@@ -111,7 +111,7 @@ void fatal(const StringView &tag, Args && ... args) {
 #if DEBUG
 #define SPASSERT(cond, msg) do { \
 	if (!(cond)) { \
-		if (strlen(msg)) { ::stappler::log::format(stappler::log::LogType::Fatal, "Assert", "%s", msg);} \
+		if (strlen(msg)) { STAPPLER_VERSIONIZED_NAMESPACE::log::format(STAPPLER_VERSIONIZED_NAMESPACE::log::LogType::Fatal, "Assert", "%s", msg);} \
 		assert(cond); \
 	} \
 } while (0)

@@ -34,7 +34,7 @@ THE SOFTWARE.
 
 #include "curl/curl.h"
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 template <typename Interface>
 static void Handle_destroy(HandleData<Interface> &data) {

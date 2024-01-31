@@ -37,7 +37,7 @@ THE SOFTWARE.
 
 #include "curl/curl.h"
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 SPUNUSED static CURL *CurlHandle_alloc();
 SPUNUSED static void CurlHandle_release(CURL *curl);

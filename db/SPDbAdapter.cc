@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPDbAdapter.h"
 #include "SPDbScheme.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 ApplicationInterface::~ApplicationInterface() { }
 

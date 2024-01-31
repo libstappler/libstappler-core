@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPHtmlParser.h"
 #include "SPLog.h"
 
-namespace stappler::bitmap::custom {
+namespace STAPPLER_VERSIONIZED stappler::bitmap::custom {
 
 static size_t detectSvgSize(StringView value) {
 	StringView str(value);

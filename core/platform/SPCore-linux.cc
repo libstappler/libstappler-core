@@ -20,12 +20,14 @@
  THE SOFTWARE.
  **/
 
-#include "SPStringView.h"
+#include "SPString.h"
 #include "SPDso.h"
 
 #if LINUX
 
-namespace stappler::platform {
+#include <sys/random.h>
+
+namespace STAPPLER_VERSIONIZED stappler::platform {
 
 struct i18n {
 	using icu_case_fn = int32_t (*) (char16_t *dest, int32_t destCapacity, const char16_t *src, int32_t srcLength,
@@ -83,7 +85,7 @@ struct i18n {
 
 		// try ICU
 		char buf[256] = { 0 };
-		const char *paramName;
+		const char *paramName = nullptr;
 		StringView verSuffix;
 
 		auto dbg = Dso("libicutu.so");
@@ -372,6 +374,22 @@ auto totitle<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 template <>
 auto totitle<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
 	return s_instance->totitle<memory::StandartInterface>(data);
+}
+
+size_t makeRandomBytes(uint8_t * buf, size_t count) {
+	size_t generated = 0;
+	auto ret = ::getrandom(buf, count, GRND_RANDOM | GRND_NONBLOCK);
+	if (ret < ssize_t(count)) {
+		buf += ret;
+		count -= ret;
+		generated += ret;
+
+		ret = ::getrandom(buf, count, GRND_NONBLOCK);
+		if (ret >= 0) {
+			generated += ret;
+		}
+	}
+	return generated;
 }
 
 }

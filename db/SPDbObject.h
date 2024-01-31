@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDataWrapper.h"
 #include "SPDb.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 class Object : public stappler::data::WrapperTemplate<Interface> {
 public:

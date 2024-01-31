@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPMemPriorityQueue.h"
 #include "SPRef.h"
 
-namespace stappler::thread {
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
 class Task : public RefBase<memory::StandartInterface> {
 public: /* typedefs */

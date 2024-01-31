@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPVectorPath.h"
 #include "SPFontStyle.h"
 
-namespace stappler::vg {
+namespace STAPPLER_VERSIONIZED stappler::vg {
 
 using Metric = geom::Metric;
 

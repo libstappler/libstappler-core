@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include "SPFilesystem.h"
 #endif
 
-namespace stappler::data {
+namespace STAPPLER_VERSIONIZED stappler::data {
 
 struct EncodeFormat {
 	static int EncodeStreamIndex;

@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPCharGroup.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 bool inCharGroup(CharGroupId mask, char16_t c) {
 	switch (mask) {

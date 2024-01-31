@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 static StringView s_turkish_stopwords[] = {
 	StringView("acaba", 5),

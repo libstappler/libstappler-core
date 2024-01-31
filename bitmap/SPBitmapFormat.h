@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPIO.h"
 #include "SPBytesView.h"
 
-namespace stappler::bitmap {
+namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
 class BitmapFormat;
 

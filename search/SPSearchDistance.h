@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPMemory.h"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 using namespace mem_pool;
 

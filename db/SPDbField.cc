@@ -33,7 +33,7 @@ THE SOFTWARE.
 #define strcasecmp _stricmp
 #endif
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 AutoFieldScheme::AutoFieldScheme(const Scheme &s, ReqVec &&vec, ViewLinkageFn &&fn, ReqVec &&lvec)
 : scheme(s), requiresForAuto(std::move(vec)), linkage(std::move(fn)), requiresForLinking(std::move(lvec)) { }

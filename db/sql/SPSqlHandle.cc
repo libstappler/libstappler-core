@@ -22,11 +22,12 @@ THE SOFTWARE.
 **/
 
 #include "SPSqlHandle.h"
+#include "SPSqlDriver.h"
 #include "SPDbFile.h"
 #include "SPDbScheme.h"
 #include "SPDbUser.h"
 
-namespace stappler::db::sql {
+namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 StringView SqlHandle::getKeyValueSchemeName() {
 	return "__sessions";

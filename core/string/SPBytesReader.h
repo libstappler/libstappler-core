@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPCharGroup.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename _CharType>
 class BytesReader {

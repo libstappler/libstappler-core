@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPMemory.h"
 #include "SPData.h"
 
-namespace stappler::sql {
+namespace STAPPLER_VERSIONIZED stappler::sql {
 
 enum class Profile {
 	Postgres,

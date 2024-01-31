@@ -31,7 +31,7 @@ THE SOFTWARE.
 #define SP_REF_DEBUG 0
 #endif
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 struct AtomicCounter {
 	AtomicCounter() { _count.store(1); }
@@ -287,13 +287,13 @@ void RefBase<Interface>::foreachBacktrace(const Callback<void(uint64_t, Time, co
 
 }
 
-namespace stappler::mem_std {
+namespace STAPPLER_VERSIONIZED stappler::mem_std {
 
 using Ref = RefBase<memory::StandartInterface>;
 
 }
 
-namespace stappler::mem_pool {
+namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
 using Ref = RefBase<memory::PoolInterface>;
 

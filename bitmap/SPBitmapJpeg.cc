@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "jpeglib.h"
 #include <setjmp.h>
 
-namespace stappler::bitmap::jpeg {
+namespace STAPPLER_VERSIONIZED stappler::bitmap::jpeg {
 
 struct JpegError {
     struct jpeg_error_mgr pub;	/* "public" fields */

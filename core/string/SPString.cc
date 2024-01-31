@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include "SPString.h"
 #include "SPUnicode.h"
 
-namespace stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 // Copies two characters from src to dst.
 template<typename Char>

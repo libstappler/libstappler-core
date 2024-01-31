@@ -25,12 +25,13 @@ THE SOFTWARE.
 
 #ifdef WIN32
 #include "SPPlatformUnistd.h"
+#include "SPString.h"
 #include "winnls.h"
 #else
 #include "unicode/uidna.h"
 #endif
 
-namespace stappler::idn {
+namespace STAPPLER_VERSIONIZED stappler::idn {
 
 using HostUnicodeChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
 		chars::Chars<char, '.', '-'>, chars::Range<char, char(128), char(255)>>;

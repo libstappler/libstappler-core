@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 #ifdef WIN32
 
-namespace stappler::filesystem::native {
+namespace STAPPLER_VERSIONIZED stappler::filesystem::native {
 
 static void nativeToPosix_c(char *path, size_t size) {
 	if (size >= 2) {

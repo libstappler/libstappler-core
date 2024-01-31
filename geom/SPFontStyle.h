@@ -28,7 +28,7 @@
 #include "SPSpanView.h"
 #include "SPColor.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 using EnumSize = uint8_t;
 
@@ -469,7 +469,7 @@ inline bool operator>= (const CharLayout &l, const char16_t &c) { return l.charI
 
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 inline geom::FontSize progress(geom::FontSize source, geom::FontSize target, float p) {
 	return geom::FontSize::progress(source, target, p);
@@ -480,10 +480,10 @@ inline geom::FontSize progress(geom::FontSize source, geom::FontSize target, flo
 namespace std {
 
 template <>
-struct hash<stappler::geom::FontSize> {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::geom::FontSize> {
 	hash() { }
 
-	size_t operator() (const stappler::geom::FontSize &value) const noexcept {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::geom::FontSize &value) const noexcept {
 		return hash<uint16_t>{}(value.get());
 	}
 };

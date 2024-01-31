@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemAlloc.h"
 
-namespace stappler::memory::impl {
+namespace STAPPLER_VERSIONIZED stappler::memory::impl {
 
 // small object optimization type (based on SSO-23: https://github.com/elliotgoodrich/SSO-23)
 template <typename Type, size_t ByteCount>

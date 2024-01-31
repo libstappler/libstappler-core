@@ -33,7 +33,7 @@ THE SOFTWARE.
 #include "SPBitmap.h"
 #endif
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 SPUNUSED static void prepareGetQuery(Query &query, uint64_t oid, bool forUpdate);
 

@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDataValue.h"
 #include "SPFilesystem.h"
 
-namespace stappler::data::serenity {
+namespace STAPPLER_VERSIONIZED stappler::data::serenity {
 
 bool shouldEncodePercent(char c);
 

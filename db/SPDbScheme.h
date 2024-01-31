@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPDbWorker.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 class Scheme : public AllocBase {
 public:

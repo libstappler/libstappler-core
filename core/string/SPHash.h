@@ -32,7 +32,7 @@ THE SOFTWARE.
 
 // Requires C++17
 
-namespace stappler::hash {
+namespace STAPPLER_VERSIONIZED stappler::hash {
 
 #define SP_HASH_INLINE [[gnu::always_inline]]
 

@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPThreadTask.h"
 
-namespace stappler::thread {
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
 class Worker;
 

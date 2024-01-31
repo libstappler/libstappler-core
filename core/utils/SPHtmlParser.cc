@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPHtmlParser.h"
 
-namespace stappler::html {
+namespace STAPPLER_VERSIONIZED stappler::html {
 
 using HtmlIdentifier16 = chars::Compose<char16_t,
 		chars::Range<char16_t, u'0', u'9'>,

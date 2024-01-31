@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPCommon.h"
 #include "SPThread.h"
 
-namespace stappler::thread {
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadCallbacks {
 	void (*init) (void *);
@@ -105,7 +105,7 @@ void ThreadInterface<memory::PoolInterface>::workerThread(ThreadInterface<memory
 #include "SPThreadTask.cc"
 #include "SPThreadTaskQueue.cc"
 
-namespace stappler::thread {
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
 thread_local ThreadInfo tl_threadInfo;
 

@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPMemPoolInterface.h"
 #include "SPMemPoolApi.h"
 
-#if SPAPR
+#if MODULE_STAPPLER_APR
 #define SP_APR_EXPORT SP_EXTERN_C
 #else
 #define SP_APR_EXPORT static
@@ -50,9 +50,6 @@ SP_APR_EXPORT void apr_allocator_max_free_set(apr_allocator_t *allocator, apr_si
 
 SP_APR_EXPORT void apr_pool_initialize();
 SP_APR_EXPORT void apr_pool_terminate();
-
-SP_APR_EXPORT serenity_allocmngr_t *serenity_allocmngr_get(apr_pool_t *);
-SP_APR_EXPORT const char *serenity_pool_get_tag(apr_pool_t *);
 
 SP_APR_EXPORT apr_status_t apr_pool_create_unmanaged_ex(apr_pool_t **newpool,
 		apr_abortfunc_t abort_fn, apr_allocator_t *allocator) __attribute__((nonnull(1)));
@@ -88,7 +85,7 @@ SP_APR_EXPORT char * apr_pstrdup(apr_pool_t *p, const char *s);
 
 SP_APR_EXPORT apr_thread_mutex_t *apr_allocator_mutex_get(apr_allocator_t *allocator) __attribute__((nonnull(1)));
 
-namespace stappler::mempool::apr {
+namespace STAPPLER_VERSIONIZED stappler::mempool::apr {
 
 using pool_t = apr_pool_t;
 using status_t = apr_status_t;
@@ -97,7 +94,7 @@ using cleanup_fn = status_t(*)(void *);
 
 }
 
-namespace stappler::mempool::apr::allocator {
+namespace STAPPLER_VERSIONIZED stappler::mempool::apr::allocator {
 
 SPUNUSED static allocator_t *create() {
 	allocator_t *ret = nullptr;
@@ -131,11 +128,23 @@ SPUNUSED static void max_free_set(allocator_t *alloc, size_t size) {
 }
 
 
-namespace stappler::mempool::apr::pool {
+namespace STAPPLER_VERSIONIZED stappler::mempool::apr::pool {
 
-static custom::AllocManager *allocmngr_get(pool_t *pool) {
-	return (custom::AllocManager *)serenity_allocmngr_get(pool);
-}
+struct wrapper_pool_t {
+	apr_pool_t *parent;
+	apr_pool_t *child;
+	apr_pool_t *sibling;
+	apr_pool_t **ref;
+	void *cleanups;
+	void *free_cleanups;
+	apr_allocator_t *allocator;
+	struct process_chain *subprocesses;
+	apr_abortfunc_t abort_fn;
+	void *user_data;
+	const char *tag;
+};
+
+static custom::AllocManager *allocmngr_get(pool_t *pool);
 
 SPUNUSED static void initialize() {
 	apr_pool_initialize();
@@ -283,13 +292,46 @@ SPUNUSED static bool isThreadSafeAsParent(pool_t *pool) {
 	return false;
 }
 
+static custom::AllocManager *allocmngr_get(pool_t *pool) {
+	wrapper_pool_t *p = (wrapper_pool_t *)pool;
+	if (p->tag) {
+		auto m = (custom::AllocManager *)p->tag;
+		if (m->pool == pool) {
+			return m;
+		}
+	}
+
+	auto m = (custom::AllocManager *)palloc(pool, sizeof(custom::AllocManager *));
+	m->pool = pool;
+	m->name = p->tag;
+
+	cleanup_register(pool, m, [] (void *ptr) {
+		auto m = (custom::AllocManager *)ptr;
+
+		wrapper_pool_t *p = (wrapper_pool_t *)m->pool;
+		p->tag = m->name;
+		return 0;
+	});
+
+	p->tag = (const char *)m;
+	return m;
+}
+
 SPUNUSED static const char *get_tag(pool_t *pool) {
-	return serenity_pool_get_tag(pool);
+	wrapper_pool_t *p = (wrapper_pool_t *)pool;
+	if (p->tag) {
+		auto m = (custom::AllocManager *)p->tag;
+		if (m->pool == pool) {
+			return m->name;
+		}
+		return p->tag;
+	}
+	return NULL;
 }
 
 }
 
-#ifndef SPAPR
+#ifndef MODULE_STAPPLER_APR
 
 SP_APR_EXPORT apr_status_t apr_allocator_create(apr_allocator_t **allocator) { return 0; }
 SP_APR_EXPORT void apr_allocator_destroy(apr_allocator_t *allocator) { }
@@ -300,9 +342,6 @@ SP_APR_EXPORT void apr_allocator_max_free_set(apr_allocator_t *allocator, apr_si
 
 SP_APR_EXPORT void apr_pool_initialize() { }
 SP_APR_EXPORT void apr_pool_terminate() { }
-
-SP_APR_EXPORT serenity_allocmngr_t *serenity_allocmngr_get(apr_pool_t *) { return nullptr; }
-SP_APR_EXPORT const char *serenity_pool_get_tag(apr_pool_t *) { return nullptr; }
 
 SP_APR_EXPORT apr_status_t apr_pool_create_unmanaged_ex(apr_pool_t **newpool,
 		apr_abortfunc_t abort_fn, apr_allocator_t *allocator) { return 0; }

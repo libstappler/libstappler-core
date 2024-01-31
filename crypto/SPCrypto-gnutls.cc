@@ -43,7 +43,7 @@ THE SOFTWARE.
 #include <nettle/ecc-curve.h>
 #include <gmp.h>
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 struct Hook_GnuTLS_RandomData {
 	const Gost3411_512::Buf *buf;

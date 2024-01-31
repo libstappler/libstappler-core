@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include "SPData.h"
 #endif
 
-namespace stappler::mem_pool {
+namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
 namespace pool = memory::pool;
 namespace allocator = memory::allocator;
@@ -157,7 +157,7 @@ inline bool exists_ordered(Vector<T> &vec, const T & val) {
 }
 
 
-namespace stappler::mem_std {
+namespace STAPPLER_VERSIONIZED stappler::mem_std {
 
 namespace pool = memory::pool;
 namespace allocator = memory::allocator;
@@ -268,7 +268,7 @@ inline bool exists_ordered(Vector<T> &vec, const T & val) {
 
 #ifdef MODULE_STAPPLER_DATA
 
-namespace stappler::mem_pool {
+namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
 using Value = stappler::data::ValueTemplate<stappler::memory::PoolInterface>;
 using Array = Value::ArrayType;
@@ -292,7 +292,7 @@ inline bool emplace_ordered(Vector<Value> &vec, const Value &val) {
 }
 
 
-namespace stappler::mem_std {
+namespace STAPPLER_VERSIONIZED stappler::mem_std {
 
 using Value = data::ValueTemplate<stappler::memory::StandartInterface>;
 using Array = Value::ArrayType;

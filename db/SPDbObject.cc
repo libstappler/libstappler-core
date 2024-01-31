@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPDbObject.h"
 #include "SPDbScheme.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 Object::Object(Value &&data, const Scheme &scheme) : WrapperTemplate(std::move(data)), _scheme(scheme) {
 	if (!_data.isDictionary()) {

@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "SPDbScheme.h"
 #include "SPSql.h"
 
-namespace stappler::db::sqlite {
+namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 enum class TransactionLevel {
 	Deferred,

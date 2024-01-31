@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPLog.h"
 #include "SPFilesystem.h"
 
-namespace stappler::bitmap {
+namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
 const BitmapFormat &getDefaultFormat(uint32_t);
 SPUNUSED static std::unique_lock<std::mutex> lockFormatList();

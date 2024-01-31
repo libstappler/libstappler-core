@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPDbField.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 struct FieldPoint : db::FieldCustom {
 	template <typename ... Args>

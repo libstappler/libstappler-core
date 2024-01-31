@@ -25,7 +25,7 @@
 
 #include "SPSIMD.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 SP_ATTR_OPTIMIZE_INLINE_FN static inline simd::f32x4 getNormalizedVec(const float v0[2], const float v1[2], const float v2[2]) {
 	simd::f32x4 targetVec = simd::sub(

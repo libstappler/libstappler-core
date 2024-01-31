@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "SPDbScheme.h"
 #include "SPValid.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 Auth::Auth(const ApplicationInterface *app, const Scheme &s) : _application(app), _scheme(&s) {
 	if (auto f = detectPasswordField(*_scheme)) {

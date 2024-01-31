@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPIO.h"
 #include "SPBuffer.h"
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 size_t Producer::read(const Buffer &buf, size_t nbytes) const {
 	auto pbuf = buf.prepare(nbytes);

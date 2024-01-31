@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDbContinueToken.h"
 #include "SPDbQuery.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 class ApplicationInterface;
 

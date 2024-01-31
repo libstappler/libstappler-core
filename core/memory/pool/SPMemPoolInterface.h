@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemPoolStruct.h"
 
-namespace stappler::mempool::base {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base {
 
 using pool_t = custom::Pool;
 using status_t = custom::Status;
@@ -43,7 +43,7 @@ int sp_munmap(void *addr, size_t length);
 }
 
 
-namespace stappler::mempool::base::pool {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
 pool_t *acquire();
 Pair<uint32_t, const void *> info();
@@ -57,7 +57,7 @@ void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const void *));
 }
 
 
-namespace stappler::mempool::base::allocator {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base::allocator {
 
 allocator_t *create(bool custom = false);
 allocator_t *create(void *mutex);
@@ -74,7 +74,7 @@ void destroy(allocator_t *);
 }
 
 
-namespace stappler::mempool::base::pool {
+namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
 using PoolFlags = custom::PoolFlags;
 

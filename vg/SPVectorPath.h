@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include "SPFilesystem.h"
 #endif
 
-namespace stappler::vg {
+namespace STAPPLER_VERSIONIZED stappler::vg {
 
 using namespace geom;
 

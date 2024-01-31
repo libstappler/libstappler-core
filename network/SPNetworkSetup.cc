@@ -29,7 +29,7 @@ THE SOFTWARE.
 #define SP_NETWORK_LOG(...)
 #endif
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 #define SP_TERMINATED_DATA(view) (view.terminated()?view.data():view.str<Interface>().data())
 

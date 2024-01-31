@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPDbFieldTextArray.h"
 #include "SPPqHandle.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 bool FieldTextArray::transformValue(const db::Scheme &, const Value &obj, Value &val, bool isCreate) const {
 	if (val.isArray()) {

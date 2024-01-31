@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPLog.h"
 #include "SPRef.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 class NamedRef : public RefBase<memory::StandartInterface> {
 public:

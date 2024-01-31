@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPTessTypes.h"
 #include "SPLog.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 static constexpr VerboseFlag TessTypesVerbose = VerboseFlag::None;
 static constexpr bool IntersectDebug = false;

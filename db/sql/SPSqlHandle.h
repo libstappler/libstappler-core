@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPSqlQuery.h"
 
-namespace stappler::db::sql {
+namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 class Driver;
 using Result = db::Result;

@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPUrl.h"
 #include "SPSearchConfiguration.h"
 
-namespace stappler::search {
+namespace STAPPLER_VERSIONIZED stappler::search {
 
 using Scheme =  chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>, chars::Chars<char, '+', '-', '.'>>;
 using Ipv6 =  chars::Compose<char, chars::CharGroup<char, CharGroupId::Hexadecimial>, chars::Chars<char, ':'>>;

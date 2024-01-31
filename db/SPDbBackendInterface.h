@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPDbAuth.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 class Result;
 class ApplicationInterface;

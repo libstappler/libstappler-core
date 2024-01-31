@@ -27,13 +27,13 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPSpanView.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 using FilePath = ValueWrapper<StringView, class FilePathTag>;
 
 }
 
-namespace stappler::filepath {
+namespace STAPPLER_VERSIONIZED stappler::filepath {
 
 // check if filepath is absolute
 bool isAbsolute(StringView path);

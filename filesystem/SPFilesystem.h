@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPTime.h"
 #include "SPFilepath.h"
 
-namespace stappler::filesystem {
+namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
 enum Access {
 	Exists,
@@ -234,7 +234,7 @@ auto readIntoMemory(StringView ipath, size_t off = 0, size_t size = maxOf<size_t
 }
 
 
-namespace stappler::filesystem::platform {
+namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 #if ANDROID
 void Android_initializeFilesystem(void *assetManager, StringView filesDir, StringView cachesDir, StringView apkPath);
@@ -274,7 +274,7 @@ bool _ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> 
 // functions to access native filesystem directly
 // libstappler uses posix path scheme, it should be transformed when transferred from/to other apps/libraries
 // no transformation required within libstappler itself
-namespace stappler::filesystem::native {
+namespace STAPPLER_VERSIONIZED stappler::filesystem::native {
 
 // C:\dirname\filename -> /c/dirname/filename
 template <typename Interface>
@@ -309,7 +309,7 @@ bool write_fn(StringView, const unsigned char *data, size_t len);
 
 }
 
-namespace stappler::filesystem {
+namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
 template <typename Interface>
 auto writablePath(StringView path, bool relative) -> typename Interface::StringType {
@@ -414,7 +414,7 @@ auto readTextFile(StringView ipath) -> typename Interface::StringType {
 
 }
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 template <>
 struct ProducerTraits<filesystem::File> {

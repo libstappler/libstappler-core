@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemString.h"
 
-namespace stappler::unicode {
+namespace STAPPLER_VERSIONIZED stappler::unicode {
 
 // Length lookup table
 constexpr const uint8_t utf8_length_data[256] = {
@@ -289,7 +289,25 @@ inline uint8_t utf8Encode(std::ostream &str, char32_t c) {
 	}
 }
 
-inline uint8_t utf16EncodeLength(char32_t c) {
+constexpr inline char32_t utf16Decode32(const char16_t *ptr) {
+	if ((*ptr & char16_t(0xD800)) != 0) {
+		return char32_t(0b0000'0011'1111'1111 & ptr[0]) << 10 | char32_t(0b0000'0011'1111'1111 & ptr[1]);
+	} else {
+		return char32_t(*ptr);
+	}
+}
+
+constexpr inline char32_t utf16Decode32(const char16_t *ptr, uint8_t &offset) {
+	if ((*ptr & char16_t(0xD800)) != 0) {
+		offset = 2;
+		return char32_t(0b0000'0011'1111'1111 & ptr[0]) << 10 | char32_t(0b0000'0011'1111'1111 & ptr[1]);
+	} else {
+		offset = 1;
+		return char32_t(*ptr);
+	}
+}
+
+constexpr inline uint8_t utf16EncodeLength(char32_t c) {
 	if (c < 0xD800) {
 		return 1;
 	} else if (c <= 0xDFFF) {
@@ -377,7 +395,7 @@ constexpr inline bool isUtf8Surrogate(char c) {
 // A part of SPString.h header placed here, to be available in utilities,
 // that included by SPString.h (like StringView)
 
-namespace stappler::platform {
+namespace STAPPLER_VERSIONIZED stappler::platform {
 
 char32_t tolower(char32_t c);
 char32_t toupper(char32_t c);
@@ -385,7 +403,7 @@ char32_t totitle(char32_t c);
 
 }
 
-namespace stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 using char_ptr_t = char *;
 using char_ptr_ref_t = char_ptr_t &;

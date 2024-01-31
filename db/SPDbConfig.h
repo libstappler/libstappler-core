@@ -38,7 +38,7 @@ THE SOFTWARE.
 
 #include "SPFilesystem.h"
 
-namespace stappler::db::config {
+namespace STAPPLER_VERSIONIZED stappler::db::config {
 
 constexpr auto AUTH_MAX_TIME = 720_sec;
 constexpr size_t AUTH_MAX_LOGIN_ATTEMPT = 4;

@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPSearchConfiguration.h"
 #include "SPSql.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 using Operator = sql::Operator;
 using Comparation = sql::Comparation;

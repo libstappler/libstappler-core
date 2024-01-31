@@ -40,7 +40,7 @@ THE SOFTWARE.
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 static constexpr size_t MBEDTLS_KEY_BUFFER_SIZE = 12_KiB; // Должен вмещать ключ в формате DER и PEM максимального размера
 

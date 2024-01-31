@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 #include "SPSql.h"
 
-namespace stappler::sql {
+namespace STAPPLER_VERSIONIZED stappler::sql {
 
 template <typename Binder, typename Interface>
 auto Query<Binder, Interface>::Select::all() -> Select & {

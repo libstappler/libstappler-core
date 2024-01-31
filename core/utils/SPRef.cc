@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include <cxxabi.h>
 #endif
 
-namespace stappler::backtrace {
+namespace STAPPLER_VERSIONIZED stappler::backtrace {
 
 static StringView filepath_lastComponent(StringView path) {
 	size_t pos = path.rfind('/');
@@ -99,7 +99,7 @@ SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView 
 
 #include "backtrace.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 static void debug_backtrace_error(void *data, const char *msg, int errnum) {
 	std::cout << "[Backtrace] error: " << msg << "\n";
@@ -149,7 +149,7 @@ void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
 
 #include <execinfo.h>
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 static constexpr int LinuxBacktraceSize = 128;
 static constexpr int LinuxBacktraceOffset = 2;
@@ -184,7 +184,7 @@ void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
 #include <libunwind.h>
 #include <inttypes.h>
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
 	unw_cursor_t cursor;
@@ -218,7 +218,7 @@ void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
 
 #else
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) { }
 
@@ -227,7 +227,7 @@ void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) { }
 #endif
 
 
-namespace stappler::memleak {
+namespace STAPPLER_VERSIONIZED stappler::memleak {
 
 static std::mutex s_mutex;
 static std::atomic<uint64_t> s_refId = 1;
@@ -360,7 +360,7 @@ void foreachBacktrace(const RefBase<memory::PoolInterface> *ptr,
 
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <>
 SubscriptionId SubscriptionTemplate<memory::PoolInterface>::getNextId() {

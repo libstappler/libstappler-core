@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPMemString.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 constexpr size_t basic_ostringbuf_bufsize = 256;
 

@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPStringView.h"
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 static constexpr StringView s_CABundle(
 R"CABundle(##

@@ -29,7 +29,13 @@ THE SOFTWARE.
 #include "SPIdn.h"
 #else
 
-namespace stappler::idn {
+namespace STAPPLER_VERSIONIZED stappler::platform {
+
+size_t makeRandomBytes(uint8_t * buf, size_t count);
+
+}
+
+namespace STAPPLER_VERSIONIZED stappler::idn {
 
 using HostUnicodeChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
 		chars::Chars<char, '.', '-'>, chars::Range<char, char(128), char(255)>>;
@@ -75,13 +81,14 @@ auto toUnicode(StringView source, bool validate = false) -> typename Interface::
 
 #endif
 
-namespace stappler {
+
+namespace STAPPLER_VERSIONIZED stappler {
 
 static bool validateHost(StringView &r);
 
 }
 
-namespace stappler::valid {
+namespace STAPPLER_VERSIONIZED stappler::valid {
 
 inline auto Config_getInternalPasswordKey() { return "Serenity Password Salt"_weak; }
 
@@ -377,11 +384,15 @@ bool validateBase64(const StringView &str) {
 }
 
 void makeRandomBytes_buf(uint8_t * buf, size_t count) {
-#if SPAPR
-	if (apr_generate_random_bytes(buf, count) != APR_SUCCESS) {
-		ap_random_insecure_bytes(buf, count);
+	auto offset = platform::makeRandomBytes(buf, count);
+
+	buf += offset;
+	count -= offset;
+
+	if (count == 0) {
+		return;
 	}
-#else
+
 	auto bytesInRand = 0;
 	size_t tmp = RAND_MAX;
 	while (tmp > 255) {
@@ -400,7 +411,6 @@ void makeRandomBytes_buf(uint8_t * buf, size_t count) {
 			r = rand();
 		}
 	}
-#endif
 }
 
 void makeRandomBytes(uint8_t *buf, size_t count) {
@@ -462,31 +472,6 @@ bool validatePassord(const StringView &str, const BytesView &passwd, const Strin
 	if (passwd.size() < 8 + string::Sha256::Length) {
 		return false; // not a password
 	}
-
-#if SPAPR
-	if (passwd[0] != 0 || passwd[1] != 1) {
-		// Serenity/1 protocol
-		uint8_t passwdKey [8 + string::Sha256::Length] = { 0 };
-		apr_base64_decode_binary(passwdKey, (const char *)passwd.data());
-
-		uint8_t controlKey [8 + string::Sha256::Length] = { 0 };
-		memcpy(controlKey, passwdKey, 8);
-
-		string::Sha256 hash_ctx;
-		hash_ctx.update(passwdKey, 8);
-		hash_ctx.update(str);
-		if (!key.empty()) {
-			hash_ctx.update(key);
-		}
-		hash_ctx.final(controlKey + 8);
-
-		if (memcmp(passwdKey + 8, controlKey + 8, string::Sha256::Length) == 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-#endif
 
 	// Serenity/2 protocol
 	if (passwd.size() != 16 + string::Sha512::Length) {

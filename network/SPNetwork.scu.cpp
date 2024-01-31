@@ -41,7 +41,7 @@ THE SOFTWARE.
 #define SP_NETWORK_LOG(...)
 //#define SP_NETWORK_LOG(...) log::format("Network", __VA_ARGS__)
 
-namespace stappler::network {
+namespace STAPPLER_VERSIONIZED stappler::network {
 
 static constexpr auto NetworkUserdataKey = "org.stappler.Network.Handle";
 

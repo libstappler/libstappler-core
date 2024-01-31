@@ -29,7 +29,7 @@ This file was modified for stappler project
 #include "SPVec2.h"
 #include "SPVec3.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 class Mat4;
 

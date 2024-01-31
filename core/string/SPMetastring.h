@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPStringView.h"
 
-namespace stappler::metastring {
+namespace STAPPLER_VERSIONIZED stappler::metastring {
 
 template <char... Chars>
 struct metastring {
@@ -90,7 +90,7 @@ using numeric = typename numeric_builder<num_digits (x), x>::type;
 }
 
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -108,7 +108,7 @@ template <typename CharType, CharType ... Chars> auto operator "" _meta() {
 }
 
 
-namespace stappler::metastring {
+namespace STAPPLER_VERSIONIZED stappler::metastring {
 
 template <char ... Chars>
 inline std::basic_ostream<char> &

@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SPBytesView.h"
 #include "SPSha.h"
 
-namespace stappler::crypto {
+namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 // Гарантирует единственность шифротекста для разных бэкэндов в блочных шифрах
 // ценой производетльности. Если выключено - шифротексты могут различаться

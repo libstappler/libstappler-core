@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPCore.h"
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 enum class Seek {
 	Set,

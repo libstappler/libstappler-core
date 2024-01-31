@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
-namespace stappler::math {
+namespace STAPPLER_VERSIONIZED stappler::math {
 
 template <uint64_t Count, typename T = float>
 class MovingAverage {

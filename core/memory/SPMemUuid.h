@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include "SPBytesView.h"
 #include "SPStringView.h"
 
-namespace stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 struct uuid : AllocPool {
 	static constexpr size_t FormattedLength = 36;

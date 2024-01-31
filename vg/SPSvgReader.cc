@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPSvgReader.h"
 
-namespace stappler::vg {
+namespace STAPPLER_VERSIONIZED stappler::vg {
 
 static Mat4 svg_parseTransform(StringView &r) {
 	Mat4 ret(Mat4::IDENTITY);

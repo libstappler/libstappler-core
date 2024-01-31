@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename _Type>
 class SpanView {
@@ -197,8 +197,8 @@ auto makeSpanView(const Type *ptr, size_t size) -> SpanView<Type> {
 namespace std {
 
 template<typename Value>
-struct hash<stappler::SpanView<Value>> {
-	size_t operator() (const stappler::SpanView<Value> &value) {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::SpanView<Value>> {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::SpanView<Value> &value) {
 		return value.hash();
 	}
 };

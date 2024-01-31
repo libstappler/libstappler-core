@@ -23,7 +23,7 @@ THE SOFTWARE.
 
 #include "SPDbQuery.h"
 
-namespace stappler::db {
+namespace STAPPLER_VERSIONIZED stappler::db {
 
 Query::Field::Field(Field &&f) : name(std::move(f.name)), fields(std::move(f.fields)) { }
 

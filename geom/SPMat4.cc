@@ -24,7 +24,7 @@ This file was modified for stappler project
 #include "SPMat4.h"
 #include "SPQuaternion.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 constexpr float MATH_PIOVER2 = 1.57079632679489661923f;
 constexpr float MATH_EPSILON = 0.000001f;

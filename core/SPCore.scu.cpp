@@ -49,6 +49,7 @@ THE SOFTWARE.
 
 #include "platform/SPCore-linux.cc"
 #include "platform/SPCore-android.cc"
+#include "platform/SPCore-win32.cc"
 
 #ifdef MODULE_STAPPLER_DATA
 #include "SPData.cc"
@@ -61,3 +62,22 @@ THE SOFTWARE.
 #ifdef MODULE_STAPPLER_SQL
 #include "SPSql.cc"
 #endif
+
+namespace STAPPLER_VERSIONIZED stappler {
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+const char * getStapplerVersionString() {
+	return TOSTRING(STAPPLER_VERSION_NUMBER) "/" TOSTRING(STAPPLER_VERSION_BUILD);
+}
+
+uint32_t getStapplerVersionNumber() {
+	return STAPPLER_VERSION_NUMBER;
+}
+
+uint32_t getStapplerVersionBuild() {
+	return STAPPLER_VERSION_BUILD;
+}
+
+}

@@ -24,7 +24,7 @@ This file was modified for stappler project
 #include "SPVec2.h"
 #include "SPGeometry.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 static bool isOneDimensionSegmentOverlap(float A, float B, float C, float D, float *S, float * E) {
 	const float ABmin = std::min(A, B);

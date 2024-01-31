@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPIOCommon.h"
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 struct Buffer {
 	template <typename T, typename Traits = BufferTraits<T>> Buffer(T &t);

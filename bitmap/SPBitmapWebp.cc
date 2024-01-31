@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "webp/decode.h"
 #include "webp/encode.h"
 
-namespace stappler::bitmap::webp {
+namespace STAPPLER_VERSIONIZED stappler::bitmap::webp {
 
 static bool isWebpLossless(const uint8_t * data, size_t dataLen) {
 	if (dataLen <= 12) {

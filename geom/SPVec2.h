@@ -27,7 +27,7 @@ This file was modified for stappler project
 
 #include "SPGeom.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 class Mat4;
 struct Size2;

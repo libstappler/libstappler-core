@@ -26,7 +26,7 @@ THE SOFTWARE.
 #include "SPFilesystem.h"
 #include "gif_lib.h"
 
-namespace stappler::bitmap::gif {
+namespace STAPPLER_VERSIONIZED stappler::bitmap::gif {
 
 static bool isGif(const uint8_t * data, size_t dataLen) {
 	if (dataLen <= 8) {

@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include "SPCommon.h"
 #include "SPVec4.h"
 
-namespace stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::geom {
 
 #define LAYOUT_COLOR_SPEC_BASE(Name) \
 	static Color Name ## _50; \
@@ -423,7 +423,7 @@ constexpr const Color4F Color4F::ONE(1, 1, 1, 1);
 
 }
 
-namespace stappler {
+namespace STAPPLER_VERSIONIZED stappler {
 
 template <> inline
 geom::Color progress<geom::Color>(const geom::Color &a, const geom::Color &b, float p) {

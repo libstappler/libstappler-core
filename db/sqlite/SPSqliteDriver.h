@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPSqlDriver.h"
 
-namespace stappler::db::sqlite {
+namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 class Driver : public sql::Driver {
 public:

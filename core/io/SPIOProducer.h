@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPIOCommon.h"
 
-namespace stappler::io {
+namespace STAPPLER_VERSIONIZED stappler::io {
 
 struct ProducerTraitsStream {
 	using stream_type = std::basic_istream<char>;

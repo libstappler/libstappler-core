@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "SPDbBackendInterface.h"
 #include "SPDbField.h"
 
-namespace stappler::db::sql {
+namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 class Driver : public AllocBase {
 public:
