@@ -129,9 +129,6 @@ struct Allocator {
 };
 
 struct Pool {
-#if MODULE_STAPPLER_APR
-	uint64_t magic = POOL_MAGIC; // used to detect stappler pools
-#endif
 	Pool *parent = nullptr;
 	Pool *child = nullptr;
 	Pool *sibling = nullptr;
@@ -139,6 +136,9 @@ struct Pool {
 	Cleanup *cleanups = nullptr;
 	Cleanup *free_cleanups = nullptr;
 	Allocator *allocator = nullptr;
+#if MODULE_STAPPLER_APR
+	uint64_t magic = POOL_MAGIC; // used to detect stappler pools
+#endif
 	MemNode *active = nullptr;
 	MemNode *self = nullptr; /* The node containing the pool itself */
 	uint8_t *self_first_avail = nullptr;

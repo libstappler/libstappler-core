@@ -27,9 +27,9 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
-SqlQuery::SqlQuery(db::QueryInterface *iface, ApplicationInterface *app) {
+SqlQuery::SqlQuery(db::QueryInterface *iface, const Driver *driver) {
 	binder.setInterface(iface);
-	_application = app;
+	_driver = driver;
 }
 
 void SqlQuery::clear() {
@@ -37,11 +37,13 @@ void SqlQuery::clear() {
 	binder.clear();
 }
 
-static inline bool SqlQuery_comparationIsValid(const Field &f, Comparation comp) {
+static inline bool SqlQuery_comparationIsValid(const Driver *driver, const Field &f, Comparation comp) {
 	if (f.isIndexed() || comp == Comparation::IsNull || comp == Comparation::IsNotNull) {
 		if (f.getType() == Type::Custom) {
 			auto c = f.getSlot<FieldCustom>();
-			return c->isComparationAllowed(comp);
+			if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
+				return info->isComparationAllowed(*c, comp);
+			}
 		} else {
 			return db::checkIfComparationIsValid(f.getType(), comp, f.getFlags());
 		}
@@ -273,13 +275,15 @@ void SqlQuery::writeWhere(SqlQuery::WhereContinue &w, db::Operator op, const db:
 	}
 }
 
-static void SqlQuery_writeWhereData(ApplicationInterface *app, SqlQuery::WhereContinue &whi, db::Operator op, const db::Scheme &scheme, const db::Field &f,
+static void SqlQuery_writeWhereData(const Driver *driver, SqlQuery::WhereContinue &whi, db::Operator op, const db::Scheme &scheme, const db::Field &f,
 		Comparation compare, const Value &value1, const Value &value2) {
-	if (SqlQuery_comparationIsValid(f, compare)) {
+	if (SqlQuery_comparationIsValid(driver, f, compare)) {
 		auto type = f.getType();
 		if (type == Type::Custom) {
 			auto c = f.getSlot<FieldCustom>();
-			c->writeQuery(scheme, whi, op, f.getName(), compare, value1, value2);
+			if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
+				info->writeQuery(*c, scheme, whi, op, f.getName(), compare, value1, value2);
+			}
 		} else {
 			if ((compare == Comparation::Equal || compare == db::Comparation::NotEqual)
 					&& (type == Type::Integer || type == Type::Float || type == Type::Object || type == Type::Text)
@@ -321,7 +325,7 @@ static void SqlQuery_writeWhereData(ApplicationInterface *app, SqlQuery::WhereCo
 			}
 		}
 	} else {
-		app->error("Sql", "Condition is not applicable", Value({
+		driver->getApplicationInterface()->error("Sql", "Condition is not applicable", Value({
 			stappler::pair("scheme", Value(scheme.getName())),
 			stappler::pair("field", Value(f.getName())),
 			stappler::pair("cmp", Value(encodeComparation(compare).first)),
@@ -338,14 +342,14 @@ void SqlQuery::writeWhere(SqlQuery::WhereContinue &whi, db::Operator op, const d
 				whi.where(op, SqlQuery::Field(scheme.getName(), sel.field),
 						db::Comparation::Includes, RawStringView{ftsQuery});
 			}
-		} else if (SqlQuery_comparationIsValid(*f, sel.compare)) {
-			SqlQuery_writeWhereData(_application, whi, op, scheme, *f, sel.compare, sel.value1, sel.value2);
+		} else if (SqlQuery_comparationIsValid(_driver, *f, sel.compare)) {
+			SqlQuery_writeWhereData(_driver, whi, op, scheme, *f, sel.compare, sel.value1, sel.value2);
 		}
 	}
 }
 
 void SqlQuery::writeWhere(SqlQuery::WhereContinue &whi, db::Operator op, const db::Scheme &scheme, const db::Worker::ConditionData &sel) {
-	SqlQuery_writeWhereData(_application, whi, op, scheme, *sel.field, sel.compare, sel.value1, sel.value2);
+	SqlQuery_writeWhereData(_driver, whi, op, scheme, *sel.field, sel.compare, sel.value1, sel.value2);
 }
 
 void SqlQuery::writeOrdering(SqlQuery::SelectFrom &s, const db::Scheme &scheme, const db::Query &q, bool dropLimits) {
@@ -748,7 +752,7 @@ SqlQuery::Context::Context(SqlQuery &sql, const Scheme &s, const Worker &w, cons
 			hasAltLimit = (f->getType() == Type::FullTextView || !f->hasFlag(Flags::Unique));
 			softLimitIsFts = (f->getType() == Type::FullTextView);
 		} else {
-			sql._application->error("SqlQuery", "Invalid soft limit field", Value(field));
+			sql._driver->getApplicationInterface()->error("SqlQuery", "Invalid soft limit field", Value(field));
 		}
 	}
 }

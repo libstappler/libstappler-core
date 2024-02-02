@@ -39,6 +39,13 @@ db::Adapter ApplicationInterface::getAdapterFromContext() const {
 	return db::Adapter(nullptr, nullptr);
 }
 
+void ApplicationInterface::reportDbUpdate(StringView data, bool successful) {
+	auto dir = filepath::merge<Interface>(getDocuemntRoot(), ".reports");
+	filesystem::mkdir(dir);
+	auto path = toString(dir, "/update.", stappler::Time::now().toMilliseconds(), ".sql");
+	stappler::filesystem::write(path, (const uint8_t *)data.data(), data.size());
+}
+
 Adapter Adapter::FromContext(const ApplicationInterface *app) {
 	return app->getAdapterFromContext();
 }
@@ -667,7 +674,7 @@ Value ResultRow::toData(size_t n, const db::Field &f) {
 		return data::read<Interface, BytesView>(toBytes(n));
 		break;
 	case db::Type::Custom:
-		return f.getSlot<db::FieldCustom>()->readFromStorage(*result, n);
+		return result->toCustomData(f, f.getSlot<db::FieldCustom>());
 		break;
 	default:
 		break;

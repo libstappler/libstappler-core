@@ -146,6 +146,8 @@ SPUNUSED static String pg_numeric_to_string(BytesViewNetwork r) {
 
 	return str;
 }
+PgQueryInterface::PgQueryInterface(const sql::Driver *d)
+: driver(d) { }
 
 size_t PgQueryInterface::push(String &&val) {
 	params.emplace_back(Bytes());
@@ -276,7 +278,12 @@ void PgQueryInterface::bindValue(db::Binder &, StringStream &query, const Value 
 
 void PgQueryInterface::bindDataField(db::Binder &, StringStream &query, const db::Binder::DataField &f) {
 	if (f.field && f.field->getType() == db::Type::Custom) {
-		if (!f.field->getSlot<db::FieldCustom>()->writeToStorage(*this, query, f.data)) {
+		auto custom = f.field->getSlot<db::FieldCustom>();
+		if (auto info = driver->getCustomFieldInfo(custom->getDriverTypeName())) {
+			if (!info->writeToStorage(*custom, *this, query, f.data)) {
+				query << "NULL";
+			}
+		} else {
 			query << "NULL";
 		}
 	} else {
@@ -416,8 +423,8 @@ void Handle::close() {
 }
 
 void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb) {
-	PgQueryInterface interface;
-	db::sql::SqlQuery query(&interface, _driver->getApplicationInterface());
+	PgQueryInterface interface(_driver);
+	db::sql::SqlQuery query(&interface, _driver);
 	cb(query);
 }
 
@@ -512,6 +519,11 @@ bool Handle::isSuccess() const {
 bool Handle::beginTransaction_pg(TransactionLevel l) {
 	int64_t userId = _driver->getApplicationInterface()->getUserIdFromContext();
 	int64_t now = stappler::Time::now().toMicros();
+
+	if (transactionStatus != db::TransactionStatus::None) {
+		log::error("pq::Handle", "Transaction already started");
+		return false;
+	}
 
 	auto setVariables = [&] {
 		performSimpleQuery(toString("SET LOCAL serenity.\"user\" = ", userId, ";SET LOCAL serenity.\"now\" = ", now, ";"));

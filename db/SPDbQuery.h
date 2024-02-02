@@ -26,16 +26,8 @@ THE SOFTWARE.
 
 #include "SPDb.h"
 #include "SPSearchConfiguration.h"
-#include "SPSql.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
-
-using Operator = sql::Operator;
-using Comparation = sql::Comparation;
-using Ordering = sql::Ordering;
-
-using sql::encodeComparation;
-using sql::decodeComparation;
 
 enum class Resolve {
 	None = 0,

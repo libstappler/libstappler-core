@@ -70,6 +70,9 @@ SP_APR_EXPORT apr_status_t apr_pool_cleanup_null(void *data);
 SP_APR_EXPORT void apr_pool_cleanup_register( apr_pool_t *p, const void *data,
 		apr_status_t (*plain_cleanup)(void *), apr_status_t (*child_cleanup)(void *)) __attribute__((nonnull(3,4)));
 
+SP_APR_EXPORT void apr_pool_pre_cleanup_register( apr_pool_t *p, const void *data,
+		apr_status_t (*plain_cleanup)(void *)) __attribute__((nonnull(3)));
+
 SP_APR_EXPORT apr_status_t apr_pool_userdata_set(const void *data, const char *key,
 		apr_status_t (*cleanup)(void *), apr_pool_t *pool) __attribute__((nonnull(2,4)));
 
@@ -197,18 +200,21 @@ SPUNUSED static void clear(pool_t *p) {
 }
 
 SPUNUSED static void *alloc(pool_t *p, size_t &size) {
-	auto mngr = allocmngr_get(p);
-	if (size >= custom::BlockThreshold) {
-		return mngr->alloc(size, [] (void *p, size_t s) { return apr_palloc((pool_t *)p, s); });
-	} else {
-		mngr->increment_alloc(size);
-		return apr_palloc(p, size);
+	if (auto mngr = allocmngr_get(p)) {
+		if (size >= custom::BlockThreshold) {
+			return mngr->alloc(size, [] (void *p, size_t s) { return apr_palloc((pool_t *)p, s); });
+		} else {
+			mngr->increment_alloc(size);
+		}
 	}
+	return apr_palloc(p, size);
 }
 
 SPUNUSED static void free(pool_t *p, void *ptr, size_t size) {
 	if (size >= custom::BlockThreshold) {
-		return allocmngr_get(p)->free(ptr, size, [] (void *p, size_t s) { return apr_palloc((pool_t *)p, s); });
+		if (auto m = allocmngr_get(p)) {
+			return m->free(ptr, size, [] (void *p, size_t s) { return apr_palloc((pool_t *)p, s); });
+		}
 	}
 }
 
@@ -248,6 +254,14 @@ SPUNUSED static void cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *
 	data->pool = p;
 	data->callback = cb;
 	apr_pool_cleanup_register(p, data, &__CleaupData::doCleanup, apr_pool_cleanup_null);
+}
+
+SPUNUSED static void pre_cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *)) {
+	auto data = (__CleaupData *)apr_palloc(p, sizeof(__CleaupData));
+	data->data = ptr;
+	data->pool = p;
+	data->callback = cb;
+	apr_pool_pre_cleanup_register(p, data, &__CleaupData::doCleanup);
 }
 
 SPUNUSED static status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
@@ -293,7 +307,9 @@ SPUNUSED static bool isThreadSafeAsParent(pool_t *pool) {
 }
 
 static custom::AllocManager *allocmngr_get(pool_t *pool) {
-	wrapper_pool_t *p = (wrapper_pool_t *)pool;
+	return nullptr;
+
+	/*wrapper_pool_t *p = (wrapper_pool_t *)pool;
 	if (p->tag) {
 		auto m = (custom::AllocManager *)p->tag;
 		if (m->pool == pool) {
@@ -301,7 +317,7 @@ static custom::AllocManager *allocmngr_get(pool_t *pool) {
 		}
 	}
 
-	auto m = (custom::AllocManager *)palloc(pool, sizeof(custom::AllocManager *));
+	auto m = (custom::AllocManager *)apr_palloc(pool, sizeof(custom::AllocManager *));
 	m->pool = pool;
 	m->name = p->tag;
 
@@ -314,7 +330,7 @@ static custom::AllocManager *allocmngr_get(pool_t *pool) {
 	});
 
 	p->tag = (const char *)m;
-	return m;
+	return m;*/
 }
 
 SPUNUSED static const char *get_tag(pool_t *pool) {
@@ -361,6 +377,9 @@ SP_APR_EXPORT apr_status_t apr_pool_cleanup_null(void *data) { return 0; }
 
 SP_APR_EXPORT void apr_pool_cleanup_register( apr_pool_t *p, const void *data,
 		apr_status_t (*plain_cleanup)(void *), apr_status_t (*child_cleanup)(void *)) { }
+
+SP_APR_EXPORT void apr_pool_pre_cleanup_register( apr_pool_t *p, const void *data,
+		apr_status_t (*plain_cleanup)(void *)) { }
 
 SP_APR_EXPORT apr_status_t apr_pool_userdata_set(const void *data, const char *key,
 		apr_status_t (*cleanup)(void *), apr_pool_t *pool) { return 0; }

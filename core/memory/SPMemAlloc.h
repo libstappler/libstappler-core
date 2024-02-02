@@ -364,7 +364,7 @@ inline status_t AllocPool::cleanupObjectFromPool(void *data) {
 
 template <typename T>
 inline void AllocPool::registerCleanupDestructor(T *obj, pool_t *pool) {
-	pool::cleanup_register(pool, (void *)obj, &(cleanupObjectFromPool<T>));
+	pool::pre_cleanup_register(pool, (void *)obj, &(cleanupObjectFromPool<T>));
 }
 
 }

@@ -93,6 +93,8 @@ public:
 	virtual RequestData getRequestData() const { return RequestData(); }
 
 	virtual void initTransaction(db::Transaction &) const { }
+
+	virtual void reportDbUpdate(StringView, bool successful);
 };
 
 class Adapter final : public AllocBase {

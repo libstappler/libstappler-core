@@ -187,13 +187,13 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 
 	do {
 		sqlite3 *db = nullptr;
-		if (!dbname.starts_with("/")) {
-			dbname = StringView(filesystem::writablePath<Interface>(dbname)).pdup();
-			stappler::filesystem::mkdir_recursive(stappler::filepath::root(dbname), true);
-		}
 #if WIN32
 		dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
 #endif
+		if (!dbname.starts_with("/")) {
+			dbname = StringView(filepath::merge<Interface>(_application->getDocuemntRoot(), dbname)).pdup();
+			stappler::filesystem::mkdir(stappler::filepath::root(dbname));
+		}
 		if (sqlite3_open_v2(dbname.data(), &db, flags, nullptr) == SQLITE_OK) {
 			sqlite3_db_config(db, SQLITE_DBCONFIG_DQS_DDL, 0, nullptr);
 			sqlite3_db_config(db, SQLITE_DBCONFIG_DQS_DML, 0, nullptr);
@@ -309,8 +309,29 @@ void Driver::setUserId(Handle h, int64_t userId) const {
 }
 
 Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView mem)
-: sql::Driver(pool, app)
-{ _driverPath = mem.pdup(); }
+: sql::Driver(pool, app) {
+	_driverPath = mem.pdup();
+
+	auto it = _customFields.emplace(FieldIntArray::FIELD_NAME);
+	if (!FieldIntArray::regsterForSqlite(it.first->second)) {
+		_customFields.erase(it.first);
+	}
+
+	it = _customFields.emplace(FieldBigIntArray::FIELD_NAME);
+	if (!FieldBigIntArray::regsterForSqlite(it.first->second)) {
+		_customFields.erase(it.first);
+	}
+
+	it = _customFields.emplace(FieldPoint::FIELD_NAME);
+	if (!FieldPoint::regsterForSqlite(it.first->second)) {
+		_customFields.erase(it.first);
+	}
+
+	it = _customFields.emplace(FieldTextArray::FIELD_NAME);
+	if (!FieldTextArray::regsterForSqlite(it.first->second)) {
+		_customFields.erase(it.first);
+	}
+}
 
 bool ResultCursor::statusIsSuccess(int x) {
 	return (x == SQLITE_DONE) || (x == SQLITE_ROW) || (x == SQLITE_OK);
@@ -495,6 +516,15 @@ Value ResultCursor::toTypedData(size_t field) const {
 
 	return Value();
 }
+
+Value ResultCursor::toCustomData(size_t field, const FieldCustom *f) const {
+	auto info = driver->getCustomFieldInfo(f->getDriverTypeName());
+	if (!info) {
+		return Value();
+	}
+	return info->readFromStorage(*f, *this, field);
+}
+
 int64_t ResultCursor::toId() const {
 	return toInteger(0);
 }

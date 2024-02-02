@@ -45,7 +45,7 @@ public:
 
 	using TypeString = db::Binder::TypeString;
 
-	SqlQuery(db::QueryInterface *, ApplicationInterface *);
+	SqlQuery(db::QueryInterface *, const Driver *);
 
 	void clear();
 
@@ -85,7 +85,7 @@ public:
 	StringView getFullTextQuery(const db::Scheme &scheme, const db::Field &f, const db::Query::Select &it);
 
 protected:
-	ApplicationInterface *_application = nullptr;
+	const Driver *_driver = nullptr;
 	Map<String, String> _fulltextQueries;
 };
 

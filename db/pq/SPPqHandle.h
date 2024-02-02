@@ -93,6 +93,8 @@ class PgQueryInterface : public db::QueryInterface {
 public:
 	using Binder = db::Binder;
 
+	PgQueryInterface(const sql::Driver *);
+
 	size_t push(String &&val);
 	size_t push(const StringView &val);
 	size_t push(Bytes &&val);
@@ -121,6 +123,7 @@ public:
 public:
 	Vector<Bytes> params;
 	Vector<bool> binary;
+	const sql::Driver *driver = nullptr;
 };
 
 }

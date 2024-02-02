@@ -42,10 +42,6 @@ static std::bitset<6> s_logMask = (1 | 2 | 4 | 8);
 #endif
 
 static void DefaultLog2(LogType type, const StringView &tag, const StringView &text) {
-	if (s_logMask.test(toInt(type))) {
-		return;
-	}
-
 	std::stringstream stream;
 
 #if !ANDROID
@@ -163,16 +159,27 @@ struct CustomLogManager : RefBase<memory::StandartInterface> {
 	}
 
 	void log(LogType type, const StringView tag, CustomLog::Type t, CustomLog::VA &va) {
+		if (s_logMask.test(toInt(type))) {
+			return;
+		}
+
 		int count = logFuncCount.load();
 		if (count == 0) {
 			DefaultLog(type, tag, t, va);
 		} else {
+			bool success = true;
 			logFuncMutex.lock();
 			count = logFuncCount.load();
 			for (int i = 0; i < count; i++) {
-				logFuncArr[i](type, tag, t, va);
+				success = logFuncArr[i](type, tag, t, va);
+				if (!success) {
+					break;
+				}
 			}
 			logFuncMutex.unlock();
+			if (success) {
+				DefaultLog(type, tag, t, va);
+			}
 		}
 	}
 };

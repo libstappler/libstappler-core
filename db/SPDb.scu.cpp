@@ -25,9 +25,7 @@ THE SOFTWARE.
 #include "SPDbAdapter.cc"
 #include "SPDbContinueToken.cc"
 
-#include "SPDbFieldIntArray.cc"
-#include "SPDbFieldPoint.cc"
-#include "SPDbFieldTextArray.cc"
+#include "SPDbFieldExtensions.cc"
 #include "SPPqDriver.cc"
 #include "SPPqHandle.cc"
 #include "SPPqHandleInit.cc"

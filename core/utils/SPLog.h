@@ -56,7 +56,7 @@ struct CustomLog {
 		Format
 	};
 
-	using log_fn = void (*) (LogType, const StringView &, Type, VA &);
+	using log_fn = bool (*) (LogType, const StringView &, Type, VA &);
 
 	CustomLog(log_fn fn);
 	~CustomLog();

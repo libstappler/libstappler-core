@@ -278,6 +278,8 @@ public:
 
 	virtual Value toTypedData(size_t field) const = 0;
 
+	virtual Value toCustomData(size_t field, const FieldCustom *) const = 0;
+
 	virtual int64_t toId() const = 0;
 
 	virtual StringView getFieldName(size_t field) const = 0;

@@ -25,6 +25,7 @@ THE SOFTWARE.
 #include "SPPqHandle.h"
 #include "SPSqlHandle.h"
 #include "SPDso.h"
+#include "SPDbFieldExtensions.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
@@ -683,6 +684,28 @@ Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView path, const v
 			});
 		}
 	}
+
+	if (_handle) {
+		auto it = _customFields.emplace(FieldIntArray::FIELD_NAME);
+		if (!FieldIntArray::regsterForPostgres(it.first->second)) {
+			_customFields.erase(it.first);
+		}
+
+		it = _customFields.emplace(FieldBigIntArray::FIELD_NAME);
+		if (!FieldBigIntArray::regsterForPostgres(it.first->second)) {
+			_customFields.erase(it.first);
+		}
+
+		it = _customFields.emplace(FieldPoint::FIELD_NAME);
+		if (!FieldPoint::regsterForPostgres(it.first->second)) {
+			_customFields.erase(it.first);
+		}
+
+		it = _customFields.emplace(FieldTextArray::FIELD_NAME);
+		if (!FieldTextArray::regsterForPostgres(it.first->second)) {
+			_customFields.erase(it.first);
+		}
+	}
 }
 
 ResultCursor::ResultCursor(const Driver *d, Driver::Result res) : driver(d), result(res) {
@@ -856,6 +879,15 @@ Value ResultCursor::toTypedData(size_t field) const {
 	}
 	return Value();
 }
+
+Value ResultCursor::toCustomData(size_t field, const FieldCustom *f) const {
+	auto info = driver->getCustomFieldInfo(f->getDriverTypeName());
+	if (!info) {
+		return Value();
+	}
+	return info->readFromStorage(*f, *this, field);
+}
+
 int64_t ResultCursor::toId() const {
 	if (isBinaryFormat(0)) {
 		stappler::BytesViewNetwork r((const uint8_t *)driver->getValue(result, 0, 0), driver->getLength(result, 0, 0));
@@ -927,107 +959,29 @@ Driver::Status ResultCursor::getError() const {
 
 }
 
-#if SPAPR
-#include "apr_dbd.h"
-#include "mod_dbd.h"
-#include <postgresql/libpq-fe.h>
-
-struct apr_dbd_transaction_t {
-    int mode;
-    int errnum;
-    apr_dbd_t *handle;
-};
-
-struct apr_dbd_t {
-    PGconn *conn;
-    apr_dbd_transaction_t *trans;
-};
-
 namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
-Driver::Handle Driver::doConnect(const char * const *keywords, const char * const *values, int expand_dbname) const {
-	auto p = pool::acquire();
-	if (_external) {
-		ConnStatusType status = CONNECTION_OK;
-		PGconn * ret = (PGconn *)_handle->PQconnectdbParams(keywords, values, expand_dbname);
-		if (ret) {
-			status = _handle->PQstatus(ret);
-			if (status != CONNECTION_OK) {
-				_handle->PQfinish(ret);
-				return Driver::Handle(nullptr);
-			}
-			_handle->PQsetNoticeProcessor(ret, Driver_noticeMessage, (void *)this);
-		}
-		if (ret && status == CONNECTION_OK) {
-			apr_dbd_t *dbd = (apr_dbd_t *)pool::palloc(p, sizeof(apr_dbd_t));
-			dbd->conn = ret;
-			dbd->trans = (apr_dbd_transaction_t *)pool::palloc(p, sizeof(apr_dbd_transaction_t));
-			dbd->trans->mode = 0;
-			dbd->trans->errnum = CONNECTION_OK;
-			dbd->trans->handle = dbd;
+/* HTTPD ap_dbd_t mimic */
+struct DriverConnectionHandle {
+	void *connection;
+};
 
-			ap_dbd_t *db = (ap_dbd_t *)pool::palloc(p, sizeof(ap_dbd_t));
-			db->handle = dbd;
-			db->driver = (const apr_dbd_driver_t *)_external;
-			db->pool = p;
-			db->prepared = nullptr;
-
-			pool::cleanup_register(p, [h = (DriverSym *)_handle, ret] {
-				h->PQfinish(ret);
-			});
-
-			return Driver::Handle(db);
-		}
-	} else {
-		auto h = (DriverHandle *)pool::palloc(p, sizeof(DriverHandle));
-		h->pool = p;
-		h->driver = this;
-		h->conn = _handle->PQconnectdbParams(keywords, values, expand_dbname);
-
-		if (h->conn) {
-			if (_handle->PQstatus(h->conn) != CONNECTION_OK) {
-				_handle->PQfinish(h->conn);
-				return Driver::Handle(nullptr);
-			}
-			_handle->PQsetNoticeProcessor(h->conn, Driver_noticeMessage, (void *)this);
-
-			pool::cleanup_register(p, [h = (DriverSym *)_handle, ret = h->conn] {
-				h->PQfinish(ret);
-			});
-
-			return Driver::Handle(h);
-		}
-	}
-	return Driver::Handle(nullptr);
-}
-
-Driver::Connection Driver::getConnection(Handle _h) const {
-	if (_external) {
-		auto h = (ap_dbd_t *)_h.get();
-		if (strcmp(apr_dbd_name(h->driver), "pgsql") == 0) {
-			return Driver::Connection(apr_dbd_native_handle(h->driver, h->handle));
-		}
-	} else {
-		auto h = (DriverHandle *)_h.get();
-		return Driver::Connection(h->conn);
-	}
-
-	return Driver::Connection(nullptr);
-}
-
-}
-
-#else
-
-namespace STAPPLER_VERSIONIZED stappler::db::pq {
+struct DriverExternalHandle {
+	DriverConnectionHandle *handle;
+	void *driver;
+};
 
 Driver::Handle Driver::doConnect(const char * const *keywords, const char * const *values, int expand_dbname) const {
+	if (_external) {
+		log::error("pq::Driver", "Driver in external mode can not do connection by itself");
+		return Driver::Handle(nullptr);
+	}
+
 	auto p = pool::acquire();
 	auto h = (DriverHandle *)pool::palloc(p, sizeof(DriverHandle));
 	h->pool = p;
 	h->driver = this;
-	h->ctime = Time::now();
-	h->conn = (_handle->PQconnectdbParams(keywords, values, expand_dbname));
+	h->conn = _handle->PQconnectdbParams(keywords, values, expand_dbname);
 
 	if (h->conn) {
 		if (_handle->PQstatus(h->conn) != CONNECTION_OK) {
@@ -1036,8 +990,11 @@ Driver::Handle Driver::doConnect(const char * const *keywords, const char * cons
 		}
 		_handle->PQsetNoticeProcessor(h->conn, Driver_noticeMessage, (void *)this);
 
-		pool::cleanup_register(p, [h = (DriverSym *)_handle, ret = h->conn] {
-			h->PQfinish(ret);
+		pool::cleanup_register(p, [h = (DriverSym *)_handle, ret = h] {
+			if (ret->conn) {
+				h->PQfinish(ret->conn);
+				ret->conn = nullptr;
+			}
 		});
 
 		return Driver::Handle(h);
@@ -1046,9 +1003,16 @@ Driver::Handle Driver::doConnect(const char * const *keywords, const char * cons
 }
 
 Driver::Connection Driver::getConnection(Handle _h) const {
-	auto h = (DriverHandle *)_h.get();
-	return Driver::Connection(h->conn);
+	if (_external) {
+		auto h = (DriverExternalHandle *)_h.get();
+		if (h->driver == _external) {
+			return Driver::Connection(h->handle->connection);
+		}
+	} else {
+		auto h = (DriverHandle *)_h.get();
+		return Driver::Connection(h->conn);
+	}
+	return Driver::Connection(nullptr);
 }
 
 }
-#endif

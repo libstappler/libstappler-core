@@ -37,6 +37,48 @@ enum class TransactionLevel {
 	Exclusive,
 };
 
+class SqliteQueryInterface : public db::QueryInterface {
+public:
+	using Binder = db::Binder;
+
+	struct BindingData {
+		uint32_t idx = 0;
+		Bytes data;
+		Type type;
+	};
+
+	SqliteQueryInterface(const sql::Driver *d);
+
+	size_t push(String &&val);
+	size_t push(const StringView &val);
+	size_t push(Bytes &&val);
+	size_t push(StringStream &query, const Value &val, bool force, bool compress = false);
+
+	virtual void bindInt(db::Binder &, StringStream &query, int64_t val) override;
+	virtual void bindUInt(db::Binder &, StringStream &query, uint64_t val) override;
+	virtual void bindDouble(db::Binder &, StringStream &query, double val) override;
+	virtual void bindString(db::Binder &, StringStream &query, const String &val) override;
+	virtual void bindMoveString(db::Binder &, StringStream &query, String &&val) override;
+	virtual void bindStringView(db::Binder &, StringStream &query, const StringView &val) override;
+	virtual void bindBytes(db::Binder &, StringStream &query, const Bytes &val) override;
+	virtual void bindMoveBytes(db::Binder &, StringStream &query, Bytes &&val) override;
+	virtual void bindCoderSource(db::Binder &, StringStream &query, const stappler::CoderSource &val) override;
+	virtual void bindValue(db::Binder &, StringStream &query, const Value &val) override;
+	virtual void bindDataField(db::Binder &, StringStream &query, const db::Binder::DataField &f) override;
+	virtual void bindTypeString(db::Binder &, StringStream &query, const db::Binder::TypeString &type) override;
+	virtual void bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) override;
+	virtual void bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) override;
+	virtual void bindFullTextData(db::Binder &, StringStream &query, const db::FullTextData &d) override;
+	virtual void bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) override;
+	virtual void bindDoubleVector(Binder &b, StringStream &query, const Vector<double> &vec) override;
+	virtual void bindStringVector(Binder &b, StringStream &query, const Vector<StringView> &vec) override;
+	virtual void clear() override;
+
+public:
+	const sql::Driver *driver = nullptr;
+	Vector<BindingData> params;
+};
+
 class Handle : public db::sql::SqlHandle {
 public:
 	Handle(const Driver *, Driver::Handle);

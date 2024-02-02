@@ -105,6 +105,8 @@ void free(pool_t *, void *ptr, size_t size);
 void cleanup_kill(pool_t *, void *, cleanup_fn);
 void cleanup_register(pool_t *, void *, cleanup_fn);
 void cleanup_register(pool_t *p, memory::function<void()> &&cb);
+void pre_cleanup_register(pool_t *, void *, cleanup_fn);
+void pre_cleanup_register(pool_t *p, memory::function<void()> &&cb);
 
 void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const void *));
 

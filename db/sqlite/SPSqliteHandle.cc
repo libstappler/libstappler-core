@@ -29,234 +29,228 @@ namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 static std::mutex s_logMutex;
 
-class SqliteQueryInterface : public db::QueryInterface {
-public:
-	using Binder = db::Binder;
+SqliteQueryInterface::SqliteQueryInterface(const sql::Driver *d)
+: driver(d) { }
 
-	struct BindingData {
-		uint32_t idx = 0;
-		Bytes data;
-		Type type;
-	};
+size_t SqliteQueryInterface::push(String &&val) {
+	auto &it = params.emplace_back(BindingData());
+	it.data.assign_strong((uint8_t *)val.data(), val.size() + 1);
+	it.idx = params.size();
+	it.type = Type::Text;
+	return it.idx;
+}
 
-	size_t push(String &&val) {
-		auto &it = params.emplace_back(BindingData());
-		it.data.assign_strong((uint8_t *)val.data(), val.size() + 1);
-		it.idx = params.size();
-		it.type = Type::Text;
-		return it.idx;
-	}
+size_t SqliteQueryInterface::push(const StringView &val) {
+	auto &it = params.emplace_back(BindingData());
+	it.data.assign_strong((uint8_t *)val.data(), val.size() + 1);
+	it.data.data()[val.size()] = 0;
+	it.idx = params.size();
+	it.type = Type::Text;
+	return it.idx;
+}
 
-	size_t push(const StringView &val) {
-		auto &it = params.emplace_back(BindingData());
-		it.data.assign_strong((uint8_t *)val.data(), val.size() + 1);
-		it.data.data()[val.size()] = 0;
-		it.idx = params.size();
-		it.type = Type::Text;
-		return it.idx;
-	}
+size_t SqliteQueryInterface::push(Bytes &&val) {
+	auto &it = params.emplace_back(BindingData());
+	it.data = std::move(val);
+	it.idx = params.size();
+	it.type = Type::Bytes;
+	return it.idx;
+}
 
-	size_t push(Bytes &&val) {
-		auto &it = params.emplace_back(BindingData());
-		it.data = std::move(val);
-		it.idx = params.size();
-		it.type = Type::Bytes;
-		return it.idx;
-	}
-
-	size_t push(StringStream &query, const Value &val, bool force, bool compress = false) {
-		if (!force || val.getType() == Value::Type::EMPTY) {
-			switch (val.getType()) {
-			case Value::Type::EMPTY: query << "NULL"; break;
-			case Value::Type::BOOLEAN: query << (val.asBool() ? "TRUE" : "FALSE"); break;
-			case Value::Type::INTEGER: query << val.asInteger(); break;
-			case Value::Type::DOUBLE:
-				if (std::isnan(val.asDouble())) {
-					query << "'NaN'";
-				} else if (val.asDouble() == std::numeric_limits<double>::infinity()) {
-					query << "'-Infinity'";
-				} else if (-val.asDouble() == std::numeric_limits<double>::infinity()) {
-					query << "'Infinity'";
-				} else {
-					query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << val.asDouble();
-				}
-				break;
-			case Value::Type::CHARSTRING:
-				query << "?" << push(val.getString());
-				break;
-			case Value::Type::BYTESTRING:
-				query << "?" << push(val.asBytes());
-				break;
-			case Value::Type::ARRAY:
-			case Value::Type::DICTIONARY:
-				query << "?" << push(data::write<Interface>(val, EncodeFormat(EncodeFormat::Cbor,
-						compress ? EncodeFormat::LZ4HCCompression : EncodeFormat::DefaultCompress)));
-				break;
-			default: break;
+size_t SqliteQueryInterface::push(StringStream &query, const Value &val, bool force, bool compress) {
+	if (!force || val.getType() == Value::Type::EMPTY) {
+		switch (val.getType()) {
+		case Value::Type::EMPTY: query << "NULL"; break;
+		case Value::Type::BOOLEAN: query << (val.asBool() ? "TRUE" : "FALSE"); break;
+		case Value::Type::INTEGER: query << val.asInteger(); break;
+		case Value::Type::DOUBLE:
+			if (std::isnan(val.asDouble())) {
+				query << "'NaN'";
+			} else if (val.asDouble() == std::numeric_limits<double>::infinity()) {
+				query << "'-Infinity'";
+			} else if (-val.asDouble() == std::numeric_limits<double>::infinity()) {
+				query << "'Infinity'";
+			} else {
+				query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << val.asDouble();
 			}
-		} else {
+			break;
+		case Value::Type::CHARSTRING:
+			query << "?" << push(val.getString());
+			break;
+		case Value::Type::BYTESTRING:
+			query << "?" << push(val.asBytes());
+			break;
+		case Value::Type::ARRAY:
+		case Value::Type::DICTIONARY:
 			query << "?" << push(data::write<Interface>(val, EncodeFormat(EncodeFormat::Cbor,
 					compress ? EncodeFormat::LZ4HCCompression : EncodeFormat::DefaultCompress)));
+			break;
+		default: break;
 		}
-		return params.size();
+	} else {
+		query << "?" << push(data::write<Interface>(val, EncodeFormat(EncodeFormat::Cbor,
+				compress ? EncodeFormat::LZ4HCCompression : EncodeFormat::DefaultCompress)));
 	}
+	return params.size();
+}
 
-	virtual void bindInt(db::Binder &, StringStream &query, int64_t val) override {
-		query << val;
+void SqliteQueryInterface::bindInt(db::Binder &, StringStream &query, int64_t val) {
+	query << val;
+}
+void SqliteQueryInterface::bindUInt(db::Binder &, StringStream &query, uint64_t val) {
+	query << val;
+}
+void SqliteQueryInterface::bindDouble(db::Binder &, StringStream &query, double val) {
+	query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << val;
+}
+void SqliteQueryInterface::bindString(db::Binder &, StringStream &query, const String &val) {
+	if (auto num = push(String(val))) {
+		query << "?" << num;
 	}
-	virtual void bindUInt(db::Binder &, StringStream &query, uint64_t val) override {
-		query << val;
+}
+void SqliteQueryInterface::bindMoveString(db::Binder &, StringStream &query, String &&val) {
+	if (auto num = push(std::move(val))) {
+		query << "?" << num;
 	}
-	virtual void bindDouble(db::Binder &, StringStream &query, double val) override {
-		query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << val;
+}
+void SqliteQueryInterface::bindStringView(db::Binder &, StringStream &query, const StringView &val) {
+	if (auto num = push(val)) {
+		query << "?" << num;
 	}
-	virtual void bindString(db::Binder &, StringStream &query, const String &val) override {
-		if (auto num = push(String(val))) {
-			query << "?" << num;
-		}
+}
+void SqliteQueryInterface::bindBytes(db::Binder &, StringStream &query, const Bytes &val) {
+	if (auto num = push(Bytes(val))) {
+		query << "?" << num;
 	}
-	virtual void bindMoveString(db::Binder &, StringStream &query, String &&val) override {
-		if (auto num = push(std::move(val))) {
-			query << "?" << num;
-		}
+}
+void SqliteQueryInterface::bindMoveBytes(db::Binder &, StringStream &query, Bytes &&val) {
+	if (auto num = push(std::move(val))) {
+		query << "?" << num;
 	}
-	virtual void bindStringView(db::Binder &, StringStream &query, const StringView &val) override {
-		if (auto num = push(val)) {
-			query << "?" << num;
-		}
+}
+void SqliteQueryInterface::bindCoderSource(db::Binder &, StringStream &query, const stappler::CoderSource &val) {
+	if (auto num = push(Bytes(val.data(), val.data() + val.size()))) {
+		query << "?" << num;
 	}
-	virtual void bindBytes(db::Binder &, StringStream &query, const Bytes &val) override {
-		if (auto num = push(Bytes(val))) {
-			query << "?" << num;
-		}
-	}
-	virtual void bindMoveBytes(db::Binder &, StringStream &query, Bytes &&val) override {
-		if (auto num = push(std::move(val))) {
-			query << "?" << num;
-		}
-	}
-	virtual void bindCoderSource(db::Binder &, StringStream &query, const stappler::CoderSource &val) override {
-		if (auto num = push(Bytes(val.data(), val.data() + val.size()))) {
-			query << "?" << num;
-		}
-	}
-	virtual void bindValue(db::Binder &, StringStream &query, const Value &val) override {
-		push(query, val, false);
-	}
-	virtual void bindDataField(db::Binder &, StringStream &query, const db::Binder::DataField &f) override {
-		if (f.field && f.field->getType() == db::Type::Custom) {
-			if (!f.field->getSlot<db::FieldCustom>()->writeToStorage(*this, query, f.data)) {
+}
+void SqliteQueryInterface::bindValue(db::Binder &, StringStream &query, const Value &val) {
+	push(query, val, false);
+}
+void SqliteQueryInterface::bindDataField(db::Binder &, StringStream &query, const db::Binder::DataField &f) {
+	if (f.field && f.field->getType() == db::Type::Custom) {
+		auto c = f.field->getSlot<db::FieldCustom>();
+		if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
+			if (!info->writeToStorage(*c, *this, query, f.data)) {
 				query << "NULL";
 			}
 		} else {
-			push(query, f.data, f.force, f.compress);
-		}
-	}
-	virtual void bindTypeString(db::Binder &, StringStream &query, const db::Binder::TypeString &type) override {
-		if (auto num = push(type.str)) {
-			query << "?" << num;
-		}
-	}
-
-	virtual void bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) override {
-		query << " NULL";
-		/*if (!d.data || !d.data.isArray() || d.data.size() == 0) {
 			query << "NULL";
-		} else {
-			bool first = true;
-			for (auto &it : d.data.asArray()) {
-				auto &data = it.getString(0);
-				auto lang = stappler::search::Language(it.getInteger(1));
-				auto rank = stappler::search::SearchData::Rank(it.getInteger(2));
-				auto type = stappler::search::SearchData::Type(it.getInteger(3));
+		}
+	} else {
+		push(query, f.data, f.force, f.compress);
+	}
+}
+void SqliteQueryInterface::bindTypeString(db::Binder &, StringStream &query, const db::Binder::TypeString &type) {
+	if (auto num = push(type.str)) {
+		query << "?" << num;
+	}
+}
 
-				if (!data.empty()) {
-					if (!first) { query << " || "; } else { first = false; }
-					auto dataIdx = push(data);
-					if (type == stappler::search::SearchData::Parse) {
-						if (rank == stappler::search::SearchData::Unknown) {
-							query << " to_tsvector('" << stappler::search::getLanguageName(lang) << "', $" << dataIdx << "::text)";
-						} else {
-							query << " setweight(to_tsvector('" << stappler::search::getLanguageName(lang) << "', $" << dataIdx << "::text), '" << char('A' + char(rank)) << "')";
-						}
+void SqliteQueryInterface::bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) {
+	query << " NULL";
+	/*if (!d.data || !d.data.isArray() || d.data.size() == 0) {
+		query << "NULL";
+	} else {
+		bool first = true;
+		for (auto &it : d.data.asArray()) {
+			auto &data = it.getString(0);
+			auto lang = stappler::search::Language(it.getInteger(1));
+			auto rank = stappler::search::SearchData::Rank(it.getInteger(2));
+			auto type = stappler::search::SearchData::Type(it.getInteger(3));
+
+			if (!data.empty()) {
+				if (!first) { query << " || "; } else { first = false; }
+				auto dataIdx = push(data);
+				if (type == stappler::search::SearchData::Parse) {
+					if (rank == stappler::search::SearchData::Unknown) {
+						query << " to_tsvector('" << stappler::search::getLanguageName(lang) << "', $" << dataIdx << "::text)";
 					} else {
-						query << " $" << dataIdx << "::tsvector";
+						query << " setweight(to_tsvector('" << stappler::search::getLanguageName(lang) << "', $" << dataIdx << "::text), '" << char('A' + char(rank)) << "')";
 					}
 				} else {
-					query << " NULL";
+					query << " $" << dataIdx << "::tsvector";
 				}
+			} else {
+				query << " NULL";
 			}
-		}*/
-	}
-
-	virtual void bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) override {
-		query << " NULL";
-		/*int normalizationValue = 0;
-		if (d.field->hasFlag(db::Flags::TsNormalize_DocLength)) {
-			normalizationValue |= 2;
-		} else if (d.field->hasFlag(db::Flags::TsNormalize_DocLengthLog)) {
-			normalizationValue |= 1;
-		} else if (d.field->hasFlag(db::Flags::TsNormalize_UniqueWordsCount)) {
-			normalizationValue |= 8;
-		} else if (d.field->hasFlag(db::Flags::TsNormalize_UniqueWordsCountLog)) {
-			normalizationValue |= 16;
 		}
-		query << " ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", " << d.query << ", " << normalizationValue << ")";*/
-	}
+	}*/
+}
 
-	virtual void bindFullTextData(db::Binder &, StringStream &query, const db::FullTextData &d) override {
-		query << " NULL";
-		/*auto idx = push(String(d.buffer));
-		switch (d.type) {
-		case db::FullTextData::Parse:
-			query  << " websearch_to_tsquery('" << d.getLanguage() << "', $" << idx << "::text)";
-			break;
-		case db::FullTextData::Cast:
-			query  << " to_tsquery('" << d.getLanguage() << "', $" << idx << "::text)";
-			break;
-		case db::FullTextData::ForceCast:
-			query  << " $" << idx << "::tsquery ";
-			break;
-		}*/
+void SqliteQueryInterface::bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) {
+	query << " NULL";
+	/*int normalizationValue = 0;
+	if (d.field->hasFlag(db::Flags::TsNormalize_DocLength)) {
+		normalizationValue |= 2;
+	} else if (d.field->hasFlag(db::Flags::TsNormalize_DocLengthLog)) {
+		normalizationValue |= 1;
+	} else if (d.field->hasFlag(db::Flags::TsNormalize_UniqueWordsCount)) {
+		normalizationValue |= 8;
+	} else if (d.field->hasFlag(db::Flags::TsNormalize_UniqueWordsCountLog)) {
+		normalizationValue |= 16;
 	}
+	query << " ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", " << d.query << ", " << normalizationValue << ")";*/
+}
 
-	virtual void bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) override {
-		query << "(";
-		bool start = true;
-		for (auto &it : vec) {
-			if (start) { start = false; } else { query << ","; }
-			query << it;
-		}
-		query << ")";
+void SqliteQueryInterface::bindFullTextData(db::Binder &, StringStream &query, const db::FullTextData &d) {
+	query << " NULL";
+	/*auto idx = push(String(d.buffer));
+	switch (d.type) {
+	case db::FullTextData::Parse:
+		query  << " websearch_to_tsquery('" << d.getLanguage() << "', $" << idx << "::text)";
+		break;
+	case db::FullTextData::Cast:
+		query  << " to_tsquery('" << d.getLanguage() << "', $" << idx << "::text)";
+		break;
+	case db::FullTextData::ForceCast:
+		query  << " $" << idx << "::tsquery ";
+		break;
+	}*/
+}
+
+void SqliteQueryInterface::bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) {
+	query << "(";
+	bool start = true;
+	for (auto &it : vec) {
+		if (start) { start = false; } else { query << ","; }
+		query << it;
 	}
+	query << ")";
+}
 
-	virtual void bindDoubleVector(Binder &b, StringStream &query, const Vector<double> &vec) override {
-		query << "(";
-		bool start = true;
-		for (auto &it : vec) {
-			if (start) { start = false; } else { query << ","; }
-			bindDouble(b, query, it);
-		}
-		query << ")";
+void SqliteQueryInterface::bindDoubleVector(Binder &b, StringStream &query, const Vector<double> &vec) {
+	query << "(";
+	bool start = true;
+	for (auto &it : vec) {
+		if (start) { start = false; } else { query << ","; }
+		bindDouble(b, query, it);
 	}
+	query << ")";
+}
 
-	virtual void bindStringVector(Binder &b, StringStream &query, const Vector<StringView> &vec) override {
-		query << "(";
-		bool start = true;
-		for (auto &it : vec) {
-			if (start) { start = false; } else { query << ","; }
-			bindStringView(b, query, it);
-		}
-		query << ")";
+void SqliteQueryInterface::bindStringVector(Binder &b, StringStream &query, const Vector<StringView> &vec) {
+	query << "(";
+	bool start = true;
+	for (auto &it : vec) {
+		if (start) { start = false; } else { query << ","; }
+		bindStringView(b, query, it);
 	}
+	query << ")";
+}
 
-	virtual void clear() override {
-		params.clear();
-	}
-
-public:
-	Vector<BindingData> params;
-};
+void SqliteQueryInterface::clear() {
+	params.clear();
+}
 
 Handle::Handle(const Driver *d, Driver::Handle h) : SqlHandle(d), driver(d), handle(h) {
 	_profile = stappler::sql::Profile::Sqlite;
@@ -286,8 +280,8 @@ void Handle::close() {
 }
 
 void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb) {
-	SqliteQueryInterface interface;
-	db::sql::SqlQuery query(&interface, _driver->getApplicationInterface());
+	SqliteQueryInterface interface(_driver);
+	db::sql::SqlQuery query(&interface, _driver);
 	query.setProfile(_profile);
 	cb(query);
 }

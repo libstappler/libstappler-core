@@ -62,7 +62,7 @@ struct ColRec {
 struct TableRec {
 	using Scheme = db::Scheme;
 
-	static Map<StringView, TableRec> parse(const BackendInterface::Config &cfg,
+	static Map<StringView, TableRec> parse(const Driver *driver, const BackendInterface::Config &cfg,
 			const Map<StringView, const Scheme *> &s, const Vector<Pair<StringView, int64_t>> &);
 	static Map<StringView, TableRec> get(Handle &h, StringStream &stream);
 
@@ -71,7 +71,7 @@ struct TableRec {
 			const Map<StringView, const db::Scheme *> &s);
 
 	TableRec();
-	TableRec(const BackendInterface::Config &cfg, const db::Scheme *scheme,
+	TableRec(const Driver *d, const BackendInterface::Config &cfg, const db::Scheme *scheme,
 			const Vector<Pair<StringView, int64_t>> &customs);
 
 	Map<String, ColRec> cols;
@@ -533,12 +533,12 @@ void TableRec::writeCompareResult(StringStream &stream,
 	}
 }
 
-Map<StringView, TableRec> TableRec::parse(const BackendInterface::Config &cfg,
+Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInterface::Config &cfg,
 		const Map<StringView, const db::Scheme *> &s, const Vector<Pair<StringView, int64_t>> &customs) {
 	Map<StringView, TableRec> tables;
 	for (auto &it : s) {
 		auto scheme = it.second;
-		tables.emplace(scheme->getName(), TableRec(cfg, scheme, customs));
+		tables.emplace(scheme->getName(), TableRec(driver, cfg, scheme, customs));
 
 		// check for extra tables
 		for (auto &fit : scheme->getFields()) {
@@ -776,7 +776,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 }
 
 TableRec::TableRec() : objects(false) { }
-TableRec::TableRec(const BackendInterface::Config &cfg, const db::Scheme *scheme,
+TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, const db::Scheme *scheme,
 		const Vector<Pair<StringView, int64_t>> &customs) {
 	StringStream hashStreamAfter; hashStreamAfter << getDefaultFunctionVersion();
 	StringStream hashStreamBefore; hashStreamBefore << getDefaultFunctionVersion();
@@ -866,20 +866,21 @@ TableRec::TableRec(const BackendInterface::Config &cfg, const db::Scheme *scheme
 
 		case db::Type::Custom:
 			if (auto objSlot = f.getSlot<db::FieldCustom>()) {
-				auto name = objSlot->getTypeName();
-				int64_t oid = 0;
-				for (auto &it : customs) {
-					if (it.first == name) {
-						oid = it.second;
-						break;
+				if (auto info = driver->getCustomFieldInfo(objSlot->getDriverTypeName())) {
+					int64_t oid = 0;
+					for (auto &it : customs) {
+						if (it.first == info->typeName) {
+							oid = it.second;
+							break;
+						}
 					}
+					if (oid) {
+						cols.emplace(it.first, ColRec(info->typeName, oid, f.hasFlag(db::Flags::Required)));
+					} else {
+						cols.emplace(it.first, ColRec(info->typeName, f.hasFlag(db::Flags::Required)));
+					}
+					emplaced = true;
 				}
-				if (oid) {
-					cols.emplace(it.first, ColRec(objSlot->getTypeName(), oid, f.hasFlag(db::Flags::Required)));
-				} else {
-					cols.emplace(it.first, ColRec(objSlot->getTypeName(), f.hasFlag(db::Flags::Required)));
-				}
-				emplaced = true;
 			}
 			break;
 		}
@@ -916,7 +917,11 @@ TableRec::TableRec(const BackendInterface::Config &cfg, const db::Scheme *scheme
 					|| (f.hasFlag(db::Flags::Indexed) && !f.hasFlag(db::Flags::Unique))) {
 				if (type == db::Type::Custom) {
 					auto c = f.getSlot<db::FieldCustom>();
-					indexes.emplace(toString(name, "_idx_", c->getIndexName()), c->getIndexField());
+					if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
+						if (info->isIndexable) {
+							indexes.emplace(toString(name, "_idx_", info->getIndexName(*c)), info->getIndexDefinition(*c));
+						}
+					}
 				} else if (type == db::Type::FullTextView) {
 					indexes.emplace(toString(name, "_idx_", it.first), toString("USING GIN ( \"", it.first, "\" )"));
 				} else {
@@ -989,7 +994,9 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 		for (auto &f : it.second->getFields()) {
 			if (f.second.getType() == Type::Custom) {
 				auto objSlot = f.second.getSlot<db::FieldCustom>();
-				Handle_insert_sorted(customFields, objSlot->getTypeName());
+				if (auto info = driver->getCustomFieldInfo(objSlot->getDriverTypeName())) {
+					Handle_insert_sorted(customFields, info->typeName);
+				}
 			}
 		}
 	}
@@ -1022,27 +1029,31 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 		performSimpleQuery("DROP TABLE custom_fields;");
 	}
 
-	auto requiredTables = TableRec::parse(cfg, s, customFields);
+	auto requiredTables = TableRec::parse(driver, cfg, s, customFields);
 	auto existedTables = TableRec::get(*this, tables);
 
 	StringStream stream;
 	TableRec::writeCompareResult(stream, requiredTables, existedTables, s);
 
-	auto name = toString(".db/update.", stappler::Time::now().toMilliseconds(), ".sql");
 	if (stream.size() > 3) {
+		bool success = true;
 		if (performSimpleQuery(stream.weak(), [&] (const Value &errInfo) {
 			stream << "Server: " << cfg.name << "\n";
 			stream << "\nErrorInfo: " << EncodeFormat::Pretty << errInfo << "\n";
 		})) {
 			performSimpleQuery("COMMIT;"_weak);
 		} else {
-			log::error("Database", "Fail to perform update ", name.c_str());
+			log::error("Database", "Fail to perform database update");
 			stream << "\nError: " << driver->getStatusMessage(lastError) << "\n";
 			performSimpleQuery("ROLLBACK;"_weak);
+			success = false;
 		}
 
 		tables << "\n" << stream;
-		stappler::filesystem::write(name, (const uint8_t *)tables.data(), tables.size());
+		_driver->getApplicationInterface()->reportDbUpdate(tables.weak(), success);
+		if (!success) {
+			return false;
+		}
 	} else {
 		performSimpleQuery("COMMIT;"_weak);
 	}
@@ -1053,6 +1064,14 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 	performSimpleQuery(query.weak());
 	query.clear();
 
+	auto iit = existedTables.find(StringView("__error"));
+	if (iit != existedTables.end()) {
+		query << "DELETE FROM __error WHERE \"time\" < " << Time::now().toMicros() - config::STORAGE_DEFAULT_INTERNAL_INTERVAL.toMicros() << ";";
+		performSimpleQuery(query.weak());
+		query.clear();
+	}
+
+	endTransaction_pg();
 	return true;
 }
 

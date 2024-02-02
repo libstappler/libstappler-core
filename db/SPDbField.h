@@ -303,6 +303,23 @@ struct UniqueConstraintDef {
 	Vector<StringView> fields;
 };
 
+struct CustomFieldInfo {
+	bool isIndexable = false;
+	String typeName;
+
+	Function<Value(const FieldCustom &, const ResultCursor &, size_t field)> readFromStorage;
+	Function<bool(const FieldCustom &, QueryInterface &, StringStream &, const Value &)> writeToStorage;
+
+	Function<String(const FieldCustom &)> getIndexName;
+	Function<String(const FieldCustom &)> getIndexDefinition;
+
+	Function<bool(const FieldCustom &, Comparation)> isComparationAllowed;
+
+	Function<void(const FieldCustom &, const Scheme &,
+			stappler::sql::Query<db::Binder, Interface>::WhereContinue &,
+			Operator, const StringView &, Comparation, const Value &, const Value &)> writeQuery;
+};
+
 struct FieldCustom;
 
 class Field : public AllocBase {
@@ -599,18 +616,7 @@ struct FieldCustom : Field::Slot {
 		init<FieldCustom, Args...>(*this, std::forward<Args>(args)...);
 	}
 
-	virtual Value readFromStorage(const ResultCursor &, size_t field) const = 0;
-	virtual bool writeToStorage(QueryInterface &, StringStream &, const Value &) const = 0;
-
-	virtual StringView getTypeName() const = 0;
-
-	virtual String getIndexName() const { return name; }
-	virtual String getIndexField() const { return toString("( \"", name, "\" )"); }
-
-	virtual bool isComparationAllowed(Comparation) const { return false; }
-
-	virtual void writeQuery(const Scheme &, stappler::sql::Query<db::Binder, Interface>::WhereContinue &,
-			stappler::sql::Operator, const StringView &, stappler::sql::Comparation, const Value &, const Value &) const { };
+	virtual StringView getDriverTypeName() const = 0;
 };
 
 struct FieldVirtual : Field::Slot {

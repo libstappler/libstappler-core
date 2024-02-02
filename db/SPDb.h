@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SPMemUserData.h"
 #include "SPMemory.h"
 #include "SPData.h"
+#include "SPSql.h"
 #include "SPDbConfig.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
@@ -60,6 +61,13 @@ struct FieldArray;
 struct FieldView;
 struct FieldFullTextView;
 struct FieldCustom;
+
+using Operator = sql::Operator;
+using Comparation = sql::Comparation;
+using Ordering = sql::Ordering;
+
+using sql::encodeComparation;
+using sql::decodeComparation;
 
 struct RequestData {
 	bool exists = false;

@@ -62,6 +62,23 @@ CREATE INDEX IF NOT EXISTS "__login_idx_user" ON "__login" ("user");
 CREATE INDEX IF NOT EXISTS "__login_idx_date" ON "__login" ("date");
 )Sql";
 
+static BackendInterface::StorageType getStorageType(StringView type) {
+	if (type == "BIGINT" || type == "INTEGER" || type == "INT") {
+		return BackendInterface::StorageType::Int8;
+	} else if (type == "NUMERIC") {
+		return BackendInterface::StorageType::Numeric;
+	} else if (type == "BOOLEAN") {
+		return BackendInterface::StorageType::Bool;
+	} else if (type == "BLOB") {
+		return BackendInterface::StorageType::Bytes;
+	} else if (type == "TEXT") {
+		return BackendInterface::StorageType::Text;
+	} else if (type == "REAL" || type == "DOUBLE") {
+		return BackendInterface::StorageType::Float8;
+	}
+	return BackendInterface::StorageType::Unknown;
+}
+
 struct ColRec {
 	using Type = BackendInterface::StorageType;
 
@@ -78,7 +95,9 @@ struct ColRec {
 	bool isNotNull() const;
 
 	ColRec(Type t, Flags flags = Flags::None) : type(t), flags(flags) { }
-	ColRec(const StringView &t, Flags flags = Flags::None) : custom(t.str<Interface>()), flags(flags) { }
+	ColRec(const StringView &t, Flags flags = Flags::None) : custom(t.str<Interface>()), flags(flags) {
+		type = getStorageType(custom);
+	}
 };
 
 SP_DEFINE_ENUM_AS_MASK(ColRec::Flags)
@@ -219,7 +238,7 @@ struct TriggerRec {
 struct TableRec {
 	using Scheme = db::Scheme;
 
-	static Map<StringView, TableRec> parse(const BackendInterface::Config &cfg,
+	static Map<StringView, TableRec> parse(const Driver *driver, const BackendInterface::Config &cfg,
 			const Map<StringView, const Scheme *> &s);
 	static Map<StringView, TableRec> get(Handle &h, StringStream &stream);
 
@@ -228,7 +247,7 @@ struct TableRec {
 			const Map<StringView, const db::Scheme *> &s);
 
 	TableRec();
-	TableRec(const BackendInterface::Config &cfg, const db::Scheme *scheme);
+	TableRec(const Driver *driver, const BackendInterface::Config &cfg, const db::Scheme *scheme);
 
 	Map<String, ColRec> cols;
 	Map<String, IndexRec> indexes;
@@ -241,23 +260,6 @@ struct TableRec {
 	const db::Scheme *viewScheme = nullptr;
 	const db::FieldView *viewField = nullptr;
 };
-
-static BackendInterface::StorageType getStorageType(StringView type) {
-	if (type == "BIGINT" || type == "INTEGER" || type == "INT") {
-		return BackendInterface::StorageType::Int8;
-	} else if (type == "NUMERIC") {
-		return BackendInterface::StorageType::Numeric;
-	} else if (type == "BOOLEAN") {
-		return BackendInterface::StorageType::Bool;
-	} else if (type == "BLOB") {
-		return BackendInterface::StorageType::Bytes;
-	} else if (type == "TEXT") {
-		return BackendInterface::StorageType::Text;
-	} else if (type == "REAL" || type == "DOUBLE") {
-		return BackendInterface::StorageType::Float8;
-	}
-	return BackendInterface::StorageType::Unknown;
-}
 
 static StringView getStorageTypeName(BackendInterface::StorageType type, StringView custom) {
 	switch (type) {
@@ -575,12 +577,12 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 	}
 }
 
-Map<StringView, TableRec> TableRec::parse(const BackendInterface::Config &cfg,
+Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInterface::Config &cfg,
 		const Map<StringView, const db::Scheme *> &s) {
 	Map<StringView, TableRec> tables;
 	for (auto &it : s) {
 		auto scheme = it.second;
-		tables.emplace(scheme->getName(), TableRec(cfg, scheme));
+		tables.emplace(scheme->getName(), TableRec(driver, cfg, scheme));
 	}
 
 	for (auto &it : s) {
@@ -918,7 +920,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 }
 
 TableRec::TableRec() { }
-TableRec::TableRec(const BackendInterface::Config &cfg, const db::Scheme *scheme) {
+TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, const db::Scheme *scheme) {
 	withOids = true;
 	if (scheme->isDetouched()) {
 		detached = true;
@@ -991,22 +993,12 @@ TableRec::TableRec(const BackendInterface::Config &cfg, const db::Scheme *scheme
 			break;
 
 		case db::Type::Custom:
-			/*if (auto objSlot = f.getSlot<db::FieldCustom>()) {
-				auto name = objSlot->getTypeName();
-				int64_t oid = 0;
-				for (auto &it : customs) {
-					if (it.first == name) {
-						oid = it.second;
-						break;
-					}
+			if (auto objSlot = f.getSlot<db::FieldCustom>()) {
+				if (auto info = driver->getCustomFieldInfo(objSlot->getDriverTypeName())) {
+					cols.emplace(it.first, ColRec(StringView(info->typeName), flags));
+					emplaced = true;
 				}
-				if (oid) {
-					cols.emplace(it.first, ColRec(objSlot->getTypeName(), oid, f.hasFlag(db::Flags::Required)));
-				} else {
-					cols.emplace(it.first, ColRec(objSlot->getTypeName(), f.hasFlag(db::Flags::Required)));
-				}
-				emplaced = true;
-			}*/
+			}
 			break;
 		}
 
@@ -1039,7 +1031,16 @@ TableRec::TableRec(const BackendInterface::Config &cfg, const db::Scheme *scheme
 			}
 
 			if ((type == db::Type::Text && f.getTransform() == db::Transform::Alias) || (f.hasFlag(db::Flags::Indexed))) {
-				indexes.emplace(toString(name, (unique ? "_uidx_" : "_idx_"), it.first), IndexRec(it.first, unique));
+				if (type == db::Type::Custom) {
+					auto c = f.getSlot<db::FieldCustom>();
+					if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
+						if (info->isIndexable) {
+							indexes.emplace(toString(name, "_idx_", info->getIndexName(*c)), info->getIndexDefinition(*c));
+						}
+					}
+				} else {
+					indexes.emplace(toString(name, (unique ? "_uidx_" : "_idx_"), it.first), IndexRec(it.first, unique));
+				}
 			}
 
 			/*if (type == db::Type::Text) {
@@ -1107,15 +1108,26 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 	StringStream tables;
 	tables << "Server: " << cfg.name << "\n";
 	auto existedTables = TableRec::get(*this, tables);
-	auto requiredTables = TableRec::parse(cfg, s);
+	auto requiredTables = TableRec::parse(driver, cfg, s);
 
 	StringStream stream;
 	TableRec::writeCompareResult(*this, stream, requiredTables, existedTables, s);
 
+	auto name = toString(".reports/update.", stappler::Time::now().toMilliseconds(), ".sql");
 	if (!stream.empty()) {
-		// std::cout << stream.weak() << "\n";
-		if (!performSimpleQuery(stream.weak())) {
+		bool success = true;
+		if (!performSimpleQuery(stream.weak(), [&] (const Value &errInfo) {
+			stream << "Server: " << cfg.name << "\n";
+			stream << "\nErrorInfo: " << EncodeFormat::Pretty << errInfo << "\n";
+		})) {
+			log::error("Database", "Fail to perform update ", name.c_str());
 			endTransaction();
+			success = false;
+		}
+
+		tables << "\n" << stream;
+		_driver->getApplicationInterface()->reportDbUpdate(tables.weak(), success);
+		if (!success) {
 			return false;
 		}
 	}

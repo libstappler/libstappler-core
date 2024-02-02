@@ -21,49 +21,70 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_DB_EXTENSIONS_SPDBFIELDINTARRAY_H_
-#define STAPPLER_DB_EXTENSIONS_SPDBFIELDINTARRAY_H_
+#ifndef STAPPLER_DB_SPDBFIELDEXTENSIONS_H_
+#define STAPPLER_DB_SPDBFIELDEXTENSIONS_H_
 
 #include "SPDbField.h"
+#include "SPSqlDriver.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
 struct FieldIntArray : db::FieldCustom {
+	static auto constexpr FIELD_NAME = StringView("INT[]");
+	static bool regsterForPostgres(CustomFieldInfo &);
+	static bool regsterForSqlite(CustomFieldInfo &);
+
 	template <typename ... Args>
 	FieldIntArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
 
+	virtual StringView getDriverTypeName() const override { return FIELD_NAME; }
+
 	virtual bool transformValue(const db::Scheme &, const Value &obj, Value &val, bool isCreate) const override;
-	virtual Value readFromStorage(const db::ResultCursor &iface, size_t field) const override;
-	virtual bool writeToStorage(db::QueryInterface &iface, StringStream &query, const Value &val) const override;
-	virtual StringView getTypeName() const override;
 	virtual bool isSimpleLayout() const override;
-	virtual String getIndexName() const override;
-	virtual String getIndexField() const override;
-
-	virtual bool isComparationAllowed(db::Comparation c) const override;
-
-	virtual void writeQuery(const db::Scheme &s, stappler::sql::Query<db::Binder, Interface>::WhereContinue &whi, stappler::sql::Operator op,
-			const StringView &f, stappler::sql::Comparation, const Value &val, const Value &) const override;
 };
 
 struct FieldBigIntArray : db::FieldCustom {
+	static auto constexpr FIELD_NAME = StringView("BIGINT[]");
+	static bool regsterForPostgres(CustomFieldInfo &);
+	static bool regsterForSqlite(CustomFieldInfo &);
+
 	template <typename ... Args>
 	FieldBigIntArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
 
+	virtual StringView getDriverTypeName() const override { return FIELD_NAME; }
+
 	virtual bool transformValue(const db::Scheme &, const Value &obj, Value &val, bool isCreate) const override;
-	virtual Value readFromStorage(const db::ResultCursor &iface, size_t field) const override ;
-	virtual bool writeToStorage(db::QueryInterface &iface, StringStream &query, const Value &val) const override;
-	virtual StringView getTypeName() const override;
 	virtual bool isSimpleLayout() const override;
-	virtual String getIndexName() const override;
-	virtual String getIndexField() const override;
+};
 
-	virtual bool isComparationAllowed(db::Comparation c) const override;
+struct FieldPoint : db::FieldCustom {
+	static auto constexpr FIELD_NAME = StringView("POINT");
+	static bool regsterForPostgres(CustomFieldInfo &);
+	static bool regsterForSqlite(CustomFieldInfo &);
 
-	virtual void writeQuery(const db::Scheme &s, stappler::sql::Query<db::Binder, Interface>::WhereContinue &whi, stappler::sql::Operator op,
-			const StringView &f, stappler::sql::Comparation, const Value &val, const Value &) const override;
+	template <typename ... Args>
+	FieldPoint(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
+
+	virtual StringView getDriverTypeName() const override { return FIELD_NAME; }
+
+	virtual bool transformValue(const db::Scheme &, const Value &obj, Value &val, bool isCreate) const override;
+	virtual bool isSimpleLayout() const override;
+};
+
+struct FieldTextArray : db::FieldCustom {
+	static auto constexpr FIELD_NAME = StringView("TEXT[]");
+	static bool regsterForPostgres(CustomFieldInfo &);
+	static bool regsterForSqlite(CustomFieldInfo &);
+
+	template <typename ... Args>
+	FieldTextArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
+
+	virtual StringView getDriverTypeName() const override { return FIELD_NAME; }
+
+	virtual bool transformValue(const db::Scheme &, const Value &obj, Value &val, bool isCreate) const override;
+	virtual bool isSimpleLayout() const override;
 };
 
 }
 
-#endif /* STAPPLER_DB_EXTENSIONS_SPDBFIELDINTARRAY_H_ */
+#endif /* STAPPLER_DB_SPDBFIELDEXTENSIONS_H_ */

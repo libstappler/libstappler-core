@@ -79,6 +79,7 @@ public:
 	virtual double toDouble(size_t field) const override;
 	virtual bool toBool(size_t field) const override;
 	virtual Value toTypedData(size_t field) const override;
+	virtual Value toCustomData(size_t field, const FieldCustom *) const override;
 	virtual int64_t toId() const override;
 	virtual StringView getFieldName(size_t field) const override;
 	virtual bool isSuccess() const override;

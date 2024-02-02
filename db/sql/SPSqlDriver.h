@@ -65,6 +65,8 @@ public:
 
 	void setDbCtrl(Function<void(bool)> &&);
 
+	const CustomFieldInfo *getCustomFieldInfo(StringView) const;
+
 protected:
 	Driver(pool_t *, ApplicationInterface *);
 
@@ -72,6 +74,8 @@ protected:
 	Function<void(bool)> _dbCtrl = nullptr;
 	pool_t *_pool = nullptr;
 	ApplicationInterface *_application = nullptr;
+
+	Map<StringView, CustomFieldInfo> _customFields;
 };
 
 }

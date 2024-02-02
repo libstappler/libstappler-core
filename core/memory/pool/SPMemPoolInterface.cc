@@ -237,6 +237,7 @@ SPUNUSED static void *palloc(pool_t *p, size_t size);
 SPUNUSED static void *calloc(pool_t *p, size_t count, size_t eltsize);
 SPUNUSED static void cleanup_kill(pool_t *p, void *ptr, status_t(*cb)(void *));
 SPUNUSED static void cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *));
+SPUNUSED static void pre_cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *));
 SPUNUSED static status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool);
 SPUNUSED static status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool);
 SPUNUSED static status_t userdata_get(void **data, const char *key, pool_t *pool);
@@ -610,6 +611,16 @@ void cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 	((custom::Pool *)pool)->cleanup_register(ptr, (custom::Cleanup::Callback)cb);
 }
 
+void pre_cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
+		if (!isCustom(pool)) {
+			apr::pool::pre_cleanup_register((apr::pool_t *)pool, ptr, cb);
+			return;
+		}
+	}
+	((custom::Pool *)pool)->pre_cleanup_register(ptr, (custom::Cleanup::Callback)cb);
+}
+
 status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isCustom(pool)) {
@@ -762,6 +773,13 @@ void cleanup_register(pool_t *p, memory::function<void()> &&cb) {
 	auto fn = new (p) memory::function<void()>(move(cb));
 	pool::pop();
 	pool::cleanup_register(p, fn, &cleanup_register_fn);
+}
+
+void pre_cleanup_register(pool_t *p, memory::function<void()> &&cb) {
+	pool::push(p);
+	auto fn = new (p) memory::function<void()>(move(cb));
+	pool::pop();
+	pool::pre_cleanup_register(p, fn, &cleanup_register_fn);
 }
 
 size_t get_active_count() {
