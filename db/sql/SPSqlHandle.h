@@ -29,6 +29,8 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 class Driver;
+class QueryStorageHandle;
+
 using Result = db::Result;
 
 class SqlHandle : public db::BackendInterface {
@@ -73,7 +75,7 @@ public:
 	// get changed objects from view field in object from timestamp
 	Value getDeltaData(const Scheme &, const db::FieldView &, const stappler::Time &, uint64_t);
 
-	virtual void makeQuery(const stappler::Callback<void(SqlQuery &)> &cb) = 0;
+	virtual void makeQuery(const stappler::Callback<void(SqlQuery &)> &cb, const QueryStorageHandle *) = 0;
 
 	virtual bool selectQuery(const SqlQuery &, const Callback<bool(Result &)> &cb,
 			const Callback<void(const Value &)> &err = nullptr) = 0;
@@ -88,9 +90,8 @@ public:
 
 	virtual Value select(Worker &, const db::Query &) override;
 
-	virtual Value create(Worker &, Value &) override;
-	virtual Value save(Worker &, uint64_t oid, const Value &obj, const Vector<String> &fields) override;
-	virtual Value patch(Worker &, uint64_t oid, const Value &patch) override;
+	virtual Value create(Worker &, const Vector<InputField> &, Vector<InputRow> &, bool multiCreate) override;
+	virtual Value save(Worker &, uint64_t oid, const Value &obj, const Vector<InputField> &, InputRow &) override;
 
 	virtual bool remove(Worker &, uint64_t oid) override;
 

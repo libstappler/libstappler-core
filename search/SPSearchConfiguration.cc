@@ -166,58 +166,95 @@ static bool stemWordDefault(Language lang, StemmerEnv *env, ParserToken tok, Str
 	return true;
 }
 
+struct Configuration::Data : AllocBase {
+	pool_t *pool = nullptr;
+	std::atomic<uint32_t> refCount = 1;
+	Language language = Language::Simple;
+	StemmerEnv *primary = nullptr;
+	StemmerEnv *secondary = nullptr;
+
+	Map<ParserToken, StemmerCallback> stemmers;
+
+	PreStemCallback preStem;
+	const StringView *customStopwords = nullptr;
+
+	Data(pool_t *p, Language lang)
+	: pool(p), language(lang), primary(search::getStemmer(language))
+	, secondary(search::getStemmer((lang == Language::Simple) ? Language::Simple : Language::English)) { }
+};
+
 Configuration::Configuration() : Configuration(Language::English) { }
 
-Configuration::Configuration(Language lang)
-: _language(lang), _primary(search::getStemmer(_language))
-, _secondary(search::getStemmer((lang == Language::Simple) ? Language::Simple : Language::English)) { }
+Configuration::Configuration(Language lang) {
+	pool::initialize();
+	auto p = pool::create(pool::acquire());
+	perform([&] {
+		data = new (p) Data(p, lang);
+	}, p);
+}
+
+Configuration::~Configuration() {
+	if (data->refCount.fetch_sub(1) == 1) {
+		data->~Data();
+		pool::destroy(data->pool);
+		pool::terminate();
+	}
+}
 
 void Configuration::setLanguage(Language lang) {
-	_language = lang;
-	_primary = search::getStemmer(_language);
-	if (!_secondary) {
-		_secondary = search::getStemmer((lang == Language::Simple) ? Language::Simple : Language::English);
-	}
+	perform([&] {
+		data->language = lang;
+		data->primary = search::getStemmer(data->language);
+		if (!data->secondary) {
+			data->secondary = search::getStemmer((lang == Language::Simple) ? Language::Simple : Language::English);
+		}
+	}, data->pool);
 }
 
 Language Configuration::getLanguage() const {
-	return _language;
+	return data->language;
 }
 
 void Configuration::setStemmer(ParserToken tok, StemmerCallback &&cb) {
-	_stemmers.emplace(tok, move(cb));
+	perform([&] {
+		data->stemmers.emplace(tok, move(cb));
+	}, data->pool);
 }
 
 Configuration::StemmerCallback Configuration::getStemmer(ParserToken tok) const {
-	auto it = _stemmers.find(tok);
-	if (it != _stemmers.end()) {
+	auto it = data->stemmers.find(tok);
+	if (it != data->stemmers.end()) {
 		return it->second;
 	}
 
-	return StemmerCallback([&, lang = _language, env = getEnvForToken(tok), stopwords = _customStopwords] (StringView word, const Callback<void(StringView)> &cb) -> bool {
+	return StemmerCallback([&, lang = data->language, env = getEnvForToken(tok), stopwords = data->customStopwords]
+							(StringView word, const Callback<void(StringView)> &cb) -> bool {
 		return stemWordDefault(lang, env, tok, word, cb, stopwords);
 	});
 }
 
 void Configuration::setCustomStopwords(const StringView *w) {
-	_customStopwords = w;
+	data->customStopwords = w;
 }
 
 const StringView *Configuration::getCustomStopwords() const {
-	return _customStopwords;
+	return data->customStopwords;
 }
 
 void Configuration::setPreStem(PreStemCallback &&cb) {
-	_preStem = move(cb);
+	perform([&] {
+		data->preStem = move(cb);
+	}, data->pool);
+
 }
 const Configuration::PreStemCallback &Configuration::getPreStem() const {
-	return _preStem;
+	return data->preStem;
 }
 
 void Configuration::stemPhrase(const StringView &str, const StemWordCallback &cb) const {
 	parsePhrase(str, [&] (StringView word, ParserToken tok) {
-		if (_preStem && !isWordPart(tok)) {
-			auto ret = _preStem(word, tok);
+		if (data->preStem && !isWordPart(tok)) {
+			auto ret = data->preStem(word, tok);
 			if (!ret.empty()) {
 				for (auto &it : ret) {
 					auto str = normalizeWord(it);
@@ -237,10 +274,11 @@ size_t Configuration::makeSearchVector(SearchVector &vec, StringView str, Search
 		return counter;
 	}
 
-	auto pushWord = [&] (StringView s) -> const String * {
-		auto it = vec.find(s);
-		if (it == vec.end()) {
-			return &vec.emplace(s.str<memory::PoolInterface>(), Vector<Pair<size_t, SearchData::Rank>>({pair(counter, rank)})).first->first;
+	auto pushWord = [&] (StringView s) -> const StringView * {
+		++ vec.documentLength;
+		auto it = vec.words.find(s);
+		if (it == vec.words.end()) {
+			return &vec.words.emplace(s.pdup(vec.words.get_allocator()), SearchVector::MatchVector({pair(counter, rank)})).first->first;
 		} else {
 			auto value = pair(counter, rank);
 			auto iit = std::lower_bound(it->second.begin(), it->second.end(), value,
@@ -265,8 +303,8 @@ size_t Configuration::makeSearchVector(SearchVector &vec, StringView str, Search
 			++ counter;
 		}
 
-		if (_preStem && !isWordPart(tok)) {
-			auto ret = _preStem(word, tok);
+		if (data->preStem && !isWordPart(tok)) {
+			auto ret = data->preStem(word, tok);
 			if (ret.size() == 1) {
 				auto str = normalizeWord(ret.back());
 				if (auto sPtr = pushWord(str)) {
@@ -295,9 +333,9 @@ size_t Configuration::makeSearchVector(SearchVector &vec, StringView str, Search
 	return counter;
 }
 
-Configuration::String Configuration::encodeSearchVector(const SearchVector &vec, SearchData::Rank rank) const {
+String Configuration::encodeSearchVectorPostgres(const SearchVector &vec, SearchData::Rank rank) const {
 	StringStream ret;
-	for (auto &it : vec) {
+	for (auto &it : vec.words) {
 		if (!ret.empty()) {
 			ret << " ";
 		}
@@ -319,20 +357,38 @@ Configuration::String Configuration::encodeSearchVector(const SearchVector &vec,
 			if (ret.weak().back() != ':') { ret << ","; }
 			ret << v.first;
 			auto r = v.second;
-			if (r == SearchData::Unknown) {
+			if (r == SearchRank::Unknown) {
 				r = rank;
 			}
 			switch (r) {
-			case SearchData::A: ret << 'A'; break;
-			case SearchData::B: ret << 'B'; break;
-			case SearchData::C: ret << 'C'; break;
-			case SearchData::D:
-			case SearchData::Unknown:
+			case SearchRank::A: ret << 'A'; break;
+			case SearchRank::B: ret << 'B'; break;
+			case SearchRank::C: ret << 'C'; break;
+			case SearchRank::D:
+			case SearchRank::Unknown:
 				break;
 			}
 		}
 	}
 	return ret.str();
+}
+
+Bytes Configuration::encodeSearchVectorData(const SearchVector &data, SearchData::Rank rank) const {
+	data::cbor::Encoder<Interface> enc(true);
+	data::cbor::_writeArrayStart(enc, 3);
+	data::cbor::_writeInt(enc, 1); // version
+	data::cbor::_writeInt(enc, data.documentLength); // version
+	data::cbor::_writeMapStart(enc, data.words.size());
+	for (auto &it : data.words) {
+		enc.write(it.first);
+		_writeArrayStart(enc, it.second.size() * 2);
+		for (auto &iit : it.second) {
+			data::cbor::_writeInt(enc, iit.first);
+			data::cbor::_writeInt(enc, toInt( (iit.second == SearchData::Rank::Unknown) ? rank : iit.second ));
+		}
+	}
+	auto result = enc.data();
+	return data::compress<Interface>(result.data(), result.size(), EncodeFormat::Compression::LZ4HCCompression, true);
 }
 
 void Configuration::stemHtml(const StringView &str, const StemWordCallback &cb) const {
@@ -342,15 +398,15 @@ void Configuration::stemHtml(const StringView &str, const StemWordCallback &cb) 
 }
 
 bool Configuration::stemWord(const StringView &word, ParserToken tok, const StemWordCallback &cb) const {
-	auto it = _stemmers.find(tok);
-	if (it != _stemmers.end()) {
+	auto it = data->stemmers.find(tok);
+	if (it != data->stemmers.end()) {
 		return it->second(word, [&] (StringView stem) {
 			cb(word, stem, tok);
 		});
 	} else {
-		return stemWordDefault(_language, getEnvForToken(tok), tok, word, [&] (StringView stem) {
+		return stemWordDefault(data->language, getEnvForToken(tok), tok, word, [&] (StringView stem) {
 			cb(word, stem, tok);
-		}, _customStopwords);
+		}, data->customStopwords);
 	}
 }
 
@@ -359,22 +415,22 @@ StemmerEnv *Configuration::getEnvForToken(ParserToken tok) const {
 	case ParserToken::AsciiWord:
 	case ParserToken::AsciiHyphenatedWord:
 	case ParserToken::HyphenatedWord_AsciiPart:
-		if (_secondary) {
-			if (memory::pool::acquire() == StemmerEnv_getUserData(_secondary)) {
-				return _secondary;
+		if (data->secondary) {
+			if (memory::pool::acquire() == StemmerEnv_getUserData(data->secondary)) {
+				return data->secondary;
 			} else {
-				return Configuration_makeLocalConfig(_secondary);
+				return Configuration_makeLocalConfig(data->secondary);
 			}
 		}
 		break;
 	case ParserToken::Word:
 	case ParserToken::HyphenatedWord:
 	case ParserToken::HyphenatedWord_Part:
-		if (_primary) {
-			if (memory::pool::acquire() == StemmerEnv_getUserData(_primary)) {
-				return _primary;
+		if (data->primary) {
+			if (memory::pool::acquire() == StemmerEnv_getUserData(data->primary)) {
+				return data->primary;
 			} else {
-				return Configuration_makeLocalConfig(_primary);
+				return Configuration_makeLocalConfig(data->primary);
 			}
 		}
 		break;
@@ -397,7 +453,7 @@ StemmerEnv *Configuration::getEnvForToken(ParserToken tok) const {
 	return nullptr;
 }
 
-Configuration::String Configuration::makeHeadline(const HeadlineConfig &cfg, const StringView &origin, const Vector<String> &stemList) const {
+String Configuration::makeHeadline(const HeadlineConfig &cfg, const StringView &origin, const Vector<String> &stemList) const {
 	memory::PoolInterface::StringStreamType result;
 	result.reserve(origin.size() + (cfg.startToken.size() + cfg.stopToken.size()) * stemList.size());
 
@@ -456,7 +512,7 @@ Configuration::String Configuration::makeHeadline(const HeadlineConfig &cfg, con
 	return result.str();
 }
 
-Configuration::String Configuration::makeHtmlHeadlines(const HeadlineConfig &cfg, const StringView &origin, const Vector<String> &stemList, size_t count) const {
+String Configuration::makeHtmlHeadlines(const HeadlineConfig &cfg, const StringView &origin, const Vector<String> &stemList, size_t count) const {
 	return makeHeadlines(cfg, [&] (const Function<bool(const StringView &, const StringView &)> &cb) {
 		Stemmer_Reader_run(origin, [&] (const StringView &str, const Callback<void()> &cancelCb) {
 			if (!cb(str, StringView())) {
@@ -466,7 +522,7 @@ Configuration::String Configuration::makeHtmlHeadlines(const HeadlineConfig &cfg
 	}, stemList, count);
 }
 
-Configuration::String Configuration::makeHeadlines(const HeadlineConfig &cfg, const Callback<void(const Function<bool(const StringView &frag, const StringView &tag)>)> &cb,
+String Configuration::makeHeadlines(const HeadlineConfig &cfg, const Callback<void(const Function<bool(const StringView &frag, const StringView &tag)>)> &cb,
 		const Vector<String> &stemList, size_t count) const {
 
 	using SplitTokens = StringViewUtf8::MatchCompose<
@@ -703,7 +759,7 @@ Configuration::String Configuration::makeHeadlines(const HeadlineConfig &cfg, co
 	return ret.str();
 }
 
-Configuration::Vector<Configuration::String> Configuration::stemQuery(const Vector<SearchData> &query) const {
+Vector<String> Configuration::stemQuery(const Vector<SearchData> &query) const {
 	Vector<String> queryList;
 	for (auto &it : query) {
 		stemPhrase(it.buffer, [&] (StringView word, StringView stem, ParserToken tok) {
@@ -718,7 +774,40 @@ Configuration::Vector<Configuration::String> Configuration::stemQuery(const Vect
 	return queryList;
 }
 
-void Configuration_parseQueryBlank(Configuration::Vector<SearchQuery *> &stack, StringView r) {
+Vector<String> Configuration::stemQuery(const SearchQuery &query) const {
+	Vector<String> queryList;
+	doStemQuery(queryList, query);
+	return queryList;
+}
+
+void Configuration::doStemQuery(Vector<String> queryList, const SearchQuery &query) const {
+	if (!query.value.empty()) {
+		emplace_ordered(queryList, query.value);
+	}
+	for (auto &it : query.args) {
+		doStemQuery(queryList, it);
+	}
+}
+
+struct Configuration_ParserControl {
+	Vector<SearchQuery *> stack;
+	StringView error;
+	bool neg = false;
+	bool success = true;
+	bool strict = false;
+
+	bool popNeg() {
+		auto tmp = neg;
+		neg = false;
+		return tmp;
+	}
+
+	void pushNeg() {
+		neg = !neg;
+	}
+};
+
+static bool Configuration_parseQueryBlank(Configuration_ParserControl &control, StringView r) {
 	auto makeShift = [&] (SearchQuery *q, SearchOp op) {
 		SearchQuery tmp = move(*q);
 		q->clear();
@@ -727,7 +816,7 @@ void Configuration_parseQueryBlank(Configuration::Vector<SearchQuery *> &stack, 
 	};
 
 	while (!r.empty()) {
-		auto q = stack.back();
+		auto q = control.stack.back();
 		r.skipUntil<StringView::Chars<'"', '|', '!', '(', ')'>>();
 		if (q->block == SearchQuery::Quoted) {
 			if (r[0] != '"') {
@@ -737,7 +826,7 @@ void Configuration_parseQueryBlank(Configuration::Vector<SearchQuery *> &stack, 
 		}
 		switch (r[0]) {
 		case '"':
-			if (q->block == SearchQuery::None) {
+			if (q->block != SearchQuery::Quoted) {
 				if (q->op == SearchOp::None) {
 					q->op = SearchOp::Follow;
 					q->block = SearchQuery::Quoted;
@@ -748,46 +837,49 @@ void Configuration_parseQueryBlank(Configuration::Vector<SearchQuery *> &stack, 
 					auto &top = q->args.emplace_back();
 					top.op = SearchOp::Follow;
 					top.block = SearchQuery::Quoted;
-					stack.emplace_back(&top);
+					top.neg = control.popNeg();
+					control.stack.emplace_back(&top);
 				}
-			} else if (q->block == SearchQuery::Quoted) {
-				stack.pop_back();
+			} else {
+				control.stack.pop_back();
 			}
 			break;
 		case '|':
-			if (q->op == SearchOp::None || q->op == SearchOp::Not) {
+			if (q->block == SearchQuery::Quoted) {
+				control.success = false;
+				control.error = StringView("Invalid '|' token within quote block");
+				if (control.strict) {
+					return false;
+				}
+			} else if (q->op == SearchOp::None) {
 				if (!q->value.empty()) {
 					makeShift(q, SearchOp::Or);
 					auto &top = q->args.emplace_back();
-					stack.emplace_back(&top);
+					control.stack.emplace_back(&top);
 				}
 			} else if (q->op == SearchOp::Or) {
 				auto &top = q->args.emplace_back();
-				stack.emplace_back(&top);
+				control.stack.emplace_back(&top);
 			} else {
 				if (q->op == SearchOp::And && q->args.size() <= 1) {
 					q->op = SearchOp::Or;
 					auto &top = q->args.emplace_back();
-					stack.emplace_back(&top);
+					control.stack.emplace_back(&top);
 				} else {
 					makeShift(q, SearchOp::Or);
 					auto &top = q->args.emplace_back();
-					stack.emplace_back(&top);
+					control.stack.emplace_back(&top);
 				}
 			}
 			break;
 		case '!': {
-			if (q->op == SearchOp::Or) {
-				makeShift(q, SearchOp::And);
-				auto &top = q->args.emplace_back();
-				top.op = SearchOp::Not;
-				stack.emplace_back(&top);
-			} else if (q->op != SearchOp::None && q->op != SearchOp::Not) {
-				auto &top = q->args.emplace_back();
-				top.op = SearchOp::Not;
-				stack.emplace_back(&top);
+			if (q->block == SearchQuery::Quoted) {
+				control.error = StringView("Invalid '!' token within quote block");
+				if (control.strict) {
+					return false;
+				}
 			} else {
-				q->op = SearchOp::Not;
+				control.pushNeg();
 			}
 			break;
 		}
@@ -801,15 +893,26 @@ void Configuration_parseQueryBlank(Configuration::Vector<SearchQuery *> &stack, 
 						makeShift(q, SearchOp::And);
 					}
 					auto &top = q->args.emplace_back();
-					top.op = SearchOp::Follow;
+					top.op = SearchOp::And;
 					top.block = SearchQuery::Parentesis;
-					stack.emplace_back(&top);
+					top.neg = control.popNeg();
+					control.stack.emplace_back(&top);
+				}
+			} else {
+				control.error = StringView("Invalid '(' token within block");
+				if (control.strict) {
+					return false;
 				}
 			}
 			break;
 		case ')':
 			if (q->block == SearchQuery::Parentesis) {
-				stack.pop_back();
+				control.stack.pop_back();
+			} else {
+				control.error = StringView("Invalid ')' outside of parenthesis");
+				if (control.strict) {
+					return false;
+				}
 			}
 			break;
 		default: break;
@@ -817,28 +920,36 @@ void Configuration_parseQueryBlank(Configuration::Vector<SearchQuery *> &stack, 
 
 		++ r;
 	}
+	return true;
 }
 
-void Configuration_parseQueryWord(Configuration::Vector<SearchQuery *> &stack, StringView word, size_t offset = 0, StringView source = StringView()) {
-	auto q = stack.back();
+static bool Configuration_parseQueryWord(Configuration_ParserControl &control, StringView word, size_t offset = 0, StringView source = StringView()) {
+	auto q = control.stack.back();
 
-	if (q->op == SearchOp::None || q->op == SearchOp::Not) {
+	if (q->op == SearchOp::None) {
 		if (q->value.empty()) {
 			q->value = word.str<memory::PoolInterface>();
 			q->source = source;
 			q->offset = offset;
-			if (stack.size() > 1) {
-				stack.pop_back();
+			q->neg = control.popNeg();
+			if (control.stack.size() > 1) {
+				control.stack.pop_back();
 			}
 		} else {
-			SearchQuery tmp = move(*q);
+			control.error = StringView("Invalid element");
+			if (control.strict) {
+				return false;
+			}
+
+			/*SearchQuery tmp = move(*q);
 			q->clear();
 			q->op = SearchOp::And;
 			q->args.emplace_back(move(tmp));
-			q->args.emplace_back(SearchQuery(word, offset, source));
+			q->args.emplace_back(SearchQuery(word, offset, source));*/
 		}
 	} else if (q->op == SearchOp::And || q->op == SearchOp::Follow) {
-		q->args.emplace_back(SearchQuery(word, offset, source));
+		auto &v = q->args.emplace_back(SearchQuery(word, offset, source));
+		v.neg = control.popNeg();
 	} else {
 		SearchQuery tmp = move(*q);
 		q->clear();
@@ -846,165 +957,79 @@ void Configuration_parseQueryWord(Configuration::Vector<SearchQuery *> &stack, S
 		q->args.emplace_back(move(tmp));
 		q->args.emplace_back(SearchQuery(word, offset, source));
 	}
+	return true;
 }
 
-SearchQuery Configuration::parseQuery(StringView str) const {
+SearchQuery Configuration::parseQuery(StringView str, bool strict, StringView *err) const {
 	SearchQuery query;
 	query.op = SearchOp::And;
 
-	Vector<SearchQuery *> stack;
-	stack.emplace_back(&query);
+	Configuration_ParserControl control;
+	control.stack.emplace_back(&query);
+	control.strict = strict;
 
 	size_t prev = 0;
 	size_t counter = 0;
-	search::parsePhrase(str, [&] (StringView word, ParserToken tok) {
+	auto ret = search::parsePhrase(str, [&] (StringView word, ParserToken tok) {
+		auto status = isComplexWord(tok) ? ParserStatus::PreventSubdivide : ParserStatus::Continue;
 		if (tok == ParserToken::Blank) {
-			Configuration_parseQueryBlank(stack, word);
+			if (!Configuration_parseQueryBlank(control, word)) {
+				return ParserStatus::Stop;
+			}
 		} else {
 			++ counter;
-			if (_preStem && !isWordPart(tok)) {
-				auto ret = _preStem(word, tok);
+			if (data->preStem && !isWordPart(tok)) {
+				auto ret = data->preStem(word, tok);
 				if (!ret.empty()) {
 					auto offset = counter - prev;
 					prev = counter;
 					for (auto &it : ret) {
 						auto str = normalizeWord(it);
-						Configuration_parseQueryWord(stack, str, offset, word);
+						if (!Configuration_parseQueryWord(control, str, offset, word)) {
+							return ParserStatus::Stop;
+						}
 					}
 					return isComplexWord(tok) ? ParserStatus::PreventSubdivide : ParserStatus::Continue;
 				}
 			}
 			stemWord(word, tok, [&] (StringView w, StringView s, ParserToken tok) {
 				if (!s.empty()) {
-					Configuration_parseQueryWord(stack, s, counter - prev, w);
+					if (!Configuration_parseQueryWord(control, s, counter - prev, w)) {
+						status = ParserStatus::Stop;
+					}
 					prev = counter;
 				}
 			});
 		}
-		return isComplexWord(tok) ? ParserStatus::PreventSubdivide : ParserStatus::Continue;
+		return status;
 	});
 
-	if (stack.back()->block == SearchQuery::Block::Quoted && stack.back()->op == SearchOp::Follow && stack.back()->args.empty()) {
-		auto v = stack.back();
-		stack.pop_back();
-		if (!stack.empty()) {
-			if (&stack.back()->args.back() == v) {
-				stack.back()->args.pop_back();
+	if (!ret) {
+		if (err) {
+			*err = control.error;
+		}
+		return SearchQuery();
+	}
+
+	if (control.stack.back()->block == SearchQuery::Block::Quoted
+			&& control.stack.back()->op == SearchOp::Follow
+			&& control.stack.back()->args.empty()) {
+		auto v = control.stack.back();
+		control.stack.pop_back();
+		if (!control.stack.empty()) {
+			if (&control.stack.back()->args.back() == v) {
+				control.stack.back()->args.pop_back();
 			}
 		}
 	}
 
+	query.normalize();
 	return query;
 }
 
 bool Configuration::isMatch(const SearchVector &vec, StringView q) const {
 	auto query = parseQuery(q);
-	return isMatch(vec, query);
-}
-
-static const Configuration::Vector<Pair<size_t, SearchData::Rank>> *Configuration_isMatch(const Configuration::SearchVector &vec, StringView stem) {
-	auto it = vec.find(stem);
-	if (it != vec.end()) {
-		return &it->second;
-	}
-	return nullptr;
-}
-
-static bool Configuration_isFollow(Configuration::Vector< Pair<SearchData::Rank, Configuration::Vector<size_t>> > & path,
-		const Configuration::Vector<Pair<size_t, SearchData::Rank>> * v2, size_t offset) {
-	if (offset < 1) {
-		offset = 1;
-	}
-
-	if (path.empty()) {
-		for (auto &it : *v2) {
-			auto &obj = path.emplace_back();
-			obj.first = it.second;
-			obj.second.emplace_back(it.first);
-		}
-	} else {
-		auto it = path.begin();
-		while (it != path.end()) {
-			auto target = it->second.back();
-			auto iit = std::lower_bound(v2->begin(), v2->end(), pair(target, it->first),
-					[&] (const Pair<size_t, SearchData::Rank> &l, const Pair<size_t, SearchData::Rank> &r) {
-				if (l.first != r.first) {
-					return l.first < r.first;
-				} else {
-					return toInt(l.second) < toInt(r.second);
-				}
-			});
-			if (iit != v2->end()) {
-				while (iit != v2->end() && (iit->first == target || iit->second != it->first)) {
-					++ iit;
-				}
-
-				if (iit != v2->end() && (iit->first - target <= offset && iit->second == it->first)) {
-					it->second.emplace_back(iit->first);
-					++ it;
-					continue;
-				}
-			}
-			it = path.erase(it);
-		}
-	}
-
-	return !path.empty();
-}
-
-static bool Configuration_isMatch(const Configuration::SearchVector &vec, const SearchQuery &q) {
-	if (!q.args.empty()) {
-		switch (q.op) {
-		case SearchOp::None: break;
-		case SearchOp::Not:
-			return !Configuration_isMatch(vec, q.args.front());
-			break;
-		case SearchOp::And:
-			for (auto &it : q.args) {
-				if (!Configuration_isMatch(vec, it)) {
-					return false;
-					break;
-				}
-			}
-			return true;
-			break;
-		case SearchOp::Or:
-			for (auto &it : q.args) {
-				if (Configuration_isMatch(vec, it)) {
-					return true;
-					break;
-				}
-			}
-			return false;
-			break;
-		case SearchOp::Follow:
-			Configuration::Vector< Pair<SearchData::Rank, Configuration::Vector<size_t>> > path;
-			for (auto &it : q.args) {
-				auto tmp = Configuration_isMatch(vec, it.value);
-				if (!tmp) {
-					return false;
-				}
-
-				if (!Configuration_isFollow(path, tmp, it.offset)) {
-					return false;
-				}
-			}
-			return true;
-			break;
-		}
-	} else if (!q.value.empty()) {
-		auto v = Configuration_isMatch(vec, q.value);
-		if (q.op == SearchOp::Not) {
-			return v == nullptr;
-		} else {
-			return v != nullptr;
-		}
-	}
-	return false;
-}
-
-bool Configuration::isMatch(const SearchVector &vec, const SearchQuery &q) const {
-	return Configuration_isMatch(vec, q);
+	return query.isMatch(vec);
 }
 
 }

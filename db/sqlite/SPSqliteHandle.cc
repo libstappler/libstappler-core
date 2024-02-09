@@ -29,8 +29,24 @@ namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 static std::mutex s_logMutex;
 
-SqliteQueryInterface::SqliteQueryInterface(const sql::Driver *d)
-: driver(d) { }
+class SqliteQuery : public db::sql::SqlQuery {
+public:
+	virtual ~SqliteQuery() = default;
+
+	SqliteQuery(db::QueryInterface *q, const sql::Driver *d)
+	: SqlQuery(q, d) { }
+
+	virtual void writeFullTextWhere(WhereContinue &whi, db::Operator op, const db::Scheme &scheme,
+			const db::Query::Select &sel, StringView ftsQuery) override {
+		auto functionCall = toString("sp_ts_query_valid(\"", scheme.getName(), "\".\"", sel.field, "\", '", ftsQuery, "')");
+		whi.where(op,
+				SqlQuery::Field(StringView(functionCall), true),
+				Comparation::Equal, RawStringView{StringView("1")});
+	}
+};
+
+SqliteQueryInterface::SqliteQueryInterface(const sql::Driver *d, const sql::QueryStorageHandle *s, Driver::Handle h)
+: driver(d), storage(s), handle(h) { }
 
 size_t SqliteQueryInterface::push(String &&val) {
 	auto &it = params.emplace_back(BindingData());
@@ -157,65 +173,61 @@ void SqliteQueryInterface::bindTypeString(db::Binder &, StringStream &query, con
 }
 
 void SqliteQueryInterface::bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) {
-	query << " NULL";
-	/*if (!d.data || !d.data.isArray() || d.data.size() == 0) {
-		query << "NULL";
-	} else {
-		bool first = true;
-		for (auto &it : d.data.asArray()) {
-			auto &data = it.getString(0);
-			auto lang = stappler::search::Language(it.getInteger(1));
-			auto rank = stappler::search::SearchData::Rank(it.getInteger(2));
-			auto type = stappler::search::SearchData::Type(it.getInteger(3));
+	auto slot = d.field->getSlot<FieldFullTextView>();
+	auto result = slot->searchConfiguration->encodeSearchVectorData(d.data);
+	if (auto num = push(move(result))) {
+		query << "?" << num;
+	}
 
-			if (!data.empty()) {
-				if (!first) { query << " || "; } else { first = false; }
-				auto dataIdx = push(data);
-				if (type == stappler::search::SearchData::Parse) {
-					if (rank == stappler::search::SearchData::Unknown) {
-						query << " to_tsvector('" << stappler::search::getLanguageName(lang) << "', $" << dataIdx << "::text)";
-					} else {
-						query << " setweight(to_tsvector('" << stappler::search::getLanguageName(lang) << "', $" << dataIdx << "::text), '" << char('A' + char(rank)) << "')";
-					}
-				} else {
-					query << " $" << dataIdx << "::tsvector";
-				}
-			} else {
-				query << " NULL";
-			}
+	storage->data->emplace(d.field->getName(), &d.data);
+}
+
+void SqliteQueryInterface::bindFullTextFrom(db::Binder &, StringStream &query, const db::Binder::FullTextFrom &d) {
+	auto tableName = toString(d.scheme, "_f_", d.field->getName());
+	auto fieldId = toString(d.scheme, "_id");
+
+	auto &storageData = *storage->data;
+
+	auto it = storageData.find(d.query);
+	if (it != storageData.end()) {
+		auto q = (TextQueryData *)it->second;
+		query << " INNER JOIN (SELECT DISTINCT \"" << fieldId << "\" as id FROM \"" << tableName << "\" WHERE word IN (";
+
+		bool first = true;
+		for (auto &w : q->pos) {
+			if (first) { first = false; } else { query << ","; }
+			query << w;
 		}
-	}*/
+
+		query << ")) AS \"__" << d.scheme << "_" << d.field->getName() << "\""
+			" ON (\"" << d.scheme << "\".__oid=\"__" << d.scheme << "_" << d.field->getName() << "\".id)";
+	}
 }
 
 void SqliteQueryInterface::bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) {
-	query << " NULL";
-	/*int normalizationValue = 0;
-	if (d.field->hasFlag(db::Flags::TsNormalize_DocLength)) {
-		normalizationValue |= 2;
-	} else if (d.field->hasFlag(db::Flags::TsNormalize_DocLengthLog)) {
-		normalizationValue |= 1;
-	} else if (d.field->hasFlag(db::Flags::TsNormalize_UniqueWordsCount)) {
-		normalizationValue |= 8;
-	} else if (d.field->hasFlag(db::Flags::TsNormalize_UniqueWordsCountLog)) {
-		normalizationValue |= 16;
-	}
-	query << " ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", " << d.query << ", " << normalizationValue << ")";*/
+	auto slot = d.field->getSlot<FieldFullTextView>();
+	query << " sp_ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", '" << d.query << "', " << toInt(slot->normalization) << ")";
 }
 
-void SqliteQueryInterface::bindFullTextData(db::Binder &, StringStream &query, const db::FullTextData &d) {
-	query << " NULL";
-	/*auto idx = push(String(d.buffer));
-	switch (d.type) {
-	case db::FullTextData::Parse:
-		query  << " websearch_to_tsquery('" << d.getLanguage() << "', $" << idx << "::text)";
-		break;
-	case db::FullTextData::Cast:
-		query  << " to_tsquery('" << d.getLanguage() << "', $" << idx << "::text)";
-		break;
-	case db::FullTextData::ForceCast:
-		query  << " $" << idx << "::tsquery ";
-		break;
-	}*/
+void SqliteQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query, const db::Binder::FullTextQueryRef &d) {
+	query << d.scheme << "." << d.field->getName();
+
+	auto it = storage->data->find(query.weak());
+	while (it != storage->data->end()) {
+		query << "_";
+		it = storage->data->find(query.weak());
+	}
+
+	auto q = new TextQueryData;
+	q->query = &d.query;
+	q->query->decompose([&] (StringView pos) {
+		emplace_ordered(q->pos, ((const Driver *)driver)->insertWord(handle, pos));
+	}, [&] (StringView neg) {
+		emplace_ordered(q->neg, ((const Driver *)driver)->insertWord(handle, neg));
+	});
+
+	auto str = StringView(query.weak());
+	storage->data->emplace(str.pdup(), q);
 }
 
 void SqliteQueryInterface::bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) {
@@ -279,9 +291,9 @@ void Handle::close() {
 	conn = Driver::Connection(nullptr);
 }
 
-void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb) {
-	SqliteQueryInterface interface(_driver);
-	db::sql::SqlQuery query(&interface, _driver);
+void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb, const sql::QueryStorageHandle *storage) {
+	SqliteQueryInterface interface(_driver, storage, handle);
+	SqliteQuery query(&interface, _driver);
 	query.setProfile(_profile);
 	cb(query);
 }
@@ -450,7 +462,9 @@ bool Handle::beginTransaction() {
 		return false;
 	}
 
-	driver->setUserId(handle, _driver->getApplicationInterface()->getUserIdFromContext());
+	if (_driver->getApplicationInterface()) {
+		driver->setUserId(handle, _driver->getApplicationInterface()->getUserIdFromContext());
+	}
 
 	switch (level) {
 	case TransactionLevel::Deferred:

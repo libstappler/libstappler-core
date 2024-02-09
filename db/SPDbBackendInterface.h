@@ -106,13 +106,11 @@ public:
 	virtual Value select(Worker &, const Query &) = 0;
 
 	// create new object or objects, returns new values
-	virtual Value create(Worker &, Value &) = 0;
+	virtual Value create(Worker &, const Vector<InputField> &inputField, Vector<InputRow> &inputRows, bool multiCreate) = 0;
+	// virtual Value create(Worker &, Map<StringView, InputValue> &) = 0;
 
 	// perform update operation (read-modify-write), update only specified fields in new object
-	virtual Value save(Worker &, uint64_t oid, const Value &obj, const Vector<String> &fields) = 0;
-
-	// perform update operation in-place with patch data
-	virtual Value patch(Worker &, uint64_t oid, const Value &patch) = 0;
+	virtual Value save(Worker &, uint64_t oid, const Value &obj, const Vector<InputField> &, InputRow &) = 0;
 
 	// delete object by id
 	virtual bool remove(Worker &, uint64_t oid) = 0;
@@ -178,20 +176,33 @@ protected:
 class Binder {
 public:
 	struct DataField {
-		const db::Field *field;
+		const Field *field;
 		const Value &data;
 		bool force = false;
 		bool compress = false;
 	};
 
 	struct FullTextField {
-		const Value &data;
+		const Field *field;
+		const FullTextVector &data;
+	};
+
+	struct FullTextFrom {
+		StringView scheme;
+		const Field *field;
+		StringView query;
 	};
 
 	struct FullTextRank {
 		StringView scheme;
 		const Field *field;
 		StringView query;
+	};
+
+	struct FullTextQueryRef {
+		StringView scheme;
+		const Field *field;
+		const FullTextQuery &query;
 	};
 
 	struct TypeString {
@@ -209,20 +220,21 @@ public:
 	void writeBind(StringStream &, int64_t);
 	void writeBind(StringStream &, uint64_t);
 	void writeBind(StringStream &, double);
-	void writeBind(StringStream &query, stappler::Time val);
-	void writeBind(StringStream &query, stappler::TimeInterval val);
+	void writeBind(StringStream &query, Time val);
+	void writeBind(StringStream &query, TimeInterval val);
 	void writeBind(StringStream &, const String &);
 	void writeBind(StringStream &, String &&);
 	void writeBind(StringStream &, const StringView &);
 	void writeBind(StringStream &, const Bytes &);
 	void writeBind(StringStream &, Bytes &&);
-	void writeBind(StringStream &, const stappler::CoderSource &);
+	void writeBind(StringStream &, const CoderSource &);
 	void writeBind(StringStream &, const Value &);
 	void writeBind(StringStream &, const DataField &);
 	void writeBind(StringStream &, const TypeString &);
 	void writeBind(StringStream &, const FullTextField &);
+	void writeBind(StringStream &, const FullTextFrom &);
 	void writeBind(StringStream &, const FullTextRank &);
-	void writeBind(StringStream &, const FullTextData &);
+	void writeBind(StringStream &, const FullTextQueryRef &);
 	void writeBind(StringStream &, const stappler::sql::PatternComparator<const Value &> &);
 	void writeBind(StringStream &, const stappler::sql::PatternComparator<const StringView &> &);
 	void writeBind(StringStream &, const Vector<int64_t> &);
@@ -252,8 +264,9 @@ public:
 	virtual void bindDataField(Binder &, StringStream &, const Binder::DataField &) = 0;
 	virtual void bindTypeString(Binder &, StringStream &, const Binder::TypeString &) = 0;
 	virtual void bindFullText(Binder &, StringStream &, const Binder::FullTextField &) = 0;
+	virtual void bindFullTextFrom(Binder &, StringStream &, const Binder::FullTextFrom &) = 0;
 	virtual void bindFullTextRank(Binder &, StringStream &, const Binder::FullTextRank &) = 0;
-	virtual void bindFullTextData(Binder &, StringStream &, const FullTextData &) = 0;
+	virtual void bindFullTextQuery(Binder &, StringStream &, const Binder::FullTextQueryRef &d) = 0;
 	virtual void bindIntVector(Binder &, StringStream &, const Vector<int64_t> &) = 0;
 	virtual void bindDoubleVector(Binder &, StringStream &, const Vector<double> &) = 0;
 	virtual void bindStringVector(Binder &, StringStream &, const Vector<StringView> &) = 0;
@@ -305,6 +318,8 @@ struct ResultRow {
 	size_t size() const;
 	Value toData(const db::Scheme &, const Map<String, db::Field> & = Map<String, db::Field>(),
 			const Vector<const Field *> &virtuals = Vector<const Field *>());
+
+	Value encode() const;
 
 	StringView front() const;
 	StringView back() const;

@@ -54,7 +54,9 @@ Transaction Transaction::acquire(const Adapter &adapter) {
 		auto ret = Transaction(d);
 		ret.retain();
 
-		adapter.getApplicationInterface()->initTransaction(ret);
+		if (adapter.getApplicationInterface()) {
+			adapter.getApplicationInterface()->initTransaction(ret);
+		}
 
 		return ret;
 	}
@@ -347,9 +349,9 @@ Value Transaction::create(Worker &w, Value &data) const {
 	return Value();
 }
 
-Value Transaction::save(Worker &w, uint64_t oid, const Value &obj, const Vector<String> &fields) const {
+Value Transaction::save(Worker &w, uint64_t oid, Value &obj, Value &patch, Set<const Field *> &fields) const {
 	if (!w.scheme().hasAccessControl()) {
-		return _data->adapter.save(w, oid, obj, fields);
+		return _data->adapter.save(w, oid, obj, patch, fields);
 	}
 
 	DataHolder h(_data, w);
@@ -367,22 +369,18 @@ Value Transaction::save(Worker &w, uint64_t oid, const Value &obj, const Vector<
 		bool hasD = (d && d->onSave);
 
 		if (hasR || hasD) {
-			if (auto curObj = acquireObject(w.scheme(), oid)) {
-				Value newObj(obj);
-				Vector<String> newFields(fields);
-				if ((hasD && !d->onSave(w, curObj, newObj, newFields)) || (hasR && !r->onSave(w, curObj, newObj, newFields))) {
-					return false;
-				}
+			if ((hasD && !d->onSave(w, obj, patch, fields)) || (hasR && !r->onSave(w, obj, patch, fields))) {
+				return false;
+			}
 
-				if (auto val = _data->adapter.save(w, oid, newObj, newFields)) {
-					ret = processReturnObject(w.scheme(), val) ? std::move(val) : Value(true);
-					return true;
-				}
+			if (auto val = _data->adapter.save(w, oid, obj, patch, fields)) {
+				ret = processReturnObject(w.scheme(), val) ? std::move(val) : Value(true);
+				return true;
 			}
 			return false;
 		}
 
-		if (auto val = _data->adapter.save(w, oid, obj, fields)) {
+		if (auto val = _data->adapter.save(w, oid, obj, patch, fields)) {
 			ret = processReturnObject(w.scheme(), val) ? std::move(val) : Value(true);
 			return true;
 		}
@@ -394,8 +392,9 @@ Value Transaction::save(Worker &w, uint64_t oid, const Value &obj, const Vector<
 }
 
 Value Transaction::patch(Worker &w, uint64_t oid, Value &data) const {
+	Value tmp;
 	if (!w.scheme().hasAccessControl()) {
-		return _data->adapter.patch(w, oid, data);
+		return _data->adapter.save(w, oid, tmp, data, Set<const Field *>());
 	}
 
 	DataHolder h(_data, w);
@@ -412,7 +411,7 @@ Value Transaction::patch(Worker &w, uint64_t oid, Value &data) const {
 			return false;
 		}
 
-		if (auto val = _data->adapter.patch(w, oid, data)) {
+		if (auto val = _data->adapter.save(w, oid, tmp, data, Set<const Field *>())) {
 			ret = processReturnObject(w.scheme(), val) ? std::move(val) : Value(true);
 			return true;
 		}

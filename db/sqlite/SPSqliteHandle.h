@@ -47,7 +47,7 @@ public:
 		Type type;
 	};
 
-	SqliteQueryInterface(const sql::Driver *d);
+	SqliteQueryInterface(const sql::Driver *d, const sql::QueryStorageHandle *, Driver::Handle h);
 
 	size_t push(String &&val);
 	size_t push(const StringView &val);
@@ -67,8 +67,9 @@ public:
 	virtual void bindDataField(db::Binder &, StringStream &query, const db::Binder::DataField &f) override;
 	virtual void bindTypeString(db::Binder &, StringStream &query, const db::Binder::TypeString &type) override;
 	virtual void bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) override;
+	virtual void bindFullTextFrom(db::Binder &, StringStream &query, const db::Binder::FullTextFrom &d) override;
 	virtual void bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) override;
-	virtual void bindFullTextData(db::Binder &, StringStream &query, const db::FullTextData &d) override;
+	virtual void bindFullTextQuery(db::Binder &, StringStream &query, const db::Binder::FullTextQueryRef &d) override;
 	virtual void bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) override;
 	virtual void bindDoubleVector(Binder &b, StringStream &query, const Vector<double> &vec) override;
 	virtual void bindStringVector(Binder &b, StringStream &query, const Vector<StringView> &vec) override;
@@ -76,6 +77,8 @@ public:
 
 public:
 	const sql::Driver *driver = nullptr;
+	const sql::QueryStorageHandle *storage = nullptr;
+	Driver::Handle handle;
 	Vector<BindingData> params;
 };
 
@@ -95,7 +98,7 @@ public:
 	Driver::Handle getHandle() const;
 	Driver::Connection getConnection() const;
 
-	virtual void makeQuery(const Callback<void(sql::SqlQuery &)> &cb) override;
+	virtual void makeQuery(const Callback<void(sql::SqlQuery &)> &cb, const sql::QueryStorageHandle *) override;
 
 	virtual bool selectQuery(const db::sql::SqlQuery &, const Callback<bool(sql::Result &)> &cb,
 			const Callback<void(const Value &)> &err = nullptr) override;

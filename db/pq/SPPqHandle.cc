@@ -146,8 +146,8 @@ SPUNUSED static String pg_numeric_to_string(BytesViewNetwork r) {
 
 	return str;
 }
-PgQueryInterface::PgQueryInterface(const sql::Driver *d)
-: driver(d) { }
+PgQueryInterface::PgQueryInterface(const sql::Driver *d, const sql::QueryStorageHandle *s)
+: driver(d), storage(s) { }
 
 size_t PgQueryInterface::push(String &&val) {
 	params.emplace_back(Bytes());
@@ -298,62 +298,32 @@ void PgQueryInterface::bindTypeString(db::Binder &, StringStream &query, const d
 }
 
 void PgQueryInterface::bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) {
-	if (!d.data || !d.data.isArray() || d.data.size() == 0) {
+	if (d.data.empty()) {
 		query << "NULL";
 	} else {
-		bool first = true;
-		for (auto &it : d.data.asArray()) {
-			auto &data = it.getString(0);
-			auto lang = stappler::search::Language(it.getInteger(1));
-			auto rank = stappler::search::SearchData::Rank(it.getInteger(2));
-			auto type = stappler::search::SearchData::Type(it.getInteger(3));
-
-			if (!data.empty()) {
-				if (!first) { query << " || "; } else { first = false; }
-				auto dataIdx = push(data);
-				if (type == stappler::search::SearchData::Parse) {
-					if (rank == stappler::search::SearchData::Unknown) {
-						query << " to_tsvector('" << stappler::search::getLanguageName(lang) << "', $" << dataIdx << "::text)";
-					} else {
-						query << " setweight(to_tsvector('" << stappler::search::getLanguageName(lang) << "', $" << dataIdx << "::text), '" << char('A' + char(rank)) << "')";
-					}
-				} else {
-					query << " $" << dataIdx << "::tsvector";
-				}
-			} else {
-				query << " NULL";
-			}
-		}
+		auto slot = d.field->getSlot<FieldFullTextView>();
+		auto str = slot->searchConfiguration->encodeSearchVectorPostgres(d.data);
+		auto dataIdx = push(str);
+		query << " $" << dataIdx << "::tsvector";
 	}
+}
+
+void PgQueryInterface::bindFullTextFrom(db::Binder &, StringStream &query, const db::Binder::FullTextFrom &) {
+
 }
 
 void PgQueryInterface::bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) {
-	int normalizationValue = 0;
-	if (d.field->hasFlag(db::Flags::TsNormalize_DocLength)) {
-		normalizationValue |= 2;
-	} else if (d.field->hasFlag(db::Flags::TsNormalize_DocLengthLog)) {
-		normalizationValue |= 1;
-	} else if (d.field->hasFlag(db::Flags::TsNormalize_UniqueWordsCount)) {
-		normalizationValue |= 8;
-	} else if (d.field->hasFlag(db::Flags::TsNormalize_UniqueWordsCountLog)) {
-		normalizationValue |= 16;
-	}
-	query << " ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", " << d.query << ", " << normalizationValue << ")";
+	auto slot = d.field->getSlot<FieldFullTextView>();
+	query << " ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", " << d.query << ", " << toInt(slot->normalization) << ")";
 }
 
-void PgQueryInterface::bindFullTextData(db::Binder &, StringStream &query, const db::FullTextData &d) {
-	auto idx = push(String(d.buffer));
-	switch (d.type) {
-	case db::FullTextData::Parse:
-		query  << " websearch_to_tsquery('" << d.getLanguage() << "', $" << idx << "::text)";
-		break;
-	case db::FullTextData::Cast:
-		query  << " to_tsquery('" << d.getLanguage() << "', $" << idx << "::text)";
-		break;
-	case db::FullTextData::ForceCast:
-		query  << " $" << idx << "::tsquery ";
-		break;
-	}
+void PgQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query, const db::Binder::FullTextQueryRef &d) {
+	StringStream tmp;
+	d.query.encode([&] (StringView str) {
+		tmp << str;
+	}, FullTextQuery::Postgresql);
+	auto idx = push(tmp.str());
+	query  << " $" << idx << "::tsquery ";
 }
 
 void PgQueryInterface::bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) {
@@ -422,8 +392,8 @@ void Handle::close() {
 	conn = Driver::Connection(nullptr);
 }
 
-void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb) {
-	PgQueryInterface interface(_driver);
+void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb, const sql::QueryStorageHandle *s) {
+	PgQueryInterface interface(_driver, s);
 	db::sql::SqlQuery query(&interface, _driver);
 	cb(query);
 }

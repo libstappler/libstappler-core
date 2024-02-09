@@ -76,11 +76,6 @@ enum class Flags : uint32_t {
 	Enum = 1 << 15, /** Value is enumeration with fixed (or low-distributed) number of values (enables more effective index in MDB) */
 	PatternIndexed = (1 << 9) | (1 << 16), /** Create index, that allows select queries with textual patterns (also enables normal index) */
 	TrigramIndexed = (1 << 9) | (1 << 17), /** enable trigram index on this field (also enables normal index) */
-
-	TsNormalize_DocLengthLog = 1 << 24, /** Text search normalization: divides the rank by 1 + the logarithm of the document length */
-	TsNormalize_DocLength = 1 << 25, /** Text search normalization: divides the rank by the document length */
-	TsNormalize_UniqueWordsCount = 1 << 26, /** Text search normalization: divides the rank by the number of unique words in document */
-	TsNormalize_UniqueWordsCountLog = 1 << 27, /** Text search normalization: divides the rank by 1 + the logarithm of the number of unique words in document */
 };
 
 SP_DEFINE_ENUM_AS_MASK(Flags)
@@ -269,10 +264,10 @@ using ViewLinkageFn = Function<Vector<uint64_t>(const Scheme &targetScheme, cons
 using ViewFn = Function<bool(const Scheme &objScheme, const Value &obj)>;
 
 // function to extract fulltext search data from object
-using FullTextViewFn = Function<Vector<FullTextData>(const Scheme &objScheme, const Value &obj)>;
+using FullTextViewFn = Function<FullTextVector(const Scheme &objScheme, const Value &obj)>;
 
 // function to prepare fulltext query from input string
-using FullTextQueryFn = Function<Vector<FullTextData>(const Value &searchData)>;
+using FullTextQueryFn = Function<FullTextQuery(const Value &searchData)>;
 
 using VirtualReadFn = Function<Value(const Scheme &objScheme, const Value &)>;
 
@@ -318,6 +313,10 @@ struct CustomFieldInfo {
 	Function<void(const FieldCustom &, const Scheme &,
 			stappler::sql::Query<db::Binder, Interface>::WhereContinue &,
 			Operator, const StringView &, Comparation, const Value &, const Value &)> writeQuery;
+
+	Function<void(const FieldCustom &, const Scheme &,
+			stappler::sql::Query<db::Binder, Interface>::SelectFrom &,
+			Comparation cmp, const Value &val, const Value &)> writeFrom;
 };
 
 struct FieldCustom;
@@ -601,11 +600,14 @@ struct FieldFullTextView : Field::Slot {
 
 	virtual bool transformValue(const Scheme &, const Value &, Value &, bool isCreate) const override { return false; }
 
-	Vector<FullTextData> parseQuery(const Value &) const;
+	FullTextQuery parseQuery(const Value &) const;
 
 	Vector<String> requireFields;
 	FullTextViewFn viewFn;
 	FullTextQueryFn queryFn;
+
+	search::Normalization normalization = search::Normalization::Default;
+	const search::Configuration *searchConfiguration = nullptr;
 };
 
 struct FieldCustom : Field::Slot {
@@ -879,6 +881,18 @@ template <> struct FieldOption<FieldView, Vector<String>> {
 template <> struct FieldOption<FieldFullTextView, Vector<String>> {
 	static inline void assign(FieldFullTextView & f, Vector<String> && s) {
 		f.requireFields = std::move(s);
+	}
+};
+
+template <> struct FieldOption<FieldFullTextView, search::Configuration *> {
+	static inline void assign(FieldFullTextView & f, const search::Configuration *s) {
+		f.searchConfiguration = s;
+	}
+};
+
+template <> struct FieldOption<FieldFullTextView, search::Configuration> {
+	static inline void assign(FieldFullTextView & f, const search::Configuration &s) {
+		f.searchConfiguration = &s;
 	}
 };
 

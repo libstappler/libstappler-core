@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SPSearchDistanceEdLib.cc"
 #include "SPSearchIndex.cc"
 #include "SPSearchParser.cc"
+#include "SPSearchQuery.cc"
 #include "SPSearchUrl.cc"
 
 namespace STAPPLER_VERSIONIZED stappler::search {

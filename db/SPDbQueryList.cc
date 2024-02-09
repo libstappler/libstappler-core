@@ -330,7 +330,7 @@ void QueryList::Item::readFields(const FieldCallback &cb, bool isSimpleGet) cons
 
 QueryList::QueryList(const ApplicationInterface *app, const Scheme *scheme)
 : _application(app) {
-	queries.reserve(4);
+	queries.reserve(config::RESOURCE_RESOLVE_MAX_DEPTH);
 	queries.emplace_back(Item{scheme});
 }
 
@@ -409,7 +409,7 @@ bool QueryList::offset(const Scheme *scheme, size_t offset) {
 	return false;
 }
 
-bool QueryList::setFullTextQuery(const Field *field, Vector<FullTextData> &&data) {
+bool QueryList::setFullTextQuery(const Field *field, FullTextQuery &&data) {
 	if (queries.size() > 0 && field->getType() == Type::FullTextView) {
 		Item &b = queries.back();
 		b.query.select(field->getName(), std::move(data));
@@ -429,7 +429,7 @@ bool QueryList::setAll() {
 }
 
 bool QueryList::setField(const Scheme *scheme, const Field *field) {
-	if (queries.size() < 4) {
+	if (queries.size() < config::RESOURCE_RESOLVE_MAX_DEPTH) {
 		Item &prev = queries.back();
 		prev.field = field;
 		queries.emplace_back(Item{scheme, prev.scheme->getForeignLink(*prev.field)});

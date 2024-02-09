@@ -418,6 +418,8 @@ bool SqlHandle::cleanupRefSet(SqlQuery &query, const Scheme &scheme, uint64_t oi
 }
 
 Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Value &&val) {
+	auto queryStorage = _driver->makeQueryStorage(w.scheme().getName());
+
 	Value ret;
 	switch (a) {
 	case db::Action::Get:
@@ -453,7 +455,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 			}
 			default: ret = getSimpleField(w, query, oid, f); break;
 			}
-		});
+		}, &queryStorage);
 		break;
 	case db::Action::Count:
 		makeQuery([&] (SqlQuery &query) {
@@ -466,7 +468,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 			case db::Type::View: ret = Value(getViewCount(w, query, oid, f, db::Query())); break;
 			default: ret = Value(getSimpleCount(w, query, oid, f)); break;
 			}
-		});
+		}, &queryStorage);
 		break;
 	case db::Action::Set:
 		switch (f.getType()) {
@@ -480,7 +482,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 				bool success = false;
 				makeQuery([&] (SqlQuery &query) {
 					success = insertIntoArray(query, w.scheme(), oid, f, val);
-				});
+				}, &queryStorage);
 				if (success) {
 					ret = std::move(val);
 				}
@@ -508,7 +510,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 						}
 						query << ";";
 						performQuery(query);
-					});
+					}, &queryStorage);
 				}
 				ret = field(db::Action::Append, w, oid, f, std::move(val));
 			}
@@ -531,7 +533,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 				bool success = false;
 				makeQuery([&] (SqlQuery &query) {
 					success = insertIntoArray(query, w.scheme(), oid, f, val);
-				});
+				}, &queryStorage);
 				if (success) {
 					ret = std::move(val);
 				}
@@ -553,7 +555,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 				bool success = false;
 				makeQuery([&] (SqlQuery &query) {
 					success = insertIntoRefSet(query, w.scheme(), oid, f, toAdd);
-				});
+				}, &queryStorage);
 				if (success) {
 					ret = std::move(val);
 				}
@@ -576,7 +578,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 				if (performQuery(query) != stappler::maxOf<size_t>()) {
 					ret = Value(true);
 				}
-			});
+			}, &queryStorage);
 			break;
 		case db::Type::Set:
 			if (f.isReference()) {
@@ -600,7 +602,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 									<< w.scheme().getName() << "_f_" << f.getName() << " WHERE "<< source << "_id=" << oid << ");";
 							ret = Value(performQuery(query) != stappler::maxOf<size_t>());
 						}
-					});
+					}, &queryStorage);
 				} else {
 					Vector<int64_t> toRemove;
 					for (auto &it : val.asArray()) {
@@ -611,7 +613,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 
 					makeQuery([&] (SqlQuery &query) {
 						ret = Value(cleanupRefSet(query, w.scheme(), oid, f, toRemove));
-					});
+					}, &queryStorage);
 				}
 			}
 			break;
@@ -628,6 +630,8 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 }
 
 Value SqlHandle::field(db::Action a, Worker &w, const Value &obj, const Field &f, Value &&val) {
+	auto queryStorage = _driver->makeQueryStorage(w.scheme().getName());
+
 	Value ret;
 	auto oid = obj.isInteger() ? obj.asInteger() : obj.getInteger("__oid");
 	auto targetId = obj.isInteger() ? obj.asInteger() : obj.getInteger(f.getName());
@@ -671,7 +675,7 @@ Value SqlHandle::field(db::Action a, Worker &w, const Value &obj, const Field &f
 				}
 				break;
 			}
-		});
+		}, &queryStorage);
 		break;
 	case db::Action::Count:
 		makeQuery([&] (SqlQuery &query) {
@@ -690,7 +694,7 @@ Value SqlHandle::field(db::Action a, Worker &w, const Value &obj, const Field &f
 				}
 				break;
 			}
-		});
+		}, &queryStorage);
 		break;
 	case db::Action::Set:
 	case db::Action::Remove:

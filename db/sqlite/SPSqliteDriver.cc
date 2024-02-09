@@ -22,21 +22,58 @@
  **/
 
 #include "SPSqliteDriver.h"
+#include "SPSqliteDriverHandle.h"
 #include "SPSqliteHandle.h"
-#include "sqlite3.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
-struct DriverHandle {
-	sqlite3 *conn;
-	const Driver *driver;
-	void *padding;
-	pool_t *pool;
-	StringView name;
-	sqlite3_stmt *oidQuery = nullptr;
-	int64_t userId = 0;
-	Time ctime;
-};
+constexpr static auto DATABASE_DEFAULTS = StringView(R"Sql(
+CREATE TABLE IF NOT EXISTS "__objects" (
+	"__oid" BIGINT NOT NULL DEFAULT 0,
+	"control" INT NOT NULL PRIMARY KEY DEFAULT 0
+) WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS "__removed" (
+	__oid BIGINT NOT NULL PRIMARY KEY
+) WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS "__sessions" (
+	name BLOB NOT NULL PRIMARY KEY,
+	mtime BIGINT NOT NULL,
+	maxage BIGINT NOT NULL,
+	data BLOB
+) WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS "__broadcasts" (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	date BIGINT NOT NULL,
+	msg BLOB
+);
+
+CREATE TABLE IF NOT EXISTS "__login" (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	"user" BIGINT NOT NULL,
+	name TEXT NOT NULL,
+	password BLOB NOT NULL,
+	date BIGINT NOT NULL,
+	success BOOLEAN NOT NULL,
+	addr TEXT,
+	host TEXT,
+	path TEXT
+);
+
+CREATE TABLE IF NOT EXISTS "__words" (
+	id BIGINT NOT NULL,
+	word TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS "__broadcasts_idx_date" ON "__broadcasts" ("date");
+CREATE INDEX IF NOT EXISTS "__login_idx_user" ON "__login" ("user");
+CREATE INDEX IF NOT EXISTS "__login_idx_date" ON "__login" ("date");
+CREATE UNIQUE INDEX IF NOT EXISTS "__words_idx_id" ON "__words" ("id");
+
+INSERT OR IGNORE INTO "__objects" ("__oid") VALUES (0);
+)Sql");
 
 Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path) {
 	if (sqlite3_initialize() == SQLITE_OK) {
@@ -87,12 +124,17 @@ BackendInterface *Driver::acquireInterface(Handle handle, pool_t *pool) const {
 
 static StringView Driver_exec(pool_t *p, sqlite3 *db, StringView query) {
 	sqlite3_stmt *stmt = nullptr;
-	if (sqlite3_prepare_v3(db, query.data(), query.size(), 0, &stmt, nullptr) != SQLITE_OK) {
+	auto err = sqlite3_prepare_v3(db, query.data(), query.size(), 0, &stmt, nullptr);
+	if (err != SQLITE_OK) {
+		log::error("sqlite::Driver", err, ": ", sqlite3_errstr(int(err)), ": ", sqlite3_errmsg(db), ":\n", query);
 		return StringView();
 	}
 
-	auto err = sqlite3_step(stmt);
+	err = sqlite3_step(stmt);
 	if (err != SQLITE_ROW) {
+		if (err < 100) {
+			log::error("sqlite::Driver", err, ": ", sqlite3_errstr(int(err)), ": ", sqlite3_errmsg(db), ":\n", query);
+		}
 		sqlite3_finalize(stmt);
 		return StringView();
 	}
@@ -108,9 +150,10 @@ static StringView Driver_exec(pool_t *p, sqlite3 *db, StringView query) {
 	return StringView();
 }
 
-static void stellator_next_oid_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
+static void sp_sqlite_next_oid_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
 	sqlite3_int64 ret = 0;
 	DriverHandle *data = (DriverHandle *)sqlite3_user_data(ctx);
+	std::unique_lock lock(data->mutex);
 	auto err = sqlite3_step(data->oidQuery);
 	if (err == SQLITE_ROW) {
 		ret = sqlite3_column_int64(data->oidQuery, 0);
@@ -122,11 +165,11 @@ static void stellator_next_oid_xFunc(sqlite3_context *ctx, int nargs, sqlite3_va
 	sqlite3_result_int64(ctx, ret);
 }
 
-static void stellator_now_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
+static void sp_sqlite_now_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
 	sqlite3_result_int64(ctx, Time::now().toMicros());
 }
 
-static void stellator_user_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
+static void sp_sqlite_user_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
 	DriverHandle *data = (DriverHandle *)sqlite3_user_data(ctx);
 	sqlite3_result_int64(ctx, data->userId);
 }
@@ -190,8 +233,12 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 #if WIN32
 		dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
 #endif
-		if (!dbname.starts_with("/")) {
-			dbname = StringView(filepath::merge<Interface>(_application->getDocuemntRoot(), dbname)).pdup();
+		if (!dbname.is('/') && !dbname.is(':')) {
+			if (_application) {
+				dbname = StringView(filepath::merge<Interface>(_application->getDocuemntRoot(), dbname)).pdup();
+			} else {
+				dbname = StringView(filesystem::writablePath<Interface>(dbname)).pdup();
+			}
 			stappler::filesystem::mkdir(stappler::filepath::root(dbname));
 		}
 		if (sqlite3_open_v2(dbname.data(), &db, flags, nullptr) == SQLITE_OK) {
@@ -218,36 +265,102 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 				}
 			}
 
-			Driver_exec(nullptr, db, "CREATE TABLE IF NOT EXISTS \"__objects\" ( \"__oid\" BIGINT NOT NULL DEFAULT 0, \"control\" INT NOT NULL PRIMARY KEY DEFAULT 0 ) WITHOUT ROWID;");
-			Driver_exec(nullptr, db, "INSERT OR IGNORE INTO \"__objects\" (\"__oid\") VALUES (0);");
+			auto queryData = DATABASE_DEFAULTS;
+			auto outPtr = queryData.data();
 
-			auto h = (DriverHandle *)pool::palloc(p, sizeof(DriverHandle));
+			bool success = true;
+			while (outPtr && *outPtr != 0 && success) {
+				auto size = queryData.size() - (outPtr - queryData.data());
+				StringView nextQuery(outPtr, size);
+				nextQuery.skipChars<StringView::WhiteSpace>();
+				if (nextQuery.empty()) {
+					break;
+				}
+
+				sqlite3_stmt *stmt = nullptr;
+				auto err = sqlite3_prepare_v3(db, nextQuery.data(), nextQuery.size(), 0, &stmt, &outPtr);
+				if (err != SQLITE_OK) {
+					auto len = outPtr - nextQuery.data();
+					StringView performedQuery(nextQuery.data(), len);
+					auto info = getInfo(Connection(db), err);
+					info.setString(performedQuery, "query");
+#if DEBUG
+					log::debug("pq::Handle", EncodeFormat::Pretty, info);
+#endif
+					break;
+				}
+
+				err = sqlite3_step(stmt);
+
+				if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
+					auto info = getInfo(Connection(db), err);
+					info.setString(nextQuery, "query");
+#if DEBUG
+					log::debug("pq::Handle", EncodeFormat::Pretty, info);
+#endif
+					sqlite3_finalize(stmt);
+					break;
+				}
+
+				success = ResultCursor::statusIsSuccess(err);
+				sqlite3_finalize(stmt);
+			}
+
+			auto mem = pool::palloc(p, sizeof(DriverHandle));
+			auto h = new (mem) DriverHandle;
 			h->pool = p;
 			h->driver = this;
 			h->conn = db;
 			h->name = dbname.pdup(p);
 			h->ctime = Time::now();
+			h->mutex.lock();
 
-			StringView str("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
+			do {
+				StringView str("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
 
-			sqlite3_stmt *stmt = nullptr;
-			auto err = sqlite3_prepare_v3(db, str.data(), str.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
-			if (err == SQLITE_OK) {
-				h->oidQuery = stmt;
-			}
-
-			sqlite3_create_function_v2(db, "stellator_next_oid", 0, SQLITE_UTF8, (void *)h,
-					stellator_next_oid_xFunc, nullptr, nullptr, nullptr);
-			sqlite3_create_function_v2(db, "stellator_now", 0, SQLITE_UTF8, (void *)h,
-					stellator_now_xFunc, nullptr, nullptr, nullptr);
-			sqlite3_create_function_v2(db, "stellator_user", 0, SQLITE_UTF8, (void *)h,
-					stellator_user_xFunc, nullptr, nullptr, nullptr);
-
-			pool::cleanup_register(p, [query = h->oidQuery, ret = h->conn] {
-				if (query) {
-					sqlite3_finalize(query);
+				sqlite3_stmt *stmt = nullptr;
+				auto err = sqlite3_prepare_v3(db, str.data(), str.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+				if (err == SQLITE_OK) {
+					h->oidQuery = stmt;
 				}
-				sqlite3_close(ret);
+			} while (0);
+
+			do {
+				StringView str("INSERT INTO \"__words\"(\"id\",\"word\") VALUES(?1, ?2) ON CONFLICT(id) DO UPDATE SET word=word RETURNING \"id\", \"word\";");
+
+				sqlite3_stmt *stmt = nullptr;
+				auto err = sqlite3_prepare_v3(db, str.data(), str.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+				if (err == SQLITE_OK) {
+					h->wordsQuery = stmt;
+				}
+			} while (0);
+
+			sqlite3_create_function_v2(db, "sp_sqlite_next_oid", 0, SQLITE_UTF8, (void *)h,
+					sp_sqlite_next_oid_xFunc, nullptr, nullptr, nullptr);
+			sqlite3_create_function_v2(db, "sp_sqlite_now", 0, SQLITE_UTF8, (void *)h,
+					sp_sqlite_now_xFunc, nullptr, nullptr, nullptr);
+			sqlite3_create_function_v2(db, "sp_sqlite_user", 0, SQLITE_UTF8, (void *)h,
+					sp_sqlite_user_xFunc, nullptr, nullptr, nullptr);
+
+			sqlite3_create_function_v2(db, "sp_ts_update", 6, SQLITE_UTF8, (void *)h,
+					sp_ts_update_xFunc, nullptr, nullptr, nullptr);
+			sqlite3_create_function_v2(db, "sp_ts_rank", 3, SQLITE_UTF8, (void *)h,
+					sp_ts_rank_xFunc, nullptr, nullptr, nullptr);
+			sqlite3_create_function_v2(db, "sp_ts_query_valid", 2, SQLITE_UTF8, (void *)h,
+					sp_ts_query_valid_xFunc, nullptr, nullptr, nullptr);
+
+			sqlite3_create_module(db, "sp_unwrap", &s_UnwrapModule, (void *)this);
+
+			h->mutex.unlock();
+
+			pool::pre_cleanup_register(p, [h] {
+				if (h->oidQuery) {
+					sqlite3_finalize(h->oidQuery);
+				}
+				if (h->wordsQuery) {
+					sqlite3_finalize(h->wordsQuery);
+				}
+				sqlite3_close(h->conn);
 			});
 
 			rec = Handle(h);
@@ -306,6 +419,35 @@ Value Driver::getInfo(Connection conn, int err) const {
 void Driver::setUserId(Handle h, int64_t userId) const {
 	auto db = (DriverHandle *)h.get();
 	db->userId = userId;
+}
+
+uint64_t Driver::insertWord(Handle h, StringView word) const {
+	auto data = (DriverHandle *)h.get();
+
+	uint64_t hash = hash::hash32(word.data(), word.size(), 0) << 16;
+
+	std::unique_lock lock(data->mutex);
+	bool success = false;
+	while (!success) {
+		sqlite3_bind_int64(data->wordsQuery, 1, hash);
+		sqlite3_bind_text(data->wordsQuery, 2, word.data(), int(word.size()), nullptr);
+
+		auto err = sqlite3_step(data->wordsQuery);
+		if (err == SQLITE_ROW) {
+			auto w = StringView((const char *)sqlite3_column_text(data->wordsQuery, 1), sqlite3_column_bytes(data->wordsQuery, 1));
+			if (w == word) {
+				success = true;
+				sqlite3_reset(data->wordsQuery);
+				break;
+			} else {
+				log::debug("sqlite::Driver", "Hash collision: ", w, " ", word, " ", hash);
+			}
+		}
+		sqlite3_reset(data->wordsQuery);
+		++ hash;
+	}
+
+	return hash;
 }
 
 Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView mem)

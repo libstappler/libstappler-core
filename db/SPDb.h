@@ -29,10 +29,12 @@ THE SOFTWARE.
 #include "SPData.h"
 #include "SPSql.h"
 #include "SPDbConfig.h"
+#include "SPSearchConfiguration.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
 using namespace mem_pool;
+using namespace stappler::sql;
 
 struct InputFile;
 
@@ -62,12 +64,10 @@ struct FieldView;
 struct FieldFullTextView;
 struct FieldCustom;
 
-using Operator = sql::Operator;
-using Comparation = sql::Comparation;
-using Ordering = sql::Ordering;
-
-using sql::encodeComparation;
-using sql::decodeComparation;
+using FullTextRank = search::SearchRank;
+using FullTextData = search::SearchData;
+using FullTextVector = search::SearchVector;
+using FullTextQuery = search::SearchQuery;
 
 struct RequestData {
 	bool exists = false;
@@ -132,6 +132,54 @@ struct InputFile : public AllocBase {
 
 	InputFile &operator=(const InputFile &) = delete;
 	InputFile &operator=(InputFile &&) = default;
+};
+
+struct InputValue {
+	enum class Type {
+		None,
+		Value,
+		File,
+		TSV
+	};
+
+	Type type;
+	union {
+		Value value;
+		InputFile *file;
+		FullTextVector tsv;
+	};
+
+	bool hasValue() const {
+		return type == Type::Value && !value.empty();
+	}
+
+	InputValue() : type(Type::None) { }
+	InputValue(Value &&val) : type(Type::Value), value(move(val)) { }
+	InputValue(FullTextVector &&val) : type(Type::TSV), tsv(move(val)) { }
+
+	InputValue(InputValue &&);
+	InputValue &operator=(InputValue &&);
+
+	InputValue(const InputValue &);
+	InputValue &operator=(const InputValue &);
+
+	void clear();
+
+	~InputValue();
+};
+
+struct InputField {
+	const Field *field = nullptr;
+
+	bool operator==(const InputField &other) const { return field == other.field; }
+	bool operator!=(const InputField &other) const { return field != other.field; }
+	bool operator<(const InputField &other) const { return field < other.field; }
+};
+
+struct InputRow {
+	Vector<InputValue> values;
+
+	InputRow() = default;
 };
 
 }

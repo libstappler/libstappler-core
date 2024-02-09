@@ -39,6 +39,23 @@ db::Adapter ApplicationInterface::getAdapterFromContext() const {
 	return db::Adapter(nullptr, nullptr);
 }
 
+void ApplicationInterface::scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const {
+	log::error("ApplicationInterface", "scheduleAyncDbTask is not define");
+	::abort();
+}
+
+StringView ApplicationInterface::getDocuemntRoot() const {
+	return filesystem::writablePath<Interface>();
+}
+
+void ApplicationInterface::pushErrorMessage(Value &&val) const {
+	log::error("ApplicationInterface", data::EncodeFormat::Pretty, val);
+}
+
+void ApplicationInterface::pushDebugMessage(Value &&val) const {
+	log::debug("ApplicationInterface", data::EncodeFormat::Pretty, val);
+}
+
 void ApplicationInterface::reportDbUpdate(StringView data, bool successful) {
 	auto dir = filepath::merge<Interface>(getDocuemntRoot(), ".reports");
 	filesystem::mkdir(dir);
@@ -107,6 +124,7 @@ Value Adapter::performQueryList(const QueryList &ql, size_t count, bool forUpdat
 }
 
 bool Adapter::init(const BackendInterface::Config &cfg, const Map<StringView, const Scheme *> &schemes) const {
+	Scheme::initSchemes(schemes);
 	return _interface->init(cfg, schemes);
 }
 
@@ -191,77 +209,196 @@ Value Adapter::select(Worker &w, const Query &q) const {
 	return _interface->select(w, q);
 }
 
-Value Adapter::create(Worker &w, Value &d) const {
-	auto ret = _interface->create(w, d);
-	if (ret) {
-		auto updateData = [&] (Value &value) -> bool {
-			for (auto &it : value.asDict()) {
-				auto f = w.scheme().getField(it.first);
-				if (f && f->getType() == Type::Virtual) {
-					auto slot = f->getSlot<FieldVirtual>();
-					if (slot->writeFn) {
-						if (!slot->writeFn(w.scheme(), ret, it.second)) {
-							return false;
-						}
-					} else {
-						return false;
+Value Adapter::create(Worker &w, Value &changeSet) const {
+	auto &scheme = w.scheme();
+	auto &fullTextFields = scheme.getFullTextFields();
+
+	Vector<InputField> inputFields;
+	Vector< InputRow > inputRows;
+
+	bool stop = false;
+	if (changeSet.isDictionary()) {
+		auto &targetRow = inputRows.emplace_back();
+		for (auto &it : scheme.getFields()) {
+			auto &val = changeSet.getValue(it.first);
+			if (val) {
+				if (fullTextFields.find(&it.second) == fullTextFields.end()) {
+					targetRow.values.emplace_back(move(val));
+				} else {
+					targetRow.values.emplace_back(Value(val));
+				}
+				inputFields.emplace_back(InputField{&it.second});
+			} else {
+				if (it.second.hasFlag(Flags::Required)) {
+					w.getApplicationInterface()->error("Storage", "No value for required field",
+							Value({ std::make_pair("field", Value(it.first)) }));
+					stop = true;
+				}
+			}
+		}
+	} else if (changeSet.isArray()) {
+		for (auto &rowValues : changeSet.asArray()) {
+			for (auto &it : scheme.getFields()) {
+				auto &val = rowValues.getValue(it.first);
+				if (val) {
+					emplace_ordered(inputFields, InputField{&it.second});
+				} else {
+					if (it.second.hasFlag(Flags::Required)) {
+						w.getApplicationInterface()->error("Storage", "No value for required field",
+								Value({ std::make_pair("field", Value(it.first)) }));
+						stop = true;
 					}
 				}
 			}
-			return true;
-		};
+		}
+	} else {
+		stop = true;
+	}
 
-		if (ret.isArray()) {
-			for (auto &it : ret.asArray()) {
-				if (!updateData(it)) {
-					_interface->cancelTransaction();
-					return Value();
+	if (stop) {
+		return Value();
+	}
+
+	if (changeSet.isArray()) {
+		for (auto &rowValues : changeSet.asArray()) {
+			auto &targetRow = inputRows.emplace_back();
+			for (auto &it : inputFields) {
+				auto &v = rowValues.getValue(it.field->getName());
+				if (v) {
+					if (fullTextFields.find(it.field) == fullTextFields.end()) {
+						targetRow.values.emplace_back(move(v));
+					} else {
+						targetRow.values.emplace_back(Value(v));
+					}
+				} else {
+					targetRow.values.emplace_back(Value(v));
 				}
 			}
-		} else if (ret.isDictionary()) {
-			if (!updateData(ret)) {
+		}
+	}
+
+	processFullTextFields(scheme, changeSet, inputFields, inputRows);
+
+	auto ret = _interface->create(w, inputFields, inputRows, changeSet.isArray());
+	auto updateData = [&] (Value &value) -> bool {
+		for (auto &it : value.asDict()) {
+			auto f = w.scheme().getField(it.first);
+			if (f && f->getType() == Type::Virtual) {
+				auto slot = f->getSlot<FieldVirtual>();
+				if (slot->writeFn) {
+					if (!slot->writeFn(w.scheme(), ret, it.second)) {
+						return false;
+					}
+				} else {
+					return false;
+				}
+			}
+		}
+		return true;
+	};
+
+	if (ret.isArray()) {
+		for (auto &it : ret.asArray()) {
+			if (!updateData(it)) {
 				_interface->cancelTransaction();
 				return Value();
 			}
+		}
+	} else if (ret.isDictionary()) {
+		if (!updateData(ret)) {
+			_interface->cancelTransaction();
+			return Value();
 		}
 	}
 	return ret;
 }
 
-Value Adapter::save(Worker &w, uint64_t oid, const Value &obj, const Vector<String> &fields) const {
-	bool hasNonVirtualUpdates = false;
-	Map<const FieldVirtual *, Value> virtualWrites;
-	auto &dict = obj.asDict();
-
-	for (auto &it : fields) {
-		if (dict.find(it) == dict.end()) {
-			if (auto f = w.scheme().getField(it)) {
-				if (f->getType() != Type::Virtual) {
-					hasNonVirtualUpdates = true;
-				}
-			}
-		}
-	}
-
-	if (!hasNonVirtualUpdates) {
-		auto it = dict.begin();
-		while (it != dict.end()) {
-			if (auto f = w.scheme().getField(it->first)) {
-				if (std::find(fields.begin(), fields.end(), f->getName()) != fields.end()) {
-					if (f->getType() == Type::Virtual) {
-						virtualWrites.emplace(f->getSlot<FieldVirtual>(), it->second);
-					} else {
-						hasNonVirtualUpdates = true;
+static void Adapter_mergeValues(const Scheme &scheme, const Field &f, const Value &obj, Value &original, Value &newVal) {
+	if (f.getType() == Type::Extra) {
+		if (newVal.isDictionary()) {
+			auto &extraFields = static_cast<const FieldExtra *>(f.getSlot())->fields;
+			for (auto &it : newVal.asDict()) {
+				auto f_it = extraFields.find(it.first);
+				if (f_it != extraFields.end()) {
+					auto slot = f_it->second.getSlot();
+					auto &val = original.getValue(it.first);
+					if (!slot->replaceFilterFn || slot->replaceFilterFn(scheme, obj, val, it.second)) {
+						if (!it.second.isNull()) {
+							if (val) {
+								Adapter_mergeValues(scheme, f_it->second, obj, val, it.second);
+							} else {
+								original.setValue(std::move(it.second), it.first);
+							}
+						} else {
+							original.erase(it.first);
+						}
 					}
 				}
 			}
-			++ it;
+		} else if (newVal.isArray() && f.getTransform() == Transform::Array) {
+			original.setValue(std::move(newVal));
 		}
+	} else {
+		original.setValue(std::move(newVal));
+	}
+}
+
+Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch, const Set<const Field *> &fields) const {
+	bool hasNonVirtualUpdates = false;
+	Map<const FieldVirtual *, Value> virtualWrites;
+
+	Vector<InputField> inputFields;
+	Vector<InputRow> inputRows;
+	auto &inputRow = inputRows.emplace_back();
+	if (!fields.empty()) {
+		for (auto &it : fields) {
+			auto &patchValue = patch.getValue(it->getName());
+			auto &val = obj.getValue(it->getName());
+
+			if (!patchValue.isNull()) {
+				if (val) {
+					inputRow.values.emplace_back(Value(val));
+					Adapter_mergeValues(w.scheme(), *it, obj, inputRow.values.back().value, patchValue);
+				} else {
+					inputRow.values.emplace_back(Value(std::move(patchValue)));
+				}
+				obj.setValue(inputRow.values.back().value, it->getName());
+			} else {
+				inputRow.values.emplace_back(Value());
+				obj.erase(it->getName());
+			}
+
+			inputFields.emplace_back(InputField{it});
+		}
+
+		processFullTextFields(w.scheme(), obj, inputFields, inputRows);
+	} else {
+		for (auto &it : patch.asDict()) {
+			auto f = w.scheme().getField(it.first);
+			if (f) {
+				inputFields.emplace_back(InputField{f});
+				inputRow.values.emplace_back(Value(std::move(it.second)));
+			}
+		}
+		processFullTextFields(w.scheme(), patch, inputFields, inputRows);
+	}
+
+
+	size_t i = 0;
+	for (auto &it : inputFields) {
+		if (it.field->getType() != Type::Virtual) {
+			hasNonVirtualUpdates = true;
+		} else {
+			if (inputRow.values[i].hasValue()) {
+				virtualWrites.emplace(it.field->getSlot<FieldVirtual>(), move(inputRow.values[i].value));
+			}
+		}
+		++ i;
 	}
 
 	Value ret;
 	if (hasNonVirtualUpdates) {
-		ret = _interface->save(w, oid, obj, fields);
+		ret = _interface->save(w, oid, obj, inputFields, inputRow);
 	} else {
 		ret = obj;
 	}
@@ -281,10 +418,6 @@ Value Adapter::save(Worker &w, uint64_t oid, const Value &obj, const Vector<Stri
 		}
 	}
 	return ret;
-}
-
-Value Adapter::patch(Worker &w, uint64_t oid, const Value &patch) const {
-	return _interface->patch(w, oid, patch);
 }
 
 bool Adapter::remove(Worker &w, uint64_t oid) const {
@@ -394,6 +527,45 @@ void Adapter::runAutoFields(const Transaction &t, const Vector<uint64_t> &vec, c
 	}
 }
 
+void Adapter::processFullTextFields(const Scheme &scheme, Value &patch, Vector<InputField> &ifields, Vector<InputRow> &ivalues) const {
+	auto addFullTextView = [&] (const Field *f, const FieldFullTextView *slot) {
+		if (slot->viewFn) {
+			size_t target = 0;
+			auto iit = std::find(ifields.begin(), ifields.end(), InputField{f});
+			if (iit == ifields.end()) {
+				ifields.emplace_back(InputField{f});
+				for (auto &row : ivalues) {
+					row.values.emplace_back(Value());
+				}
+				target = ifields.size() - 1;
+			} else {
+				target = iit - ifields.begin();
+			}
+
+			size_t i = 0;
+			for (auto &row : ivalues) {
+				auto result = slot->viewFn(scheme, patch.isArray()? patch.getValue(i):patch);
+				if (!result.empty()) {
+					row.values[target] = InputValue(move(result));
+				}
+				++ i;
+			}
+		}
+	};
+
+	for (auto &it : scheme.getFields()) {
+		if (it.second.getType() == Type::FullTextView) {
+			auto slot = it.second.getSlot<FieldFullTextView>();
+			for (auto &p_it : ifields) {
+				if (std::find(slot->requireFields.begin(), slot->requireFields.end(), p_it.field->getName()) != slot->requireFields.end()) {
+					addFullTextView(&it.second, slot);
+					break;
+				}
+			}
+		}
+	}
+}
+
 
 void Binder::setInterface(QueryInterface *iface) {
 	_iface = iface;
@@ -447,11 +619,14 @@ void Binder::writeBind(StringStream &query, const TypeString &type) {
 void Binder::writeBind(StringStream &query, const FullTextField &d) {
 	_iface->bindFullText(*this, query, d);
 }
+void Binder::writeBind(StringStream &query, const FullTextFrom &d) {
+	_iface->bindFullTextFrom(*this, query, d);
+}
 void Binder::writeBind(StringStream &query, const FullTextRank &rank) {
 	_iface->bindFullTextRank(*this, query, rank);
 }
-void Binder::writeBind(StringStream &query, const FullTextData &data) {
-	_iface->bindFullTextData(*this, query, data);
+void Binder::writeBind(StringStream &query, const FullTextQueryRef &data) {
+	_iface->bindFullTextQuery(*this, query, data);
 }
 void Binder::writeBind(StringStream &query, const stappler::sql::PatternComparator<const Value &> &cmp) {
 	if (cmp.value->isString()) {
@@ -609,6 +784,19 @@ Value ResultRow::toData(const db::Scheme &scheme, const Map<String, db::Field> &
 	return row;
 }
 
+Value ResultRow::encode() const {
+	Value row(Value::Type::DICTIONARY);
+	row.asDict().reserve(result->getFieldsCount());
+
+	for (size_t i = 0; i < result->getFieldsCount(); i++) {
+		auto n = result->getFieldName(i);
+		if (!isNull(i)) {
+			row.setValue(toTypedData(i), n);
+		}
+	}
+	return row;
+}
+
 StringView ResultRow::front() const {
 	return at(0);
 }
@@ -674,7 +862,7 @@ Value ResultRow::toData(size_t n, const db::Field &f) {
 		return data::read<Interface, BytesView>(toBytes(n));
 		break;
 	case db::Type::Custom:
-		return result->toCustomData(f, f.getSlot<db::FieldCustom>());
+		return result->toCustomData(n, f.getSlot<db::FieldCustom>());
 		break;
 	default:
 		break;

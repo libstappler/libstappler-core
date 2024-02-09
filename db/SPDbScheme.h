@@ -95,6 +95,7 @@ public:
 	bool hasDelta() const;
 	bool isDetouched() const;
 	bool isCompressed() const;
+	bool hasFullText() const;
 
 	const Scheme & define(std::initializer_list<Field> il);
 	const Scheme & define(Vector<Field> &&il);
@@ -104,6 +105,8 @@ public:
 
 	template <typename T, typename ... Args>
 	const Scheme & define(T &&il, Args && ... args);
+
+	bool init();
 
 	void addFlags(Options);
 
@@ -125,6 +128,8 @@ public:
 	const Field *getField(const StringView &str) const;
 	const Vector<UniqueConstraint> &getUnique() const;
 	BytesView getCompressDict() const;
+
+	const Set<const Field *> &getFullTextFields() const { return fullTextFields; }
 
 	const Field *getForeignLink(const FieldObject *f) const;
 	const Field *getForeignLink(const Field &f) const;
@@ -226,7 +231,6 @@ protected:// CRUD functions
 
 	Value setFileWithWorker(Worker &w, uint64_t oid, const Field &, InputFile &) const;
 
-protected:
 	void initScheme();
 
 	void addView(const Scheme *, const Field *);
@@ -238,12 +242,12 @@ protected:
 	void mergeValues(const Field &f, const Value &obj, Value &original, Value &newVal) const;
 
 	stappler::Pair<bool, Value> prepareUpdate(const Value &data, bool isProtected) const;
-	Value updateObject(Worker &, Value && obj, Value &data) const;
+	Value updateObject(Worker &, Value & obj, Value &data) const;
 
 	Value doPatch(Worker &w, const Transaction &t, uint64_t obj, Value & patch) const;
 
 	Value patchOrUpdate(Worker &, uint64_t id, Value & patch) const;
-	Value patchOrUpdate(Worker &, const Value & obj, Value & patch) const;
+	Value patchOrUpdate(Worker &, Value & obj, Value & patch) const;
 
 	void touchParents(const Transaction &, const Value &obj) const;
 	void extractParents(Map<int64_t, const Scheme *> &, const Transaction &, const Value &obj, bool isChangeSet = false) const;
@@ -261,8 +265,6 @@ protected:
 	// call before object is created, when file is embedded into patch
 	Value createFile(const Transaction &, const Field &, const BytesView &, const StringView &type, int64_t = 0) const;
 
-	void processFullTextFields(Value &patch, Vector<String> *updateFields = nullptr) const;
-
 	Value makeObjectForPatch(const Transaction &, uint64_t id, const Value &, const Value &patch) const;
 
 	void updateLimits();
@@ -275,7 +277,6 @@ protected:
 
 	void updateView(const Transaction &, const Value &, const ViewScheme *, const Vector<uint64_t> &) const;
 
-protected:
 	Map<String, Field> fields;
 	String name;
 
@@ -289,6 +290,7 @@ protected:
 	Set<const Field *> fullTextFields;
 	Set<const Field *> autoFieldReq;
 
+	bool _init = false;
 	bool _hasFiles = false;
 	bool _hasForceExclude = false;
 	bool _hasAccessControl = false;

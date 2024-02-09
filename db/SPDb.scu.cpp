@@ -34,6 +34,8 @@ THE SOFTWARE.
 #include "SPSqlHandleObject.cc"
 #include "SPSqlHandleProp.cc"
 #include "SPSqlQuery.cc"
+#include "SPSqliteModuleTextSearch.cc"
+#include "SPSqliteModuleUnwrap.cc"
 #include "SPSqliteDriver.cc"
 #include "SPSqliteHandle.cc"
 #include "SPSqliteHandleInit.cc"
@@ -102,6 +104,100 @@ String InputFile::readText() {
 		return ret;
 	}
 	return String();
+}
+
+
+InputValue::InputValue(InputValue &&other) : type(other.type) {
+	switch (type) {
+	case Type::Value:
+		new (&value) db::Value(move(other.value));
+		break;
+	case Type::File:
+		file = other.file;
+		break;
+	case Type::TSV:
+		new (&tsv) FullTextVector(move(other.tsv));
+		break;
+	case Type::None:
+		break;
+	}
+	other.clear();
+}
+
+InputValue &InputValue::operator=(InputValue &&other) {
+	clear();
+	type = other.type;
+	switch (type) {
+	case Type::Value:
+		new (&value) db::Value(move(other.value));
+		break;
+	case Type::File:
+		file = other.file;
+		break;
+	case Type::TSV:
+		new (&tsv) FullTextVector(move(other.tsv));
+		break;
+	case Type::None:
+		break;
+	}
+	other.clear();
+	return *this;
+}
+
+InputValue::InputValue(const InputValue &other) : type(other.type) {
+	switch (type) {
+	case Type::Value:
+		new (&value) db::Value(other.value);
+		break;
+	case Type::File:
+		file = other.file;
+		break;
+	case Type::TSV:
+		new (&tsv) FullTextVector(other.tsv);
+		break;
+	case Type::None:
+		break;
+	}
+}
+
+InputValue &InputValue::operator=(const InputValue &other) {
+	clear();
+	type = other.type;
+	switch (type) {
+	case Type::Value:
+		new (&value) db::Value(other.value);
+		break;
+	case Type::File:
+		file = other.file;
+		break;
+	case Type::TSV:
+		new (&tsv) FullTextVector(other.tsv);
+		break;
+	case Type::None:
+		break;
+	}
+	return *this;
+}
+
+void InputValue::clear() {
+	switch (type) {
+	case Type::Value:
+		value.~Value();
+		break;
+	case Type::File:
+		file = nullptr;
+		break;
+	case Type::TSV:
+		tsv.~SearchVector();
+		break;
+	case Type::None:
+		break;
+	}
+	type = Type::None;
+}
+
+InputValue::~InputValue() {
+	clear();
 }
 
 static size_t processExtraVarSize(const FieldExtra *s) {

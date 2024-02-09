@@ -49,39 +49,7 @@ static void Scheme_setOwner(const Scheme *scheme, const Map<String, Field> &map)
 
 bool Scheme::initSchemes(const Map<StringView, const Scheme *> &schemes) {
 	for (auto &it : schemes) {
-		const_cast<Scheme *>(it.second)->initScheme();
-		for (auto &fit : it.second->getFields()) {
-			const_cast<Field::Slot *>(fit.second.getSlot())->owner = it.second;
-			if (fit.second.getType() == Type::View) {
-				auto slot = static_cast<const FieldView *>(fit.second.getSlot());
-				if (slot->scheme) {
-					const_cast<Scheme *>(slot->scheme)->addView(it.second, &fit.second);
-				}
-			} else if (fit.second.getType() == Type::FullTextView) {
-				auto slot = static_cast<const FieldFullTextView *>(fit.second.getSlot());
-				for (auto &req_it : slot->requireFields) {
-					if (auto f = it.second->getField(req_it)) {
-						const_cast<Scheme *>(it.second)->fullTextFields.emplace(f);
-					}
-				}
-			} else if (fit.second.getType() == Type::Extra) {
-				auto slot = static_cast<const FieldExtra *>(fit.second.getSlot());
-				Scheme_setOwner(it.second, slot->fields);
-			}
-			if (fit.second.getSlot()->autoField.defaultFn) {
-				auto &autoF = fit.second.getSlot()->autoField;
-				for (auto &a_it : autoF.schemes) {
-					const_cast<Scheme &>(a_it.scheme).addAutoField(it.second, &fit.second, a_it);
-				}
-			}
-			if (fit.second.hasFlag(Flags::Composed) && (fit.second.getType() == Type::Object || fit.second.getType() == Type::Set)) {
-				auto slot = static_cast<const FieldObject *>(fit.second.getSlot());
-				if (slot->scheme) {
-					const_cast<Scheme *>(slot->scheme)->addParent(it.second, &fit.second);
-				}
-			}
-
-		}
+		const_cast<Scheme *>(it.second)->init();
 	}
 	return true;
 }
@@ -124,6 +92,10 @@ bool Scheme::isDetouched() const {
 
 bool Scheme::isCompressed() const {
 	return (flags & Options::Compressed) != Options::None;
+}
+
+bool Scheme::hasFullText() const {
+	return !fullTextFields.empty();
 }
 
 const Scheme & Scheme::define(std::initializer_list<Field> il) {
@@ -221,6 +193,78 @@ const Scheme & Scheme::define(UniqueConstraintDef &&def) {
 const Scheme & Scheme::define(Bytes &&dict) {
 	_compressDict = std::move(dict);
 	return *this;
+}
+
+bool Scheme::init() {
+	if (_init) {
+		return true;
+	}
+	// init non-linked object fields as StrongReferences
+	for (auto &fit : fields) {
+		const_cast<Field::Slot *>(fit.second.getSlot())->owner = this;
+		switch (fit.second.getType()) {
+		case Type::Object:
+		case Type::Set:
+			if (auto slot = fit.second.getSlot<FieldObject>()) {
+				if (slot->linkage == Linkage::Auto && slot->onRemove == RemovePolicy::Null && !slot->hasFlag(Flags::Reference)) {
+					if (!getForeignLink(slot)) {
+						// assume strong reference
+						auto mutSlot = const_cast<FieldObject *>(slot);
+						mutSlot->onRemove = RemovePolicy::StrongReference;
+						mutSlot->flags |= Flags::Reference;
+					}
+				}
+			}
+			break;
+		case Type::FullTextView: {
+			auto slot = static_cast<const FieldFullTextView *>(fit.second.getSlot());
+			for (auto &req_it : slot->requireFields) {
+				if (auto f = getField(req_it)) {
+					fullTextFields.emplace(f);
+				}
+			}
+			break;
+		}
+		case Type::Extra: {
+			auto slot = static_cast<const FieldExtra *>(fit.second.getSlot());
+			Scheme_setOwner(this, slot->fields);
+			break;
+		}
+		case Type::Array: {
+			auto slot = static_cast<const FieldArray *>(fit.second.getSlot());
+			auto arraySlot = slot->tfield.getSlot();
+			const_cast<Field::Slot *>(arraySlot)->owner = this;
+			if (arraySlot->type == Type::Extra) {
+				auto extraSlot = static_cast<const FieldExtra *>(arraySlot);
+				Scheme_setOwner(this, extraSlot->fields);
+			}
+			break;
+		}
+		case Type::View: {
+			auto slot = static_cast<const FieldView *>(fit.second.getSlot());
+			if (slot->scheme) {
+				const_cast<Scheme *>(slot->scheme)->addView(this, &fit.second);
+			}
+			break;
+		}
+		default:
+			break;
+		}
+		if (fit.second.getSlot()->autoField.defaultFn) {
+			auto &autoF = fit.second.getSlot()->autoField;
+			for (auto &a_it : autoF.schemes) {
+				const_cast<Scheme &>(a_it.scheme).addAutoField(this, &fit.second, a_it);
+			}
+		}
+		if (fit.second.hasFlag(Flags::Composed) && (fit.second.getType() == Type::Object || fit.second.getType() == Type::Set)) {
+			auto slot = static_cast<const FieldObject *>(fit.second.getSlot());
+			if (slot->scheme) {
+				const_cast<Scheme *>(slot->scheme)->addParent(this, &fit.second);
+			}
+		}
+	}
+	_init = true;
+	return true;
 }
 
 void Scheme::addFlags(Options opts) {
@@ -396,7 +440,10 @@ void Scheme::setAccessRole(AccessRoleId id, AccessRole &&r) {
 
 bool Scheme::save(const Transaction &t, Object *obj) const {
 	Worker w(*this, t);
-	return t.save(w, obj->getObjectId(), obj->_data, Vector<String>());
+	Set<const Field *> fields;
+
+	Value tmp(obj->_data);
+	return t.save(w, obj->getObjectId(), tmp, obj->_data, fields);
 }
 
 bool Scheme::hasFiles() const {
@@ -434,12 +481,10 @@ Value Scheme::createWithWorker(Worker &w, const Value &data, bool isProtected) c
 	Value changeSet = data;
 	if (data.isDictionary()) {
 		transform(changeSet, isProtected?TransformAction::ProtectedCreate:TransformAction::Create);
-		processFullTextFields(changeSet);
 	} else {
 		for (auto &it : changeSet.asArray()) {
 			if (it) {
 				transform(it, isProtected?TransformAction::ProtectedCreate:TransformAction::Create);
-				processFullTextFields(it);
 			}
 		}
 	}
@@ -538,7 +583,8 @@ Value Scheme::updateWithWorker(Worker &w, const Value & obj, const Value &data, 
 			return false;
 		}
 
-		ret = patchOrUpdate(w, obj, changeSet);
+		Value tmp(obj);
+		ret = patchOrUpdate(w, tmp, changeSet);
 		if (ret.isNull()) {
 			if (filePatch.isDictionary()) {
 				purgeFilePatch(t, filePatch);
@@ -550,36 +596,6 @@ Value Scheme::updateWithWorker(Worker &w, const Value & obj, const Value &data, 
 	});
 
 	return ret;
-}
-
-void Scheme::mergeValues(const Field &f, const Value &obj, Value &original, Value &newVal) const {
-	if (f.getType() == Type::Extra) {
-		if (newVal.isDictionary()) {
-			auto &extraFields = static_cast<const FieldExtra *>(f.getSlot())->fields;
-			for (auto &it : newVal.asDict()) {
-				auto f_it = extraFields.find(it.first);
-				if (f_it != extraFields.end()) {
-					auto slot = f_it->second.getSlot();
-					auto &val = original.getValue(it.first);
-					if (!slot->replaceFilterFn || slot->replaceFilterFn(*this, obj, val, it.second)) {
-						if (!it.second.isNull()) {
-							if (val) {
-								mergeValues(f_it->second, obj, val, it.second);
-							} else {
-								original.setValue(std::move(it.second), it.first);
-							}
-						} else {
-							original.erase(it.first);
-						}
-					}
-				}
-			}
-		} else if (newVal.isArray() && f.getTransform() == Transform::Array) {
-			original.setValue(std::move(newVal));
-		}
-	} else {
-		original.setValue(std::move(newVal));
-	}
 }
 
 stappler::Pair<bool, Value> Scheme::prepareUpdate(const Value &data, bool isProtected) const {
@@ -639,7 +655,7 @@ void Scheme::extractParents(Map<int64_t, const Scheme *> &parentsToUpdate, const
 	}
 }
 
-Value Scheme::updateObject(Worker &w, Value && obj, Value &changeSet) const {
+Value Scheme::updateObject(Worker &w, Value & obj, Value &changeSet) const {
 	Set<const Field *> fieldsToUpdate;
 
 	Vector<stappler::Pair<const ViewScheme *, Vector<uint64_t>>> viewsToUpdate; viewsToUpdate.reserve(views.size());
@@ -683,28 +699,9 @@ Value Scheme::updateObject(Worker &w, Value && obj, Value &changeSet) const {
 		it.second = getLinkageForView(obj, *it.first);
 	}
 
-	// apply changeset
-	Vector<String> updatedFields;
-	for (auto &it : fieldsToUpdate) {
-		auto &v = changeSet.getValue(it->getName());
-		auto &val = obj.getValue(it->getName());
-
-		if (!v.isNull()) {
-			if (val) {
-				mergeValues(*it, obj, val, v);
-			} else {
-				obj.setValue(std::move(v), it->getName().str<Interface>());
-			}
-		} else {
-			obj.erase(it->getName());
-		}
-		updatedFields.emplace_back(it->getName().str<Interface>());
-	}
-
-	processFullTextFields(obj, &updatedFields);
 	if (!viewsToUpdate.empty() || !parentsToUpdate.empty()) {
 		if (w.perform([&] (const Transaction &t) {
-			if (t.save(w, obj.getInteger("__oid"), obj, updatedFields)) {
+			if (t.save(w, obj.getInteger("__oid"), obj, changeSet, fieldsToUpdate)) {
 				t.performAsSystem([&] () -> bool {
 					for (auto &it : parentsToUpdate) {
 						Worker(*it.second, t).touch(it.first);
@@ -720,7 +717,7 @@ Value Scheme::updateObject(Worker &w, Value && obj, Value &changeSet) const {
 		})) {
 			return obj;
 		}
-	} else if (auto ret = w.transaction().save(w, obj.getInteger("__oid"), obj, updatedFields)) {
+	} else if (auto ret = w.transaction().save(w, obj.getInteger("__oid"), obj, changeSet, fieldsToUpdate)) {
 		return ret;
 	}
 
@@ -735,10 +732,11 @@ void Scheme::touchWithWorker(Worker &w, uint64_t id) const {
 }
 
 void Scheme::touchWithWorker(Worker &w, const Value & obj) const {
+	Value tmp(obj);
 	Value patch;
 	transform(patch, TransformAction::Touch);
 	w.includeNone();
-	patchOrUpdate(w, obj, patch);
+	patchOrUpdate(w, tmp, patch);
 }
 
 Value Scheme::fieldWithWorker(Action a, Worker &w, uint64_t oid, const Field &f, Value &&patch) const {
@@ -852,7 +850,7 @@ Value Scheme::patchOrUpdate(Worker &w, uint64_t id, Value & patch) const {
 			if (!isAtomicPatch(patch) || (r && r->onSave && !r->onPatch) || (d && d->onSave && !d->onPatch)) {
 				if (auto obj = makeObjectForPatch(t, id, Value(), patch)) {
 					t.setObject(id, Value(obj));
-					if ((ret = updateObject(w, std::move(obj), patch))) {
+					if ((ret = updateObject(w, obj, patch))) {
 						return true;
 					}
 				}
@@ -869,7 +867,7 @@ Value Scheme::patchOrUpdate(Worker &w, uint64_t id, Value & patch) const {
 	return Value();
 }
 
-Value Scheme::patchOrUpdate(Worker &w, const Value & obj, Value & patch) const {
+Value Scheme::patchOrUpdate(Worker &w, Value & obj, Value & patch) const {
 	auto isObjectValid = [&] (const Value &obj) -> bool {
 		for (auto &it : patch.asDict()) {
 			if (!obj.hasValue(it.first)) {
@@ -895,12 +893,12 @@ Value Scheme::patchOrUpdate(Worker &w, const Value & obj, Value & patch) const {
 			} else {
 				auto id =  obj.getInteger("__oid");
 				if (isObjectValid(obj)) {
-					if ((ret = updateObject(w, Value(obj), patch))) {
+					if ((ret = updateObject(w, obj, patch))) {
 						return true;
 					}
 				} else if (auto patchObj = makeObjectForPatch(t, id, obj, patch)) {
 					t.setObject(id, Value(patchObj));
-					if ((ret = updateObject(w, std::move(patchObj), patch))) {
+					if ((ret = updateObject(w, patchObj, patch))) {
 						return true;
 					}
 				}
@@ -1071,50 +1069,6 @@ Value Scheme::createFile(const Transaction &t, const Field &field, const BytesVi
 		return File::createImage(t, field, type, data, mtime);
 	}
 	return Value();
-}
-
-void Scheme::processFullTextFields(Value &patch, Vector<String> *updateFields) const {
-	Vector<const FieldFullTextView *> vec; vec.reserve(2);
-	for (auto &it : fields) {
-		if (it.second.getType() == Type::FullTextView) {
-			auto slot = it.second.getSlot<FieldFullTextView>();
-			for (auto &p_it : patch.asDict()) {
-				if (updateFields) {
-					if (std::find(updateFields->begin(), updateFields->end(), p_it.first) == updateFields->end()) {
-						continue;
-					}
-				}
-				if (std::find(slot->requireFields.begin(), slot->requireFields.end(), p_it.first) != slot->requireFields.end()) {
-					if (std::find(vec.begin(), vec.end(), slot) == vec.end()) {
-						vec.emplace_back(slot);
-					}
-					break;
-				}
-			}
-		}
-	}
-
-	for (auto &it : vec) {
-		if (it->viewFn) {
-			auto result = it->viewFn(*this, patch);
-			if (!result.empty()) {
-				Value val;
-				for (auto &r_it : result) {
-					auto &value = val.emplace();
-					value.addString(r_it.buffer);
-					value.addInteger(stappler::toInt(r_it.language));
-					value.addInteger(stappler::toInt(r_it.rank));
-					value.addInteger(stappler::toInt(r_it.type));
-				}
-				if (val) {
-					patch.setValue(std::move(val), it->name);
-					if (updateFields) {
-						updateFields->emplace_back(it->name);
-					}
-				}
-			}
-		}
-	}
 }
 
 Value Scheme::makeObjectForPatch(const Transaction &t, uint64_t oid, const Value &obj, const Value &patch) const {
@@ -1326,29 +1280,6 @@ void Scheme::purgeFilePatch(const Transaction &t, const Value &patch) const {
 					File::purgeFile(t, it.second);
 				}
 			}
-		}
-	}
-}
-
-void Scheme::initScheme() {
-	// init non-linked object fields as StrongReferences
-	for (auto &it : fields) {
-		switch (it.second.getType()) {
-		case Type::Object:
-		case Type::Set:
-			if (auto slot = it.second.getSlot<FieldObject>()) {
-				if (slot->linkage == Linkage::Auto && slot->onRemove == RemovePolicy::Null && !slot->hasFlag(Flags::Reference)) {
-					if (!getForeignLink(slot)) {
-						// assume strong reference
-						auto mutSlot = const_cast<FieldObject *>(slot);
-						mutSlot->onRemove = RemovePolicy::StrongReference;
-						mutSlot->flags |= Flags::Reference;
-					}
-				}
-			}
-			break;
-		default:
-			break;
 		}
 	}
 }

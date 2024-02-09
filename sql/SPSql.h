@@ -180,8 +180,7 @@ public:
 
 		Field(const StringView &str, bool plain) : name(str), plain(plain) { }
 
-		template <typename SourceString, typename FieldString>
-		Field(SourceString &&t, FieldString &&f) : source(t), name(f) { }
+		Field(const StringView &t, const StringView &f) : source(t), name(f) { }
 
 		Field & as(const char *str) { alias = StringView(str); return *this; }
 		Field & as(const std::string &str) { alias = StringView(str); return *this; }

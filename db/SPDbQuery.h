@@ -25,7 +25,6 @@ THE SOFTWARE.
 #define STAPPLER_DB_SPDBQUERY_H_
 
 #include "SPDb.h"
-#include "SPSearchConfiguration.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
@@ -76,14 +75,14 @@ public:
 		Value value1;
 		Value value2;
 		String field;
-		Vector<stappler::search::SearchData> searchData;
+		FullTextQuery textQuery;
 
 		Select() { }
 		Select(const StringView & f, Comparation c, Value && v1, Value && v2);
 		Select(const StringView & f, Comparation c, int64_t v1, int64_t v2);
 		Select(const StringView & f, Comparation c, const String & v);
 		Select(const StringView & f, Comparation c, const StringView & v);
-		Select(const StringView & f, Comparation c, Vector<stappler::search::SearchData> && v);
+		Select(const StringView & f, Comparation c, FullTextQuery && v);
 	};
 
 	struct SoftLimit {
@@ -117,7 +116,7 @@ public:
 	Query & select(const StringView &f, const Bytes & v);
 	Query & select(const StringView &f, Bytes && v);
 
-	Query & select(const StringView &f, Vector<stappler::search::SearchData> && v);
+	Query & select(const StringView &f, FullTextQuery && v);
 
 	Query & select(Select &&q);
 

@@ -73,8 +73,8 @@ Query::Select::Select(const StringView & f, Comparation c, const String & v)
 Query::Select::Select(const StringView & f, Comparation c, const StringView & v)
 : compare(Comparation::Equal), value1(v), value2(0), field(f.str<Interface>()) { }
 
-Query::Select::Select(const StringView & f, Comparation c, Vector<stappler::search::SearchData> && v)
-: compare(Comparation::Equal), field(f.str<Interface>()), searchData(std::move(v)) { }
+Query::Select::Select(const StringView & f, Comparation c, FullTextQuery && v)
+: compare(Comparation::Equal), field(f.str<Interface>()), textQuery(std::move(v)) { }
 
 Resolve Query::decodeResolve(const StringView &str) {
 	if (str == "$all") {
@@ -245,7 +245,7 @@ Query & Query::select(const StringView &f, Bytes && v) {
 	selectList.emplace_back(f, Comparation::Equal, Value(std::move(v)), Value());
 	return *this;
 }
-Query & Query::select(const StringView &f, Vector<stappler::search::SearchData> && v) {
+Query & Query::select(const StringView &f, FullTextQuery && v) {
 	selectList.emplace_back(f, Comparation::Equal, std::move(v));
 	order(f, Ordering::Descending);
 	return *this;

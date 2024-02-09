@@ -28,6 +28,8 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
+struct DriverHandle;
+
 class Driver : public sql::Driver {
 public:
 	static Driver *open(pool_t *, ApplicationInterface *, StringView path = StringView());
@@ -56,6 +58,8 @@ public:
 	Value getInfo(Connection, int) const;
 
 	void setUserId(Handle, int64_t) const;
+
+	uint64_t insertWord(Handle, StringView) const;
 
 protected:
 	Driver(pool_t *, ApplicationInterface *, StringView);

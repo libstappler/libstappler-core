@@ -707,19 +707,13 @@ void FieldArray::hash(StringStream &stream, ValidationLevel l) const {
 	}
 }
 
-Vector<FullTextData> FieldFullTextView::parseQuery(const Value &data) const {
+FullTextQuery FieldFullTextView::parseQuery(const Value &data) const {
 	if (queryFn) {
 		return queryFn(data);
-	} else if (data.isString()) {
-		stappler::StringViewUtf8 r(data.getString());
-		r.skipUntil<stappler::StringViewUtf8::MatchCharGroup<stappler::CharGroupId::Latin>, stappler::StringViewUtf8::MatchCharGroup<stappler::CharGroupId::Cyrillic>>();
-		if (r.is<stappler::StringViewUtf8::MatchCharGroup<stappler::CharGroupId::Latin>>()) {
-			return Vector<FullTextData>{FullTextData{data.getString(), stappler::search::Language::English}};
-		} else if (r.is<stappler::StringViewUtf8::MatchCharGroup<stappler::CharGroupId::Cyrillic>>()) {
-			return Vector<FullTextData>{FullTextData{data.getString(), stappler::search::Language::Russian}};
-		}
+	} else if (data.isString() && searchConfiguration) {
+		return searchConfiguration->parseQuery(data.getString());
 	}
-	return Vector<FullTextData>();
+	return FullTextQuery();
 }
 
 bool FieldVirtual::transformValue(const Scheme &scheme, const Value &obj, Value &value, bool isCreate) const {

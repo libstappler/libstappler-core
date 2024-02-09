@@ -52,7 +52,7 @@ template <typename Binder, typename Interface, typename Value1>
 static inline void Query_writeComparationStr(Query<Binder, Interface> &q, typename Interface::StringStreamType &stream,
 		const typename Query<Binder, Interface>::Field &f, const StringView &cmp, Value1 &&v1) {
 	stream << "(";
-	if (!f.source.empty()) { stream << f.source << "."; }
+	if (!f.source.empty()) { stream << "\"" << f.source << "\"."; }
 	Query_writeFieldName<Interface>(stream, f.name, f.plain) << cmp;
 	q.writeBind(forward<Value1>(v1));
 	stream << ")";

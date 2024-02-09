@@ -93,8 +93,6 @@ protected:
 
 SP_DEFINE_ENUM_AS_MASK(QueryFieldResolver::Meta);
 
-using FullTextData = stappler::search::SearchData;
-
 class QueryList : public AllocBase {
 public:
 	using FieldCallback = stappler::Callback<void(const StringView &name, const Field *f)>;
@@ -134,7 +132,7 @@ public:
 	bool limit(const Scheme *, size_t limit);
 	bool offset(const Scheme *, size_t offset);
 
-	bool setFullTextQuery(const Field *field, Vector<FullTextData> &&);
+	bool setFullTextQuery(const Field *field, FullTextQuery &&);
 
 	bool setAll();
 	bool setField(const Scheme *, const Field *field);

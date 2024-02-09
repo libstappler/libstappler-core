@@ -134,10 +134,40 @@ bool FieldIntArray::regsterForSqlite(CustomFieldInfo &info) {
 		return true;
 	};
 	info.isComparationAllowed = [] (const FieldCustom &, Comparation c) {
+		switch (c) {
+		case db::Comparation::Includes:
+		case db::Comparation::Equal:
+		case db::Comparation::IsNotNull:
+		case db::Comparation::IsNull:
+			return true;
+			break;
+		default:
+			break;
+		}
 		return false;
 	};
 	info.writeQuery = [] (const FieldCustom &, const Scheme &s, stappler::sql::Query<db::Binder, Interface>::WhereContinue &whi,
-			Operator op, const StringView &f, Comparation cmp, const Value &val, const Value &) { };
+			Operator op, const StringView &f, Comparation cmp, const Value &val, const Value &) {
+		if (cmp == db::Comparation::IsNull || cmp == db::Comparation::IsNotNull) {
+			whi.where(op, db::sql::SqlQuery::Field(s.getName(), f), cmp, val);
+		} else {
+			if (val.isInteger()) {
+				auto unwrapTable = StringView(toString(s.getName(), "_", f, "_unwrap")).pdup();
+				whi.where(op, db::sql::SqlQuery::Field(unwrapTable, StringView("__unwrap_value")), "=?", Value(val));
+			}
+		}
+	};
+	info.writeFrom = [] (const FieldCustom &field, const Scheme &s, stappler::sql::Query<db::Binder, Interface>::SelectFrom &from,
+			Comparation cmp, const Value &val, const Value &) {
+		if (cmp == db::Comparation::IsNull || cmp == db::Comparation::IsNotNull) {
+		} else {
+			if (val.isString()) {
+				auto name = toString("sp_unwrap(", s.getName(), ".\"", field.name, "\")");
+				auto unwrapTable = toString(s.getName(), "_", field.name, "_unwrap");
+				from.from(stappler::sql::Query<db::Binder, Interface>::Field(name).as(unwrapTable));
+			}
+		}
+	};
 	return true;
 }
 
@@ -224,10 +254,40 @@ bool FieldBigIntArray::regsterForSqlite(CustomFieldInfo &info) {
 		return true;
 	};
 	info.isComparationAllowed = [] (const FieldCustom &, Comparation c) {
+		switch (c) {
+		case db::Comparation::Includes:
+		case db::Comparation::Equal:
+		case db::Comparation::IsNotNull:
+		case db::Comparation::IsNull:
+			return true;
+			break;
+		default:
+			break;
+		}
 		return false;
 	};
 	info.writeQuery = [] (const FieldCustom &, const Scheme &s, stappler::sql::Query<db::Binder, Interface>::WhereContinue &whi,
-			Operator op, const StringView &f, Comparation cmp, const Value &val, const Value &) { };
+			Operator op, const StringView &f, Comparation cmp, const Value &val, const Value &) {
+		if (cmp == db::Comparation::IsNull || cmp == db::Comparation::IsNotNull) {
+			whi.where(op, db::sql::SqlQuery::Field(s.getName(), f), cmp, val);
+		} else {
+			if (val.isInteger()) {
+				auto unwrapTable = StringView(toString(s.getName(), "_", f, "_unwrap")).pdup();
+				whi.where(op, db::sql::SqlQuery::Field(unwrapTable, StringView("__unwrap_value")), "=?", Value(val));
+			}
+		}
+	};
+	info.writeFrom = [] (const FieldCustom &field, const Scheme &s, stappler::sql::Query<db::Binder, Interface>::SelectFrom &from,
+			Comparation cmp, const Value &val, const Value &) {
+		if (cmp == db::Comparation::IsNull || cmp == db::Comparation::IsNotNull) {
+		} else {
+			if (val.isString()) {
+				auto name = toString("sp_unwrap(", s.getName(), ".\"", field.name, "\")");
+				auto unwrapTable = toString(s.getName(), "_", field.name, "_unwrap");
+				from.from(stappler::sql::Query<db::Binder, Interface>::Field(name).as(unwrapTable));
+			}
+		}
+	};
 	return true;
 }
 
@@ -429,10 +489,43 @@ bool FieldTextArray::regsterForSqlite(CustomFieldInfo &info) {
 		return true;
 	};
 	info.isComparationAllowed = [] (const FieldCustom &, Comparation c) {
+		switch (c) {
+		case db::Comparation::Includes:
+		case db::Comparation::Equal:
+		case db::Comparation::IsNotNull:
+		case db::Comparation::IsNull:
+			return true;
+			break;
+		default:
+			break;
+		}
 		return false;
 	};
-	info.writeQuery = [] (const FieldCustom &, const Scheme &s, stappler::sql::Query<db::Binder, Interface>::WhereContinue &whi,
-			Operator op, const StringView &f, Comparation cmp, const Value &val, const Value &) { };
+	info.writeQuery = [] (const FieldCustom &field, const Scheme &s, stappler::sql::Query<db::Binder, Interface>::WhereContinue &whi,
+			Operator op, const StringView &f, Comparation cmp, const Value &val, const Value &) {
+		if (cmp == db::Comparation::IsNull || cmp == db::Comparation::IsNotNull) {
+			whi.where(op, db::sql::SqlQuery::Field(s.getName(), f), cmp, val);
+		} else {
+			if (val.isString()) {
+				if (auto q = dynamic_cast<db::sqlite::SqliteQueryInterface *>(whi.query->getBinder().getInterface())) {
+					auto id = q->push(val.asString());
+					auto unwrapTable = toString(s.getName(), "_", f, "_unwrap");
+					whi.where(op, db::sql::SqlQuery::Field(unwrapTable, StringView("__unwrap_value")), "=?", Value(id));
+				}
+			}
+		}
+	};
+	info.writeFrom = [] (const FieldCustom &field, const Scheme &s, stappler::sql::Query<db::Binder, Interface>::SelectFrom &from,
+			Comparation cmp, const Value &val, const Value &) {
+		if (cmp == db::Comparation::IsNull || cmp == db::Comparation::IsNotNull) {
+		} else {
+			if (val.isString()) {
+				auto name = toString("sp_unwrap(", s.getName(), ".\"", field.name, "\")");
+				auto unwrapTable = toString(s.getName(), "_", field.name, "_unwrap");
+				from.from(stappler::sql::Query<db::Binder, Interface>::Field(name).as(unwrapTable));
+			}
+		}
+	};
 	return true;
 }
 

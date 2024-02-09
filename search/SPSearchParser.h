@@ -94,22 +94,23 @@ enum class Language {
 	Simple
 };
 
-enum ParserStatus {
+enum class ParserStatus {
 	Continue = 0, // just continue parsing
 	PreventSubdivide = 1, // do not subdivide complex token (works with isComplexWord(ParserToken))
 	Stop = 2, // stop parsing in place
 };
 
+enum class SearchRank {
+	Unknown,
+	D,
+	C,
+	B,
+	A,
+};
+
 struct SearchData {
 	using Language = search::Language;
-
-	enum Rank {
-		A,
-		B,
-		C,
-		D,
-		Unknown,
-	};
+	using Rank = SearchRank;
 
 	enum Type {
 		Parse,
@@ -119,48 +120,16 @@ struct SearchData {
 
 	String buffer;
 	Language language = Language::Unknown;
-	Rank rank = D;
-	Type type = Parse;
+	Rank rank = Rank::D;
 
-	StringView getLanguage() const; // compatibility
+	StringView getLanguage() const;
 };
 
-enum class SearchOp {
+enum class SearchOp : uint8_t {
 	None,
-	Not,
 	And,
 	Or,
 	Follow,
-};
-
-struct SearchQuery {
-	enum Block {
-		None,
-		Parentesis,
-		Quoted,
-	};
-
-	enum Format {
-		Stappler,
-		Postgresql,
-	};
-
-	Block block = None;
-	size_t offset = 0;
-	SearchOp op = SearchOp::None;
-	String value;
-	StringView source;
-	Vector<SearchQuery> args;
-
-	SearchQuery() = default;
-	SearchQuery(StringView value, size_t offset = 1, StringView source = StringView());
-	SearchQuery(SearchOp, StringView);
-
-	void clear();
-	void encode(const Callback<void(StringView)> &, Format = Stappler) const;
-
-	void describe(std::ostream &stream, size_t depth = 0) const;
-	void foreach(const Callback<void(StringView value, StringView source)> &) const;
 };
 
 struct StemmerEnv;

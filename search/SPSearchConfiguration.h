@@ -24,30 +24,17 @@ THE SOFTWARE.
 #ifndef STAPPLER_SEARCH_SPSEARCHCONFIGURATION_H_
 #define STAPPLER_SEARCH_SPSEARCHCONFIGURATION_H_
 
-#include "SPSearchParser.h"
+#include "SPSearchQuery.h"
 
 namespace STAPPLER_VERSIONIZED stappler::search {
 
 class Configuration : public memory::AllocPool {
 public:
-	template <typename K, typename V>
-	using Map = memory::PoolInterface::MapType<K, V>;
-
-	template <typename T>
-	using Vector = memory::PoolInterface::VectorType<T>;
-
-	template <typename T>
-	using Set = memory::PoolInterface::SetType<T>;
-
-	using String = memory::PoolInterface::StringType;
-	using StringStream = memory::PoolInterface::StringStreamType;
-
 	using StemmerCallback = Function<bool(StringView, const Callback<void(StringView)> &)>;
 	using StemWordCallback = Callback<void(StringView, StringView, ParserToken)>;
 
 	using PreStemCallback = Function<Vector<StringView>(StringView, ParserToken)>;
 
-	using SearchVector = Map<String, Vector<Pair<size_t, SearchData::Rank>>>;
 	using WordMap = memory::dict<StringView, StringView>;
 
 	struct HeadlineConfig {
@@ -69,9 +56,9 @@ public:
 		Function<void(StringView, StringView)> fragmentCallback;
 	};
 
-public:
 	Configuration();
 	Configuration(Language);
+	virtual ~Configuration();
 
 	void setLanguage(Language);
 	Language getLanguage() const;
@@ -98,27 +85,30 @@ public:
 			const Vector<String> &stemList, size_t count = 1) const;
 
 	Vector<String> stemQuery(const Vector<SearchData> &query) const;
+	Vector<String> stemQuery(const SearchQuery &query) const;
 
 	size_t makeSearchVector(SearchVector &, StringView phrase, SearchData::Rank rank = SearchData::Rank::Unknown, size_t counter = 0,
 			const Callback<void(StringView, StringView, ParserToken)> & = nullptr) const;
-	String encodeSearchVector(const SearchVector &, SearchData::Rank rank = SearchData::Rank::Unknown) const;
 
-	SearchQuery parseQuery(StringView) const;
+	// encode for postgres textual representation
+	String encodeSearchVectorPostgres(const SearchVector &, SearchData::Rank rank = SearchData::Rank::Unknown) const;
+
+	// encode for binary blob
+	Bytes encodeSearchVectorData(const SearchVector &, SearchData::Rank rank = SearchData::Rank::Unknown) const;
+
+	SearchQuery parseQuery(StringView, bool strict = false, StringView *err = nullptr) const;
 
 	bool isMatch(const SearchVector &, StringView) const;
 	bool isMatch(const SearchVector &, const SearchQuery &) const;
 
 protected:
+	struct Data;
+
 	StemmerEnv *getEnvForToken(ParserToken) const;
 
-	Language _language = Language::Simple;
-	StemmerEnv *_primary = nullptr;
-	StemmerEnv *_secondary = nullptr;
+	void doStemQuery(Vector<String>, const SearchQuery &query) const;
 
-	Map<ParserToken, StemmerCallback> _stemmers;
-
-	PreStemCallback _preStem;
-	const StringView *_customStopwords = nullptr;
+	Data *data;
 };
 
 }

@@ -172,6 +172,7 @@ public: // CBOR format impl
 	inline void write(int64_t value) { _writeInt(*this, value); }
 	inline void write(double value) { _writeFloat(*this, value); }
 	inline void write(const typename ValueType::StringType &str) { _writeString(*this, str); }
+	inline void write(const StringView &str) { _writeString(*this, str); }
 	inline void write(const typename ValueType::BytesType &data) { _writeBytes(*this, data); }
 	inline void onBeginArray(const typename ValueType::ArrayType &arr) { _writeArrayStart(*this, arr.size()); }
 	inline void onBeginDict(const typename ValueType::DictionaryType &dict) { _writeMapStart(*this, dict.size()); }

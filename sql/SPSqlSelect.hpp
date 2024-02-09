@@ -138,7 +138,7 @@ auto Query<Binder, Interface>::SelectFrom::from(const Field &field) -> SelectFro
 		this->query->target = field.name;
 	}
 	if (!field.alias.empty()) {
-		this->query->stream << " " << field.alias;
+		this->query->stream << " \"" << field.alias << "\"";
 	}
 	return *this;
 }

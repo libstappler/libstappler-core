@@ -207,6 +207,7 @@ using iter_reference_t = typename T::reference;
 #include <unordered_set>
 #include <compare>
 #include <bitset>
+#include <forward_list>
 
 #if XWIN
 #pragma clang diagnostic pop

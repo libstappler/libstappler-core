@@ -27,44 +27,11 @@ namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 constexpr static uint32_t getDefaultFunctionVersion() { return 10; }
 
-constexpr static const char * DATABASE_DEFAULTS = R"Sql(
-CREATE TABLE IF NOT EXISTS "__removed" (
-	__oid BIGINT NOT NULL PRIMARY KEY
-) WITHOUT ROWID;
-
-CREATE TABLE IF NOT EXISTS "__sessions" (
-	name BLOB NOT NULL PRIMARY KEY,
-	mtime BIGINT NOT NULL,
-	maxage BIGINT NOT NULL,
-	data BLOB
-) WITHOUT ROWID;
-
-CREATE TABLE IF NOT EXISTS "__broadcasts" (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	date BIGINT NOT NULL,
-	msg BLOB
-);
-
-CREATE TABLE IF NOT EXISTS "__login" (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	"user" BIGINT NOT NULL,
-	name TEXT NOT NULL,
-	password BLOB NOT NULL,
-	date BIGINT NOT NULL,
-	success BOOLEAN NOT NULL,
-	addr TEXT,
-	host TEXT,
-	path TEXT
-);
-
-CREATE INDEX IF NOT EXISTS "__broadcasts_idx_date" ON "__broadcasts" ("date");
-CREATE INDEX IF NOT EXISTS "__login_idx_user" ON "__login" ("user");
-CREATE INDEX IF NOT EXISTS "__login_idx_date" ON "__login" ("date");
-)Sql";
-
 static BackendInterface::StorageType getStorageType(StringView type) {
-	if (type == "BIGINT" || type == "INTEGER" || type == "INT") {
+	if (type == "BIGINT") {
 		return BackendInterface::StorageType::Int8;
+	} else if (type == "INT" || type == "INTEGER") {
+		return BackendInterface::StorageType::Int4;
 	} else if (type == "NUMERIC") {
 		return BackendInterface::StorageType::Numeric;
 	} else if (type == "BOOLEAN") {
@@ -267,8 +234,8 @@ static StringView getStorageTypeName(BackendInterface::StorageType type, StringV
 	case ColRec::Type::Bool:	return "BOOLEAN"; break;
 	case ColRec::Type::Float4:	return "DOUBLE"; break;
 	case ColRec::Type::Float8:	return "DOUBLE"; break;
-	case ColRec::Type::Int2:	return "BIGINT"; break;
-	case ColRec::Type::Int4:	return "BIGINT"; break;
+	case ColRec::Type::Int2:	return "INT"; break;
+	case ColRec::Type::Int4:	return "INT"; break;
 	case ColRec::Type::Int8:	return "BIGINT"; break;
 	case ColRec::Type::Text: 	return "TEXT"; break;
 	case ColRec::Type::VarChar: return "TEXT"; break;
@@ -382,6 +349,29 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 					break;
 				}
 				break;
+			case Type::FullTextView:
+				writeTriggerHeader(name, t, t.sourceField);
+				switch (t.type) {
+				case TriggerRec::Delete:
+					outstream << " WHEN OLD.\"" << t.sourceField << "\" IS NOT NULL BEGIN\n"
+							"\tSELECT sp_ts_update(OLD.__oid, OLD.\"" << t.sourceField << "\", "
+									"'" << t.sourceTable << "', '" << t.sourceField << "', '" << t.targetTable << "', 2);"
+							"\nEND;\n";
+					break;
+				case TriggerRec::Update:
+					outstream << " BEGIN\n"
+							"\tSELECT sp_ts_update(OLD.__oid, NEW.\"" << t.sourceField << "\", "
+									"'" << t.sourceTable << "', '" << t.sourceField << "', '" << t.targetTable << "', 1);"
+							"\nEND;\n";
+					break;
+				case TriggerRec::Insert:
+					outstream << " WHEN NEW.\"" << t.sourceField << "\" IS NOT NULL BEGIN\n"
+							"\tSELECT sp_ts_update(NEW.__oid, NEW.\"" << t.sourceField << "\", "
+									"'" << t.sourceTable << "', '" << t.sourceField << "', '" << t.targetTable << "', 0);"
+							"\nEND;\n";
+					break;
+				}
+				break;
 			default:
 				break;
 			}
@@ -391,21 +381,21 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(OLD.__oid," << stappler::toInt(DeltaAction::Delete) << ",stellator_now(),stellator_user());"
+						"(OLD.__oid," << stappler::toInt(DeltaAction::Delete) << ",sp_sqlite_now(),stellator_user());"
 						"\nEND;\n";
 				break;
 			case TriggerRec::Update:
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(NEW.__oid," << stappler::toInt(DeltaAction::Update) << ",stellator_now(),stellator_user());"
+						"(NEW.__oid," << stappler::toInt(DeltaAction::Update) << ",sp_sqlite_now(),stellator_user());"
 						"\nEND;\n";
 				break;
 			case TriggerRec::Insert:
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(OLD.__oid," << stappler::toInt(DeltaAction::Create) << ",stellator_now(),stellator_user());"
+						"(OLD.__oid," << stappler::toInt(DeltaAction::Create) << ",sp_sqlite_now(),stellator_user());"
 						"\nEND;\n";
 				break;
 			}
@@ -415,21 +405,21 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(OLD.\"" << t.tagField << "\",OLD.\"" << t.targetField  << "\",stellator_now(),stellator_user());"
+						"(OLD.\"" << t.tagField << "\",OLD.\"" << t.targetField  << "\",sp_sqlite_now(),stellator_user());"
 						"\nEND;\n";
 				break;
 			case TriggerRec::Update:
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",stellator_now(),stellator_user());"
+						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",sp_sqlite_now(),stellator_user());"
 						"\nEND;\n";
 				break;
 			case TriggerRec::Insert:
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",stellator_now(),stellator_user());"
+						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",sp_sqlite_now(),stellator_user());"
 						"\nEND;\n";
 				break;
 			}
@@ -468,9 +458,9 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 					auto req_type = req_col.type;
 
 					if (req_type != ex_col.type) {
-						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN IF EXISTS \"" << ex_col_it.first << "\";\n";
+						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \"" << ex_col_it.first << "\";\n";
 					} else if (ex_col.type == ColRec::Type::Unknown && req_type == ColRec::Type::Unknown && ex_col.custom != req_col.custom) {
-						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN IF EXISTS \"" << ex_col_it.first << "\";\n";
+						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \"" << ex_col_it.first << "\";\n";
 					} else {
 						req_t.cols.erase(req_col_it);
 					}
@@ -500,7 +490,7 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				if (it.second.detached) {
 					outstream << "\t\"__oid\" INTEGER PRIMARY KEY AUTOINCREMENT";
 				} else {
-					outstream << "\t\"__oid\" INTEGER DEFAULT (stellator_next_oid())";
+					outstream << "\t\"__oid\" INTEGER DEFAULT (sp_sqlite_next_oid())";
 				}
 			}
 
@@ -541,7 +531,7 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				outstream << " UNIQUE";
 			}
 			outstream << " INDEX IF NOT EXISTS \"" << cit.first << "\" ON \"" << it.first << "\"";
-			if (cit.second.fields.size() == 0 && cit.second.fields.front().back() == ')') {
+			if (cit.second.fields.size() == 1 && cit.second.fields.front().back() == ')') {
 				outstream <<  " " << cit.second.fields.front() << ";\n";
 			} else {
 				outstream << " (";
@@ -598,7 +588,8 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 			auto &f = fit.second;
 			auto type = fit.second.getType();
 
-			if (type == db::Type::Set) {
+			switch (type) {
+			case db::Type::Set: {
 				auto ref = static_cast<const db::FieldObject *>(f.getSlot());
 				if (ref->onRemove == db::RemovePolicy::Reference || ref->onRemove == db::RemovePolicy::StrongReference) {
 					// create many-to-many table link
@@ -608,11 +599,6 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					TableRec table;
 					table.cols.emplace(toString(source, "_id"), ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
 					table.cols.emplace(toString(target, "_id"), ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
-
-					/*table.constraints.emplace(toString(name, "_ref_", source), ConstraintRec(
-							ConstraintRec::Reference, toString(source, "_id"), source, db::RemovePolicy::Cascade));
-					table.constraints.emplace(name + "_ref_" + ref->getName(), ConstraintRec(
-							ConstraintRec::Reference, toString(target, "_id"), target.str<Interface>(), db::RemovePolicy::Cascade));*/
 
 					table.indexes.emplace(toString(name, "_idx_", source), toString(source, "_id"));
 					table.indexes.emplace(toString(name, "_idx_", target), toString(target, "_id"));
@@ -648,7 +634,9 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 						}
 					} while (0);
 				}
-			} else if (type == db::Type::Object) {
+				break;
+			}
+			case db::Type::Object: {
 				auto ref = static_cast<const db::FieldObject *>(f.getSlot());
 				auto targetIt = tables.find(ref->scheme->getName());
 				if (targetIt != tables.end()) {
@@ -689,7 +677,9 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 						} while (0);
 					}
 				}
-			} else if (type == db::Type::Array) {
+				break;
+			}
+			case db::Type::Array: {
 				auto slot = static_cast<const db::FieldArray *>(f.getSlot());
 				if (slot->tfield && slot->tfield.isSimpleLayout()) {
 
@@ -729,7 +719,9 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 
 					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
 				}
-			} else if (type == db::Type::View) {
+				break;
+			}
+			case db::Type::View: {
 				auto slot = static_cast<const db::FieldView *>(f.getSlot());
 
 				String name = toString(it.first, "_f_", fit.first, "_view");
@@ -801,6 +793,46 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 
 					tables.emplace(StringView(name).pdup(), std::move(table));
 				}
+				break;
+			}
+			case db::Type::FullTextView: {
+				String name = toString(it.first, "_f_", fit.first);
+
+				auto & source = it.first;
+				auto sourceFieldName = toString(source, "_id");
+
+				TableRec table;
+				table.cols.emplace(sourceFieldName, ColRec(ColRec::Type::Int8));
+				table.cols.emplace("word", ColRec(ColRec::Type::Int8));
+
+				table.indexes.emplace(toString(name, "_idx_word"), "word");
+				tables.emplace(StringView(name).pdup(), std::move(table)).first;
+
+				do {
+					TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
+					trigger.tagField = toString(source, "_id");
+					auto triggerName = trigger.makeName();
+					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+				} while (0);
+
+				do {
+					TriggerRec trigger(TriggerRec::Update, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
+					trigger.tagField = toString(source, "_id");
+					auto triggerName = trigger.makeName();
+					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+				} while (0);
+
+				do {
+					TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
+					trigger.tagField = toString(source, "_id");
+					auto triggerName = trigger.makeName();
+					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+				} while (0);
+
+				break;
+			}
+			default:
+				break;
 			}
 
 			if (scheme->hasDelta()) {
@@ -975,7 +1007,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 			break;
 
 		case db::Type::FullTextView:
-			cols.emplace(it.first, ColRec(ColRec::Type::TsVector, flags));
+			cols.emplace(it.first, ColRec(ColRec::Type::Bytes, flags));
 			emplaced = true;
 			break;
 
@@ -1043,14 +1075,18 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 				}
 			}
 
-			/*if (type == db::Type::Text) {
+			if (type == db::Type::Text) {
 				if (f.hasFlag(db::Flags::PatternIndexed)) {
-					indexes.emplace(toString(name, "_idx_", it.first, "_pattern"), toString("USING btree ( \"", it.first, "\" text_pattern_ops)"));
+					indexes.emplace(toString(name, "_idx_", it.first, "_pattern"), toString("( \"", it.first, "\" COLLATE NOCASE)"));
 				}
-				if (f.hasFlag(db::Flags::TrigramIndexed)) {
+				/*if (f.hasFlag(db::Flags::TrigramIndexed)) {
 					indexes.emplace(toString(name, "_idx_", it.first, "_trgm"), toString("USING GIN ( \"", it.first, "\" gin_trgm_ops)"));
-				}
-			}*/
+				}*/
+			}
+
+			if (type == db::Type::FullTextView) {
+
+			}
 		}
 	}
 
@@ -1126,7 +1162,9 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 		}
 
 		tables << "\n" << stream;
-		_driver->getApplicationInterface()->reportDbUpdate(tables.weak(), success);
+		if (_driver->getApplicationInterface()) {
+			_driver->getApplicationInterface()->reportDbUpdate(tables.weak(), success);
+		}
 		if (!success) {
 			return false;
 		}

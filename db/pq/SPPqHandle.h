@@ -55,7 +55,7 @@ public:
 
 	virtual bool isNotificationsSupported() const override { return true; }
 
-	virtual void makeQuery(const Callback<void(sql::SqlQuery &)> &cb) override;
+	virtual void makeQuery(const Callback<void(sql::SqlQuery &)> &cb, const sql::QueryStorageHandle *) override;
 
 	virtual bool selectQuery(const db::sql::SqlQuery &, const Callback<bool(Result &)> &cb,
 			const Callback<void(const Value &)> &err = nullptr) override;
@@ -93,7 +93,7 @@ class PgQueryInterface : public db::QueryInterface {
 public:
 	using Binder = db::Binder;
 
-	PgQueryInterface(const sql::Driver *);
+	PgQueryInterface(const sql::Driver *, const sql::QueryStorageHandle *s);
 
 	size_t push(String &&val);
 	size_t push(const StringView &val);
@@ -112,9 +112,10 @@ public:
 	virtual void bindValue(db::Binder &, StringStream &query, const Value &val) override;
 	virtual void bindDataField(db::Binder &, StringStream &query, const db::Binder::DataField &f) override;
 	virtual void bindTypeString(db::Binder &, StringStream &query, const db::Binder::TypeString &type) override;
-	virtual void bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) override;
-	virtual void bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) override;
-	virtual void bindFullTextData(db::Binder &, StringStream &query, const db::FullTextData &d) override;
+	virtual void bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &) override;
+	virtual void bindFullTextFrom(db::Binder &, StringStream &query, const db::Binder::FullTextFrom &) override;
+	virtual void bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &) override;
+	virtual void bindFullTextQuery(db::Binder &, StringStream &query, const db::Binder::FullTextQueryRef &d) override;
 	virtual void bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) override;
 	virtual void bindDoubleVector(Binder &b, StringStream &query, const Vector<double> &vec) override;
 	virtual void bindStringVector(Binder &b, StringStream &query, const Vector<StringView> &vec) override;
@@ -124,6 +125,7 @@ public:
 	Vector<Bytes> params;
 	Vector<bool> binary;
 	const sql::Driver *driver = nullptr;
+	const sql::QueryStorageHandle *storage = nullptr;
 };
 
 }

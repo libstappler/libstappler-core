@@ -141,7 +141,7 @@ void Decoder<Interface>::decodeArray(uint8_t type, ValueType &ret) {
 	MajorTypeEncoded majorType = MajorTypeEncoded::Simple;
 	if (size > 0) {
 		type = r.readUnsigned();
-		majorType = (MajorTypeEncoded)(type & toInt(Flags::MajorTypeMaskEncoded));
+		majorType = MajorTypeEncoded(type & toInt(Flags::MajorTypeMaskEncoded));
 		type = type & toInt(Flags::AdditionalInfoMask);
 	} else {
 		majorType = MajorTypeEncoded::Simple;

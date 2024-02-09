@@ -112,7 +112,29 @@ static inline auto SqlQuery_makeSoftLimitWith(SqlQuery::Context &ictx,
 }
 
 template <typename Clause>
-static inline auto SqlQuery_makeWhereClause(SqlQuery::Context &ctx, Clause &tmp, const StringView &lName = StringView(), uint64_t oid = 0) {
+static inline auto SqlQuery_makeWhereClause(const Driver *driver, SqlQuery::Context &ctx, Clause &tmp, const StringView &lName = StringView(), uint64_t oid = 0) {
+	if (ctx.query->hasSelect()) {
+		for (auto &it : ctx.query->getSelectList()) {
+			auto f = ctx.scheme->getField(it.field);
+			switch (f->getType()) {
+			case db::Type::Custom: {
+				auto c = f->getSlot<FieldCustom>();
+				if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
+					if (info->writeFrom) {
+						info->writeFrom(*c, *ctx.scheme, tmp, it.compare, it.value1, it.value2);
+					}
+				}
+				break;
+			}
+			case db::Type::FullTextView:
+				ctx._this->writeFullTextFrom(tmp, *ctx.scheme, f, it);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
 	bool isAsc = ctx.query->getOrdering() == Ordering::Ascending;
 	if (ctx.query->hasSelect() || !ctx.softLimitField.empty() || !lName.empty()) {
 		if (ctx.softLimitField == "__oid" || !ctx.hasAltLimit) {
@@ -174,7 +196,7 @@ bool SqlQuery::writeQuery(Context &ctx) {
 		: select();
 	auto s = writeSelectFrom(sel, ctx);
 
-	SqlQuery_makeWhereClause(ctx, s);
+	SqlQuery_makeWhereClause(_driver, ctx, s);
 
 	writeOrdering(s, *ctx.scheme, *ctx.query, ctx.hasAltLimit);
 	if (ctx.query->isForUpdate()) { s.forUpdate(); }
@@ -231,7 +253,7 @@ bool SqlQuery::writeQuery(Context &ctx, const db::Scheme &scheme, uint64_t oid, 
 			})
 		: sel.from(ctx.scheme->getName());
 
-	SqlQuery_makeWhereClause(ctx, tmp, lName, oid);
+	SqlQuery_makeWhereClause(_driver, ctx, tmp, lName, oid);
 
 	writeOrdering(tmp, *ctx.scheme, *ctx.query, ctx.hasAltLimit);
 	if (ctx.query->isForUpdate()) { tmp.forUpdate(); }
@@ -269,7 +291,7 @@ void SqlQuery::writeWhere(SqlQuery::WhereContinue &w, db::Operator op, const db:
 		w.parenthesis(op, [&] (SqlQuery::WhereBegin &wh) {
 			auto whi = wh.where();
 			for (auto &it : q.getSelectList()) {
-				writeWhere(whi, db::Operator::And, scheme, it);
+				writeWhereItem(whi, db::Operator::And, scheme, it);
 			}
 		});
 	}
@@ -333,14 +355,13 @@ static void SqlQuery_writeWhereData(const Driver *driver, SqlQuery::WhereContinu
 	}
 }
 
-void SqlQuery::writeWhere(SqlQuery::WhereContinue &whi, db::Operator op, const db::Scheme &scheme, const db::Query::Select &sel) {
+void SqlQuery::writeWhereItem(SqlQuery::WhereContinue &whi, db::Operator op, const db::Scheme &scheme, const db::Query::Select &sel) {
 	if (auto f = scheme.getField(sel.field)) {
 		auto type = f->getType();
 		if (type == db::Type::FullTextView && sel.compare != db::Comparation::IsNull && sel.compare != db::Comparation::IsNotNull) {
 			auto ftsQuery = getFullTextQuery(scheme, *f, sel);
 			if (!ftsQuery.empty()) {
-				whi.where(op, SqlQuery::Field(scheme.getName(), sel.field),
-						db::Comparation::Includes, RawStringView{ftsQuery});
+				writeFullTextWhere(whi, op, scheme, sel, ftsQuery);
 			}
 		} else if (SqlQuery_comparationIsValid(_driver, *f, sel.compare)) {
 			SqlQuery_writeWhereData(_driver, whi, op, scheme, *f, sel.compare, sel.value1, sel.value2);
@@ -348,7 +369,7 @@ void SqlQuery::writeWhere(SqlQuery::WhereContinue &whi, db::Operator op, const d
 	}
 }
 
-void SqlQuery::writeWhere(SqlQuery::WhereContinue &whi, db::Operator op, const db::Scheme &scheme, const db::Worker::ConditionData &sel) {
+void SqlQuery::writeWhereCond(SqlQuery::WhereContinue &whi, db::Operator op, const db::Scheme &scheme, const db::Worker::ConditionData &sel) {
 	SqlQuery_writeWhereData(_driver, whi, op, scheme, *sel.field, sel.compare, sel.value1, sel.value2);
 }
 
@@ -663,7 +684,7 @@ void SqlQuery::writeQueryViewDelta(const db::QueryList &list, const stappler::Ti
 	s.fields(Field("dv", "time").as("__d_time"), Field("dv", "object").as("__d_object"), Field("dv", "__vid"))
 		.from(Field(view->scheme->getName()).as("t"))
 		.rightJoinOn("dv", [&] (SqlQuery::WhereBegin &w) {
-			w.where(Field("dv", "object"), db::Comparation::Equal, Field("t", "__oid"));
+			w.where(Field("dv", "object"), Comparation::Equal, Field("t", "__oid"));
 	});
 }
 
@@ -673,6 +694,13 @@ const StringStream &SqlQuery::getQuery() const {
 
 db::QueryInterface * SqlQuery::getInterface() const {
 	return binder.getInterface();
+}
+
+void SqlQuery::writeFullTextFrom(SelectFrom &sel, const Scheme &scheme, const db::Field *f, const db::Query::Select &it) {
+	auto ftsQuery = getFullTextQuery(scheme, *f, it);
+	if (!ftsQuery.empty()) {
+		sel.query->writeBind(db::Binder::FullTextFrom{scheme.getName(), f, ftsQuery});
+	}
 }
 
 void SqlQuery::writeFullTextRank(Select &sel, const db::Scheme &scheme, const db::Query &q) {
@@ -697,7 +725,11 @@ void SqlQuery::writeFullTextRank(Select &sel, const db::Scheme &scheme, const db
 	}
 }
 
-StringView SqlQuery::getFullTextQuery(const db::Scheme &scheme, const db::Field &f, const db::Query::Select &it) {
+void SqlQuery::writeFullTextWhere(WhereContinue &whi, db::Operator op, const db::Scheme &scheme, const db::Query::Select &sel, StringView ftsQuery) {
+	whi.where(op, SqlQuery::Field(scheme.getName(), sel.field), Comparation::Includes, RawStringView{ftsQuery});
+}
+
+StringView SqlQuery::getFullTextQuery(const Scheme &scheme, const db::Field &f, const db::Query::Select &it) {
 	if (f.getType() != Type::FullTextView) {
 		return StringView();
 	}
@@ -709,26 +741,17 @@ StringView SqlQuery::getFullTextQuery(const db::Scheme &scheme, const db::Field 
 		return fit->second;
 	}
 
-	if (!it.searchData.empty()) {
+	if (!it.textQuery.empty()) {
 		StringStream queryFrom;
-		for (auto &searchIt : it.searchData) {
-			if (!queryFrom.empty()) {
-				queryFrom  << " && ";
-			}
-			binder.writeBind(queryFrom, searchIt);
-		}
+		binder.writeBind(queryFrom, Binder::FullTextQueryRef{scheme.getName(), &f, it.textQuery});
 		return _fulltextQueries.emplace(std::move(key), queryFrom.str()).first->second;
 	} else if (it.value1) {
 		auto d = f.getSlot<db::FieldFullTextView>();
 		auto q = d->parseQuery(it.value1);
 		if (!q.empty()) {
+			auto &it = _parsedQueries.emplace_front(move(q));
 			StringStream queryFrom;
-			for (auto &searchIt : q) {
-				if (!queryFrom.empty()) {
-					queryFrom  << " && ";
-				}
-				binder.writeBind(queryFrom, searchIt);
-			}
+			binder.writeBind(queryFrom, Binder::FullTextQueryRef{scheme.getName(), &f, it});
 			return _fulltextQueries.emplace(std::move(key), queryFrom.str()).first->second;
 		}
 	}

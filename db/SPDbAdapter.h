@@ -77,15 +77,15 @@ public:
 	}
 
 	virtual db::Adapter getAdapterFromContext() const;
-	virtual void scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const = 0;
+	virtual void scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const;
 
-	virtual StringView getDocuemntRoot() const = 0;
+	virtual StringView getDocuemntRoot() const;
 
-	virtual const Scheme *getFileScheme() const = 0;
-	virtual const Scheme *getUserScheme() const = 0;
+	virtual const Scheme *getFileScheme() const { return nullptr; }
+	virtual const Scheme *getUserScheme() const { return nullptr; }
 
-	virtual void pushErrorMessage(Value &&) const = 0;
-	virtual void pushDebugMessage(Value &&) const = 0;
+	virtual void pushErrorMessage(Value &&) const;
+	virtual void pushDebugMessage(Value &&) const;
 
 	virtual db::InputFile *getFileFromContext(int64_t id) const { return nullptr; }
 	virtual int64_t getUserIdFromContext() const { return 0; }
@@ -148,8 +148,7 @@ protected:
 	Value select(Worker &, const Query &) const;
 
 	Value create(Worker &, Value &) const;
-	Value save(Worker &, uint64_t oid, const Value &obj, const Vector<String> &fields) const;
-	Value patch(Worker &, uint64_t oid, const Value &patch) const;
+	Value save(Worker &, uint64_t oid, Value &obj, Value &patch, const Set<const Field *> &fields) const;
 
 	bool remove(Worker &, uint64_t oid) const;
 
@@ -171,6 +170,7 @@ protected:
 	TransactionStatus getTransactionStatus() const;
 
 	void runAutoFields(const Transaction &t, const Vector<uint64_t> &vec, const Scheme &, const Field &);
+	void processFullTextFields(const Scheme &, Value &patch, Vector<InputField> &ifields, Vector<InputRow> &ivalues) const;
 
 	const ApplicationInterface *_application = nullptr;
 	BackendInterface *_interface = nullptr;

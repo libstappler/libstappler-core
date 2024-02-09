@@ -29,6 +29,27 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
+class Driver;
+
+struct QueryStorageHandle {
+	const Driver *driver;
+	StringView name;
+	Map<StringView, const void *> *data;
+
+	QueryStorageHandle(const Driver *d, StringView n, Map<StringView, const void *> *);
+	~QueryStorageHandle();
+
+	QueryStorageHandle(const QueryStorageHandle &) = delete;
+	QueryStorageHandle& operator=(const QueryStorageHandle &) = delete;
+
+	QueryStorageHandle(QueryStorageHandle &&);
+	QueryStorageHandle& operator=(QueryStorageHandle &&);
+
+	void clear() {
+		data->clear();
+	}
+};
+
 class Driver : public AllocBase {
 public:
 	using Handle = stappler::ValueWrapper<void *, class HandleClass>;
@@ -67,7 +88,17 @@ public:
 
 	const CustomFieldInfo *getCustomFieldInfo(StringView) const;
 
+	QueryStorageHandle makeQueryStorage(StringView) const;
+
+	Map<StringView, const void *> *getQueryStorage(StringView) const;
+	Map<StringView, const void *> *getCurrentQueryStorage() const;
+
 protected:
+	friend class QueryStorageHandle;
+
+	Map<StringView, const void *> *registerQueryStorage(StringView) const;
+	void unregisterQueryStorage(StringView) const;
+
 	Driver(pool_t *, ApplicationInterface *);
 
 	StringView _driverPath;

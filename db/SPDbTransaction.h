@@ -133,7 +133,7 @@ public:
 	bool remove(Worker &t, uint64_t oid) const;
 
 	Value create(Worker &, Value &data) const;
-	Value save(Worker &, uint64_t oid, const Value &newObject, const Vector<String> &fields) const;
+	Value save(Worker &, uint64_t oid, Value &obj, Value &patch, Set<const Field *> &fields) const;
 	Value patch(Worker &, uint64_t oid, Value &data) const;
 
 	Value field(Action, Worker &, uint64_t oid, const Field &, Value && = Value()) const;
@@ -214,7 +214,7 @@ struct AccessRole : public AllocBase {
 	using OnCount = stappler::ValueWrapper<Function<bool(Worker &, const Query &)>, class OnCountTag>;
 	using OnCreate = stappler::ValueWrapper<Function<bool(Worker &, Value &obj)>, class OnCreateTag>;
 	using OnPatch = stappler::ValueWrapper<Function<bool(Worker &, int64_t id, Value &obj)>, class OnPatchTag>;
-	using OnSave = stappler::ValueWrapper<Function<bool(Worker &, const Value &, Value &obj, Vector<String> &fields)>, class OnSaveTag>;
+	using OnSave = stappler::ValueWrapper<Function<bool(Worker &, const Value &obj, Value &patch, Set<const Field *> &fields)>, class OnSaveTag>;
 	using OnRemove = stappler::ValueWrapper<Function<bool(Worker &, const Value &)>, class OnRemoveTag>;
 	using OnField = stappler::ValueWrapper<Function<bool(Action, Worker &, const Value &, const Field &, Value &)>, class OnFieldTag>;
 	using OnReturn = stappler::ValueWrapper<Function<bool(const Scheme &, Value &)>, class OnReturnTag>;
@@ -253,7 +253,7 @@ struct AccessRole : public AllocBase {
 
 	Function<bool(Worker &, Value &obj)> onCreate;
 	Function<bool(Worker &, int64_t id, Value &obj)> onPatch;
-	Function<bool(Worker &, const Value &, Value &obj, Vector<String> &fields)> onSave;
+	Function<bool(Worker &, const Value &obj, Value &patch, Set<const Field *> &fields)> onSave;
 	Function<bool(Worker &, const Value &)> onRemove;
 
 	Function<bool(Action, Worker &, const Value &, const Field &, Value &)> onField;

@@ -47,7 +47,7 @@ Value SqlHandle::get(const stappler::CoderSource &key) {
 			}
 			return true;
 		});
-	});
+	}, nullptr);
 	return ret;
 }
 
@@ -61,7 +61,7 @@ bool SqlHandle::set(const stappler::CoderSource &key, const Value &data, stapple
 			.onConflict("name").doUpdate().excluded("mtime").excluded("maxage").excluded("data")
 			.finalize();
 		ret = (performQuery(query) != stappler::maxOf<size_t>());
-	});
+	}, nullptr);
 	return ret;
 }
 
@@ -70,7 +70,7 @@ bool SqlHandle::clear(const stappler::CoderSource &key) {
 	makeQuery([&] (SqlQuery &query) {
 		query.remove("__sessions").where("name", Comparation::Equal, key).finalize();
 		ret = (performQuery(query) == 1); // one row should be affected
-	});
+	}, nullptr);
 	return ret;
 }
 
@@ -175,7 +175,7 @@ db::User * SqlHandle::authorizeUser(const db::Auth &auth, const StringView &inam
 			}
 			return true;
 		});
-	});
+	}, nullptr);
 
 	if (transactionStarted) {
 		endTransaction();
@@ -249,7 +249,7 @@ void SqlHandle::finalizeBroadcast() {
 			query.finalize();
 			performQuery(query);
 			_bcasts.clear();
-		});
+		}, nullptr);
 	}
 }
 
@@ -278,7 +278,7 @@ int64_t SqlHandle::processBroadcasts(const stappler::Callback<void(BytesView)> &
 				return true;
 			});
 		}
-	});
+	}, nullptr);
 	return maxId;
 }
 
@@ -287,12 +287,12 @@ void SqlHandle::broadcast(const Bytes &bytes) {
 		makeQuery([&] (SqlQuery &query) {
 			query.insert("__broadcasts").fields("date", "msg").values(stappler::Time::now(), Bytes(bytes)).finalize();
 			performQuery(query);
-		});
+		}, nullptr);
 		if (isNotificationsSupported()) {
 			makeQuery([&] (SqlQuery &query) {
 				query.getStream() << "NOTIFY " << config::BROADCAST_CHANNEL_NAME << ";";
 				performQuery(query);
-			});
+			}, nullptr);
 		}
 	} else {
 		_bcasts.emplace_back(stappler::Time::now(), bytes);
@@ -361,7 +361,7 @@ int64_t SqlHandle::getDeltaValue(const Scheme &scheme) {
 				}
 				return true;
 			});
-		});
+		}, nullptr);
 		return ret;
 	}
 	return 0;
@@ -380,7 +380,7 @@ int64_t SqlHandle::getDeltaValue(const Scheme &scheme, const db::FieldView &view
 				}
 				return true;
 			});
-		});
+		}, nullptr);
 		return ret;
 	}
 	return 0;
@@ -428,7 +428,7 @@ Value SqlHandle::getHistory(const Scheme &scheme, const stappler::Time &time, bo
 			}
 			return true;
 		});
-	});
+	}, nullptr);
 	return ret;
 }
 
@@ -469,7 +469,7 @@ Value SqlHandle::getHistory(const db::FieldView &view, const Scheme *scheme, uin
 			}
 			return true;
 		});
-	});
+	}, nullptr);
 
 	return ret;
 }
@@ -482,7 +482,7 @@ Value SqlHandle::getDeltaData(const Scheme &scheme, const stappler::Time &time) 
 			q.writeQueryDelta(scheme, time, Set<const Field *>(), false);
 			q.finalize();
 			ret = selectValueQuery(scheme, q, resv.getVirtuals());
-		});
+		}, nullptr);
 	}
 	return ret;
 }
@@ -523,7 +523,7 @@ Value SqlHandle::getDeltaData(const Scheme &scheme, const db::FieldView &view, c
 				selectValueQuery(r, view, q);
 				ret = std::move(r);
 			}
-		});
+		}, nullptr);
 	}
 	return ret;
 }

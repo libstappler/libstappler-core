@@ -100,7 +100,14 @@ auto Query<Binder, Interface>::InsertValues::def() -> InsertValues & {
 		break;
 	}
 
-	this->query->stream << "DEFAULT";
+	switch (this->query->profile) {
+	case Profile::Postgres:
+		this->query->stream << "DEFAULT";
+		break;
+	case Profile::Sqlite:
+		this->query->stream << "NULL";
+		break;
+	}
 	return *this;
 }
 

@@ -27,6 +27,30 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
+thread_local std::map<StringView, Map<StringView, const void *>> tl_DriverQueryStorage;
+
+QueryStorageHandle::QueryStorageHandle(const Driver *d, StringView n, Map<StringView, const void *> *dt)
+: driver(d), name(n), data(dt) { }
+
+QueryStorageHandle::~QueryStorageHandle() {
+	if (driver) {
+		driver->unregisterQueryStorage(name);
+	}
+}
+
+QueryStorageHandle::QueryStorageHandle(QueryStorageHandle &&other)
+: driver(other.driver), name(other.name), data(other.data) {
+	other.driver = nullptr;
+}
+
+QueryStorageHandle& QueryStorageHandle::operator=(QueryStorageHandle &&other) {
+	driver = other.driver;
+	name = other.name;
+	data = other.data;
+	other.driver = nullptr;
+	return *this;
+}
+
 Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, const void *external) {
 	Driver *ret = nullptr;
 	pool::push(pool);
@@ -59,9 +83,50 @@ const CustomFieldInfo *Driver::getCustomFieldInfo(StringView key) const {
 	return nullptr;
 }
 
+QueryStorageHandle Driver::makeQueryStorage(StringView name) const {
+	auto d = registerQueryStorage(name);
+	if (d) {
+		return QueryStorageHandle(this, name, d);
+	}
+	return QueryStorageHandle(nullptr, name, nullptr);
+}
+
+Map<StringView, const void *> *Driver::getQueryStorage(StringView name) const {
+	auto it = tl_DriverQueryStorage.find(name);
+	if (it != tl_DriverQueryStorage.end()) {
+		return &it->second;
+	}
+	return nullptr;
+}
+
+Map<StringView, const void *> *Driver::getCurrentQueryStorage() const {
+	if (tl_DriverQueryStorage.size() > 0) {
+		return &tl_DriverQueryStorage.begin()->second;
+	}
+	return nullptr;
+}
+
+Map<StringView, const void *> *Driver::registerQueryStorage(StringView name) const {
+	if (tl_DriverQueryStorage.find(name) != tl_DriverQueryStorage.end()) {
+		return nullptr;
+	}
+
+	auto ret = &tl_DriverQueryStorage.emplace(name, Map<StringView, const void *>()).first->second;
+
+	return ret;
+}
+
+void Driver::unregisterQueryStorage(StringView name) const {
+	tl_DriverQueryStorage.erase(name);
+}
+
 Driver::Driver(pool_t *p, ApplicationInterface *app)
 : _pool(p), _application(app) {
+	if (!app) {
+		auto mem = pool::palloc(_pool, sizeof(ApplicationInterface));
 
+		_application = new (mem) ApplicationInterface;
+	}
 }
 
 }
