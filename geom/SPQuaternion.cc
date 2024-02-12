@@ -283,4 +283,11 @@ void Quaternion::squad(const Quaternion& q1, const Quaternion& q2, const Quatern
 	Quaternion_slerpForSquad(dstQ, dstS, 2.0f * t * (1.0f - t), dst);
 }
 
+#ifdef __LCC__
+
+constexpr const Quaternion Quaternion::IDENTITY(0.0f, 0.0f, 0.0f, 1.0f);
+constexpr const Quaternion Quaternion::ZERO(0.0f, 0.0f, 0.0f, 0.0f);
+
+#endif
+
 }

@@ -414,11 +414,11 @@ PrivateKey::PrivateKey(Backend b) : _valid(true), _key() {
 }
 
 PrivateKey::PrivateKey(Backend b, BytesView data, const CoderSource &str) : PrivateKey(b) {
-	import(data, str);
+	this->import(data, str);
 }
 
 PrivateKey::PrivateKey(BytesView data, const CoderSource &str) : PrivateKey(Backend::Default) {
-	import(data, str);
+	this->import(data, str);
 }
 
 PrivateKey::~PrivateKey() {
@@ -661,7 +661,7 @@ PublicKey::PublicKey(Backend b, BytesView data) : PublicKey(b) {
 	if (data.starts_with(reinterpret_cast<const uint8_t *>("ssh-rsa"), "ssh-rsa"_len)) {
 		importOpenSSH(StringView(reinterpret_cast<const char *>(data.data()), data.size()));
 	} else {
-		import(data);
+		this->import(data);
 	}
 }
 
@@ -669,7 +669,7 @@ PublicKey::PublicKey(BytesView data) : PublicKey(Backend::Default) {
 	if (data.starts_with(reinterpret_cast<const uint8_t *>("ssh-rsa"), "ssh-rsa"_len)) {
 		importOpenSSH(StringView(reinterpret_cast<const char *>(data.data()), data.size()));
 	} else {
-		import(data);
+		this->import(data);
 	}
 }
 
@@ -860,6 +860,16 @@ static uint8_t * writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwor
 
 }
 
+#ifdef __LCC__
+#pragma diag_suppress 2464
+#pragma diag_suppress 1444
+#endif
+
 #include "SPCrypto-openssl.cc"
 #include "SPCrypto-mbedtls.cc"
 #include "SPCrypto-gnutls.cc"
+
+#ifdef __LCC__
+#pragma diag_default 2464
+#pragma diag_default 1444
+#endif

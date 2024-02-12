@@ -27,8 +27,6 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
-static std::mutex s_logMutex;
-
 class SqliteQuery : public db::sql::SqlQuery {
 public:
 	virtual ~SqliteQuery() = default;
@@ -40,7 +38,7 @@ public:
 			const db::Query::Select &sel, StringView ftsQuery) override {
 		auto functionCall = toString("sp_ts_query_valid(\"", scheme.getName(), "\".\"", sel.field, "\", '", ftsQuery, "')");
 		whi.where(op,
-				SqlQuery::Field(StringView(functionCall), true),
+				SqlQuery::Field(StringView(functionCall), SqlQuery::Field::PlainText),
 				Comparation::Equal, RawStringView{StringView("1")});
 	}
 };
@@ -220,9 +218,9 @@ void SqliteQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query, 
 
 	auto q = new TextQueryData;
 	q->query = &d.query;
-	q->query->decompose([&] (StringView pos) {
+	q->query->decompose([&, this] (StringView pos) {
 		emplace_ordered(q->pos, ((const Driver *)driver)->insertWord(handle, pos));
-	}, [&] (StringView neg) {
+	}, [&, this] (StringView neg) {
 		emplace_ordered(q->neg, ((const Driver *)driver)->insertWord(handle, neg));
 	});
 

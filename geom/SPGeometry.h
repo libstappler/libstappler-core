@@ -77,8 +77,6 @@ struct Size2 {
 	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Size2)
 };
 
-constexpr Size2 Size2::ZERO(0.0f, 0.0f);
-
 
 struct Size3 {
 	static const Size3 ZERO;
@@ -144,8 +142,6 @@ struct Size3 {
 	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Size3)
 };
 
-constexpr Size3 Size3::ZERO = Size3(0.0f, 0.0f, 0.0f);
-
 
 struct Extent2 {
 	static const Extent2 ZERO;
@@ -165,14 +161,10 @@ struct Extent2 {
 	constexpr Extent2& operator= (const Size2 &size) { width = size.width; height = size.width; return *this; }
 	constexpr Extent2& operator= (const Vec2 &other) { width = other.x; height = other.y; return *this; }
 
-	constexpr bool operator==(const Extent2 &other) const = default;
-	constexpr bool operator!=(const Extent2 &other) const = default;
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Extent2)
 
 	constexpr operator Size2 () const { return Size2(width, height); }
 };
-
-constexpr Extent2 Extent2::ZERO = Extent2(0, 0);
 
 
 struct Extent3 {
@@ -198,14 +190,49 @@ struct Extent3 {
 	constexpr Extent3& operator= (const Size3 &size) { width = size.width; height = size.width; depth = size.depth; return *this; }
 	constexpr Extent3& operator= (const Vec3 &other) { width = other.x; height = other.y; depth = other.z; return *this; }
 
-	constexpr bool operator==(const Extent3 &other) const = default;
-	constexpr bool operator!=(const Extent3 &other) const = default;
-	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Extent3)
+#if SP_HAVE_THREE_WAY_COMPARISON
+	SP_THREE_WAY_COMPARISON_TYPE(Extent3)
+#else
+	constexpr bool operator==(const Extent3 &other) const {
+		return width == other.width
+			&& height == other.height
+			&& depth == other.depth
+			;
+	}
+	constexpr bool operator!=(const Extent3 &other) const {
+		return width != other.width
+			|| height != other.height
+			|| depth != other.depth
+			;
+	}
+	constexpr bool operator<(const Extent3 &other) const {
+		if (width < other.width) { return true; } else if (width > other.width) { return false; }
+		if (height < other.height) { return true; } else if (height > other.height) { return false; }
+		if (depth < other.depth) { return true; } else if (depth > other.depth) { return false; }
+		return false;
+	}
+	constexpr bool operator>(const Extent3 &other) const {
+		if (width < other.width) { return false; } else if (width > other.width) { return true; }
+		if (height < other.height) { return false; } else if (height > other.height) { return true; }
+		if (depth < other.depth) { return false; } else if (depth > other.depth) { return true; }
+		return false;
+	}
+	constexpr bool operator<=(const Extent3 &other) const {
+		if (width < other.width) { return true; } else if (width > other.width) { return false; }
+		if (height < other.height) { return true; } else if (height > other.height) { return false; }
+		if (depth < other.depth) { return true; } else if (depth > other.depth) { return false; }
+		return true;
+	}
+	constexpr bool operator>=(const Extent3 &other) const {
+		if (width < other.width) { return false; } else if (width > other.width) { return true; }
+		if (height < other.height) { return false; } else if (height > other.height) { return true; }
+		if (depth < other.depth) { return false; } else if (depth > other.depth) { return true; }
+		return true;
+	}
+#endif
 
 	constexpr operator Size3 () const { return Size3(width, height, depth); }
 };
-
-constexpr Extent3 Extent3::ZERO = Extent3(0, 0, 0);
 
 
 struct Rect {
@@ -249,14 +276,11 @@ struct Rect {
 	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Rect)
 };
 
-constexpr Rect Rect::ZERO = Rect(0.0f, 0.0f, 0.0f, 0.0f);
-
 struct UVec2 {
 	uint32_t x;
 	uint32_t y;
 
-	constexpr bool operator==(const UVec2 &) const = default;
-	constexpr bool operator!=(const UVec2 &) const = default;
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec2)
 };
 
 struct UVec3 {
@@ -264,8 +288,7 @@ struct UVec3 {
 	uint32_t y;
 	uint32_t z;
 
-	constexpr bool operator==(const UVec3 &) const = default;
-	constexpr bool operator!=(const UVec3 &) const = default;
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec3)
 };
 
 struct UVec4 {
@@ -274,8 +297,7 @@ struct UVec4 {
 	uint32_t z;
 	uint32_t w;
 
-	constexpr bool operator==(const UVec4 &) const = default;
-	constexpr bool operator!=(const UVec4 &) const = default;
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec4)
 };
 
 struct URect {
@@ -292,9 +314,6 @@ struct URect {
 
 	constexpr UVec2 origin() const { return UVec2{x, y}; }
 
-	constexpr bool operator==(const URect &) const = default;
-	constexpr bool operator!=(const URect &) const = default;
-
 	constexpr float getMaxX() const { return x + width; }
 	constexpr float getMidX() const { return x + width / 2.0f; }
 	constexpr float getMinX() const { return x; }
@@ -304,7 +323,19 @@ struct URect {
 
 	bool containsPoint(const UVec2 &point) const;
 	bool intersectsRect(const URect &rect) const;
+
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(URect)
 };
+
+#ifndef __LCC__
+
+constexpr Size2 Size2::ZERO(0.0f, 0.0f);
+constexpr Size3 Size3::ZERO = Size3(0.0f, 0.0f, 0.0f);
+constexpr Extent2 Extent2::ZERO = Extent2(0, 0);
+constexpr Extent3 Extent3::ZERO = Extent3(0, 0, 0);
+constexpr Rect Rect::ZERO = Rect(0.0f, 0.0f, 0.0f, 0.0f);
+
+#endif
 
 Rect TransformRect(const Rect& rect, const Mat4& transform);
 

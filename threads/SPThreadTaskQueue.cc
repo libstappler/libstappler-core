@@ -204,7 +204,7 @@ struct TaskQueue::WorkerContext {
 
 	bool waitExternal(TimeInterval iv, uint32_t *count) {
 		std::unique_lock<std::mutex> waitLock(exit->mutex);
-		auto ret = exit->condition.wait_for(waitLock, std::chrono::microseconds(iv.toMicros()), [&] {
+		auto ret = exit->condition.wait_for(waitLock, std::chrono::microseconds(iv.toMicros()), [&, this] {
 			return queue->getOutputCounter() > 0;
 		});
 		if (!ret) {

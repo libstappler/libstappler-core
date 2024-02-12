@@ -192,7 +192,7 @@ bool Transaction::foreach(Worker &w, const Query &query, const Callback<bool(Val
 		return false;
 	}
 
-	return _data->adapter.foreach(w, query, [&] (Value &val) -> bool {
+	return _data->adapter.foreach(w, query, [&, this] (Value &val) -> bool {
 		if (processReturnObject(w.scheme(), val)) {
 			return cb(val);
 		}
@@ -302,7 +302,7 @@ Value Transaction::create(Worker &w, Value &data) const {
 	}
 
 	Value ret;
-	if (perform([&] {
+	if (perform([&, this] {
 		auto r = w.scheme().getAccessRole(_data->role);
 		auto d = w.scheme().getAccessRole(AccessRoleId::Default);
 
@@ -361,7 +361,7 @@ Value Transaction::save(Worker &w, uint64_t oid, Value &obj, Value &patch, Set<c
 	}
 
 	Value ret;
-	if (perform([&] {
+	if (perform([&, this] {
 		auto r = w.scheme().getAccessRole(_data->role);
 		auto d = w.scheme().getAccessRole(AccessRoleId::Default);
 
@@ -404,7 +404,7 @@ Value Transaction::patch(Worker &w, uint64_t oid, Value &data) const {
 	}
 
 	Value ret;
-	if (perform([&] {
+	if (perform([&, this] {
 		auto r = w.scheme().getAccessRole(_data->role);
 		auto d = w.scheme().getAccessRole(AccessRoleId::Default);
 		if ((d && d->onPatch && !d->onPatch(w, oid, data)) || (r && r->onPatch && !r->onPatch(w, oid, data))) {
@@ -444,7 +444,7 @@ Value Transaction::field(Action a, Worker &w, uint64_t oid, const Field &f, Valu
 	}
 
 	Value ret;
-	if (perform([&] {
+	if (perform([&, this] {
 		ret = _data->adapter.field(a, w, oid, f, std::move(patch));
 		return true;
 	})) {
@@ -470,7 +470,7 @@ Value Transaction::field(Action a, Worker &w, const Value &obj, const Field &f, 
 	}
 
 	Value ret;
-	if (perform([&] {
+	if (perform([&, this] {
 		auto r = w.scheme().getAccessRole(_data->role);
 		auto d = w.scheme().getAccessRole(AccessRoleId::Default);
 

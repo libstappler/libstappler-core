@@ -367,7 +367,7 @@ Handle::Handle(const Driver *d, Driver::Handle h) : SqlHandle(d), driver(d), han
 		if (c.get()) {
 			conn = c;
 
-			performSimpleSelect("SELECT current_database();", [&] (db::Result &qResult) {
+			performSimpleSelect("SELECT current_database();", [&, this] (db::Result &qResult) {
 				if (!qResult.empty()) {
 					dbName = qResult.current().toString(0).pdup();
 				}
@@ -495,7 +495,7 @@ bool Handle::beginTransaction_pg(TransactionLevel l) {
 		return false;
 	}
 
-	auto setVariables = [&] {
+	auto setVariables = [&, this] {
 		performSimpleQuery(toString("SET LOCAL serenity.\"user\" = ", userId, ";SET LOCAL serenity.\"now\" = ", now, ";"));
 	};
 

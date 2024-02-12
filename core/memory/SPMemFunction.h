@@ -62,7 +62,7 @@ public:
 	function(const function & other, const allocator_type &alloc = allocator_type()) noexcept : mAllocator(alloc) {
 		mCallback = other.mCallback;
 		if (mCallback) {
-			mCallback()->copy(other.mBuffer, mAllocator, mBuffer);
+			mCallback()->copy(other.mBuffer.data(), mAllocator, mBuffer.data());
 		}
 	}
 
@@ -70,7 +70,7 @@ public:
 		clear();
 		mCallback = other.mCallback;
 		if (mCallback) {
-			mCallback()->copy(other.mBuffer, mAllocator, mBuffer);
+			mCallback()->copy(other.mBuffer.data(), mAllocator, mBuffer.data());
 		}
 		return *this;
 	}
@@ -79,9 +79,9 @@ public:
 		mCallback = other.mCallback;
 		if (mCallback) {
 			if (other.mAllocator == mAllocator) {
-				mCallback()->move(other.mBuffer, mAllocator, mBuffer);
+				mCallback()->move(other.mBuffer.data(), mAllocator, mBuffer.data());
 			} else {
-				mCallback()->copy(other.mBuffer, mAllocator, mBuffer);
+				mCallback()->copy(other.mBuffer.data(), mAllocator, mBuffer.data());
 			}
 		}
 	}
@@ -91,9 +91,9 @@ public:
 		mCallback = other.mCallback;
 		if (mCallback) {
 			if (other.mAllocator == mAllocator) {
-				mCallback()->move(other.mBuffer, mAllocator, mBuffer);
+				mCallback()->move(other.mBuffer.data(), mAllocator, mBuffer.data());
 			} else {
-				mCallback()->copy(other.mBuffer, mAllocator, mBuffer);
+				mCallback()->copy(other.mBuffer.data(), mAllocator, mBuffer.data());
 			}
 		}
 		return *this;
@@ -106,24 +106,31 @@ public:
 		>>::value>::type>
 	function(FunctionT && f, const allocator_type &alloc = allocator_type()) noexcept
 	: mAllocator(alloc) {
-		mCallback = makeFreeFunction(std::forward<FunctionT>(f), mAllocator, mBuffer);
+		mCallback = makeFreeFunction(std::forward<FunctionT>(f), mAllocator, mBuffer.data());
 	}
 
 	template <typename FunctionT>
 	function & operator= (FunctionT &&f) noexcept {
 		clear();
-		mCallback = makeFreeFunction(std::forward<FunctionT>(f), mAllocator, mBuffer);
+		mCallback = makeFreeFunction(std::forward<FunctionT>(f), mAllocator, mBuffer.data());
 		return *this;
 	}
 
 	ReturnType operator () (ArgumentTypes ... args) const {
-		return mCallback()->invoke(mBuffer, std::forward<ArgumentTypes>(args) ...);
+		return mCallback()->invoke(mBuffer.data(), std::forward<ArgumentTypes>(args) ...);
 	}
 
-	inline operator bool () const noexcept { return mCallback != nullptr; }
+	constexpr operator bool () const noexcept { return mCallback != nullptr; }
 
-	inline bool operator == (nullptr_t) const noexcept { return mCallback == nullptr; }
-	inline bool operator != (nullptr_t) const noexcept { return mCallback != nullptr; }
+	constexpr bool operator == (nullptr_t) const noexcept { return mCallback == nullptr; }
+	constexpr bool operator != (nullptr_t) const noexcept { return mCallback != nullptr; }
+
+	constexpr bool operator == (const function & other) const noexcept {
+		return mAllocator == other.mAllocator && mCallback == other.mCallback && mBuffer == other.mBuffer;
+	}
+	constexpr bool operator != (const function & other) const noexcept {
+		return mAllocator != other.mAllocator || mCallback != other.mCallback || mBuffer != other.mBuffer;
+	}
 
 	const allocator_type &get_allocator() const { return mAllocator; }
 
@@ -215,14 +222,14 @@ private:
 	void clear() {
 		if (mCallback) {
 			auto t = mCallback();
-			t->destroy(mBuffer);
+			t->destroy(mBuffer.data());
 			mCallback = nullptr;
 		}
 	}
 
 	allocator_type mAllocator;
 	traits_callback mCallback = nullptr;
-	uint8_t mBuffer[OptBufferSize];
+	std::array<uint8_t, OptBufferSize> mBuffer;
 };
 
 

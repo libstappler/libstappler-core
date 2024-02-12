@@ -71,7 +71,7 @@ enum class BlockCipher : uint16_t {
 	Gost3412_2015_CTR_ACPKM
 };
 
-enum class KeyType {
+enum class KeyType : uint32_t {
 	Unknown,
 	RSA,
 	DSA,
@@ -110,8 +110,9 @@ enum class KeyFormat {
 struct KeyContext {
 	void *cryptoCtx = nullptr;
 	void *keyCtx = nullptr;
-	void *backendCtx = nullptr;
+	uint32_t padding = 0;
 	KeyType type = KeyType::Unknown;
+	void *backendCtx = nullptr;
 };
 
 struct BlockKey256 {

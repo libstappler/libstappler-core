@@ -409,6 +409,8 @@ inline Color4F operator/(const Color4B &l, const Color4F &r) {
 	return Color4F(l) / r;
 }
 
+#ifndef __LCC__
+
 constexpr const Color3B Color3B::WHITE(255, 255, 255);
 constexpr const Color3B Color3B::BLACK(0, 0, 0);
 
@@ -420,6 +422,7 @@ constexpr const Color4F Color4F::BLACK(0, 0, 0, 1);
 constexpr const Color4F Color4F::ZERO(0, 0, 0, 0);
 constexpr const Color4F Color4F::ONE(1, 1, 1, 1);
 
+#endif
 
 }
 

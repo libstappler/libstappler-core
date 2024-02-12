@@ -540,7 +540,7 @@ void QueryList::decodeSelect(const Scheme &scheme, Query &q, const Value &val) {
 	} else if (val.isString()) {
 		q.select(val.getString());
 	} else if (val.isArray() && val.size() > 0) {
-		auto cb = [&] (const Value &iit) {
+		auto cb = [&, this] (const Value &iit) {
 			if (iit.isArray() && iit.size() >= 3) {
 				auto field = iit.getValue(0).asString();
 				if (auto f = scheme.getField(field)) {

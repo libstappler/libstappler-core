@@ -209,6 +209,7 @@ static int hook_ossl_bnrand_range(BIGNUM *r, const BIGNUM *range, unsigned int s
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC_KEY *eckey) {
 	ECDSA_SIG *newsig = NULL, *ret = NULL;
 	BIGNUM *md = NULL;
@@ -381,6 +382,7 @@ static int s_ossl_GostR3410_2012_512_psign_resign(EVP_PKEY_CTX *ctx, unsigned ch
 		return pack_sign_cp(unpacked_sig, order / 2, sig, siglen);
 	}
 }
+
 #pragma GCC diagnostic pop
 
 static int ossl_gost_meth_nids(const int **nids) {

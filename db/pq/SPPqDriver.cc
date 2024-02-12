@@ -192,8 +192,6 @@ struct DriverHandle {
 	pool_t *pool;
 };
 
-static std::mutex s_driverMutex;
-
 struct PgDriverLibStorage {
 	std::mutex s_driverMutex;
 	std::map<std::string, DriverSym, std::less<void>> s_driverLibs;

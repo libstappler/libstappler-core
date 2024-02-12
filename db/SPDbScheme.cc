@@ -507,7 +507,7 @@ Value Scheme::createWithWorker(Worker &w, const Value &data, bool isProtected) c
 	}
 
 	Value retVal;
-	if (w.perform([&] (const Transaction &t) -> bool {
+	if (w.perform([&, this] (const Transaction &t) -> bool {
 		Value patch(createFilePatch(t, data, changeSet));
 		if (auto ret = t.create(w, changeSet)) {
 			touchParents(t, ret);
@@ -539,7 +539,7 @@ Value Scheme::updateWithWorker(Worker &w, uint64_t oid, const Value &data, bool 
 	}
 
 	Value ret;
-	w.perform([&] (const Transaction &t) -> bool {
+	w.perform([&, this] (const Transaction &t) -> bool {
 		Value filePatch(createFilePatch(t, data, changeSet));
 		if (changeSet.empty()) {
 			w.getApplicationInterface()->error("Storage", "Empty changeset for id", Value({ std::make_pair("oid", Value((int64_t)oid)) }));
@@ -576,7 +576,7 @@ Value Scheme::updateWithWorker(Worker &w, const Value & obj, const Value &data, 
 	}
 
 	Value ret;
-	w.perform([&] (const Transaction &t) -> bool {
+	w.perform([&, this] (const Transaction &t) -> bool {
 		Value filePatch(createFilePatch(t, data, changeSet));
 		if (changeSet.empty()) {
 			w.getApplicationInterface()->error("Storage", "Empty changeset for id", Value({ std::make_pair("oid", Value((int64_t)oid)) }));
@@ -627,7 +627,7 @@ stappler::Pair<bool, Value> Scheme::prepareUpdate(const Value &data, bool isProt
 }
 
 void Scheme::touchParents(const Transaction &t, const Value &obj) const {
-	t.performAsSystem([&] () -> bool {
+	t.performAsSystem([&, this] () -> bool {
 		if (!parents.empty()) {
 			Map<int64_t, const Scheme *> parentsToUpdate;
 			extractParents(parentsToUpdate, t, obj, false);
@@ -700,7 +700,7 @@ Value Scheme::updateObject(Worker &w, Value & obj, Value &changeSet) const {
 	}
 
 	if (!viewsToUpdate.empty() || !parentsToUpdate.empty()) {
-		if (w.perform([&] (const Transaction &t) {
+		if (w.perform([&, this] (const Transaction &t) {
 			if (t.save(w, obj.getInteger("__oid"), obj, changeSet, fieldsToUpdate)) {
 				t.performAsSystem([&] () -> bool {
 					for (auto &it : parentsToUpdate) {
@@ -811,7 +811,7 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, const Value &obj, const Field
 
 Value Scheme::setFileWithWorker(Worker &w, uint64_t oid, const Field &f, InputFile &file) const {
 	Value ret;
-	w.perform([&] (const Transaction &t) -> bool {
+	w.perform([&, this] (const Transaction &t) -> bool {
 		Value patch;
 		transform(patch, TransformAction::Update);
 		auto d = createFile(t, f, file);
@@ -843,7 +843,7 @@ Value Scheme::doPatch(Worker &w, const Transaction &t, uint64_t id, Value & patc
 Value Scheme::patchOrUpdate(Worker &w, uint64_t id, Value & patch) const {
 	if (!patch.empty()) {
 		Value ret;
-		w.perform([&] (const Transaction &t) {
+		w.perform([&, this] (const Transaction &t) {
 			auto r = getAccessRole(t.getRole());
 			auto d = getAccessRole(AccessRoleId::Default);
 			// if we have save callback - we unable to do patches
@@ -868,7 +868,7 @@ Value Scheme::patchOrUpdate(Worker &w, uint64_t id, Value & patch) const {
 }
 
 Value Scheme::patchOrUpdate(Worker &w, Value & obj, Value & patch) const {
-	auto isObjectValid = [&] (const Value &obj) -> bool {
+	auto isObjectValid = [&, this] (const Value &obj) -> bool {
 		for (auto &it : patch.asDict()) {
 			if (!obj.hasValue(it.first)) {
 				return false;
@@ -884,7 +884,7 @@ Value Scheme::patchOrUpdate(Worker &w, Value & obj, Value & patch) const {
 
 	if (!patch.empty()) {
 		Value ret;
-		w.perform([&] (const Transaction &t) {
+		w.perform([&, this] (const Transaction &t) {
 			if (isAtomicPatch(patch)) {
 				ret = doPatch(w, t, obj.getInteger("__oid"), patch);
 				if (ret) {
@@ -920,7 +920,7 @@ bool Scheme::removeWithWorker(Worker &w, uint64_t oid) const {
 	}
 
 	if (!parents.empty() || hasAuto) {
-		return w.perform([&] (const Transaction &t) {
+		return w.perform([&, this] (const Transaction &t) {
 			Query query;
 			prepareGetQuery(query, oid, true);
 			for (auto &it : parents) {
@@ -1202,7 +1202,7 @@ bool Scheme::validateHint(const Value &hint) {
 }
 
 Value Scheme::createFilePatch(const Transaction &t, const Value &ival, Value &iChangeSet) const {
-	auto createPatch = [&] (const Value &val, Value &changeSet) {
+	auto createPatch = [&, this] (const Value &val, Value &changeSet) {
 		Value patch;
 		for (auto &it : val.asDict()) {
 			auto f = getField(it.first);
@@ -1480,7 +1480,7 @@ void Scheme::updateView(const Transaction &t, const Value & obj, const ViewSchem
 			t.scheduleAutoField(*scheme->scheme, *scheme->viewField, it);
 		}
 	} else {
-		t.performAsSystem([&] () -> bool {
+		t.performAsSystem([&, this] () -> bool {
 			t.removeFromView(*scheme->scheme, *view, objId, obj);
 
 			if (!ids.empty()) {

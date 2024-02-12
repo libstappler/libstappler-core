@@ -675,4 +675,44 @@ void Mat4::translate(const Vec3 &t, Mat4 *dst) const {
 	translate(t.x, t.y, t.z, dst);
 }
 
+#ifdef __LCC__
+
+constexpr const Mat4 Mat4::IDENTITY = Mat4(
+	1.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, 1.0f, 0.0f, 0.0f,
+	0.0f, 0.0f, 1.0f, 0.0f,
+	0.0f, 0.0f, 0.0f, 1.0f);
+
+constexpr const Mat4 Mat4::ZERO = Mat4(
+	0.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, 0.0f, 0.0f, 0.0f );
+
+constexpr const Mat4 Mat4::INVALID = Mat4(
+	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
+	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
+	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
+	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan() );
+
+constexpr const Mat4 Mat4::ROTATION_Z_90 = Mat4(
+	0.0f, -1.0f, 0.0f, 0.0f,
+	1.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, 0.0f, 1.0f, 0.0f,
+	0.0f, 0.0f, 0.0f, 1.0f );
+
+constexpr const Mat4 Mat4::ROTATION_Z_180 = Mat4(
+	-1.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, -1.0f, 0.0f, 0.0f,
+	0.0f, 0.0f, 1.0f, 0.0f,
+	0.0f, 0.0f, 0.0f, 1.0f );
+
+constexpr const Mat4 Mat4::ROTATION_Z_270 = Mat4(
+	0.0f, 1.0f, 0.0f, 0.0f,
+	-1.0f, 0.0f, 0.0f, 0.0f,
+	0.0f, 0.0f, 1.0f, 0.0f,
+	0.0f, 0.0f, 0.0f, 1.0f );
+
+#endif
+
 }

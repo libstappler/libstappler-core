@@ -120,17 +120,57 @@ using iter_reference_t = typename T::reference;
 #endif
 #endif
 
+#if __LCC__ && __LCC__ <= 126
+#define SP_HAVE_THREE_WAY_COMPARISON 0
+#elif __cpp_impl_three_way_comparison >= 201711
+#define SP_HAVE_THREE_WAY_COMPARISON 1
+#else
+#define SP_HAVE_THREE_WAY_COMPARISON 0
+#endif
+
+
 // Enable default <=> operator if we can
-#if __cpp_impl_three_way_comparison >= 201711
+#if SP_HAVE_THREE_WAY_COMPARISON
 #define SP_THREE_WAY_COMPARISON_TYPE(Type) auto operator<=>(const Type&) const = default;
 #define SP_THREE_WAY_COMPARISON_FRIEND(Type) friend auto operator<=>(const Type&, const Type &) = default;
 #define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type) constexpr auto operator<=>(const Type &) const = default;
 #define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type) friend constexpr auto operator<=>(const Type&, const Type &) = default;
 #else
+#if __LCC__ && __LCC__ >= 126
+#define SP_THREE_WAY_COMPARISON_TYPE(Type) \
+	bool operator==(const Type&) const = default;\
+	bool operator!=(const Type&) const = default;\
+	bool operator>(const Type&) const = default;\
+	bool operator>=(const Type&) const = default;\
+	bool operator<=(const Type&) const = default;\
+	bool operator<(const Type&) const = default;
+#define SP_THREE_WAY_COMPARISON_FRIEND(Type) \
+	friend bool operator==(const Type&, const Type &) = default;\
+	friend bool operator!=(const Type&, const Type &) = default;\
+	friend bool operator>(const Type&, const Type &) = default;\
+	friend bool operator>=(const Type&, const Type &) = default;\
+	friend bool operator<=(const Type&, const Type &) = default;\
+	friend bool operator<(const Type&, const Type &) = default;
+#define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type) \
+	constexpr bool operator==(const Type&) const = default;\
+	constexpr bool operator!=(const Type&) const = default;\
+	constexpr bool operator>(const Type&) const = default;\
+	constexpr bool operator>=(const Type&) const = default;\
+	constexpr bool operator<=(const Type&) const = default;\
+	constexpr bool operator<(const Type&) const = default;
+#define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type) \
+	friend constexpr bool operator==(const Type&, const Type &) = default;\
+	friend constexpr bool operator!=(const Type&, const Type &) = default;\
+	friend constexpr bool operator>(const Type&, const Type &) = default;\
+	friend constexpr bool operator>=(const Type&, const Type &) = default;\
+	friend constexpr bool operator<=(const Type&, const Type &) = default;\
+	friend constexpr bool operator<(const Type&, const Type &) = default;
+#else
 #define SP_THREE_WAY_COMPARISON_TYPE(Type)
 #define SP_THREE_WAY_COMPARISON_FRIEND(Type)
 #define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type)
 #define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type)
+#endif
 #endif
 
 // we want _Float16 and _Float64
@@ -205,9 +245,12 @@ using iter_reference_t = typename T::reference;
 #include <initializer_list>
 #include <unordered_map>
 #include <unordered_set>
-#include <compare>
 #include <bitset>
 #include <forward_list>
+
+#if SP_HAVE_THREE_WAY_COMPARISON
+#include <compare>
+#endif
 
 #if XWIN
 #pragma clang diagnostic pop
@@ -596,8 +639,6 @@ struct ValueWrapper {
 	template <typename M>
 	inline constexpr std::enable_if_t<HasMultiplication<Type, M>::type::value, ValueWrapper<T, Flag>>
 	operator*(const M &v) const { return ValueWrapper<T, Flag>(value * v); }
-
-	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(ValueWrapper)
 
 	T value;
 };

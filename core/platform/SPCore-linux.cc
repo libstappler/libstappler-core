@@ -58,7 +58,14 @@ struct i18n {
 
 	i18n() {
 		// try unistring
+		// try version 0 or 1 if no general symlink
 		_handle = Dso("libunistring.so");
+		if (!_handle) {
+			_handle = Dso("libunistring.so.1");
+		}
+		if (!_handle) {
+			_handle = Dso("libunistring.so.0");
+		}
 		if (_handle) {
 			tolower_fn = _handle.sym<decltype(tolower_fn)>("uc_toupper");
 			toupper_fn = _handle.sym<decltype(toupper_fn)>("uc_tolower");

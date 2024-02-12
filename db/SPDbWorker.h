@@ -303,7 +303,7 @@ struct FieldResolver {
 
 template <typename Callback>
 inline bool Worker::perform(const Callback &cb) const {
-	return _transaction.perform([&] () -> bool {
+	return _transaction.perform([&, this] () -> bool {
 		return cb(_transaction);
 	});
 }

@@ -36,7 +36,7 @@ enum class TransactionLevel {
 	Serialized,
 };
 
-class Handle : public db::sql::SqlHandle {
+class Handle final : public db::sql::SqlHandle {
 public:
 	Handle(const Driver *, Driver::Handle);
 

@@ -423,7 +423,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 	Value ret;
 	switch (a) {
 	case db::Action::Get:
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			switch (f.getType()) {
 			case db::Type::File:
 			case db::Type::Image: ret = getFileField(w, query, oid, 0, f); break;
@@ -458,7 +458,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 		}, &queryStorage);
 		break;
 	case db::Action::Count:
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			switch (f.getType()) {
 			case db::Type::File:
 			case db::Type::Image: ret = Value(getFileCount(w, query, oid, 0, f)); break;
@@ -480,7 +480,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 			if (val.isArray()) {
 				field(db::Action::Remove, w, oid, f, Value());
 				bool success = false;
-				makeQuery([&] (SqlQuery &query) {
+				makeQuery([&, this] (SqlQuery &query) {
 					success = insertIntoArray(query, w.scheme(), oid, f, val);
 				}, &queryStorage);
 				if (success) {
@@ -494,7 +494,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 				if (objField->onRemove == db::RemovePolicy::Reference) {
 					field(db::Action::Remove, w, oid, f, Value());
 				} else {
-					makeQuery([&] (SqlQuery &query) {
+					makeQuery([&, this] (SqlQuery &query) {
 						auto obj = static_cast<const db::FieldObject *>(f.getSlot());
 
 						auto source = w.scheme().getName();
@@ -531,7 +531,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 			if (!val.isNull()) {
 				Worker(w).touch(oid);
 				bool success = false;
-				makeQuery([&] (SqlQuery &query) {
+				makeQuery([&, this] (SqlQuery &query) {
 					success = insertIntoArray(query, w.scheme(), oid, f, val);
 				}, &queryStorage);
 				if (success) {
@@ -553,7 +553,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 					toAdd.push_back(val.asInteger());
 				}
 				bool success = false;
-				makeQuery([&] (SqlQuery &query) {
+				makeQuery([&, this] (SqlQuery &query) {
 					success = insertIntoRefSet(query, w.scheme(), oid, f, toAdd);
 				}, &queryStorage);
 				if (success) {
@@ -573,7 +573,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 		case db::Type::FullTextView: return Value(); break; // file update should be done by scheme itself
 		case db::Type::Array:
 			Worker(w).touch(oid);
-			makeQuery([&] (SqlQuery &query) {
+			makeQuery([&, this] (SqlQuery &query) {
 				query << "DELETE FROM " << w.scheme().getName() << "_f_" << f.getName() << " WHERE " << w.scheme().getName() << "_id=" << oid << ";";
 				if (performQuery(query) != stappler::maxOf<size_t>()) {
 					ret = Value(true);
@@ -585,7 +585,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 				Worker(w).touch(oid);
 				auto objField = static_cast<const db::FieldObject *>(f.getSlot());
 				if (!val.isArray()) {
-					makeQuery([&] (SqlQuery &query) {
+					makeQuery([&, this] (SqlQuery &query) {
 						if (objField->onRemove == db::RemovePolicy::Reference) {
 							query.remove(toString(w.scheme().getName(), "_f_", f.getName()))
 									.where(toString(w.scheme().getName(), "_id"), Comparation::Equal, oid)
@@ -611,7 +611,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 						}
 					}
 
-					makeQuery([&] (SqlQuery &query) {
+					makeQuery([&, this] (SqlQuery &query) {
 						ret = Value(cleanupRefSet(query, w.scheme(), oid, f, toRemove));
 					}, &queryStorage);
 				}
@@ -637,7 +637,7 @@ Value SqlHandle::field(db::Action a, Worker &w, const Value &obj, const Field &f
 	auto targetId = obj.isInteger() ? obj.asInteger() : obj.getInteger(f.getName());
 	switch (a) {
 	case db::Action::Get:
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			switch (f.getType()) {
 			case db::Type::File:
 			case db::Type::Image: ret = getFileField(w, query, oid, targetId, f); break;
@@ -678,7 +678,7 @@ Value SqlHandle::field(db::Action a, Worker &w, const Value &obj, const Field &f
 		}, &queryStorage);
 		break;
 	case db::Action::Count:
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			switch (f.getType()) {
 			case db::Type::File:
 			case db::Type::Image: ret = Value(getFileCount(w, query, oid, 0, f)); break;

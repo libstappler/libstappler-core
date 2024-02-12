@@ -22,16 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPTime.h"
-
-#if WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#else
-#endif
-
-#if __APPLE__
-#include <sys/time.h>
-#endif
+#include "SPPlatformUnistd.h"
 
 inline time_t _time() {
 	return time(NULL);

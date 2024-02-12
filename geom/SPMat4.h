@@ -302,6 +302,8 @@ public:
 	static const Mat4 ROTATION_Z_270;
 };
 
+#ifndef __LCC__
+
 constexpr const Mat4 Mat4::IDENTITY = Mat4(
 	1.0f, 0.0f, 0.0f, 0.0f,
 	0.0f, 1.0f, 0.0f, 0.0f,
@@ -337,6 +339,8 @@ constexpr const Mat4 Mat4::ROTATION_Z_270 = Mat4(
 	-1.0f, 0.0f, 0.0f, 0.0f,
 	0.0f, 0.0f, 1.0f, 0.0f,
 	0.0f, 0.0f, 0.0f, 1.0f );
+
+#endif
 
 inline Vec4& operator*=(Vec4& v, const Mat4& m) {
 	m.transformVector(&v);

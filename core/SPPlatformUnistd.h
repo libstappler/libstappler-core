@@ -70,6 +70,12 @@ using pid_t = DWORD;
 
 #else
 #include <unistd.h>
+
+#if LINUX
+#include <sys/mman.h>
+#include <sys/time.h>
+#endif
+
 #endif
 
 #if XWIN

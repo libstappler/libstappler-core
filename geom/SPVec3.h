@@ -255,11 +255,15 @@ constexpr inline Vec3 & Vec3::normalize() {
 	return *this;
 }
 
+#ifndef __LCC__
+
 constexpr const Vec3 Vec3::ZERO(0.0f, 0.0f, 0.0f);
 constexpr const Vec3 Vec3::ONE(1.0f, 1.0f, 1.0f);
 constexpr const Vec3 Vec3::UNIT_X(1.0f, 0.0f, 0.0f);
 constexpr const Vec3 Vec3::UNIT_Y(0.0f, 1.0f, 0.0f);
 constexpr const Vec3 Vec3::UNIT_Z(0.0f, 0.0f, 1.0f);
+
+#endif
 
 constexpr inline const Vec3 operator+(const Vec3 &l, const Vec3 &r) {
 	Vec3 result;

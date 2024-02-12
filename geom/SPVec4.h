@@ -255,12 +255,16 @@ constexpr inline Vec4 &Vec4::normalize() {
 	return *this;
 }
 
+#ifndef __LCC__
+
 constexpr const Vec4 Vec4::ZERO = Vec4(0.0f, 0.0f, 0.0f, 0.0f);
 constexpr const Vec4 Vec4::ONE = Vec4(1.0f, 1.0f, 1.0f, 1.0f);
 constexpr const Vec4 Vec4::UNIT_X = Vec4(1.0f, 0.0f, 0.0f, 0.0f);
 constexpr const Vec4 Vec4::UNIT_Y = Vec4(0.0f, 1.0f, 0.0f, 0.0f);
 constexpr const Vec4 Vec4::UNIT_Z = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
 constexpr const Vec4 Vec4::UNIT_W = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+#endif
 
 inline const Vec4 operator+(const Vec4 &l, const Vec4 &r) {
 	Vec4 result;

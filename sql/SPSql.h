@@ -170,6 +170,10 @@ public:
 	};
 
 	struct Field {
+		enum Flags {
+			None,
+			PlainText
+		};
 		static Field all() { return Field("*"); }
 		static Field all(const StringView & t) { return Field(t, "*"); }
 
@@ -178,7 +182,7 @@ public:
 		Field(const std::string &str) : name(str) { }
 		Field(const memory::string &str) : name(str) { }
 
-		Field(const StringView &str, bool plain) : name(str), plain(plain) { }
+		Field(const StringView &str, Flags f) : name(str), plain(f == PlainText) { }
 
 		Field(const StringView &t, const StringView &f) : source(t), name(f) { }
 

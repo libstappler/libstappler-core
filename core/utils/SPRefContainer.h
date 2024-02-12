@@ -223,7 +223,7 @@ void RefContainer<Item>::removeAllItemsByTag(uint32_t tag) {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
-		std::remove_if(target, end, [&] (Item *a) {
+		std::remove_if(target, end, [&, this] (Item *a) {
 			if (a->getTag() == tag) {
 				a->invalidate();
 				a->release(0);
@@ -252,7 +252,7 @@ bool RefContainer<Item>::cleanup() {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
-		std::remove_if(target, end, [&] (Item *a) {
+		std::remove_if(target, end, [&, this] (Item *a) {
 			if (a->isDone()) {
 				a->release(0);
 				-- _nitems;

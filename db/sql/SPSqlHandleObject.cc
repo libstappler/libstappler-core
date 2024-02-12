@@ -88,7 +88,7 @@ bool SqlHandle::foreach(Worker &worker, const Query &q, const Callback<bool(Valu
 	auto queryStorage = _driver->makeQueryStorage(worker.scheme().getName());
 	bool ret = false;
 	auto &scheme = worker.scheme();
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		auto ordField = q.getQueryField();
 		if (ordField.empty()) {
 			SqlQuery::Context ctx(query, scheme, worker, q);
@@ -134,7 +134,7 @@ Value SqlHandle::select(Worker &worker, const db::Query &q) {
 
 	Value ret;
 	auto &scheme = worker.scheme();
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		auto ordField = q.getQueryField();
 		if (ordField.empty()) {
 			SqlQuery::Context ctx(query, scheme, worker, q);
@@ -191,12 +191,12 @@ Value SqlHandle::create(Worker &worker, const Vector<InputField> &inputFields, V
 		}
 	};
 
-	auto perform = [&] (InputRow &row) {
+	auto perform = [&, this] (InputRow &row) {
 		int64_t id = 0;
 		Value ret;
 		Value postUpdate(Handle_preparePostUpdate(inputFields, row));
 
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			auto ins = query.insert(scheme.getName());
 			for (auto &it : inputFields) {
 				ins.field(it.field->getName());
@@ -277,7 +277,7 @@ Value SqlHandle::create(Worker &worker, const Vector<InputField> &inputFields, V
 		}
 
 		Value ret;
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			auto ins = query.insert(scheme.getName());
 			for (auto &it : inputFields) {
 				ins.field(it.field->getName());
@@ -312,7 +312,7 @@ Value SqlHandle::create(Worker &worker, const Vector<InputField> &inputFields, V
 			}
 
 			val.returning().field(SqlQuery::Field("__oid").as("id")).finalize();
-			selectQuery(query, [&] (Result &res) {
+			selectQuery(query, [&, this] (Result &res) {
 				size_t i = 0;
 				for (auto it : res) {
 					ret.getValue(i).setInteger(it.toInteger(0), "__oid");
@@ -349,7 +349,7 @@ Value SqlHandle::save(Worker &worker, uint64_t oid, const Value &data, const Vec
 
 	Value postUpdate(Handle_preparePostUpdate(inputFields, inputRow));
 
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		auto upd = query.update(scheme.getName());
 
 		for (size_t idx = 0; idx < inputFields.size(); ++ idx) {
@@ -438,7 +438,7 @@ bool SqlHandle::remove(Worker &worker, uint64_t oid) {
 	auto queryStorage = _driver->makeQueryStorage(worker.scheme().getName());
 
 	bool ret = false;
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		auto q = query.remove(scheme.getName())
 				.where("__oid", Comparation::Equal, oid);
 		q.finalize();
@@ -455,7 +455,7 @@ size_t SqlHandle::count(Worker &worker, const db::Query &q) {
 	auto queryStorage = _driver->makeQueryStorage(worker.scheme().getName());
 
 	size_t ret = 0;
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		auto ordField = q.getQueryField();
 		if (ordField.empty()) {
 			auto f = query.select().count().from(scheme.getName());
@@ -516,7 +516,7 @@ void SqlHandle::performPostUpdate(const db::Transaction &t, SqlQuery &query, con
 		}
 	};
 
-	auto makeSet = [&] (const Field &field, const Value &obj) {
+	auto makeSet = [&, this] (const Field &field, const Value &obj) {
 		auto f = field.getSlot<db::FieldObject>();
 		auto scheme = field.getForeignScheme();
 
@@ -592,7 +592,7 @@ Vector<int64_t> SqlHandle::performQueryListForIds(const QueryList &list, size_t 
 
 	auto queryStorage = _driver->makeQueryStorage(list.getScheme()->getName());
 
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		query.writeQueryList(list, true, count);
 		query.finalize();
 
@@ -613,7 +613,7 @@ Value SqlHandle::performQueryList(const QueryList &list, size_t count, bool forU
 
 	auto queryStorage = _driver->makeQueryStorage(list.getScheme()->getName());
 
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		FieldResolver resv(*list.getScheme(), list.getTopQuery());
 		query.writeQueryList(list, false, count);
 		if (forUpdate) {
@@ -633,7 +633,7 @@ bool SqlHandle::removeFromView(const db::FieldView &view, const Scheme *scheme, 
 
 		auto queryStorage = _driver->makeQueryStorage(view.owner->getName());
 
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			query << "DELETE FROM " << name << " WHERE \"" << view.scheme->getName() << "_id\"=" << oid << ";";
 			ret = performQuery(query) != stappler::maxOf<size_t>();
 		}, &queryStorage);
@@ -648,7 +648,7 @@ bool SqlHandle::addToView(const db::FieldView &view, const Scheme *scheme, uint6
 
 		auto queryStorage = _driver->makeQueryStorage(view.owner->getName());
 
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			auto ins = query.insert(name);
 			for (auto &it : data.asDict()) {
 				ins.field(it.first);
@@ -671,7 +671,7 @@ Vector<int64_t> SqlHandle::getReferenceParents(const Scheme &objectScheme, uint6
 	if (parentField->isReference() && parentField->getType() == db::Type::Set) {
 		auto schemeName = toString(parentScheme->getName(), "_f_", parentField->getName());
 		auto queryStorage = _driver->makeQueryStorage(schemeName);
-		makeQuery([&] (SqlQuery &q) {
+		makeQuery([&, this] (SqlQuery &q) {
 			q.select(toString(parentScheme->getName(), "_id"))
 				.from(schemeName)
 				.where(toString(objectScheme.getName(), "_id"), Comparation::Equal, oid);

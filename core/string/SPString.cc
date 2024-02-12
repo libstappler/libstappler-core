@@ -62,6 +62,7 @@ constexpr auto digits2(size_t value) -> const Char * {
 				U"6061626364656667686970717273747576777879"
 				U"8081828384858687888990919293949596979899"[value * 2];
 	}
+	return nullptr;
 }
 
 template <typename IntType, typename Char>

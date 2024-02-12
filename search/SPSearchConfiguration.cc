@@ -188,7 +188,7 @@ Configuration::Configuration() : Configuration(Language::English) { }
 Configuration::Configuration(Language lang) {
 	pool::initialize();
 	auto p = pool::create(pool::acquire());
-	perform([&] {
+	perform([&, this] {
 		data = new (p) Data(p, lang);
 	}, p);
 }
@@ -202,7 +202,7 @@ Configuration::~Configuration() {
 }
 
 void Configuration::setLanguage(Language lang) {
-	perform([&] {
+	perform([&, this] {
 		data->language = lang;
 		data->primary = search::getStemmer(data->language);
 		if (!data->secondary) {
@@ -216,7 +216,7 @@ Language Configuration::getLanguage() const {
 }
 
 void Configuration::setStemmer(ParserToken tok, StemmerCallback &&cb) {
-	perform([&] {
+	perform([&, this] {
 		data->stemmers.emplace(tok, move(cb));
 	}, data->pool);
 }
@@ -242,7 +242,7 @@ const StringView *Configuration::getCustomStopwords() const {
 }
 
 void Configuration::setPreStem(PreStemCallback &&cb) {
-	perform([&] {
+	perform([&, this] {
 		data->preStem = move(cb);
 	}, data->pool);
 
@@ -252,7 +252,7 @@ const Configuration::PreStemCallback &Configuration::getPreStem() const {
 }
 
 void Configuration::stemPhrase(const StringView &str, const StemWordCallback &cb) const {
-	parsePhrase(str, [&] (StringView word, ParserToken tok) {
+	parsePhrase(str, [&, this] (StringView word, ParserToken tok) {
 		if (data->preStem && !isWordPart(tok)) {
 			auto ret = data->preStem(word, tok);
 			if (!ret.empty()) {
@@ -298,7 +298,7 @@ size_t Configuration::makeSearchVector(SearchVector &vec, StringView str, Search
 		}
 	};
 
-	parsePhrase(str, [&] (StringView word, ParserToken tok) {
+	parsePhrase(str, [&, this] (StringView word, ParserToken tok) {
 		if (tok != ParserToken::Blank && !isWordPart(tok)) {
 			++ counter;
 		}
@@ -392,7 +392,7 @@ Bytes Configuration::encodeSearchVectorData(const SearchVector &data, SearchData
 }
 
 void Configuration::stemHtml(const StringView &str, const StemWordCallback &cb) const {
-	parseHtml(str, [&] (StringView str) {
+	parseHtml(str, [&, this] (StringView str) {
 		stemPhrase(str, cb);
 	});
 }
@@ -461,9 +461,9 @@ String Configuration::makeHeadline(const HeadlineConfig &cfg, const StringView &
 	StringViewUtf8 r(origin);
 	StringView dropSep;
 
-	parsePhrase(origin, [&] (StringView word, ParserToken tok) {
+	parsePhrase(origin, [&, this] (StringView word, ParserToken tok) {
 		auto status = ParserStatus::Continue;
-		if (tok == ParserToken::Blank || !stemWord(word, tok, [&] (StringView word, StringView stem, ParserToken tok) {
+		if (tok == ParserToken::Blank || !stemWord(word, tok, [&, this] (StringView word, StringView stem, ParserToken tok) {
 			auto it = std::lower_bound(stemList.begin(), stemList.end(), stem);
 			if (it != stemList.end() && *it == stem) {
 				if (!isOpen) {
@@ -695,13 +695,13 @@ String Configuration::makeHeadlines(const HeadlineConfig &cfg, const Callback<vo
 		}
 	};
 
-	cb([&] (const StringView &str, const StringView &fragmentTag) -> bool {
+	cb([&, this] (const StringView &str, const StringView &fragmentTag) -> bool {
 		std::array<WordIndex, 32> wordsMatch;
 		uint16_t wordCount = 0;
 		uint16_t idx = 0;
 
 		bool enabledComplex = false;
-		parsePhrase(str, [&] (StringView word, ParserToken tok) {
+		parsePhrase(str, [&, this] (StringView word, ParserToken tok) {
 			auto status = ParserStatus::Continue;
 			if (tok != ParserToken::Blank && string::getUtf16Length(word) > cfg.shortWord && wordCount < 32) {
 				if (enabledComplex) {
@@ -970,7 +970,7 @@ SearchQuery Configuration::parseQuery(StringView str, bool strict, StringView *e
 
 	size_t prev = 0;
 	size_t counter = 0;
-	auto ret = search::parsePhrase(str, [&] (StringView word, ParserToken tok) {
+	auto ret = search::parsePhrase(str, [&, this] (StringView word, ParserToken tok) {
 		auto status = isComplexWord(tok) ? ParserStatus::PreventSubdivide : ParserStatus::Continue;
 		if (tok == ParserToken::Blank) {
 			if (!Configuration_parseQueryBlank(control, word)) {

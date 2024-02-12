@@ -549,7 +549,7 @@ Value FieldExtra::getDefault(const Value &patch) const {
 }
 
 bool FieldExtra::transformValue(const Scheme &scheme, const Value &obj, Value &v, bool isCreate) const {
-	auto processValue = [&] (Value &val) -> bool {
+	auto processValue = [&, this] (Value &val) -> bool {
 		if (!val.isDictionary()) {
 			return false;
 		}

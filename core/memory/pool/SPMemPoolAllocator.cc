@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include "SPMemPoolStruct.h"
 
 #if LINUX
-#include <sys/mman.h>
+#include "SPPlatformUnistd.h"
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base {
 

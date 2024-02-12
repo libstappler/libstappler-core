@@ -210,8 +210,12 @@ public:
 	static const Quaternion ZERO;
 };
 
+#ifndef __LCC__
+
 constexpr const Quaternion Quaternion::IDENTITY(0.0f, 0.0f, 0.0f, 1.0f);
 constexpr const Quaternion Quaternion::ZERO(0.0f, 0.0f, 0.0f, 0.0f);
+
+#endif
 
 }
 

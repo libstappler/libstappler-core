@@ -400,7 +400,7 @@ bool Tesselator::write(TessResult &res) {
 
 	uint32_t triangle[3] = { 0 };
 
-	auto exportQuad = [&] (uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br) {
+	auto exportQuad = [&, this] (uint32_t tl, uint32_t tr, uint32_t bl, uint32_t br) {
 		triangle[0] = _data->_vertexOffset + tl;
 		triangle[1] = _data->_vertexOffset + bl;
 		triangle[2] = _data->_vertexOffset + tr;
@@ -503,7 +503,7 @@ bool Tesselator::write(TessResult &res) {
 		if (it->_mark != mark && isWindingInside(_data->_winding, it->_realWinding)) {
 			uint32_t vertex = 0;
 
-			it->foreachOnFace([&](HalfEdge &edge) {
+			it->foreachOnFace([&, this] (HalfEdge &edge) {
 				if (vertex < 3) {
 #if DEBUG
 					if (_data->_vertexes.size() >= edge.vertex) {
@@ -784,7 +784,7 @@ bool Tesselator::Data::tessellateMonoRegion(HalfEdge *edge, uint8_t v) {
 }
 
 void Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vertex *v) {
-	auto doConnectEdges = [&] (HalfEdge *source, HalfEdge *target) {
+	auto doConnectEdges = [&, this] (HalfEdge *source, HalfEdge *target) {
 		if constexpr (TessVerbose != VerboseFlag::None) {
 			std::cout << "\t\tConnect: \n\t\t\t" << *source << "\n\t\t\t" << *target << "\n";
 		}
@@ -793,7 +793,7 @@ void Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vert
 		return eNew;
 	};
 
-	auto onVertex = [&] (VertexType type, Edge *fullEdge, HalfEdge *e, HalfEdge *eNext) {
+	auto onVertex = [&, this] (VertexType type, Edge *fullEdge, HalfEdge *e, HalfEdge *eNext) {
 		if (_dryRun) {
 			return;
 		}
@@ -1163,7 +1163,7 @@ HalfEdge *Tesselator::Data::processIntersect(Vertex *v, const EdgeDictNode *edge
 		}
 	};
 
-	auto checkRecursive = [&] (HalfEdge *e) {
+	auto checkRecursive = [&, this] (HalfEdge *e) {
 		if (auto node = _edgeDict->checkForIntersects(e, intersect, ev, _mathTolerance)) {
 			processIntersect(v, node, e, intersect, ev);
 		}
@@ -2163,7 +2163,7 @@ bool Tesselator::Data::removeDegenerateEdges(FaceEdge *e, size_t &removed) {
 }
 
 uint32_t Tesselator::Data::followBoundary(FaceEdge *face, HalfEdge *e, uint8_t mark) {
-	auto findNext = [&] (HalfEdge *eNext) {
+	auto findNext = [&, this] (HalfEdge *eNext) {
 		if (eNext->_originNext->_originNext == eNext) {
 			// simple vertex
 			return eNext;

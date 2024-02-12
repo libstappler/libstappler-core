@@ -516,7 +516,7 @@ bool UrlView::parse(const StringView &str) {
 
 bool UrlView::parse(StringView &str) {
 	auto tmp = str;
-	if (parseUrl(str, [&] (StringView str, UrlToken tok) {
+	if (parseUrl(str, [this] (StringView str, UrlToken tok) {
 		switch (tok) {
 		case UrlToken::Scheme: scheme = str; break;
 		case UrlToken::User: user = str; break;

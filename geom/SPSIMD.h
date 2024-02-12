@@ -67,9 +67,23 @@ THE SOFTWARE.
 #include "simde/x86/sse.h"
 #endif
 
+// Defined by build system
+// If SP_DEDICATED_SIMD is defined, replacements for SIMD on other platforms is not available
+// If SP_DEDICATED_SIMD is not defined, you can use simd::neon on sse or simd::sse on NEON
+#ifdef SP_DEDICATED_SIMD
+#if SP_GEOM_DEFAULT_SIMD == SP_GEOM_DEFAULT_SIMD_NEON
+#include "SPSIMD_Neon.h"
+#elif SP_GEOM_DEFAULT_SIMD == SP_GEOM_DEFAULT_SIMD_NEON64
+#include "SPSIMD_Neon64.h"
+#else
+#include "SPSIMD_Sse.h"
+#endif
+#else
 #include "SPSIMD_Sse.h"
 #include "SPSIMD_Neon.h"
 #include "SPSIMD_Neon64.h"
+#endif
+
 
 namespace STAPPLER_VERSIONIZED stappler::simd {
 

@@ -25,7 +25,11 @@ THE SOFTWARE.
 
 #ifdef __GNUC__
 #ifndef __clang__
+#ifndef __LCC__
 #define SP_VG_OPTIMIZE _Pragma( "GCC optimize (\"O3\")" )
+#else
+#define SP_VG_OPTIMIZE
+#endif
 #else
 #define SP_VG_OPTIMIZE
 #endif

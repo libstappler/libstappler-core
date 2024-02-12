@@ -310,7 +310,7 @@ static bool SearchQuery_isFollow(Vector< Pair<SearchData::Rank, Vector<size_t>> 
 			auto &targetPosition = it->second.back();
 
 			// find closest position of next word
-			auto nextIt = std::lower_bound(arr.begin(), arr.end(), Pair(targetPosition, it->first),
+			auto nextIt = std::lower_bound(arr.begin(), arr.end(), std::make_pair(targetPosition, it->first),
 					[&] (const auto &l, const Pair<size_t, SearchData::Rank> &r) {
 				if (SearchQuery_toInt(l.first) != SearchQuery_toInt(r.first)) {
 					return SearchQuery_toInt(l.first) < SearchQuery_toInt(r.first);
@@ -408,7 +408,7 @@ bool SearchQuery::isMatch(const BytesView &blob) const {
 	auto p = pool::create(pool::acquire());
 
 	bool result = false;
-	perform([&] {
+	perform([&, this] {
 		auto d = data::read<Interface>(blob);
 		if (d.isArray() && d.size() == 3 && d.getInteger(0) == 1) {
 			auto &dict = d.getDict(2);
@@ -489,7 +489,7 @@ float SearchQuery::rankQuery(const BytesView &blob, Normalization norm, RankingV
 	auto p = pool::create(pool::acquire());
 
 	float result = 0.0f;
-	perform([&] {
+	perform([&, this] {
 		auto d = data::read<Interface>(blob);
 		if (d.isArray() && d.size() == 3 && d.getInteger(0) == 1) {
 			auto docLength = d.getInteger(1);

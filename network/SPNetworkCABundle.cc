@@ -25,7 +25,12 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::network {
 
-static constexpr StringView s_CABundle(
+static
+#ifndef __LCC__
+// LCC failed to process this large constant
+constexpr
+#endif
+StringView s_CABundle(
 R"CABundle(##
 ## Bundle of CA Root Certificates
 ##

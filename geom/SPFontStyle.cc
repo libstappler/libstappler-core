@@ -27,6 +27,49 @@ namespace STAPPLER_VERSIONIZED stappler::geom {
 
 constexpr uint32_t LAYOUT_PADDING  = 1;
 
+#ifdef __LCC__
+
+constexpr FontStretch FontStretch::UltraCondensed = FontStretch(50 << 1);
+constexpr FontStretch FontStretch::ExtraCondensed = FontStretch((62 << 1) | 1);
+constexpr FontStretch FontStretch::Condensed = FontStretch(75 << 1);
+constexpr FontStretch FontStretch::SemiCondensed = FontStretch((87 << 1) | 1);
+constexpr FontStretch FontStretch::Normal = FontStretch(100 << 1);
+constexpr FontStretch FontStretch::SemiExpanded = FontStretch((112 << 1) | 1);
+constexpr FontStretch FontStretch::Expanded = FontStretch(125 << 1);
+constexpr FontStretch FontStretch::ExtraExpanded = FontStretch(150 << 1);
+constexpr FontStretch FontStretch::UltraExpanded = FontStretch(200 << 1);
+
+constexpr FontWeight FontWeight::Thin = FontWeight(100);
+constexpr FontWeight FontWeight::ExtraLight = FontWeight(200);
+constexpr FontWeight FontWeight::Light = FontWeight(300);
+constexpr FontWeight FontWeight::Normal = FontWeight(400);
+constexpr FontWeight FontWeight::Regular = FontWeight(400);
+constexpr FontWeight FontWeight::Medium = FontWeight(500);
+constexpr FontWeight FontWeight::SemiBold = FontWeight(600);
+constexpr FontWeight FontWeight::Bold = FontWeight(700);
+constexpr FontWeight FontWeight::ExtraBold = FontWeight(800);
+constexpr FontWeight FontWeight::Heavy = FontWeight(900);
+constexpr FontWeight FontWeight::Black = FontWeight(1000);
+
+constexpr FontSize FontSize::XXSmall = FontSize(uint16_t(8));
+constexpr FontSize FontSize::XSmall = FontSize(uint16_t(10));
+constexpr FontSize FontSize::Small = FontSize(uint16_t(12));
+constexpr FontSize FontSize::Medium = FontSize(uint16_t(14));
+constexpr FontSize FontSize::Large = FontSize(uint16_t(16));
+constexpr FontSize FontSize::XLarge = FontSize(uint16_t(20));
+constexpr FontSize FontSize::XXLarge = FontSize(uint16_t(24));
+
+constexpr FontStyle FontStyle::Normal = FontStyle(0);
+constexpr FontStyle FontStyle::Italic = FontStyle(minOf<int16_t>());
+constexpr FontStyle FontStyle::Oblique = FontStyle(-10 << 6);
+
+constexpr FontGrade FontGrade::Thin = FontGrade(-200);
+constexpr FontGrade FontGrade::Reduced = FontGrade(-50);
+constexpr FontGrade FontGrade::Normal = FontGrade(0);
+constexpr FontGrade FontGrade::Heavy = FontGrade(150);
+
+#endif
+
 bool Metric::readStyleValue(StringView r, bool resolutionMetric, bool allowEmptyMetric) {
 	r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 	if (!resolutionMetric && r.starts_with("auto")) {

@@ -213,7 +213,7 @@ bool SqlQuery::writeQuery(Context &ctx, const db::Scheme &scheme, uint64_t oid, 
 		}
 	}
 
-	auto writeFields = [&] (Select &sel) {
+	auto writeFields = [&, this] (Select &sel) {
 		writeFullTextRank(sel, *ctx.scheme, *ctx.query);
 		if (ctx.shouldIncludeAll()) {
 			sel = sel.field(SqlQuery::Field(ctx.scheme->getName(), "*"));
@@ -224,7 +224,7 @@ bool SqlQuery::writeQuery(Context &ctx, const db::Scheme &scheme, uint64_t oid, 
 		}
 	};
 
-	auto writeSelect = [&] () -> Select {
+	auto writeSelect = [&, this] () -> Select {
 		if (f.getType() == Type::View || (f.getType() == Type::Set && f.isReference())) {
 			auto wtmp = with("s", [&] (SqlQuery::GenericQuery &q) {
 				q.select(SqlQuery::Distinct::Distinct, SqlQuery::Field(toString(ctx.scheme->getName(), "_id")).as("id"))
@@ -288,7 +288,7 @@ void SqlQuery::writeWhere(SqlQuery::WhereContinue &w, db::Operator op, const db:
 			whi.where(db::Operator::Or, SqlQuery::Field(scheme.getName(), "__oid"), db::Comparation::Equal, Value(0));
 		});
 	} else if (q.getSelectList().size() > 0) {
-		w.parenthesis(op, [&] (SqlQuery::WhereBegin &wh) {
+		w.parenthesis(op, [&, this] (SqlQuery::WhereBegin &wh) {
 			auto whi = wh.where();
 			for (auto &it : q.getSelectList()) {
 				writeWhereItem(whi, db::Operator::And, scheme, it);
@@ -540,7 +540,7 @@ void SqlQuery::writeQueryList(const db::QueryList &list, bool idOnly, size_t cou
 	size_t i = 0;
 	if (count > 0) {
 		for (; i < count - 1; ++ i) {
-			q.with(toString("sq", i), [&] (GenericQuery &sq) {
+			q.with(toString("sq", i), [&, this] (GenericQuery &sq) {
 				writeQueryListItem(sq, list, i, true, nullptr, true);
 			});
 		}
@@ -554,12 +554,12 @@ void SqlQuery::writeQueryFile(const ApplicationInterface *app, const db::QueryLi
 	auto count = items.size();
 	GenericQuery q(this);
 	for (size_t i = 0; i < count - 1; ++ i) {
-		q.with(toString("sq", i), [&] (GenericQuery &sq) {
+		q.with(toString("sq", i), [&, this] (GenericQuery &sq) {
 			writeQueryListItem(sq, list, i, true);
 		});
 	}
 
-	q.with(toString("sq", count - 1), [&] (GenericQuery &sq) {
+	q.with(toString("sq", count - 1), [&, this] (GenericQuery &sq) {
 		writeQueryListItem(sq, list, count - 1, true, field);
 	});
 
@@ -576,7 +576,7 @@ void SqlQuery::writeQueryArray(const db::QueryList &list, const db::Field *field
 	auto count = items.size();
 	GenericQuery q(this);
 	for (size_t i = 0; i < count; ++ i) {
-		q.with(toString("sq", i), [&] (GenericQuery &sq) {
+		q.with(toString("sq", i), [&, this] (GenericQuery &sq) {
 			writeQueryListItem(sq, list, i, true);
 		});
 	}
@@ -635,7 +635,7 @@ void SqlQuery::writeQueryViewDelta(const db::QueryList &list, const stappler::Ti
 		if (items.size() != 2 || items.front().query.getSingleSelectId() == 0) {
 			size_t i = 0;
 			for (; i < items.size() - 1; ++ i) {
-				sq.with(toString("sq", i), [&] (GenericQuery &sq) {
+				sq.with(toString("sq", i), [&, this] (GenericQuery &sq) {
 					writeQueryListItem(sq, list, i, true);
 				});
 			}

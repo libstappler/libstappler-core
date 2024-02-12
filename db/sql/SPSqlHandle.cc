@@ -39,7 +39,7 @@ String SqlHandle::getNameForDelta(const Scheme &scheme) {
 
 Value SqlHandle::get(const stappler::CoderSource &key) {
 	Value ret;
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		query.select("data").from(getKeyValueSchemeName()).where("name", Comparation::Equal, key).finalize();
 		selectQuery(query, [&] (Result &res) {
 			if (!res.empty()) {
@@ -55,7 +55,7 @@ SqlHandle::SqlHandle(const Driver *driver) : _driver(driver) { }
 
 bool SqlHandle::set(const stappler::CoderSource &key, const Value &data, stappler::TimeInterval maxage) {
 	bool ret = false;
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		query.insert(getKeyValueSchemeName()).fields("name", "mtime", "maxage", "data")
 			.values(key, stappler::Time::now().toSeconds(), maxage.toSeconds(), data::write<Interface>(data, stappler::data::EncodeFormat::Cbor))
 			.onConflict("name").doUpdate().excluded("mtime").excluded("maxage").excluded("data")
@@ -67,7 +67,7 @@ bool SqlHandle::set(const stappler::CoderSource &key, const Value &data, stapple
 
 bool SqlHandle::clear(const stappler::CoderSource &key) {
 	bool ret = false;
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		query.remove("__sessions").where("name", Comparation::Equal, key).finalize();
 		ret = (performQuery(query) == 1); // one row should be affected
 	}, nullptr);
@@ -91,7 +91,7 @@ db::User * SqlHandle::authorizeUser(const db::Auth &auth, const StringView &inam
 	}
 
 	db::User *ret = nullptr;
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		query.with("u", [&] (SqlQuery::GenericQuery &q) {
 			q.select().from(auth.getScheme().getName())
 				.where(namePair.first->getName(), Comparation::Equal, std::move(namePair.second));
@@ -105,7 +105,7 @@ db::User * SqlHandle::authorizeUser(const db::Auth &auth, const StringView &inam
 
 		size_t count = 0;
 		Value ud;
-		selectQuery(query, [&] (Result &res) {
+		selectQuery(query, [&, this] (Result &res) {
 			count = res.current().toInteger(0);
 
 			if (count >= size_t(config::AUTH_MAX_LOGIN_ATTEMPT)) {
@@ -150,7 +150,7 @@ db::User * SqlHandle::authorizeUser(const db::Auth &auth, const StringView &inam
 			});
 		}).select().from("l", "u").finalize();
 
-		selectQuery(query, [&] (Result &res) {
+		selectQuery(query, [&, this] (Result &res) {
 			query.clear();
 			int64_t id = 0;
 			if (!res.empty() && (id = res.readId())) {
@@ -197,7 +197,7 @@ void SqlHandle::makeSessionsCleanup() {
 
 	query.clear();
 	query << "DELETE FROM __removed RETURNING __oid;";
-	performSimpleSelect(query.weak(), [&] (Result &res) {
+	performSimpleSelect(query.weak(), [&, this] (Result &res) {
 		if (res.empty()) {
 			return;
 		}
@@ -211,7 +211,7 @@ void SqlHandle::makeSessionsCleanup() {
 			query << it.at(0);
 		}
 		query << ");";
-		performSimpleSelect(query.weak(), [&] (Result &res) {
+		performSimpleSelect(query.weak(), [&, this] (Result &res) {
 			if (!res.empty()) {
 				query.clear();
 				query << "DELETE FROM __files WHERE __oid IN (";
@@ -241,7 +241,7 @@ void SqlHandle::makeSessionsCleanup() {
 
 void SqlHandle::finalizeBroadcast() {
 	if (!_bcasts.empty()) {
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			auto vals = query.insert("__broadcasts").fields("date", "msg").values();
 			for (auto &it : _bcasts) {
 				vals.values(it.first, std::move(it.second));
@@ -255,7 +255,7 @@ void SqlHandle::finalizeBroadcast() {
 
 int64_t SqlHandle::processBroadcasts(const stappler::Callback<void(BytesView)> &cb, int64_t value) {
 	int64_t maxId = value;
-	makeQuery([&] (SqlQuery &query) {
+	makeQuery([&, this] (SqlQuery &query) {
 		if (value <= 0) {
 			query.select("last_value").from("__broadcasts_id_seq").finalize();
 			maxId = selectQueryId(query);
@@ -284,12 +284,12 @@ int64_t SqlHandle::processBroadcasts(const stappler::Callback<void(BytesView)> &
 
 void SqlHandle::broadcast(const Bytes &bytes) {
 	if (getTransactionStatus() == db::TransactionStatus::None) {
-		makeQuery([&] (SqlQuery &query) {
+		makeQuery([&, this] (SqlQuery &query) {
 			query.insert("__broadcasts").fields("date", "msg").values(stappler::Time::now(), Bytes(bytes)).finalize();
 			performQuery(query);
 		}, nullptr);
 		if (isNotificationsSupported()) {
-			makeQuery([&] (SqlQuery &query) {
+			makeQuery([&, this] (SqlQuery &query) {
 				query.getStream() << "NOTIFY " << config::BROADCAST_CHANNEL_NAME << ";";
 				performQuery(query);
 			}, nullptr);
@@ -352,7 +352,7 @@ static void Handle_mergeViews(Value &objs, Value &vals) {
 int64_t SqlHandle::getDeltaValue(const Scheme &scheme) {
 	if (scheme.hasDelta()) {
 		int64_t ret = 0;
-		makeQuery([&] (SqlQuery &q) {
+		makeQuery([&, this] (SqlQuery &q) {
 			q.select().aggregate("max", SqlQuery::Field("d", "time"))
 					.from(SqlQuery::Field(getNameForDelta(scheme)).as("d")).finalize();
 			selectQuery(q, [&] (Result &res) {
@@ -370,7 +370,7 @@ int64_t SqlHandle::getDeltaValue(const Scheme &scheme) {
 int64_t SqlHandle::getDeltaValue(const Scheme &scheme, const db::FieldView &view, uint64_t tag) {
 	if (view.delta) {
 		int64_t ret = 0;
-		makeQuery([&] (SqlQuery &q) {
+		makeQuery([&, this] (SqlQuery &q) {
 			String deltaName = toString(scheme.getName(), "_f_", view.name, "_delta");
 			q.select().aggregate("max", SqlQuery::Field("d", "time"))
 					.from(SqlQuery::Field(deltaName).as("d")).where("tag", Comparation::Equal, tag).finalize();
@@ -392,11 +392,11 @@ Value SqlHandle::getHistory(const Scheme &scheme, const stappler::Time &time, bo
 		return ret;
 	}
 
-	makeQuery([&] (SqlQuery &q) {
+	makeQuery([&, this] (SqlQuery &q) {
 		q.select().from(getNameForDelta(scheme)).where("time", Comparation::GreatherThen, time.toMicroseconds())
 				.order(db::Ordering::Descending, "time").finalize();
 
-		selectQuery(q, [&] (Result &res) {
+		selectQuery(q, [&, this] (Result &res) {
 			for (auto it : res) {
 				auto &d = ret.emplace();
 				for (size_t i = 0; i < it.size(); ++ i) {
@@ -438,13 +438,13 @@ Value SqlHandle::getHistory(const db::FieldView &view, const Scheme *scheme, uin
 		return ret;
 	}
 
-	makeQuery([&] (SqlQuery &q) {
+	makeQuery([&, this] (SqlQuery &q) {
 		String name = toString(scheme->getName(), "_f_", view.name, "_delta");
 		q.select().from(name).where("time", Comparation::GreatherThen, time.toMicroseconds())
 				.where(Operator::And, "tag", Comparation::Equal, tag)
 				.order(db::Ordering::Descending, "time").finalize();
 
-		selectQuery(q, [&] (Result &res) {
+		selectQuery(q, [&, this] (Result &res) {
 			for (auto it : res) {
 				auto &d = ret.emplace();
 				for (size_t i = 0; i < it.size(); ++ i) {
@@ -477,7 +477,7 @@ Value SqlHandle::getHistory(const db::FieldView &view, const Scheme *scheme, uin
 Value SqlHandle::getDeltaData(const Scheme &scheme, const stappler::Time &time) {
 	Value ret;
 	if (scheme.hasDelta()) {
-		makeQuery([&] (SqlQuery &q) {
+		makeQuery([&, this] (SqlQuery &q) {
 			FieldResolver resv(scheme);
 			q.writeQueryDelta(scheme, time, Set<const Field *>(), false);
 			q.finalize();
@@ -506,7 +506,7 @@ SPUNUSED static void Handle_writeSelectViewDataQuery(SqlQuery &q, const db::Sche
 Value SqlHandle::getDeltaData(const Scheme &scheme, const db::FieldView &view, const stappler::Time &time, uint64_t tag) {
 	Value ret;
 	if (view.delta) {
-		makeQuery([&] (SqlQuery &q) {
+		makeQuery([&, this] (SqlQuery &q) {
 			Field field(&view);
 			QueryList list(_driver->getApplicationInterface(), &scheme);
 			list.selectById(&scheme, tag);
