@@ -1,6 +1,6 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,62 +21,14 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_GEOM_SPFONTSTYLE_H_
-#define CORE_GEOM_SPFONTSTYLE_H_
+#ifndef CORE_FONT_SPFONTSTYLE_H_
+#define CORE_FONT_SPFONTSTYLE_H_
 
-#include "SPGeometry.h"
-#include "SPSpanView.h"
-#include "SPColor.h"
+#include "SPFont.h"
 
-namespace STAPPLER_VERSIONIZED stappler::geom {
+namespace STAPPLER_VERSIONIZED stappler::font {
 
 using EnumSize = uint8_t;
-
-struct Metric {
-	enum Units : EnumSize {
-		Percent,
-		Px,
-		Em,
-		Rem,
-		Auto,
-		Dpi,
-		Dppx,
-		Contain, // only for background-size
-		Cover, // only for background-size
-		Vw,
-		Vh,
-		VMin,
-		VMax
-	};
-
-	inline bool isAuto() const { return metric == Units::Auto; }
-
-	inline bool isFixed() const {
-		switch (metric) {
-		case Units::Px:
-		case Units::Em:
-		case Units::Rem:
-		case Units::Vw:
-		case Units::Vh:
-		case Units::VMin:
-		case Units::VMax:
-			return true;
-			break;
-		default:
-			break;
-		}
-		return false;
-	}
-
-	float value = 0.0f;
-	Units metric = Units::Auto;
-
-	Metric(float v, Units m) : value(v), metric(m) { }
-
-	Metric() = default;
-
-	bool readStyleValue(StringView r, bool resolutionMetric, bool allowEmptyMetric);
-};
 
 enum class FontVariableAxis {
 	None,
@@ -262,7 +214,7 @@ struct TextParameters {
 	WhiteSpace whiteSpace = WhiteSpace::Normal;
 	Hyphens hyphens = Hyphens::Manual;
 	VerticalAlign verticalAlign = VerticalAlign::Baseline;
-	Color3B color = Color3B::BLACK;
+	geom::Color3B color = geom::Color3B::BLACK;
 	uint8_t opacity = 222;
 
 	inline bool operator == (const TextParameters &other) const = default;
@@ -383,100 +335,12 @@ constexpr FontGrade FontGrade::Normal = FontGrade(0);
 constexpr FontGrade FontGrade::Heavy = FontGrade(150);
 
 #endif
-
-using FontLayoutId = ValueWrapper<uint16_t, class FontLayoutIdTag>;
-
-enum SpriteAnchor : uint32_t {
-	BottomLeft,
-	TopLeft,
-	TopRight,
-	BottomRight
-};
-
-struct FontMetrics final {
-	uint16_t size = 0; // font size in pixels
-	uint16_t height = 0; // default font line height
-	int16_t ascender = 0; // The distance from the baseline to the highest coordinate used to place an outline point
-	int16_t descender = 0; // The distance from the baseline to the lowest grid coordinate used to place an outline point
-	int16_t underlinePosition = 0;
-	int16_t underlineThickness = 0;
-};
-
-struct CharLayout final {
-	static constexpr uint32_t CharMask = 0x0000FFFFU;
-	static constexpr uint32_t AnchorMask = 0x00030000U;
-	static constexpr uint32_t SourceMask = 0xFFFC0000U;
-	static constexpr uint32_t SourceMax = (SourceMask >> 18);
-
-	static uint32_t getObjectId(uint16_t sourceId, char16_t, SpriteAnchor);
-	static uint32_t getObjectId(uint32_t, SpriteAnchor);
-	static SpriteAnchor getAnchorForObject(uint32_t);
-
-	char16_t charID = 0;
-	uint16_t xAdvance = 0;
-	//int16_t xOffset = 0;
-	//int16_t yOffset = 0;
-	//uint16_t width;
-	//uint16_t height;
-
-	operator char16_t() const { return charID; }
-};
-
-struct CharSpec final {
-	char16_t charID = 0;
-	int16_t pos = 0;
-	uint16_t advance = 0;
-	uint16_t face = 0;
-};
-
-struct CharTexture final {
-	uint16_t fontID = 0;
-	char16_t charID = 0;
-	int16_t x = 0;
-	int16_t y = 0;
-	uint16_t width = 0;
-	uint16_t height = 0;
-
-	uint32_t bitmapWidth;
-	uint32_t bitmapRows;
-	int pitch;
-	uint8_t *bitmap;
-};
-
-struct FontAtlasValue {
-	Vec2 pos;
-	Vec2 tex;
-};
-
-struct EmplaceCharInterface {
-	uint16_t (*getX) (void *) = nullptr;
-	uint16_t (*getY) (void *) = nullptr;
-	uint16_t (*getWidth) (void *) = nullptr;
-	uint16_t (*getHeight) (void *) = nullptr;
-	void (*setX) (void *, uint16_t) = nullptr;
-	void (*setY) (void *, uint16_t) = nullptr;
-	void (*setTex) (void *, uint16_t) = nullptr;
-};
-
-Extent2 emplaceChars(const EmplaceCharInterface &, const SpanView<void *> &,
-		float totalSquare = std::numeric_limits<float>::quiet_NaN());
-
-inline bool operator< (const CharLayout &l, const CharLayout &c) { return l.charID < c.charID; }
-inline bool operator> (const CharLayout &l, const CharLayout &c) { return l.charID > c.charID; }
-inline bool operator<= (const CharLayout &l, const CharLayout &c) { return l.charID <= c.charID; }
-inline bool operator>= (const CharLayout &l, const CharLayout &c) { return l.charID >= c.charID; }
-
-inline bool operator< (const CharLayout &l, const char16_t &c) { return l.charID < c; }
-inline bool operator> (const CharLayout &l, const char16_t &c) { return l.charID > c; }
-inline bool operator<= (const CharLayout &l, const char16_t &c) { return l.charID <= c; }
-inline bool operator>= (const CharLayout &l, const char16_t &c) { return l.charID >= c; }
-
 }
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-inline geom::FontSize progress(geom::FontSize source, geom::FontSize target, float p) {
-	return geom::FontSize::progress(source, target, p);
+inline font::FontSize progress(font::FontSize source, font::FontSize target, float p) {
+	return font::FontSize::progress(source, target, p);
 }
 
 }
@@ -484,10 +348,10 @@ inline geom::FontSize progress(geom::FontSize source, geom::FontSize target, flo
 namespace std {
 
 template <>
-struct hash<STAPPLER_VERSIONIZED_NAMESPACE::geom::FontSize> {
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::font::FontSize> {
 	hash() { }
 
-	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::geom::FontSize &value) const noexcept {
+	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::font::FontSize &value) const noexcept {
 		return hash<uint16_t>{}(value.get());
 	}
 };

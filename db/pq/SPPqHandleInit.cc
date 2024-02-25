@@ -557,7 +557,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 
 					table.constraints.emplace(toString(name, "_ref_", source), ConstraintRec(
 							ConstraintRec::Reference, toString(source, "_id"), source, db::RemovePolicy::Cascade));
-					table.constraints.emplace(name + "_ref_" + ref->getName(), ConstraintRec(
+					table.constraints.emplace(toString(name, "_ref_", ref->getName()), ConstraintRec(
 							ConstraintRec::Reference, toString(target, "_id"), target.str<Interface>(), db::RemovePolicy::Cascade));
 
 					table.indexes.emplace(toString(name, "_idx_", source), toString(source, "_id"));
@@ -602,7 +602,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 						break;
 					}
 
-					table.constraints.emplace(name + "_ref_" + source, ConstraintRec (
+					table.constraints.emplace(toString(name, "_ref_", source), ConstraintRec (
 							ConstraintRec::Reference, toString(source, "_id"), source, db::RemovePolicy::Cascade));
 					table.pkey.emplace_back("id");
 
@@ -627,9 +627,9 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				table.cols.emplace(toString(source, "_id"), ColRec(ColRec::Type::Int8, true));
 				table.cols.emplace(toString(target, "_id"), ColRec(ColRec::Type::Int8, true));
 
-				table.constraints.emplace(name + "_ref_" + source, ConstraintRec(
+				table.constraints.emplace(toString(name, "_ref_", source), ConstraintRec(
 						ConstraintRec::Reference, toString(source, "_id"), source, db::RemovePolicy::Cascade));
-				table.constraints.emplace(name + "_ref_" + slot->getName(), ConstraintRec(
+				table.constraints.emplace(toString(name, "_ref_", slot->getName()), ConstraintRec(
 						ConstraintRec::Reference, toString(target, "_id"), target.str<Interface>(), db::RemovePolicy::Cascade));
 
 				table.indexes.emplace(toString(name, "_idx_", source), toString(source, "_id"));

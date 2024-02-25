@@ -173,7 +173,7 @@ public:
 	bool operator== (float v) const { return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false; }
 	bool operator== (double v) const { return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false; }
 	bool operator== (const char *v) const { return isString() ? strVal->compare(v) == 0 : false; }
-	bool operator== (const StringView &v) const { return isString() ? string::compare(*strVal, v) == 0 : false; }
+	bool operator== (const StringView &v) const { return isString() ? string::compare_c(*strVal, v) == 0 : false; }
 	bool operator== (const BytesView &v) const { return isBytes() ? (*bytesVal) == v : false; }
 	bool operator== (const ArrayType &v) const { return isArray() ? compare(*arrayVal, v) : false; }
 	bool operator== (const DictionaryType &v) const { return isDictionary() ? compare(*dictVal, v) : false; }
@@ -291,9 +291,9 @@ public:
 	Self slice(int start, int count);
 
 	operator bool() const noexcept { return (_type != Type::EMPTY && _type != Type::NONE); }
-	operator int32_t() const noexcept = delete; // internal protection for bool cast
-	operator int64_t() const noexcept = delete; // internal protection for bool cast
-	operator size_t() const noexcept = delete; // internal protection for bool cast
+	operator int32_t() const noexcept = delete; // internal protection for bool-to-int cast
+	operator int64_t() const noexcept = delete; // internal protection for bool-to-int cast
+	operator size_t() const noexcept = delete; // internal protection for bool-to-int cast
 
 	int64_t asInteger() const;
 	double asDouble() const;

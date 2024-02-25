@@ -432,6 +432,8 @@ size_t _itoa(uint64_t number, char* buffer, size_t bufSize);
 size_t _itoa(int64_t number, char16_t* buffer, size_t bufSize);
 size_t _itoa(uint64_t number, char16_t* buffer, size_t bufSize);
 
+size_t _itoa_len(int64_t number);
+size_t _itoa_len(uint64_t number);
 
 // fast dtoa implementation
 // data will be written from beginning, no trailing zero (do not try to use strlen on it!)
@@ -440,6 +442,7 @@ size_t _itoa(uint64_t number, char16_t* buffer, size_t bufSize);
 size_t _dtoa(double number, char* buffer, size_t bufSize);
 size_t _dtoa(double number, char16_t* buffer, size_t bufSize);
 
+size_t _dtoa_len(double number);
 
 // read number from string and offset pointers
 

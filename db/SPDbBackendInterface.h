@@ -373,7 +373,7 @@ public:
 	Result(Result &&);
 	Result & operator=(Result &&);
 
-	operator bool () const;
+	explicit operator bool () const;
 	bool success() const;
 
 	Value info() const;

@@ -2,7 +2,7 @@
 Copyright (c) 2010-2012 cocos2d-x.org
 Copyright (c) 2013-2014 Chukong Technologies
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,13 +23,59 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_GEOM_SPGEOMETRY_H_
-#define STAPPLER_GEOM_SPGEOMETRY_H_
+#ifndef CORE_GEOM_SPGEOMETRY_H_
+#define CORE_GEOM_SPGEOMETRY_H_
 
 #include "SPVec2.h"
 #include "SPVec3.h"
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
+
+struct Metric {
+	enum Units : uint8_t {
+		Percent,
+		Px,
+		Em,
+		Rem,
+		Auto,
+		Dpi,
+		Dppx,
+		Contain, // only for background-size
+		Cover, // only for background-size
+		Vw,
+		Vh,
+		VMin,
+		VMax
+	};
+
+	inline bool isAuto() const { return metric == Units::Auto; }
+
+	inline bool isFixed() const {
+		switch (metric) {
+		case Units::Px:
+		case Units::Em:
+		case Units::Rem:
+		case Units::Vw:
+		case Units::Vh:
+		case Units::VMin:
+		case Units::VMax:
+			return true;
+			break;
+		default:
+			break;
+		}
+		return false;
+	}
+
+	float value = 0.0f;
+	Units metric = Units::Auto;
+
+	Metric(float v, Units m) : value(v), metric(m) { }
+
+	Metric() = default;
+
+	bool readStyleValue(StringView r, bool resolutionMetric, bool allowEmptyMetric);
+};
 
 struct Size2 {
 	static const Size2 ZERO;
@@ -373,4 +419,4 @@ inline std::ostream & operator<<(std::ostream & stream, const Extent3 & obj) {
 
 }
 
-#endif /* STAPPLER_GEOM_SPGEOMETRY_H_ */
+#endif /* CORE_GEOM_SPGEOMETRY_H_ */

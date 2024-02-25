@@ -39,6 +39,7 @@ THE SOFTWARE.
 
 SP_VG_OPTIMIZE
 
+#include "SPVectorPathData.cc"
 #include "SPVectorPath.cc"
 #include "SPSvgReader.cc"
 #include "SPVectorImage.cc"

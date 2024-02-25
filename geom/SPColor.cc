@@ -1150,7 +1150,7 @@ template <>
 auto Color::name<memory::PoolInterface>() const -> memory::PoolInterface::StringType {
 	auto ret = table::getName(_value);
 	if (ret.empty()) {
-		ret = string::ToStringTraits<memory::StandartInterface>::toString(
+		ret = string::toString<memory::StandartInterface>(
 				"rgb(", uint32_t(_value >> 16 & 0xFF), ", ", uint32_t(_value >> 8 & 0xFF), ", ", uint32_t(_value & 0xFF), ")");
 	}
 	return ret.str<memory::PoolInterface>();
@@ -1160,7 +1160,7 @@ template <>
 auto Color::name<memory::StandartInterface>() const -> memory::StandartInterface::StringType {
 	auto ret = table::getName(_value);
 	if (ret.empty()) {
-		ret = string::ToStringTraits<memory::StandartInterface>::toString(
+		ret = string::toString<memory::StandartInterface>(
 				"rgb(", uint32_t(_value >> 16 & 0xFF), ", ", uint32_t(_value >> 8 & 0xFF), ", ", uint32_t(_value & 0xFF), ")");
 	}
 	return ret.str<memory::StandartInterface>();

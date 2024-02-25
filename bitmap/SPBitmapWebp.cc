@@ -225,7 +225,7 @@ struct WebpStruct {
 	    }
 	}
 
-	operator bool () const {
+	explicit operator bool () const {
 		return valid;
 	}
 

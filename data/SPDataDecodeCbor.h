@@ -213,11 +213,11 @@ void Decoder<Interface>::decodeMap(uint8_t type, ValueType &ret) {
 
 		switch(majorType) {
 		case MajorTypeEncoded::Unsigned:
-			parsedKey = string::ToStringTraits<Interface>::toString(_readIntValue(r, type));
+			parsedKey = string::toString<Interface>(_readIntValue(r, type));
 			key = StringView(parsedKey);
 			break;
 		case MajorTypeEncoded::Negative:
-			parsedKey = string::ToStringTraits<Interface>::toString((int64_t)(-1 - _readIntValue(r, type)));
+			parsedKey = string::toString<Interface>(int64_t(-1 - _readIntValue(r, type)));
 			key = StringView(parsedKey);
 			break;
 		case MajorTypeEncoded::ByteString:

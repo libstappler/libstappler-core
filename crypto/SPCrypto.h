@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPIO.h"
 #include "SPBytesView.h"
-#include "SPSha.h"
+#include "SPCoreCrypto.h"
 
 namespace STAPPLER_VERSIONIZED stappler::crypto {
 
@@ -161,7 +161,7 @@ public:
 	KeyContext getKey() const { return _key; }
 	KeyType getType() const { return _key.type; }
 
-	operator bool () const { return _valid && _loaded; }
+	explicit operator bool () const { return _valid && _loaded; }
 
 	bool exportPem(const Callback<void(BytesView)> &, KeyFormat = KeyFormat::PKCS8, const CoderSource &passPhrase = StringView()) const;
 	bool exportPem(const Callback<void(BytesView)> &, const CoderSource &passPhrase) const;
@@ -207,7 +207,7 @@ public:
 	KeyContext getKey() const { return _key; }
 	KeyType getType() const { return _key.type; }
 
-	operator bool () const { return _valid && _loaded; }
+	explicit operator bool () const { return _valid && _loaded; }
 
 	bool exportPem(const Callback<void(BytesView)> &) const; // only pkcs8
 	bool exportDer(const Callback<void(BytesView)> &) const; // only pkcs8

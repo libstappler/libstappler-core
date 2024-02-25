@@ -56,7 +56,7 @@ public:
 		return reinterpret_cast<T>(loadSym(name));
 	}
 
-	operator bool() const { return _handle != nullptr; }
+	explicit operator bool() const { return _handle != nullptr; }
 
 	DsoFlags getFlags() const { return _flags; }
 

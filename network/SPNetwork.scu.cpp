@@ -135,7 +135,7 @@ public:
 	}
 
 	CURL *get() { return _curl; }
-	operator bool () { return _curl != nullptr; }
+	explicit operator bool () { return _curl != nullptr; }
 
 	void invalidate(CURL * curl) {
 		if (_curl == curl) {
@@ -192,7 +192,7 @@ static bool network_setUserAttributes(FILE *file, const StringView &str, Time mt
 			}
 		}
 
-		if (mtime) {
+		if (mtime != nullptr) {
 			struct timespec times[2];
 			times[0].tv_nsec = UTIME_OMIT;
 

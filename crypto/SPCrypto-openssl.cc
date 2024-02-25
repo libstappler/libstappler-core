@@ -24,7 +24,6 @@ THE SOFTWARE.
 #include "SPString.h"
 #include "SPLog.h"
 #include "SPCrypto.h"
-#include "SPGost3411-2012.h"
 #include "SPValid.h"
 
 #if __CDT_PARSER__

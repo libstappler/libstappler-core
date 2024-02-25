@@ -525,7 +525,7 @@ bool sp_time_exp_t::read(StringView r) {
 			// 2011-04-28 ; Atom date format
 			tm_year = ((r[0] - '0') * 10 + (r[1] - '0') - 19) * 100;
 			if (tm_year < 0)
-				return Time();
+				return false;
 
 			tm_year += ((r[2] - '0') * 10) + (r[3] - '0');
 			tm_mon = ((r[5] - '0') * 10) + (r[6] - '0') - 1;
@@ -537,7 +537,7 @@ bool sp_time_exp_t::read(StringView r) {
 			// 12.03.2010
 			tm_year = ((r[6] - '0') * 10 + (r[7] - '0') - 19) * 100;
 			if (tm_year < 0)
-				return Time();
+				return false;
 
 			tm_year += ((r[8] - '0') * 10) + (r[9] - '0');
 			tm_mday = ((r[0] - '0') * 10) + (r[1] - '0');
@@ -590,7 +590,7 @@ bool sp_time_exp_t::read(StringView r) {
 		/* RFC 1123 format with one day */
 		tm_year = ((r[6] - '0') * 10 + (r[7] - '0') - 19) * 100;
 		if (tm_year < 0)
-			return Time();
+			return false;
 
 		tm_year += ((r[8] - '0') * 10) + (r[9] - '0');
 		tm_mday = (r[0] - '0');

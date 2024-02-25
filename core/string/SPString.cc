@@ -83,6 +83,19 @@ inline size_t unsigned_to_decimal(Char *out, IntType value, size_t size) {
 	return end - out;
 }
 
+template <typename IntType>
+inline size_t unsigned_to_decimal_len(IntType value) {
+	size_t ret = 0;
+	while (value >= 100) {
+		ret += 2;
+		value /= 100;
+	}
+	if (value < 10) {
+		return ret + 1;
+	}
+	return ret + 2;
+}
+
 namespace dtoa {
 
 #if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) && defined(__x86_64__)
@@ -368,6 +381,61 @@ inline void DigitGen(const DiyFp& W, const DiyFp& Mp, uint64_t delta, Char* buff
 	}
 }
 
+inline void DigitGen_len(const DiyFp& W, const DiyFp& Mp, uint64_t delta, int* len, int* K) {
+	const DiyFp one(uint64_t(1) << -Mp.e, Mp.e);
+	uint32_t p1 = static_cast<uint32_t>(Mp.f >> -one.e);
+	uint64_t p2 = Mp.f & (one.f - 1);
+	int kappa = static_cast<int>(CountDecimalDigit32(p1));
+	*len = 0;
+
+	while (kappa > 0) {
+		uint32_t d;
+		switch (kappa) {
+			case 10: d = p1 / 1000000000; p1 %= 1000000000; break;
+			case  9: d = p1 /  100000000; p1 %=  100000000; break;
+			case  8: d = p1 /   10000000; p1 %=   10000000; break;
+			case  7: d = p1 /    1000000; p1 %=    1000000; break;
+			case  6: d = p1 /     100000; p1 %=     100000; break;
+			case  5: d = p1 /      10000; p1 %=      10000; break;
+			case  4: d = p1 /       1000; p1 %=       1000; break;
+			case  3: d = p1 /        100; p1 %=        100; break;
+			case  2: d = p1 /         10; p1 %=         10; break;
+			case  1: d = p1;              p1 =           0; break;
+			default:
+#if defined(_MSC_VER)
+				__assume(0);
+#elif __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5)
+				__builtin_unreachable();
+#else
+				d = 0;
+#endif
+		}
+		if (d || *len)
+			(*len)++;
+		kappa--;
+		uint64_t tmp = (static_cast<uint64_t>(p1) << -one.e) + p2;
+		if (tmp <= delta) {
+			*K += kappa;
+			return;
+		}
+	}
+
+	// kappa = 0
+	for (;;) {
+		p2 *= 10;
+		delta *= 10;
+		char d = static_cast<char>(p2 >> -one.e);
+		if (d || *len)
+			(*len)++;
+		p2 &= one.f - 1;
+		kappa--;
+		if (p2 < delta) {
+			*K += kappa;
+			return;
+		}
+	}
+}
+
 template <typename Char>
 inline void Grisu2(double value, Char* buffer, int* length, int* K) {
 	const DiyFp v(value);
@@ -383,6 +451,19 @@ inline void Grisu2(double value, Char* buffer, int* length, int* K) {
 	DigitGen(W, Wp, Wp.f - Wm.f, buffer, length, K);
 }
 
+inline void Grisu2_len(double value, int* length, int* K) {
+	const DiyFp v(value);
+	DiyFp w_m, w_p;
+	v.NormalizedBoundaries(&w_m, &w_p);
+
+	const DiyFp c_mk = GetCachedPower(w_p.e, K);
+	const DiyFp W = v.Normalize() * c_mk;
+	DiyFp Wp = w_p * c_mk;
+	DiyFp Wm = w_m * c_mk;
+	Wm.f++;
+	Wp.f--;
+	DigitGen_len(W, Wp, Wp.f - Wm.f, length, K);
+}
 inline const char* GetDigitsLut() {
 	static const char cDigitsLut[200] = {
 		'0', '0', '0', '1', '0', '2', '0', '3', '0', '4', '0', '5', '0', '6', '0', '7', '0', '8', '0', '9',
@@ -410,19 +491,36 @@ inline size_t WriteExponent(int K, Char* buffer) {
 	if (K >= 100) {
 		*buffer++ = '0' + static_cast<char>(K / 100);
 		K %= 100;
-		const char* d = GetDigitsLut() + K * 2;
+		const char *d = GetDigitsLut() + K * 2;
 		*buffer++ = d[0];
 		*buffer++ = d[1];
-	}
-	else if (K >= 10) {
-		const char* d = GetDigitsLut() + K * 2;
+	} else if (K >= 10) {
+		const char *d = GetDigitsLut() + K * 2;
 		*buffer++ = d[0];
 		*buffer++ = d[1];
-	}
-	else
+	} else {
 		*buffer++ = '0' + static_cast<char>(K);
+	}
 
 	return buffer - orig;
+}
+
+inline size_t WriteExponent_len(int K) {
+	size_t ret = 0;
+	if (K < 0) {
+		++ ret;
+		K = -K;
+	}
+
+	if (K >= 100) {
+		ret += 3;
+		K %= 100;
+	} else if (K >= 10) {
+		ret += 3;
+	} else {
+		++ ret;
+	}
+	return ret;
 }
 
 template <typename Char>
@@ -436,14 +534,12 @@ inline size_t Prettify(Char* buffer, int length, int k) {
 		buffer[kk] = '.';
 		buffer[kk + 1] = '0';
 		return kk + 2;
-	}
-	else if (0 < kk && kk <= 21) {
+	} else if (0 < kk && kk <= 21) {
 		// 1234e-2 -> 12.34
 		::memmove(&buffer[kk + 1], &buffer[kk], (length - kk) * sizeof(Char));
 		buffer[kk] = '.';
 		return length + 1;
-	}
-	else if (-6 < kk && kk <= 0) {
+	} else if (-6 < kk && kk <= 0) {
 		// 1234e-6 -> 0.001234
 		const int offset = 2 - kk;
 		::memmove(&buffer[offset], &buffer[0], length * sizeof(Char));
@@ -452,18 +548,37 @@ inline size_t Prettify(Char* buffer, int length, int k) {
 		for (int i = 2; i < offset; i++)
 			buffer[i] = '0';
 		return length + offset;
-	}
-	else if (length == 1) {
+	} else if (length == 1) {
 		// 1e30
 		buffer[1] = 'e';
 		return 2 + WriteExponent(kk - 1, &buffer[2]);
-	}
-	else {
+	} else {
 		// 1234e30 -> 1.234e33
 		::memmove(&buffer[2], &buffer[1], (length - 1) * sizeof(Char));
 		buffer[1] = '.';
 		buffer[length + 1] = 'e';
 		return length + 2 + WriteExponent(kk - 1, &buffer[0 + length + 2]);
+	}
+}
+
+inline size_t Prettify_len(int length, int k) {
+	const int kk = length + k;	// 10^(kk-1) <= v < 10^kk
+
+	if (length <= kk && kk <= 21) {
+		// 1234e7 -> 12340000000
+		return kk + 2;
+	} else if (0 < kk && kk <= 21) {
+		// 1234e-2 -> 12.34
+		return length + 1;
+	} else if (-6 < kk && kk <= 0) {
+		// 1234e-6 -> 0.001234
+		const int offset = 2 - kk;
+		return length + offset;
+	} else if (length == 1) {
+		return 2 + WriteExponent_len(kk - 1);
+	} else {
+		// 1234e30 -> 1.234e33
+		return length + 2 + WriteExponent_len(kk - 1);
 	}
 }
 
@@ -518,6 +633,27 @@ inline size_t dtoa_milo(double value, Char* buffer) {
 	}
 }
 
+inline size_t dtoa_milo_len(double value) {
+	if (isnan(value)) {
+		return 3;
+	} else if (value == NumericLimits<double>::infinity()) {
+		return 3;
+	} else if (value == - NumericLimits<double>::infinity()) {
+		return 4;
+	} else if (value == 0) {
+		return 3;
+	} else {
+		size_t ret = 0;
+		if (value < 0) {
+			++ ret;
+			value = -value;
+		}
+		int length, K;
+		Grisu2_len(value, &length, &K);
+		return Prettify_len(length, K);
+	}
+}
+
 }
 
 size_t _itoa(int64_t number, char* buffer, size_t bufSize) {
@@ -552,8 +688,25 @@ size_t _itoa(uint64_t number, char16_t* buffer, size_t bufSize) {
 	return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
 }
 
+size_t _itoa_len(int64_t number) {
+	if (number < 0) {
+		auto ret = unsigned_to_decimal_len( uint64_t(-number) );
+		return ret + 1;
+	} else {
+		return unsigned_to_decimal_len( uint64_t(number) );
+	}
+}
+
+size_t _itoa_len(uint64_t number) {
+	return unsigned_to_decimal_len( uint64_t(number) );
+}
+
 size_t _dtoa(double number, char16_t* buffer, size_t bufSize) {
 	return dtoa::dtoa_milo(number, buffer);
+}
+
+size_t _dtoa_len(double number) {
+	return dtoa::dtoa_milo_len(number);
 }
 
 }

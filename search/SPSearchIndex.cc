@@ -80,7 +80,7 @@ SearchIndex::Result SearchIndex::performSearch(const StringView &v, size_t minMa
 	auto tokenFn = [&, this] (const StringView &str) {
 		//std::cout << "Token: " << str << "\n";
 		auto lb = std::lower_bound(_tokens.begin(), _tokens.end(), str, [&, this] (const Token &l, const StringView &r) {
-			return string::compare(makeStringView(l.index, l.slice), r) < 0;
+			return string::compare_c(makeStringView(l.index, l.slice), r) < 0;
 		});
 
 		if (lb != _tokens.end()) {
@@ -163,7 +163,7 @@ StringView SearchIndex::makeStringView(uint32_t idx, const Slice &sl) const {
 
 void SearchIndex::onToken(Vector<Token> &vec, const StringView &rep, uint32_t idx, const Slice &sl) {
 	auto insert_it = std::lower_bound(vec.begin(), vec.end(), rep, [&, this] (const Token &l, const StringView &r) {
-		return string::compare(makeStringView(l.index, l.slice), r) < 0;
+		return string::compare_c(makeStringView(l.index, l.slice), r) < 0;
 	});
 	if (insert_it ==  vec.end()) {
 		vec.emplace_back(Token{idx, sl});

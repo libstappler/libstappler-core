@@ -34,6 +34,47 @@ THE SOFTWARE.
 #include "SPData.h"
 #endif
 
+namespace STAPPLER_VERSIONIZED stappler {
+
+template <typename T>
+class VectorAdapter {
+public:
+	size_t size() const { return size_fn(target); }
+	T & back() const { return back_fn(target); }
+	T & front() const { return front_fn(target); }
+	bool empty() const { return empty_fn(target); }
+	T & at(size_t pos) const { return at_fn(target, pos); }
+	T & emplace_back(T &&v) const { return emplace_back_fn(target, move(v)); }
+
+	T *begin() const { return begin_fn(target); }
+	T *end() const { return end_fn(target); }
+
+	void clear() const { clear_fn(target); }
+	void reserve(size_t count) const { reserve_fn(target, count); }
+
+	explicit operator bool () const { return target != nullptr; }
+
+	VectorAdapter() = default;
+
+	VectorAdapter(memory::StandartInterface::VectorType<T> &vec);
+	VectorAdapter(memory::PoolInterface::VectorType<T> &vec);
+
+public:
+	void *target = nullptr;
+	size_t (*size_fn) (void *) = nullptr;
+	T & (*back_fn) (void *) = nullptr;
+	T & (*front_fn) (void *) = nullptr;
+	bool (*empty_fn) (void *) = nullptr;
+	T & (*at_fn) (void *, size_t) = nullptr;
+	T & (*emplace_back_fn) (void *, T&&) = nullptr;
+	T * (*begin_fn) (void *) = nullptr;
+	T * (*end_fn) (void *) = nullptr;
+	void (*clear_fn) (void *) = nullptr;
+	void (*reserve_fn) (void *, size_t) = nullptr;
+};
+
+}
+
 namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
 namespace pool = memory::pool;
@@ -312,6 +353,58 @@ inline bool emplace_ordered(Vector<Value> &vec, const Value &val) {
 	}
 	return false;
 }
+
+}
+
+namespace STAPPLER_VERSIONIZED stappler {
+
+template <typename T>
+VectorAdapter<T>::VectorAdapter(memory::StandartInterface::VectorType<T> &vec)
+: target(&vec), size_fn([] (void *target) {
+	return ((mem_std::Vector<T> *)target)->size();
+}), back_fn([] (void *target) -> T & {
+	return ((mem_std::Vector<T> *)target)->back();
+}), front_fn([] (void *target) -> T & {
+	return ((mem_std::Vector<T> *)target)->front();
+}), empty_fn([] (void *target) {
+	return ((mem_std::Vector<T> *)target)->empty();
+}), at_fn([] (void *target, size_t pos) -> T & {
+	return ((mem_std::Vector<T> *)target)->at(pos);
+}), emplace_back_fn([] (void *target, T &&v) -> T & {
+	return ((mem_std::Vector<T> *)target)->emplace_back(move(v));
+}), begin_fn([] (void *target) -> T * {
+	return &*((mem_std::Vector<T> *)target)->begin();
+}), end_fn([] (void *target) -> T * {
+	return &*((mem_std::Vector<T> *)target)->end();
+}), clear_fn([] (void *target) {
+	((mem_std::Vector<T> *)target)->clear();
+}), reserve_fn([] (void *target, size_t s) {
+	((mem_std::Vector<T> *)target)->reserve(s);
+}) { }
+
+template <typename T>
+VectorAdapter<T>::VectorAdapter(memory::PoolInterface::VectorType<T> &vec)
+: target(&vec), size_fn([] (void *target) {
+	return ((mem_pool::Vector<T> *)target)->size();
+}), back_fn([] (void *target) -> T & {
+	return ((mem_pool::Vector<T> *)target)->back();
+}), front_fn([] (void *target) -> T & {
+	return ((mem_pool::Vector<T> *)target)->front();
+}), empty_fn([] (void *target) {
+	return ((mem_pool::Vector<T> *)target)->empty();
+}), at_fn([] (void *target, size_t pos) -> T & {
+	return ((mem_pool::Vector<T> *)target)->at(pos);
+}), emplace_back_fn([] (void *target, T &&v) -> T & {
+	return ((mem_pool::Vector<T> *)target)->emplace_back(move(v));
+}), begin_fn([] (void *target) -> T * {
+	return &*((mem_pool::Vector<T> *)target)->begin();
+}), end_fn([] (void *target) -> T * {
+	return &*((mem_pool::Vector<T> *)target)->end();
+}), clear_fn([] (void *target) {
+	((mem_pool::Vector<T> *)target)->clear();
+}), reserve_fn([] (void *target, size_t s) {
+	((mem_pool::Vector<T> *)target)->reserve(s);
+}) { }
 
 }
 

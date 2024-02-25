@@ -103,7 +103,7 @@ public:
 	Result exec(Connection conn, const char *command, int nParams, const char *const *paramValues,
 			const int *paramLengths, const int *paramFormats, int resultFormat) const;
 
-	operator bool () const { return _handle != nullptr; }
+	explicit operator bool () const { return _handle != nullptr; }
 
 	BackendInterface::StorageType getTypeById(uint32_t) const;
 	StringView getTypeNameById(uint32_t) const;

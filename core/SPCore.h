@@ -408,8 +408,16 @@ inline constexpr auto pair(Args&&... args) -> decltype(std::make_pair(forward<Ar
 	return std::make_pair(forward<Args>(args)...);
 }
 
+#if __CDT_PARSER__
+template <typename T, typename V>
+struct Pair {
+	T first;
+	V second;
+};
+#else
 template <typename T, typename V>
 using Pair = std::pair<T, V>;
+#endif
 
 template <typename T>
 using NumericLimits = std::numeric_limits<T>;
@@ -639,6 +647,10 @@ struct ValueWrapper {
 	template <typename M>
 	inline constexpr std::enable_if_t<HasMultiplication<Type, M>::type::value, ValueWrapper<T, Flag>>
 	operator*(const M &v) const { return ValueWrapper<T, Flag>(value * v); }
+
+#if SP_HAVE_THREE_WAY_COMPARISON
+	SP_THREE_WAY_COMPARISON_TYPE(ValueWrapper)
+#endif
 
 	T value;
 };

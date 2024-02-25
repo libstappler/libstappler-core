@@ -76,7 +76,7 @@ struct EntropyContext {
 		mbedtls_entropy_free(&entropy);
 	}
 
-	operator bool() const {
+	explicit operator bool() const {
 		return valid;
 	}
 };

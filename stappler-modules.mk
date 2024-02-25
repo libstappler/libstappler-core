@@ -22,7 +22,7 @@
 STAPPLER_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 STAPPLER_VERSION_NUMBER := 1
-STAPPLER_VERSION_BUILD := 1
+STAPPLER_VERSION_BUILD := 2
 
 STAPPLER_CRYPTO_DEFAULT ?= openssl
 
@@ -39,6 +39,7 @@ include $(STAPPLER_MODULE_DIR)/search/search.mk
 include $(STAPPLER_MODULE_DIR)/sql/sql.mk
 include $(STAPPLER_MODULE_DIR)/threads/threads.mk
 include $(STAPPLER_MODULE_DIR)/geom/geom.mk
+include $(STAPPLER_MODULE_DIR)/font/font.mk
 include $(STAPPLER_MODULE_DIR)/tess/tess.mk
 include $(STAPPLER_MODULE_DIR)/vg/vg.mk
 include $(STAPPLER_MODULE_DIR)/zip/zip.mk

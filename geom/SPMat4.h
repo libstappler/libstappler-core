@@ -2,7 +2,7 @@
 Copyright 2013 BlackBerry Inc.
 Copyright (c) 2014-2015 Chukong Technologies
 Copyright (c) 2017-2019 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ This file was modified to fit the cocos2d-x project
 This file was modified for stappler project
 */
 
-#ifndef STAPPLER_GEOM_SPMAT4_H_
-#define STAPPLER_GEOM_SPMAT4_H_
+#ifndef CORE_GEOM_SPMAT4_H_
+#define CORE_GEOM_SPMAT4_H_
 
 #include "SPVec2.h"
 #include "SPVec3.h"
@@ -384,4 +384,4 @@ operator << (std::basic_ostream<char> & os, const Mat4 & m) {
 
 }
 
-#endif /* STAPPLER_GEOM_SPMAT4_H_ */
+#endif /* CORE_GEOM_SPMAT4_H_ */

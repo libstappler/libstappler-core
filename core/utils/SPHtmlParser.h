@@ -329,7 +329,10 @@ struct Parser {
 				}
 
 				attrStart = StringReader(attrStart.data(), current.data() - attrStart.data());
-				onTagAttributeList(tag, attrStart);
+				attrStart.template trimChars<typename StringReader::WhiteSpace>();
+				if (!attrStart.empty()) {
+					onTagAttributeList(tag, attrStart);
+				}
 
 				if (current.is('/')) {
 					tag.setClosable(false);

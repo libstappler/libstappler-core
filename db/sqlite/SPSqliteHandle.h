@@ -92,7 +92,7 @@ public:
 	Handle(Handle &&) = delete;
 	Handle &operator=(Handle &&) = delete;
 
-	operator bool () const;
+	explicit operator bool () const;
 
 	const Driver *getDriver() const { return driver; }
 	Driver::Handle getHandle() const;

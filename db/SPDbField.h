@@ -431,7 +431,7 @@ public:
 	bool transform(const Scheme &, int64_t, Value &, bool isCreate = false) const;
 	bool transform(const Scheme &, const Value &, Value &, bool isCreate = false) const;
 
-	operator bool () const { return slot != nullptr; }
+	explicit operator bool () const { return slot != nullptr; }
 
 	template <typename SlotType = Slot>
 	auto getSlot() const -> const SlotType * { return static_cast<const SlotType *>(slot); }

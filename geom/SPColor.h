@@ -4,7 +4,7 @@ Copyright (c) 2010-2012 cocos2d-x.org
 Copyright (c) 2011      Zynga Inc.
 Copyright (c) 2013-2015 Chukong Technologies Inc.
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_GEOM_SPCOLOR_H_
-#define STAPPLER_GEOM_SPCOLOR_H_
+#ifndef CORE_GEOM_SPCOLOR_H_
+#define CORE_GEOM_SPCOLOR_H_
 
 #include "SPCommon.h"
 #include "SPVec4.h"
@@ -450,4 +450,4 @@ geom::Color4F progress<geom::Color4F>(const geom::Color4F &a, const geom::Color4
 
 }
 
-#endif /* LIBSTAPPLER_MODULE_GEOM_SPCOLOR_H_ */
+#endif /* CORE_GEOM_SPCOLOR_H_ */

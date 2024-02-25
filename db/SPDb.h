@@ -75,7 +75,7 @@ struct RequestData {
 	StringView hostname;
 	StringView uri;
 
-	operator bool() { return exists; }
+	explicit operator bool() { return exists; }
 };
 
 struct InputConfig {

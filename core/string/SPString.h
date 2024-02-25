@@ -24,7 +24,8 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_STRING_SPSTRING_H_
 #define STAPPLER_CORE_STRING_SPSTRING_H_
 
-#include "SPSha.h"
+#include "SPCoreCrypto.h"
+#include "SPStringStream.h"
 
 namespace STAPPLER_VERSIONIZED stappler::string {
 
@@ -143,24 +144,6 @@ template <typename Interface>
 auto urldecode(const StringView &data) -> typename Interface::StringType;
 
 template <typename Interface>
-auto toUtf16(const StringView &data) -> typename Interface::WideStringType;
-
-template <typename Interface>
-auto toUtf16(char32_t) -> typename Interface::WideStringType;
-
-template <typename Interface>
-auto toUtf16Html(const StringView &data) -> typename Interface::WideStringType;
-
-template <typename Interface>
-auto toUtf8(const WideStringView &data) -> typename Interface::StringType;
-
-template <typename Interface>
-auto toUtf8(char16_t c) -> typename Interface::StringType;
-
-template <typename Interface>
-auto toUtf8(char32_t c) -> typename Interface::StringType;
-
-template <typename Interface>
 auto toKoi8r(const WideStringView &data) -> typename Interface::StringType;
 
 template <typename T>
@@ -230,81 +213,6 @@ struct StringTraits : public Interface {
 	static String decodeHtml(const StringView &);
 
 	static bool isUrlencodeChar(char c);
-};
-
-template <typename Interface>
-struct ToStringTraits;
-
-template <>
-struct ToStringTraits<memory::StandartInterface> {
-	using String = typename memory::StandartInterface::StringType;
-	using WideString = typename memory::StandartInterface::WideStringType;
-	using StringStream = typename memory::StandartInterface::StringStreamType;
-
-	template <typename T>
-	static void toStringStream(StringStream &stream, T value) {
-		stream << value;
-	}
-
-	template <typename T, typename... Args>
-	static void toStringStream(StringStream &stream, T value, Args && ... args) {
-		stream << value;
-		toStringStream(stream, std::forward<Args>(args)...);
-	}
-
-	template <class T>
-	static String toString(T value) {
-		return std::to_string(value);
-	}
-
-	static String toString(const StringView &value) { return value.str<memory::StandartInterface>(); }
-	static String toString(const String &value) { return value; }
-	static String toString(const char *value) { return value; }
-
-	template <typename T, typename... Args>
-	static String toString(T t, Args && ... args) {
-		StringStream stream;
-		toStringStream(stream, t);
-		toStringStream(stream, std::forward<Args>(args)...);
-	    return stream.str();
-	}
-};
-
-template <>
-struct ToStringTraits<memory::PoolInterface> {
-	using String = typename memory::PoolInterface::StringType;
-	using WideString = typename memory::PoolInterface::WideStringType;
-	using StringStream = typename memory::PoolInterface::StringStreamType;
-
-	template <typename T>
-	static void toStringStream(StringStream &stream, T value) {
-		stream << value;
-	}
-
-	template <typename T, typename... Args>
-	static void toStringStream(StringStream &stream, T value, Args && ... args) {
-		stream << value;
-		toStringStream(stream, std::forward<Args>(args)...);
-	}
-
-	template <class T>
-	static String toString(T value) {
-		StringStream stream;
-		stream << value;
-	    return stream.str();
-	}
-
-	static String toString(const StringView &value) { return value.str<memory::PoolInterface>(); }
-	static String toString(const String &value) { return value; }
-	static String toString(const char *value) { return value; }
-
-	template <typename T, typename... Args>
-	static String toString(T t, Args && ... args) {
-		StringStream stream;
-		toStringStream(stream, t);
-		toStringStream(stream, std::forward<Args>(args)...);
-	    return stream.str();
-	}
 };
 
 }
@@ -766,32 +674,32 @@ bool StringTraits<Interface>::isUrlencodeChar(char c) {
 template <typename StringType>
 uint8_t utf8Encode(StringType &str, char16_t c) {
 	if (c < 0x80) {
-		str.push_back((char)c);
+		str.push_back(char(c));
 		return 1;
 	} else if (c < 0x800) {
-		str.push_back((char)(0xc0 | (c >> 6)));
-		str.push_back((char)(0x80 | (c & 0x3f)));
+		str.push_back(char(0xc0 | (c >> 6)));
+		str.push_back(char(0x80 | (c & 0x3f)));
 		return 2;
 	} else {
-		str.push_back((char)(0xe0 | (c >> 12)));
-		str.push_back((char)(0x80 | (c >> 6 & 0x3f)));
-		str.push_back((char)(0x80 | (c & 0x3f)));
+		str.push_back(char(0xe0 | (c >> 12)));
+		str.push_back(char(0x80 | (c >> 6 & 0x3f)));
+		str.push_back(char(0x80 | (c & 0x3f)));
 		return 3;
 	}
 }
 
 inline uint8_t utf8Encode(std::ostream &str, char16_t c) {
 	if (c < 0x80) {
-		str << ((char)c);
+		str << (char(c));
 		return 1;
 	} else if (c < 0x800) {
-		str << ((char)(0xc0 | (c >> 6)));
-		str << ((char)(0x80 | (c & 0x3f)));
+		str << (char(0xc0 | (c >> 6)));
+		str << (char(0x80 | (c & 0x3f)));
 		return 2;
 	} else {
-		str << ((char)(0xe0 | (c >> 12)));
-		str << ((char)(0x80 | (c >> 6 & 0x3f)));
-		str << ((char)(0x80 | (c & 0x3f)));
+		str << (char(0xe0 | (c >> 12)));
+		str << (char(0x80 | (c >> 6 & 0x3f)));
+		str << (char(0x80 | (c & 0x3f)));
 		return 3;
 	}
 }
@@ -799,22 +707,22 @@ inline uint8_t utf8Encode(std::ostream &str, char16_t c) {
 template <typename StringType>
 uint8_t utf8Encode(StringType &str, char32_t c) {
 	if (c < 0x80) {
-		str.push_back((char)c);
+		str.push_back(char(c));
 		return 1;
 	} else if (c < 0x800) {
-		str.push_back((char)(0xc0 | (c >> 6)));
-		str.push_back((char)(0x80 | (c & 0x3f)));
+		str.push_back(char(0xc0 | (c >> 6)));
+		str.push_back(char(0x80 | (c & 0x3f)));
 		return 2;
 	} else if (c < 0xFFFF) {
-		str.push_back((char)(0xe0 | (c >> 12 & 0x0F)));
-		str.push_back((char)(0x80 | (c >> 6 & 0x3f)));
-		str.push_back((char)(0x80 | (c & 0x3f)));
+		str.push_back(char(0xe0 | (c >> 12 & 0x0F)));
+		str.push_back(char(0x80 | (c >> 6 & 0x3f)));
+		str.push_back(char(0x80 | (c & 0x3f)));
 		return 3;
 	} else if (c < 0x10FFFF) {
-		str.push_back((char)(0xf0 | (c >> 18 & 0x07)));
-		str.push_back((char)(0x80 | (c >> 12 & 0x3F)));
-		str.push_back((char)(0x80 | (c >> 6 & 0x3f)));
-		str.push_back((char)(0x80 | (c & 0x3f)));
+		str.push_back(char(0xf0 | (c >> 18 & 0x07)));
+		str.push_back(char(0x80 | (c >> 12 & 0x3F)));
+		str.push_back(char(0x80 | (c >> 6 & 0x3f)));
+		str.push_back(char(0x80 | (c & 0x3f)));
 		return 3;
 	} else {
 		// non-unicode char
@@ -824,22 +732,22 @@ uint8_t utf8Encode(StringType &str, char32_t c) {
 
 inline uint8_t utf8Encode(std::ostream &str, char32_t c) {
 	if (c < 0x80) {
-		str << ((char)c);
+		str << (char(c));
 		return 1;
 	} else if (c < 0x800) {
-		str << ((char)(0xc0 | (c >> 6)));
-		str << ((char)(0x80 | (c & 0x3f)));
+		str << (char(0xc0 | (c >> 6)));
+		str << (char(0x80 | (c & 0x3f)));
 		return 2;
 	} else if (c < 0xFFFF) {
-		str << ((char)(0xe0 | (c >> 12 & 0x0F)));
-		str << ((char)(0x80 | (c >> 6 & 0x3f)));
-		str << ((char)(0x80 | (c & 0x3f)));
+		str << (char(0xe0 | (c >> 12 & 0x0F)));
+		str << (char(0x80 | (c >> 6 & 0x3f)));
+		str << (char(0x80 | (c & 0x3f)));
 		return 3;
 	} else if (c < 0x10FFFF) {
-		str << ((char)(0xf0 | (c >> 18 & 0x07)));
-		str << ((char)(0x80 | (c >> 12 & 0x3F)));
-		str << ((char)(0x80 | (c >> 6 & 0x3f)));
-		str << ((char)(0x80 | (c & 0x3f)));
+		str << (char(0xf0 | (c >> 18 & 0x07)));
+		str << (char(0x80 | (c >> 12 & 0x3F)));
+		str << (char(0x80 | (c >> 6 & 0x3f)));
+		str << (char(0x80 | (c & 0x3f)));
 		return 3;
 	} else {
 		// non-unicode char
@@ -935,35 +843,10 @@ using WideString = stappler::memory::u16string;
 using StringStream = stappler::memory::ostringstream;
 using Interface = stappler::memory::PoolInterface;
 
-namespace to_string {
-
-template <typename T>
-inline mem_pool::String toString(const T &t) {
-	return stappler::string::ToStringTraits<Interface>::toString(t);
+template <typename... Args>
+inline String toString(Args && ... args) {
+	return string::toString<Interface>(std::forward<Args>(args)...);
 }
-
-template <typename T>
-inline void toStringStream(mem_pool::StringStream &stream, T value) {
-	stream << value;
-}
-
-template <typename T, typename... Args>
-inline void toStringStream(mem_pool::StringStream &stream, T value, Args && ... args) {
-	stream << value;
-	mem_pool::to_string::toStringStream(stream, std::forward<Args>(args)...);
-}
-
-template <typename T, typename... Args>
-inline mem_pool::String toString(T t, Args && ... args) {
-	mem_pool::StringStream stream;
-	mem_pool::to_string::toStringStream(stream, t);
-	mem_pool::to_string::toStringStream(stream, std::forward<Args>(args)...);
-    return stream.str();
-}
-
-}
-
-using to_string::toString;
 
 }
 
@@ -974,35 +857,10 @@ using WideString = std::u16string;
 using StringStream = std::stringstream;
 using Interface = stappler::memory::StandartInterface;
 
-namespace to_string {
-
-template <typename T>
-inline mem_std::String toString(const T &t) {
-	return stappler::string::ToStringTraits<Interface>::toString(t);
+template <typename... Args>
+inline String toString(Args && ... args) {
+	return string::toString<Interface>(std::forward<Args>(args)...);
 }
-
-template <typename T>
-inline void toStringStream(mem_std::StringStream &stream, T value) {
-	stream << value;
-}
-
-template <typename T, typename... Args>
-inline void toStringStream(mem_std::StringStream &stream, T value, Args && ... args) {
-	stream << value;
-	mem_std::to_string::toStringStream(stream, std::forward<Args>(args)...);
-}
-
-template <typename T, typename... Args>
-inline mem_std::String toString(T t, Args && ... args) {
-	mem_std::StringStream stream;
-	mem_std::to_string::toStringStream(stream, t);
-	mem_std::to_string::toStringStream(stream, std::forward<Args>(args)...);
-    return stream.str();
-}
-
-}
-
-using to_string::toString;
 
 }
 

@@ -95,9 +95,6 @@ public:
 	Self & set(const Self &str);
 	Self & set(const CharType *p, size_t l);
 
-	constexpr bool operator == (const Self &other) const;
-	constexpr bool operator != (const Self &other) const;
-
 	bool is(const CharType &c) const;
 	bool is(const CharType *c) const;
 	bool is(const Self &c) const;
@@ -261,9 +258,6 @@ public:
 	Self & set(const Self &str);
 	Self & set(const char *p, size_t l);
 
-	bool operator == (const Self &other) const;
-	bool operator != (const Self &other) const;
-
 	bool is(const char &c) const;
 	bool is(const char16_t &c) const;
 	bool is(const char32_t &c) const;
@@ -368,6 +362,12 @@ auto toupper(WideStringView) -> typename Interface::WideStringType;
 template <typename Interface>
 auto totitle(WideStringView) -> typename Interface::WideStringType;
 
+int compare_u(StringView l, StringView r);
+int compare_u(WideStringView l, WideStringView r);
+
+int caseCompare_u(StringView l, StringView r);
+int caseCompare_u(WideStringView l, WideStringView r);
+
 }
 
 namespace STAPPLER_VERSIONIZED stappler::string {
@@ -376,14 +376,25 @@ template <typename L, typename R, typename CharType
 	= typename std::enable_if<
 		std::is_same< typename L::value_type, typename R::value_type >::value,
 		typename L::value_type>::type>
-inline int compare(const L &l, const R &r);
-
+inline int compare_c(const L &l, const R &r);
 
 template <typename L, typename R, typename CharType
 	= typename std::enable_if<
 		std::is_same< typename L::value_type, typename R::value_type >::value,
 		typename L::value_type>::type>
-inline int compareCaseInsensivive(const L &l, const R &r);
+inline int compare_u(const L &l, const R &r);
+
+template <typename L, typename R, typename CharType
+	= typename std::enable_if<
+		std::is_same< typename L::value_type, typename R::value_type >::value,
+		typename L::value_type>::type>
+inline int caseCompare_c(const L &l, const R &r);
+
+template <typename L, typename R, typename CharType
+	= typename std::enable_if<
+		std::is_same< typename L::value_type, typename R::value_type >::value,
+		typename L::value_type>::type>
+inline int caseCompare_u(const L &l, const R &r);
 
 template<typename _CharT>
 constexpr size_t length(const _CharT *__p) {
@@ -426,241 +437,52 @@ operator << (std::basic_ostream<char> & os, const StringViewUtf8 & str) {
 	return os.write(str.data(), str.size());
 }
 
-template <typename C> inline bool
-operator > (const StringViewBase<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) > 0; }
+#define SP_STRINGVIEW_COMPARE_OP(Type1, Type2) \
+	template <typename C> inline bool operator == (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) == 0; } \
+	template <typename C> inline bool operator != (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) != 0; } \
+	template <typename C> inline bool operator > (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) > 0; } \
+	template <typename C> inline bool operator >= (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) >= 0; } \
+	template <typename C> inline bool operator < (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) < 0; } \
+	template <typename C> inline bool operator <= (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) <= 0; }
 
-template <typename C> inline bool
-operator >= (const StringViewBase<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) >= 0; }
+#define SP_STRINGVIEW_COMPARE_OP_UTF8(Type1, Type2) \
+	inline bool operator == (const Type1 &l, const Type2 &r) { return string::compare_c /* not an error! It's faster */ (l, r) == 0; } \
+	inline bool operator != (const Type1 &l, const Type2 &r) { return string::compare_c /* not an error! It's faster */ (l, r) != 0; } \
+	inline bool operator > (const Type1 &l, const Type2 &r) { return string::compare_u(l, r) > 0; } \
+	inline bool operator >= (const Type1 &l, const Type2 &r) { return string::compare_u(l, r) >= 0; } \
+	inline bool operator < (const Type1 &l, const Type2 &r) { return string::compare_u(l, r) < 0; } \
+	inline bool operator <= (const Type1 &l, const Type2 &r) { return string::compare_u(l, r) <= 0; }
 
-template <typename C> inline bool
-operator < (const StringViewBase<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) < 0; }
+SP_STRINGVIEW_COMPARE_OP(StringViewBase<C>, StringViewBase<C>)
 
-template <typename C> inline bool
-operator <= (const StringViewBase<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) <= 0; }
+SP_STRINGVIEW_COMPARE_OP(memory::StandartInterface::BasicStringType<C>, StringViewBase<C>)
+SP_STRINGVIEW_COMPARE_OP(StringViewBase<C>, memory::StandartInterface::BasicStringType<C>)
 
+SP_STRINGVIEW_COMPARE_OP(memory::PoolInterface::BasicStringType<C>, StringViewBase<C>)
+SP_STRINGVIEW_COMPARE_OP(StringViewBase<C>, memory::PoolInterface::BasicStringType<C>)
 
-template <typename C> inline bool
-operator == (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return StringViewBase<C>(l) == r; }
+SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, StringViewUtf8)
 
-template <typename C> inline bool
-operator != (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return StringViewBase<C>(l) != r; }
+SP_STRINGVIEW_COMPARE_OP_UTF8(memory::StandartInterface::BasicStringType<char>, StringViewUtf8)
+SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, memory::StandartInterface::BasicStringType<char>)
 
-template <typename C> inline bool
-operator > (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) > 0; }
+SP_STRINGVIEW_COMPARE_OP_UTF8(memory::PoolInterface::BasicStringType<char>, StringViewUtf8)
+SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, memory::PoolInterface::BasicStringType<char>)
 
-template <typename C> inline bool
-operator >= (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) >= 0; }
+template <typename C> inline bool operator == (const StringViewBase<C> &l, const C *r) { return string::compare_c(l, StringViewBase<C>(r)) == 0; }
+template <typename C> inline bool operator != (const StringViewBase<C> &l, const C *r) { return string::compare_c(l, StringViewBase<C>(r)) != 0; }
 
-template <typename C> inline bool
-operator < (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) < 0; }
+template <typename C> inline bool operator == (const C *l, const StringViewBase<C> &r) { return string::compare_c(StringViewBase<C>(l), r) == 0; }
+template <typename C> inline bool operator != (const C *l, const StringViewBase<C> &r) { return string::compare_c(StringViewBase<C>(l), r) != 0; }
 
-template <typename C> inline bool
-operator <= (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) <= 0; }
+inline bool operator == (const StringViewUtf8 &l, const char *r) { return string::compare_c(l, StringViewUtf8(r)) == 0; }
+inline bool operator != (const StringViewUtf8 &l, const char *r) { return string::compare_c(l, StringViewUtf8(r)) != 0; }
 
+inline bool operator == (const char *l, const StringViewUtf8 &r) { return string::compare_c(StringViewUtf8(l), r) == 0; }
+inline bool operator != (const char *l, const StringViewUtf8 &r) { return string::compare_c(StringViewUtf8(l), r) != 0; }
 
-template <typename C> inline bool
-operator == (const StringViewBase<C> &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return l == StringViewBase<C>(r); }
-
-template <typename C> inline bool
-operator != (const StringViewBase<C> &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return l != StringViewBase<C>(r); }
-
-template <typename C> inline bool
-operator > (const StringViewBase<C> &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) > 0; }
-
-template <typename C> inline bool
-operator >= (const StringViewBase<C> &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) >= 0; }
-
-template <typename C> inline bool
-operator < (const StringViewBase<C> &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) < 0; }
-
-template <typename C> inline bool
-operator <= (const StringViewBase<C> &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) <= 0; }
-
-
-template <typename C> inline bool
-operator == (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return StringViewBase<C>(l) == r; }
-
-template <typename C> inline bool
-operator != (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return StringViewBase<C>(l) != r; }
-
-template <typename C> inline bool
-operator > (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) > 0; }
-
-template <typename C> inline bool
-operator >= (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) >= 0; }
-
-template <typename C> inline bool
-operator < (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) < 0; }
-
-template <typename C> inline bool
-operator <= (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewBase<C> &r) { return string::compare(l, r) <= 0; }
-
-
-template <typename C> inline bool
-operator == (const StringViewBase<C> &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return l == StringViewBase<C>(r); }
-
-template <typename C> inline bool
-operator != (const StringViewBase<C> &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return l != StringViewBase<C>(r); }
-
-template <typename C> inline bool
-operator > (const StringViewBase<C> &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) > 0; }
-
-template <typename C> inline bool
-operator >= (const StringViewBase<C> &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) >= 0; }
-
-template <typename C> inline bool
-operator < (const StringViewBase<C> &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) < 0; }
-
-template <typename C> inline bool
-operator <= (const StringViewBase<C> &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) <= 0; }
-
-
-template <typename C> inline bool
-operator > (const StringViewUtf8 &l, const StringViewUtf8 &r) { return string::compare(l, r) > 0; }
-
-template <typename C> inline bool
-operator >= (const StringViewUtf8 &l, const StringViewUtf8 &r) { return string::compare(l, r) >= 0; }
-
-template <typename C> inline bool
-operator < (const StringViewUtf8 &l, const StringViewUtf8 &r) { return string::compare(l, r) < 0; }
-
-template <typename C> inline bool
-operator <= (const StringViewUtf8 &l, const StringViewUtf8 &r) { return string::compare(l, r) <= 0; }
-
-
-template <typename C> inline bool
-operator == (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return StringViewUtf8(l) == r; }
-
-template <typename C> inline bool
-operator != (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return StringViewUtf8(l) != r; }
-
-template <typename C> inline bool
-operator > (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) > 0; }
-
-template <typename C> inline bool
-operator >= (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) >= 0; }
-
-template <typename C> inline bool
-operator < (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) < 0; }
-
-template <typename C> inline bool
-operator <= (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) <= 0; }
-
-
-template <typename C> inline bool
-operator == (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return l == StringViewUtf8(r); }
-
-template <typename C> inline bool
-operator != (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return l != StringViewUtf8(r); }
-
-template <typename C> inline bool
-operator > (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) > 0; }
-
-template <typename C> inline bool
-operator >= (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) >= 0; }
-
-template <typename C> inline bool
-operator < (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) < 0; }
-
-template <typename C> inline bool
-operator <= (const StringViewUtf8 &l, const typename memory::StandartInterface::BasicStringType<C> &r) { return string::compare(l, r) <= 0; }
-
-
-template <typename C> inline bool
-operator == (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return StringViewUtf8(l) == r; }
-
-template <typename C> inline bool
-operator != (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return StringViewUtf8(l) != r; }
-
-template <typename C> inline bool
-operator > (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) > 0; }
-
-template <typename C> inline bool
-operator >= (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) >= 0; }
-
-template <typename C> inline bool
-operator < (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) < 0; }
-
-template <typename C> inline bool
-operator <= (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewUtf8 &r) { return string::compare(l, r) <= 0; }
-
-
-template <typename C> inline bool
-operator == (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return l == StringViewUtf8(r); }
-
-template <typename C> inline bool
-operator != (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return l != StringViewUtf8(r); }
-
-template <typename C> inline bool
-operator > (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) > 0; }
-
-template <typename C> inline bool
-operator >= (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) >= 0; }
-
-template <typename C> inline bool
-operator < (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) < 0; }
-
-template <typename C> inline bool
-operator <= (const StringViewUtf8 &l, const typename memory::PoolInterface::BasicStringType<C> &r) { return string::compare(l, r) <= 0; }
-
-
-template <typename C> inline typename memory::StandartInterface::BasicStringType<C>
-operator+ (const typename memory::StandartInterface::BasicStringType<C> &l, const StringViewBase<C> &r) {
-	typename memory::StandartInterface::BasicStringType<C> ret; ret.reserve(l.size() + r.size());
-	ret.append(l);
-	ret.append(r.data(), r.size());
-	return ret;
-}
-
-template <typename C> inline typename memory::StandartInterface::BasicStringType<C>
-operator+ (const StringViewBase<C> &l, const typename memory::StandartInterface::BasicStringType<C> &r) {
-	typename memory::StandartInterface::BasicStringType<C> ret; ret.reserve(l.size() + r.size());
-	ret.append(l.data(), l.size());
-	ret.append(r);
-	return ret;
-}
-
-template <typename C> inline typename memory::PoolInterface::BasicStringType<C>
-operator+ (const typename memory::PoolInterface::BasicStringType<C> &l, const StringViewBase<C> &r) {
-	typename memory::PoolInterface::BasicStringType<C> ret; ret.reserve(l.size() + r.size());
-	ret.append(l);
-	ret.append(r.data(), r.size());
-	return ret;
-}
-
-template <typename C> inline typename memory::PoolInterface::BasicStringType<C>
-operator+ (const StringViewBase<C> &l, const typename memory::PoolInterface::BasicStringType<C> &r) {
-	typename memory::PoolInterface::BasicStringType<C> ret; ret.reserve(l.size() + r.size());
-	ret.append(l.data(), l.size());
-	ret.append(r);
-	return ret;
-}
-
-
-template <typename C> inline typename memory::StandartInterface::BasicStringType<C>
-operator+ (typename memory::StandartInterface::BasicStringType<C> &&l, const StringViewBase<C> &r) {
-	l.append(r.data(), r.size());
-	return move(l);
-}
-
-template <typename C> inline typename memory::StandartInterface::BasicStringType<C>
-operator+ (const StringViewBase<C> &l, typename memory::StandartInterface::BasicStringType<C> &&r) {
-	r.insert(0, l.data(), l.size());
-	return move(r);
-}
-
-template <typename C> inline typename memory::PoolInterface::BasicStringType<C>
-operator+ (typename memory::PoolInterface::BasicStringType<C> &&l, const StringViewBase<C> &r) {
-	l.append(r.data(), r.size());
-	return move(l);
-}
-
-template <typename C> inline typename memory::PoolInterface::BasicStringType<C>
-operator+ (const StringViewBase<C> &l, typename memory::PoolInterface::BasicStringType<C> &&r) {
-	r.insert(0, l.data(), l.size());
-	return move(r);
-}
-
+#undef SP_STRINGVIEW_COMPARE_OP
+#undef SP_STRINGVIEW_COMPARE_OP_UTF8
 
 template <typename _CharType>
 template <typename Interface, typename ... Args>
@@ -841,16 +663,6 @@ auto StringViewBase<_CharType>::set(const CharType *p, size_t l)-> Self & {
 	this->ptr = p;
 	this->len = l;
 	return *this;
-}
-
-template <typename _CharType>
-constexpr auto StringViewBase<_CharType>::operator == (const Self &other) const -> bool {
-	return this->len == other.len && memcmp(this->ptr, other.ptr, other.len * sizeof(_CharType)) == 0;
-}
-
-template <typename _CharType>
-constexpr auto StringViewBase<_CharType>::operator != (const Self &other) const -> bool {
-	return this->len != other.len || memcmp(this->ptr, other.ptr, other.len * sizeof(_CharType)) != 0;
 }
 
 template <typename _CharType>
@@ -1261,13 +1073,6 @@ inline auto StringViewUtf8::str() const -> typename Interface::StringType {
 	return typename Interface::StringType();
 }
 
-inline bool StringViewUtf8::operator == (const Self &other) const {
-	return this->len == other.len && memcmp(this->ptr, other.ptr, other.len * sizeof(char)) == 0;
-}
-inline bool StringViewUtf8::operator != (const Self &other) const {
-	return !(*this == other);
-}
-
 // extend offset functions with unicode support
 inline void StringViewUtf8::offset(size_t l) {
 	while (l > 0 && len > 0) {
@@ -1537,453 +1342,13 @@ inline bool StringViewUtf8::match (MatchCharType c) {
 	return chars::Compose<MatchCharType, Args...>::match(c);
 }
 
-// Callback output API - Callback - StringViewBase<char>
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, const char *str) -> const Callback<void(StringViewBase<char>)> & {
-	cb(StringViewBase<char>(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, const char str[N]) -> const Callback<void(StringViewBase<char>)> & {
-	cb(StringViewBase<char>(str, N));
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, StringViewBase<char> str) -> const Callback<void(StringViewBase<char>)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, double d) -> const Callback<void(StringViewBase<char>)> & {
-	std::array<char, string::DOUBLE_MAX_DIGITS> buf = { 0 };
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data(), ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, float f) -> const Callback<void(StringViewBase<char>)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, int64_t i) -> const Callback<void(StringViewBase<char>)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf = { 0 };
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, uint64_t i) -> const Callback<void(StringViewBase<char>)> & {
-	std::array<char, std::numeric_limits<uint64_t>::digits10 + 2> buf = { 0 };
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, int32_t f) -> const Callback<void(StringViewBase<char>)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, uint32_t f) -> const Callback<void(StringViewBase<char>)> & {
-	return cb << uint64_t(f);
-}
-
-
-// Callback output API - Callback - StringViewBase<char16_t>
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, const char16_t *str) -> const Callback<void(StringViewBase<char16_t>)> & {
-	cb(StringViewBase<char16_t>(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, const char16_t str[N]) -> const Callback<void(StringViewBase<char16_t>)> & {
-	cb(StringViewBase<char16_t>(str, N));
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, StringViewBase<char16_t> str) -> const Callback<void(StringViewBase<char16_t>)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, double d) -> const Callback<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, string::DOUBLE_MAX_DIGITS> buf = { 0 };
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data(), ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, float f) -> const Callback<void(StringViewBase<char16_t>)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, int64_t i) -> const Callback<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf = { 0 };
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, uint64_t i) -> const Callback<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf = { 0 };
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, int32_t f) -> const Callback<void(StringViewBase<char16_t>)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, uint32_t f) -> const Callback<void(StringViewBase<char16_t>)> & {
-	return cb << uint64_t(f);
-}
-
-
-// Callback output API - Callback - StringViewUtf8
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, const char *str) -> const Callback<void(StringViewUtf8)> & {
-	cb(StringViewUtf8(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, const char str[N]) -> const Callback<void(StringViewUtf8)> & {
-	cb(StringViewUtf8(str, N));
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, StringViewUtf8 str) -> const Callback<void(StringViewUtf8)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, double d) -> const Callback<void(StringViewUtf8)> & {
-	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data(), ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, float f) -> const Callback<void(StringViewUtf8)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, int64_t i) -> const Callback<void(StringViewUtf8)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, uint64_t i) -> const Callback<void(StringViewUtf8)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, int32_t f) -> const Callback<void(StringViewUtf8)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, uint32_t f) -> const Callback<void(StringViewUtf8)> & {
-	return cb << uint64_t(f);
-}
-
-
-// std::function output API - std::function - StringViewBase<char>
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, const char *str) -> const std::function<void(StringViewBase<char>)> & {
-	cb(StringViewBase<char>(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, const char str[N]) -> const std::function<void(StringViewBase<char>)> & {
-	cb(StringViewBase<char>(str, N));
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, StringViewBase<char> str) -> const std::function<void(StringViewBase<char>)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, double d) -> const std::function<void(StringViewBase<char>)> & {
-	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data(), ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, float f) -> const std::function<void(StringViewBase<char>)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, int64_t i) -> const std::function<void(StringViewBase<char>)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, uint64_t i) -> const std::function<void(StringViewBase<char>)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, int32_t f) -> const std::function<void(StringViewBase<char>)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, uint32_t f) -> const std::function<void(StringViewBase<char>)> & {
-	return cb << uint64_t(f);
-}
-
-
-// std::function output API - std::function - StringViewBase<char16_t>
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, const char16_t *str) -> const std::function<void(StringViewBase<char16_t>)> & {
-	cb(StringViewBase<char16_t>(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, const char16_t str[N]) -> const std::function<void(StringViewBase<char16_t>)> & {
-	cb(StringViewBase<char16_t>(str, N));
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, StringViewBase<char16_t> str) -> const std::function<void(StringViewBase<char16_t>)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, double d) -> const std::function<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, string::DOUBLE_MAX_DIGITS> buf;
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data(), ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, float f) -> const std::function<void(StringViewBase<char16_t>)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, int64_t i) -> const std::function<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, uint64_t i) -> const std::function<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, int32_t f) -> const std::function<void(StringViewBase<char16_t>)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, uint32_t f) -> const std::function<void(StringViewBase<char16_t>)> & {
-	return cb << uint64_t(f);
-}
-
-
-// std::function output API - std::function - StringViewUtf8
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, const char *str) -> const std::function<void(StringViewUtf8)> & {
-	cb(StringViewUtf8(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, const char str[N]) -> const std::function<void(StringViewUtf8)> & {
-	cb(StringViewUtf8(str, N));
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, StringViewUtf8 str) -> const std::function<void(StringViewUtf8)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, double d) -> const std::function<void(StringViewUtf8)> & {
-	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data(), ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, float f) -> const std::function<void(StringViewUtf8)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, int64_t i) -> const std::function<void(StringViewUtf8)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, uint64_t i) -> const std::function<void(StringViewUtf8)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, int32_t f) -> const std::function<void(StringViewUtf8)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, uint32_t f) -> const std::function<void(StringViewUtf8)> & {
-	return cb << uint64_t(f);
-}
-
-
-// memory::function output API - memory::function - StringViewBase<char>
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, const char *str) -> const memory::function<void(StringViewBase<char>)> & {
-	cb(StringViewBase<char>(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, const char str[N]) -> const memory::function<void(StringViewBase<char>)> & {
-	cb(StringViewBase<char>(str, N));
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, StringViewBase<char> str) -> const memory::function<void(StringViewBase<char>)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, double d) -> const memory::function<void(StringViewBase<char>)> & {
-	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data(), ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, float f) -> const memory::function<void(StringViewBase<char>)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, int64_t i) -> const memory::function<void(StringViewBase<char>)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, uint64_t i) -> const memory::function<void(StringViewBase<char>)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, int32_t f) -> const memory::function<void(StringViewBase<char>)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, uint32_t f) -> const memory::function<void(StringViewBase<char>)> & {
-	return cb << uint64_t(f);
-}
-
-
-// memory::function output API - memory::function - StringViewBase<char16_t>
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, const char16_t *str) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	cb(StringViewBase<char16_t>(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, const char16_t str[N]) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	cb(StringViewBase<char16_t>(str, N));
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, StringViewBase<char16_t> str) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, double d) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, string::DOUBLE_MAX_DIGITS> buf;
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data(), ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, float f) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, int64_t i) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, uint64_t i) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	std::array<char16_t, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewBase<char16_t>(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, int32_t f) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, uint32_t f) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	return cb << uint64_t(f);
-}
-
-
-// memory::function output API - memory::function - StringViewUtf8
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, const char *str) -> const memory::function<void(StringViewUtf8)> & {
-	cb(StringViewUtf8(str));
-	return cb;
-}
-
-template <size_t N>
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, const char str[N]) -> const memory::function<void(StringViewUtf8)> & {
-	cb(StringViewUtf8(str, N));
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, StringViewUtf8 str) -> const memory::function<void(StringViewUtf8)> & {
-	cb(str);
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, double d) -> const memory::function<void(StringViewUtf8)> & {
-	std::array<char, string::DOUBLE_MAX_DIGITS> buf;
-	auto ret = string::_dtoa(d, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data(), ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, float f) -> const memory::function<void(StringViewUtf8)> & {
-	return cb << double(f);
-}
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, int64_t i) -> const memory::function<void(StringViewUtf8)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, uint64_t i) -> const memory::function<void(StringViewUtf8)> & {
-	std::array<char, std::numeric_limits<int64_t>::digits10 + 2> buf;
-	auto ret = string::_itoa(i, buf.data(), buf.size());
-	return cb << StringViewUtf8(buf.data() + buf.size() - ret, ret);
-}
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, int32_t f) -> const memory::function<void(StringViewUtf8)> & {
-	return cb << int64_t(f);
-}
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, uint32_t f) -> const memory::function<void(StringViewUtf8)> & {
-	return cb << uint64_t(f);
-}
-
 }
 
 
 namespace STAPPLER_VERSIONIZED stappler::string {
 
 template <typename L, typename R, typename CharType>
-inline int compare(const L &l, const R &r) {
+inline int compare_c(const L &l, const R &r) {
 	auto __lsize = l.size();
 	auto __rsize = r.size();
 	auto __len = std::min(__lsize, __rsize);
@@ -2001,32 +1366,32 @@ inline int compare(const L &l, const R &r) {
 }
 
 template <typename L, typename R, typename CharType>
-inline int compareCaseInsensivive(const L &l, const R &r) {
+inline int compare_u(const L &l, const R &r) {
+	return platform::compare_u(l, r);
+}
+
+inline int _strncasecmp(const char *l, const char *r, size_t len) {
+	return ::strncasecmp(l, r, len);
+}
+
+inline int _strncasecmp(const char16_t *l, const char16_t *r, size_t len) {
+	while (len > 0) {
+		auto lc = std::tolower(*l ++);
+		auto rc = std::tolower(*r ++);
+		if (lc != rc) {
+			return (lc < rc)?-1:1;
+		}
+		-- len;
+	}
+	return 0;
+}
+
+template <typename L, typename R, typename CharType>
+inline int caseCompare_c(const L &l, const R &r) {
 	auto __lsize = l.size();
 	auto __rsize = r.size();
-
-	int ret = 0;
-
-	uint8_t __l_off = 0;
-	uint8_t __r_off = 0;
-
-	auto lPtr = l.data();
-	auto rPtr = r.data();
-
-	auto lEnd = l.data() + l.size();
-	auto rEnd = r.data() + r.size();
-
-	while (lPtr < lEnd && rPtr < rEnd) {
-		auto lc = string::tolower(unicode::utf8Decode32(lPtr, __l_off));
-		auto rc = string::tolower(unicode::utf8Decode32(rPtr, __r_off));
-		if (lc != rc) {
-			ret =  (lc < rc)?-1:1;
-			break;
-		}
-		lPtr += __l_off;
-		rPtr += __r_off;
-	}
-
+	auto __len = std::min(__lsize, __rsize);
+	auto ret = _strncasecmp(l.data(), r.data(), __len);
 	if (!ret) {
 		if (__lsize < __rsize) {
 			return -1;
@@ -2037,6 +1402,11 @@ inline int compareCaseInsensivive(const L &l, const R &r) {
 		}
 	}
 	return ret;
+}
+
+template <typename L, typename R, typename CharType>
+inline int caseCompare_u(const L &l, const R &r) {
+	return platform::caseCompare_u(l, r);
 }
 
 }

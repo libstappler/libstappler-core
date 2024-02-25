@@ -70,7 +70,7 @@ public:
 
 	QueryFieldResolver next(const StringView &) const;
 
-	operator bool () const;
+	explicit operator bool () const;
 
 protected:
 	struct Data {

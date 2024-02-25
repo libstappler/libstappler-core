@@ -106,7 +106,7 @@ public:
 	Adapter(const Adapter &);
 	Adapter& operator=(const Adapter &);
 
-	operator bool () const { return _interface != nullptr && _application != nullptr; }
+	explicit operator bool () const { return _interface != nullptr && _application != nullptr; }
 
 	bool operator==(const Adapter &other) const { return _interface == other._interface && _application == other._application; }
 

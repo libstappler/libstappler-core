@@ -113,7 +113,7 @@ public:
 	void setAdapter(const Adapter &);
 	const Adapter &getAdapter() const;
 
-	operator bool () const { return _data != nullptr && _data->adapter; }
+	explicit operator bool () const { return _data != nullptr && _data->adapter; }
 
 	Value acquireObject(const Scheme &, uint64_t oid) const;
 

@@ -47,7 +47,7 @@ public:
 	ContinueToken &operator=(const ContinueToken &) = default;
 	ContinueToken &operator=(ContinueToken &&) = default;
 
-	operator bool () const { return !field.empty() && count > 0; }
+	explicit operator bool () const { return !field.empty() && count > 0; }
 
 	bool hasPrev() const;
 	bool hasNext() const;

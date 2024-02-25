@@ -36,6 +36,9 @@ using cleanup_fn = status_t(*)(void *);
 
 using PoolFlags = mempool::custom::PoolFlags;
 
+// use when you need to create pool from application root pool
+constexpr pool_t *app_root_pool = nullptr;
+
 size_t get_mapped_regions_count();
 void *sp_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 int sp_munmap(void *addr, size_t length);

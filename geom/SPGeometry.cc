@@ -28,6 +28,125 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
+bool Metric::readStyleValue(StringView r, bool resolutionMetric, bool allowEmptyMetric) {
+	r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
+	if (!resolutionMetric && r.starts_with("auto")) {
+		r += 4;
+		this->metric = Metric::Units::Auto;
+		this->value = 0.0f;
+		return true;
+	}
+
+	auto fRes = r.readFloat();
+	if (!fRes.valid()) {
+		return false;
+	}
+
+	auto fvalue = fRes.get();
+	if (fvalue == 0.0f) {
+		this->value = fvalue;
+		this->metric = Metric::Units::Px;
+		return true;
+	}
+
+	r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
+
+	auto str = r.readUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
+
+	if (!resolutionMetric) {
+		if (str.is('%')) {
+			++ str;
+			this->value = fvalue / 100.0f;
+			this->metric = Metric::Units::Percent;
+			return true;
+		} else if (str == "em") {
+			str += 2;
+			this->value = fvalue;
+			this->metric = Metric::Units::Em;
+			return true;
+		} else if (str == "rem") {
+			str += 3;
+			this->value = fvalue;
+			this->metric = Metric::Units::Rem;
+			return true;
+		} else if (str == "px") {
+			str += 2;
+			this->value = fvalue;
+			this->metric = Metric::Units::Px;
+			return true;
+		} else if (str == "pt") {
+			str += 2;
+			this->value = fvalue * 4.0f / 3.0f;
+			this->metric = Metric::Units::Px;
+			return true;
+		} else if (str == "pc") {
+			str += 2;
+			this->value = fvalue * 15.0f;
+			this->metric = Metric::Units::Px;
+			return true;
+		} else if (str == "mm") {
+			str += 2;
+			this->value = fvalue * 3.543307f;
+			this->metric = Metric::Units::Px;
+			return true;
+		} else if (str == "cm") {
+			str += 2;
+			this->value = fvalue * 35.43307f;
+			this->metric = Metric::Units::Px;
+			return true;
+		} else if (str == "in") {
+			str += 2;
+			this->value = fvalue * 90.0f;
+			this->metric = Metric::Units::Px;
+			return true;
+		} else if (str == "vw") {
+			str += 2;
+			this->value = fvalue;
+			this->metric = Metric::Units::Vw;
+			return true;
+		} else if (str == "vh") {
+			str += 2;
+			this->value = fvalue;
+			this->metric = Metric::Units::Vh;
+			return true;
+		} else if (str == "vmin") {
+			str += 4;
+			this->value = fvalue;
+			this->metric = Metric::Units::VMin;
+			return true;
+		} else if (str == "vmax") {
+			str += 4;
+			this->value = fvalue;
+			this->metric = Metric::Units::VMax;
+			return true;
+		}
+	} else {
+		if (str == "dpi") {
+			str += 3;
+			this->value = fvalue;
+			this->metric = Metric::Units::Dpi;
+			return true;
+		} else if (str == "dpcm") {
+			str += 4;
+			this->value = fvalue / 2.54f;
+			this->metric = Metric::Units::Dpi;
+			return true;
+		} else if (str == "dppx") {
+			str += 4;
+			this->value = fvalue;
+			this->metric = Metric::Units::Dppx;
+			return true;
+		}
+	}
+
+	if (allowEmptyMetric) {
+		this->value = fvalue;
+		return true;
+	}
+
+	return false;
+}
+
 bool Rect::containsPoint(const Vec2& point) const {
 	bool bRet = false;
 

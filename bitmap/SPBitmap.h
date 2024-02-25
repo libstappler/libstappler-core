@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -113,7 +113,7 @@ public:
 	void alloc(uint32_t w, uint32_t h,
 			PixelFormat = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
 
-	operator bool () const { return _data.size() != 0; }
+	explicit operator bool () const { return _data.size() != 0; }
 
 	void clear() { _data.clear(); }
 	bool empty() const { return _data.empty(); }
@@ -264,7 +264,7 @@ void BitmapTemplate<Interface>::setInfo(uint32_t w, uint32_t h, PixelFormat c, A
 
 template <typename Interface>
 bool BitmapTemplate<Interface>::updateStride(const StrideFn &strideFn) {
-	uint32_t outStride = (strideFn) ? max(strideFn(_color, _width), _width * getBytesPerPixel(_color)):_width * getBytesPerPixel(_color);
+	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(_color, _width), _width * getBytesPerPixel(_color)):_width * getBytesPerPixel(_color);
 	if (outStride != _stride) {
 		typename Interface::BytesType out;
 		out.resize(_height * outStride);
@@ -290,7 +290,7 @@ bool BitmapTemplate<Interface>::convert(PixelFormat color, const StrideFn &strid
 
 	bool ret = false;
 	typename Interface::BytesType out;
-	uint32_t outStride = (strideFn) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
+	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
 	out.resize(_height * outStride);
 
 	ret = convertWithTarget(out.data(), color, strideFn);
@@ -323,7 +323,7 @@ bool BitmapTemplate<Interface>::truncate(PixelFormat color, const StrideFn &stri
 	auto bppIn = getBytesPerPixel(_color);
 
 	typename Interface::BytesType out;
-	uint32_t outStride = (strideFn) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
+	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
 	out.resize(height * outStride);
 	auto bppOut = getBytesPerPixel(color);
 
@@ -353,7 +353,7 @@ bool BitmapTemplate<Interface>::truncate(PixelFormat color, const StrideFn &stri
 template <typename Interface>
 bool BitmapTemplate<Interface>::convertWithTarget(uint8_t *target, PixelFormat color, const StrideFn &strideFn) const {
 	bool ret = false;
-	uint32_t outStride = (strideFn) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
+	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
 	BytesView out(target, _height * outStride);
 
 	switch (_color) {

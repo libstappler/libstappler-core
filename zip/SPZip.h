@@ -50,7 +50,7 @@ public:
 
 	Buffer save();
 
-	operator bool () { return _handle != nullptr; }
+	explicit operator bool () { return _handle != nullptr; }
 
 	size_t size(bool original = false) const;
 	StringView getName(size_t idx, bool original = false) const;

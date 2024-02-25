@@ -86,6 +86,36 @@ struct StandartInterface : public memory::AllocBase {
 
 }
 
+namespace STAPPLER_VERSIONIZED stappler {
+
+template <typename InterfaceType>
+struct InterfaceObject {
+	using Interface = InterfaceType;
+
+	using String = typename Interface::StringType;
+	using WideString = typename Interface::WideStringType;
+	using Bytes = typename Interface::BytesType;
+
+	template <typename Value>
+	using BasicString = typename Interface::BasicStringType<Value>;
+
+	template <typename Value>
+	using Vector = typename Interface::VectorType<Value>;
+
+	template <typename K, typename V, typename Compare = std::less<>>
+	using Map = typename Interface::MapType<K, V, Compare>;
+
+	template <typename T, typename Compare = std::less<>>
+	using Set = typename Interface::SetType<T, Compare>;
+
+	template <typename T>
+	using Function = typename Interface::FunctionType<T>;
+
+	using StringStream = typename Interface::StringStreamType;
+};
+
+}
+
 namespace STAPPLER_VERSIONIZED stappler::traits {
 
 template <typename StringType>

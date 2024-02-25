@@ -274,13 +274,13 @@ static bool _setupHeaders(const HandleData<Interface> &iface, Context<Interface>
 		}
 
 		if (it.first != "Authorization" || keySign.empty()) {
-			ctx->headersData.emplace_back(string::ToStringTraits<Interface>::toString(it.first, ": ", it.second));
+			ctx->headersData.emplace_back(string::toString<Interface>(it.first, ": ", it.second));
 		}
 	}
 
 	if (!keySign.empty()) {
-		ctx->headersData.emplace_back(string::ToStringTraits<Interface>::toString("Authorization: pkey ", keySign));
-		*headers = curl_slist_append(*headers, string::ToStringTraits<Interface>::toString("Authorization: pkey ", keySign).data());
+		ctx->headersData.emplace_back(string::toString<Interface>("Authorization: pkey ", keySign));
+		*headers = curl_slist_append(*headers, string::toString<Interface>("Authorization: pkey ", keySign).data());
 	}
 
 	for (auto &it : ctx->headersData) {

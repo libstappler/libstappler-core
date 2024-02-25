@@ -44,39 +44,7 @@ public:
 	VectorPathRef & setPath(BytesView);
 	VectorPathRef & setPath(StringView);
 
-	VectorPathRef & moveTo(float x, float y);
-	VectorPathRef & moveTo(const Vec2 &point) {
-		return this->moveTo(point.x, point.y);
-	}
-
-	VectorPathRef & lineTo(float x, float y);
-	VectorPathRef & lineTo(const Vec2 &point) {
-		return this->lineTo(point.x, point.y);
-	}
-
-	VectorPathRef & quadTo(float x1, float y1, float x2, float y2);
-	VectorPathRef & quadTo(const Vec2& p1, const Vec2& p2) {
-		return this->quadTo(p1.x, p1.y, p2.x, p2.y);
-	}
-
-	VectorPathRef & cubicTo(float x1, float y1, float x2, float y2, float x3, float y3);
-	VectorPathRef & cubicTo(const Vec2& p1, const Vec2& p2, const Vec2& p3) {
-		return this->cubicTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
-	}
-
-	// use _to_rad user suffix to convert from degrees to radians
-	VectorPathRef & arcTo(float rx, float ry, float rotation, bool largeFlag, bool sweepFlag, float x, float y);
-	VectorPathRef & arcTo(const Vec2 & r, float rotation, bool largeFlag, bool sweepFlag, const Vec2 &target) {
-		return this->arcTo(r.x, r.y, rotation, largeFlag, sweepFlag, target.x, target.y);
-	}
-
-	VectorPathRef & closePath();
-
-	VectorPathRef & addRect(const Rect& rect);
-	VectorPathRef & addRect(const Rect& rect, float radius);
-	VectorPathRef & addOval(const Rect& oval);
-	VectorPathRef & addCircle(float x, float y, float radius);
-	VectorPathRef & addArc(const Rect& oval, float startAngleInRadians, float sweepAngleInRadians);
+	VectorPathRef & openForWriting(const Callback<void(PathWriter &)> &);
 
 	VectorPathRef & setFillColor(const Color4B &color);
 	const Color4B &getFillColor() const;
@@ -113,7 +81,7 @@ public:
 	bool empty() const;
 	bool valid() const;
 
-	operator bool() const;
+	explicit operator bool() const;
 
 	void setPath(Rc<VectorPath> &&);
 	VectorPath *getPath() const;

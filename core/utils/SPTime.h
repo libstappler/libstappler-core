@@ -113,7 +113,7 @@ public:
 
 	void clear();
 
-	operator bool() const { return _value != 0; }
+	constexpr explicit operator bool () const noexcept { return _value != 0; }
 
 	TimeStorage() = default;
 	TimeStorage(const TimeStorage &) = default;

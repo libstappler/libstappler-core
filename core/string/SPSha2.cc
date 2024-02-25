@@ -25,8 +25,7 @@ THE SOFTWARE.
  * Sha2 source code in public domain
  * */
 
-#include "SPSha.h"
-#include "SPCommon.h"
+#include "SPCoreCrypto.h"
 
 namespace STAPPLER_VERSIONIZED sha256 {
 

@@ -26,7 +26,7 @@
 // see original license: https://github.com/adegtyarev/streebog/blob/master/LICENSE
 
 #include "SPByteOrder.h"
-#include "SPGost3411-2012.h"
+#include "SPCoreCrypto.h"
 
 #include "simde/x86/sse2.h"
 

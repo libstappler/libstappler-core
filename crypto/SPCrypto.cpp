@@ -25,7 +25,6 @@ THE SOFTWARE.
 #include "SPString.h"
 #include "SPValid.h"
 #include "SPMemory.h"
-#include "SPGost3411-2012.h"
 
 namespace STAPPLER_VERSIONIZED stappler::crypto {
 

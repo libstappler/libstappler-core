@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "SPHtmlParser.h"
 #include "SPVectorPath.h"
-#include "SPFontStyle.h"
+#include "SPGeometry.h"
 
 namespace STAPPLER_VERSIONIZED stappler::vg {
 
@@ -57,8 +57,11 @@ struct SvgTag : public html::Tag<StringView> {
 	StringView id;
 	StringView ref;
 	VectorPath rpath;
+	PathWriter writer;
 
 	VectorPath &getPath();
+
+	PathWriter &getWriter();
 };
 
 struct SvgReader {

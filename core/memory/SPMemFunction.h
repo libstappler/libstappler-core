@@ -120,10 +120,10 @@ public:
 		return mCallback()->invoke(mBuffer.data(), std::forward<ArgumentTypes>(args) ...);
 	}
 
-	constexpr operator bool () const noexcept { return mCallback != nullptr; }
-
 	constexpr bool operator == (nullptr_t) const noexcept { return mCallback == nullptr; }
 	constexpr bool operator != (nullptr_t) const noexcept { return mCallback != nullptr; }
+
+	constexpr explicit operator bool () const noexcept { return mCallback != nullptr; }
 
 	constexpr bool operator == (const function & other) const noexcept {
 		return mAllocator == other.mAllocator && mCallback == other.mCallback && mBuffer == other.mBuffer;
@@ -286,7 +286,10 @@ public:
 		return mCallback(mFunctor, std::forward<ArgumentTypes>(args) ...);
 	}
 
-	inline operator bool () const noexcept { return mFunctor != nullptr && mCallback != nullptr; }
+	constexpr bool operator==(nullptr_t) const noexcept { return mFunctor == nullptr || mCallback == nullptr; }
+	constexpr bool operator!=(nullptr_t) const noexcept { return mFunctor != nullptr && mCallback != nullptr; }
+
+	constexpr explicit operator bool () const noexcept { return mFunctor != nullptr && mCallback != nullptr; }
 
 private:
 	using FunctionPointer = ReturnType (*) (const void *, ArgumentTypes ...);

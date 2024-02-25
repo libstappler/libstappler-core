@@ -183,7 +183,7 @@ static float svg_readCoordValue(StringView &source, float origin) {
 	return nan();
 }
 
-static void svg_readPointCoords(VectorPath &target, StringView &source) {
+static void svg_readPointCoords(PathWriter &target, StringView &source) {
 	float x, y;
 	while (!source.empty()) {
 		source.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>, StringView::Chars<','>>();
@@ -206,6 +206,13 @@ static void svg_readPointCoords(VectorPath &target, StringView &source) {
 
 VectorPath &SvgTag::getPath() {
 	return rpath;
+}
+
+PathWriter &SvgTag::getWriter() {
+	if (!writer) {
+		writer = rpath.getWriter();
+	}
+	return writer;
 }
 
 SvgReader::SvgReader() { }
@@ -243,28 +250,28 @@ void SvgReader::onEndTag(Parser &p, Tag &tag, bool isClosed) {
 		if (!isnan(tag.mat.m[0]) && !isnan(tag.mat.m[1])
 				&& !isnan(tag.mat.m[2]) && tag.mat.m[2] > 0.0f && !isnan(tag.mat.m[3]) && tag.mat.m[3] > 0.0f
 				&& (isnan(tag.mat.m[4]) || tag.mat.m[4] >= 0.0f) && (isnan(tag.mat.m[5]) || tag.mat.m[5] >= 0.0f)) {
-			tag.getPath().addRect(tag.mat.m[0], tag.mat.m[1], tag.mat.m[2], tag.mat.m[3], tag.mat.m[4], tag.mat.m[5]);
+			tag.getWriter().addRect(tag.mat.m[0], tag.mat.m[1], tag.mat.m[2], tag.mat.m[3], tag.mat.m[4], tag.mat.m[5]);
 		}
 		break;
 	case SvgTag::Circle:
 		if (!isnan(tag.mat.m[0]) && !isnan(tag.mat.m[1]) && !isnan(tag.mat.m[2]) && tag.mat.m[2] >= 0.0f) {
-			tag.getPath().addCircle(tag.mat.m[0], tag.mat.m[1], tag.mat.m[2]);
+			tag.getWriter().addCircle(tag.mat.m[0], tag.mat.m[1], tag.mat.m[2]);
 		}
 		break;
 	case SvgTag::Ellipse:
 		if (!isnan(tag.mat.m[0]) && !isnan(tag.mat.m[1]) && !isnan(tag.mat.m[2]) && !isnan(tag.mat.m[3]) && tag.mat.m[2] >= 0.0f && tag.mat.m[3] >= 0.0f) {
-			tag.getPath().addEllipse(tag.mat.m[0], tag.mat.m[1], tag.mat.m[2], tag.mat.m[3]);
+			tag.getWriter().addEllipse(tag.mat.m[0], tag.mat.m[1], tag.mat.m[2], tag.mat.m[3]);
 		}
 		break;
 	case SvgTag::Line:
 		if (!isnan(tag.mat.m[0]) && !isnan(tag.mat.m[1]) && !isnan(tag.mat.m[2]) && !isnan(tag.mat.m[3])) {
-			tag.getPath().moveTo(tag.mat.m[0], tag.mat.m[1]);
-			tag.getPath().lineTo(tag.mat.m[2], tag.mat.m[3]);
+			tag.getWriter().moveTo(tag.mat.m[0], tag.mat.m[1]);
+			tag.getWriter().lineTo(tag.mat.m[2], tag.mat.m[3]);
 		}
 		break;
 	case SvgTag::Polygon:
-		if (!tag.getPath().empty()) {
-			tag.getPath().closePath();
+		if (!tag.getWriter().empty()) {
+			tag.getWriter().closePath();
 		}
 		break;
 	default:
@@ -459,12 +466,12 @@ void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringRe
 			break;
 		case SvgTag::Polyline:
 			if (name.compare("points")) {
-				svg_readPointCoords(tag.getPath(), value);
+				svg_readPointCoords(tag.getWriter(), value);
 			}
 			break;
 		case SvgTag::Polygon:
 			if (name.compare("points")) {
-				svg_readPointCoords(tag.getPath(), value);
+				svg_readPointCoords(tag.getWriter(), value);
 			}
 			break;
 		case SvgTag::Use:

@@ -90,7 +90,7 @@ public:
 	bool close_rename(StringView);
 
 	bool is_open() const;
-	operator bool() const { return is_open(); }
+	explicit operator bool() const { return is_open(); }
 
 	const char *path() const;
 

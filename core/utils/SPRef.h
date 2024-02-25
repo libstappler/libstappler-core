@@ -164,7 +164,7 @@ public:
 	}
 
 	inline operator Base * () const { return get(); }
-	inline operator bool () const { return _ptr != nullptr; }
+	inline explicit operator bool () const { return _ptr != nullptr; }
 
 	template <typename B, typename std::enable_if<std::is_convertible<Base *, B*>{}>::type* = nullptr>
 	inline operator RcBase<B> () { return RcBase<B>(static_cast<B *>(get())); }

@@ -135,7 +135,7 @@ struct DriverSym : AllocBase {
 
 	~DriverSym() { }
 
-	operator bool () const {
+	explicit operator bool () const {
 		void **begin = (void **)&this->PQconnectdbParams;
 		void **end = (void **)&this->PQsetNoticeProcessor + 1;
 		while (begin != end) {

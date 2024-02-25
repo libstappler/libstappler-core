@@ -33,7 +33,6 @@ THE SOFTWARE.
 #include "SPData.h"
 #include "SPDataWrapper.h"
 #include "SPCrypto.h"
-#include "SPGost3411-2012.h"
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -126,7 +125,7 @@ public:
 
 	static AesToken create(Keys = Keys());
 
-	operator bool () const;
+	explicit operator bool () const;
 
 	String exportToken(StringView iss, const Fingerprint &fpb, TimeInterval maxage, StringView sub) const;
 	Value exportData(const Fingerprint &fpb) const;
@@ -199,7 +198,7 @@ JsonWebToken<Interface> JsonWebToken<Interface>::make(StringView iss, StringView
 
 template <typename Interface>
 JsonWebToken<Interface>::JsonWebToken(Value &&val, TimeInterval maxage) : payload(move(val)) {
-	if (maxage) {
+	if (maxage != nullptr) {
 		payload.setInteger((Time::now() + maxage).toSeconds(), "exp");
 	}
 }
@@ -331,7 +330,7 @@ auto JsonWebToken<Interface>::data() const -> Value {
 
 template <typename Interface>
 auto JsonWebToken<Interface>::exportPlain(data::EncodeFormat format) const -> String {
-	return string::ToStringTraits<Interface>::toString(
+	return string::toString<Interface>(
 			base64url::encode(data::write(header, format)), ".", base64url::encode(data::write(payload, format)));
 }
 
@@ -350,11 +349,11 @@ auto JsonWebToken<Interface>::exportSigned(SigAlg alg, BytesView key,
 		Value hederData(header);
 		hederData.setString(getAlgName(alg), "alg");
 
-		auto data =  string::ToStringTraits<Interface>::toString(
+		auto data =  string::toString<Interface>(
 				base64url::encode<Interface>(data::write<Interface>(hederData, format)),
 				".", base64url::encode<Interface>(data::write<Interface>(payload, format)));
 
-		return string::ToStringTraits<Interface>::toString(
+		return string::toString<Interface>(
 				data, ".", base64url::encode<Interface>(string::Sha256::hmac(data, key)));
 		break;
 	}
@@ -362,11 +361,11 @@ auto JsonWebToken<Interface>::exportSigned(SigAlg alg, BytesView key,
 		Value hederData(header);
 		hederData.setString(getAlgName(alg), "alg");
 
-		auto data =  string::ToStringTraits<Interface>::toString(
+		auto data =  string::toString<Interface>(
 				base64url::encode<Interface>(data::write<Interface>(hederData, format)),
 				".", base64url::encode<Interface>(data::write<Interface>(payload, format)));
 
-		return string::ToStringTraits<Interface>::toString(
+		return string::toString<Interface>(
 				data, ".", base64url::encode<Interface>(string::Sha512::hmac(data, key)));
 		break;
 	}
@@ -390,7 +389,7 @@ auto JsonWebToken<Interface>::exportSigned(SigAlg alg, const crypto::PrivateKey 
 	Value hederData(header);
 	hederData.setString(getAlgName(alg), "alg");
 
-	auto data =  string::ToStringTraits<Interface>::toString(
+	auto data =  string::toString<Interface>(
 			base64url::encode<Interface>(data::write<Interface>(hederData, format)),
 			".", base64url::encode<Interface>(data::write<Interface>(payload, format)));
 
@@ -406,7 +405,7 @@ auto JsonWebToken<Interface>::exportSigned(SigAlg alg, const crypto::PrivateKey 
 	}
 
 	if (pk.sign([&] (BytesView sign) {
-		data = string::ToStringTraits<Interface>::toString(data, ".", base64url::encode<Interface>(sign));
+		data = string::toString<Interface>(data, ".", base64url::encode<Interface>(sign));
 	}, data, algo)) {
 		return data;
 	}

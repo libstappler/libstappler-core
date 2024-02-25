@@ -253,7 +253,7 @@ const Configuration::PreStemCallback &Configuration::getPreStem() const {
 
 void Configuration::stemPhrase(const StringView &str, const StemWordCallback &cb) const {
 	parsePhrase(str, [&, this] (StringView word, ParserToken tok) {
-		if (data->preStem && !isWordPart(tok)) {
+		if (data->preStem != nullptr && !isWordPart(tok)) {
 			auto ret = data->preStem(word, tok);
 			if (!ret.empty()) {
 				for (auto &it : ret) {
@@ -303,12 +303,12 @@ size_t Configuration::makeSearchVector(SearchVector &vec, StringView str, Search
 			++ counter;
 		}
 
-		if (data->preStem && !isWordPart(tok)) {
+		if (data->preStem != nullptr && !isWordPart(tok)) {
 			auto ret = data->preStem(word, tok);
 			if (ret.size() == 1) {
 				auto str = normalizeWord(ret.back());
 				if (auto sPtr = pushWord(str)) {
-					if (cb) { cb(*sPtr, word, tok); }
+					if (cb != nullptr) { cb(*sPtr, word, tok); }
 					return isComplexWord(tok) ? ParserStatus::PreventSubdivide : ParserStatus::Continue;
 				}
 			} else if (!ret.empty()) {
@@ -323,7 +323,7 @@ size_t Configuration::makeSearchVector(SearchVector &vec, StringView str, Search
 		stemWord(word, tok, [&] (StringView w, StringView s, ParserToken tok) {
 			if (!s.empty()) {
 				if (auto sPtr = pushWord(s)) {
-					if (cb) { cb(*sPtr, word, tok); }
+					if (cb != nullptr) { cb(*sPtr, word, tok); }
 				}
 			}
 		});
@@ -716,7 +716,7 @@ String Configuration::makeHeadlines(const HeadlineConfig &cfg, const Callback<vo
 				}
 				stemWord(word, tok, [&] (StringView word, StringView stem, ParserToken tok) {
 					auto it = std::lower_bound(stemList.begin(), stemList.end(), stem);
-					if (it != stemList.end() && string::compareCaseInsensivive(*it, stem) == 0) {
+					if (it != stemList.end() && string::caseCompare_u(*it, stem) == 0) {
 						if (isComplexWord(tok)) {
 							enabledComplex = true;
 						} else {

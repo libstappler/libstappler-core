@@ -25,7 +25,7 @@ THE SOFTWARE.
 #define STAPPLER_CORE_UTILS_SPBUFFER_H_
 
 #include "SPIOBuffer.h"
-#include "SPStringView.h"
+#include "SPStringStream.h"
 #include "SPUnicode.h"
 
 namespace STAPPLER_VERSIONIZED stappler {
@@ -120,6 +120,35 @@ public:
 			_input = _ptr - _buffer.data();
 		}
 		return 1;
+	}
+
+	// toString interface adapter
+	template <typename ... Args, std::enable_if_t<string::detail::IsFastToStringAvailable<Args...>::value> * = nullptr>
+	StringView putStrings(Args && ... args) {
+		auto size = string::detail::getBufferSize(std::forward<Args>(args)...);
+		size_t emptyBytes = capacity() - (_ptr - _buffer.data());
+		if (emptyBytes < size) {
+			overflow(emptyBytes);
+		}
+
+		char *start = (char *)_ptr;
+		auto s = string::detail::writeBuffer(start, std::forward<Args>(args)...);
+		if (s != size) {
+			std::cout << "Invalid buffer size for toString<fast>\n";
+			abort();
+		}
+		_ptr += s;
+		if (_ptr > _buffer.data() + _input) {
+			_input = _ptr - _buffer.data();
+		}
+
+		return StringView(start, s);
+	}
+
+	template <typename ... Args, std::enable_if_t<string::detail::IsFastToStringAvailable<Args...>::value> * = nullptr>
+	StringView resetWithStrings(Args && ... args) {
+		clear();
+		return putStrings(std::forward<Args>(args)...);
 	}
 
 	template <typename Reader = StringView>

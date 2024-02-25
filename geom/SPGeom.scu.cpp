@@ -23,10 +23,10 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 #include "SPColor.cc"
+#include "SPColorCam16.cc"
 #include "SPGeometry.cc"
 #include "SPMat4.cc"
 #include "SPQuaternion.cc"
 #include "SPVec2.cc"
 #include "SPVec3.cc"
 #include "SPVec4.cc"
-#include "SPFontStyle.cc"

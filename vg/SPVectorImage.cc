@@ -62,133 +62,13 @@ VectorPathRef & VectorPathRef::setPath(StringView str) {
 	return *this;
 }
 
-VectorPathRef & VectorPathRef::moveTo(float x, float y) {
+VectorPathRef & VectorPathRef::openForWriting(const Callback<void(PathWriter &)> &cb) {
 	if (_copyOnWrite) {
 		copy();
 	}
 
 	if (_path) {
-		_path->moveTo(x, y);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::lineTo(float x, float y) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->lineTo(x, y);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::quadTo(float x1, float y1, float x2, float y2) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->quadTo(x1, y1, x2, y2);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::cubicTo(float x1, float y1, float x2, float y2, float x3, float y3) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->cubicTo(x1, y1, x2, y2, x2, y3);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::arcTo(float rx, float ry, float rotation, bool largeFlag, bool sweepFlag, float x, float y) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->arcTo(rx, ry, rotation, largeFlag, sweepFlag, x, y);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::closePath() {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->closePath();
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::addRect(const Rect& rect) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->addRect(rect);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::addRect(const Rect& rect, float radius) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->addRect(rect, radius, radius);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::addOval(const Rect& oval) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->addOval(oval);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::addCircle(float x, float y, float radius) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->addCircle(x, y, radius);
-		if (_image) { _image->setDirty(); }
-	}
-	return *this;
-}
-
-VectorPathRef & VectorPathRef::addArc(const Rect& oval, float startAngleInRadians, float sweepAngleInRadians) {
-	if (_copyOnWrite) {
-		copy();
-	}
-
-	if (_path) {
-		_path->addArc(oval, startAngleInRadians, sweepAngleInRadians);
+		_path->openForWriting(cb);
 		if (_image) { _image->setDirty(); }
 	}
 	return *this;

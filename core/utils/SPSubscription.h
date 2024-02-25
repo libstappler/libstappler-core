@@ -137,7 +137,7 @@ public:
 
 	inline operator T * () { return get(); }
 	inline operator T * () const { return get(); }
-	inline operator bool () const { return _subscription; }
+	inline explicit operator bool () const { return _subscription; }
 
 	inline T * operator->() { return get(); }
 	inline const T * operator->() const { return get(); }
