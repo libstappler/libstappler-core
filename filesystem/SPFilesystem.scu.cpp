@@ -25,6 +25,7 @@ THE SOFTWARE.
 
 #include "SPFilepath.cc"
 #include "SPFilesystem.cc"
+#include "SPFilesystemMime.cc"
 #include "SPFilesystemNativePosix.cc"
 #include "SPFilesystemNativeWin32.cc"
 

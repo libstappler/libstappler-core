@@ -33,7 +33,10 @@ namespace STAPPLER_VERSIONIZED stappler::vg {
 using Metric = geom::Metric;
 
 struct SvgTag : public html::Tag<StringView> {
-	SvgTag(StringView &r) : Tag(r) { }
+	SvgTag(StringView &r) : Tag(r) {
+		rpath.setFillColor(Color4B::BLACK);
+		rpath.setStrokeColor(Color4B::BLACK);
+	}
 
 	enum Shape {
 		None,

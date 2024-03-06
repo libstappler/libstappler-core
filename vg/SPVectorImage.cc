@@ -498,6 +498,13 @@ bool VectorImage::init(StringView data) {
 		for (auto &it : _data->getPaths()) {
 			_paths.emplace(it.first, Rc<VectorPathRef>::create(this, it.first, it.second));
 		}
+
+		auto t = Mat4::IDENTITY;
+		t.scale(1, -1, 1);
+		t.translate(0, -reader._height, 0);
+
+		_data->setViewBoxTransform(t);
+
 		return true;
 	} else {
 		log::error("layout::Image", "No paths found in input string");
@@ -516,6 +523,13 @@ bool VectorImage::init(BytesView data) {
 		for (auto &it : _data->getPaths()) {
 			_paths.emplace(it.first, Rc<VectorPathRef>::create(this, it.first, it.second));
 		}
+
+		auto t = Mat4::IDENTITY;
+		t.scale(1, -1, 1);
+		t.translate(0, -reader._height, 0);
+
+		_data->setViewBoxTransform(t);
+
 		return true;
 	} else {
 		log::error("layout::Image", "No paths found in input data");

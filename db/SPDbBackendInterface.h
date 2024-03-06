@@ -241,6 +241,11 @@ public:
 	void writeBind(StringStream &, const Vector<double> &);
 	void writeBind(StringStream &, const Vector<StringView> &);
 
+	void writeBindArray(StringStream &, const Vector<int64_t> &);
+	void writeBindArray(StringStream &, const Vector<double> &);
+	void writeBindArray(StringStream &, const Vector<StringView> &);
+	void writeBindArray(StringStream &, const Value &);
+
 	void clear();
 
 protected:

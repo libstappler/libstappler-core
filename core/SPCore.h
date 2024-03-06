@@ -229,6 +229,7 @@ using iter_reference_t = typename T::reference;
 #include <fstream>
 #include <map>
 #include <set>
+#include <bit>
 
 #include <istream>
 #include <ostream>

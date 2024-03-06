@@ -52,8 +52,8 @@ public:
 
 	void offset(size_t l) { if (l > len) { len = 0; } else { ptr += l; len -= l; } }
 
-	bool compare(const CharType *d, size_t l) const { return (l == len && memcmp(ptr, d, l * sizeof(CharType)) == 0); }
-	bool compare(const CharType *d) const { return compare(d, std::char_traits<CharType>::length(d)); }
+	bool equals(const CharType *d, size_t l) const { return (l == len && memcmp(ptr, d, l * sizeof(CharType)) == 0); }
+	bool equals(const CharType *d) const { return equals(d, std::char_traits<CharType>::length(d)); }
 
 	bool prefix(const CharType *d, size_t l) const { return (l <= len && memcmp(ptr, d, l * sizeof(CharType)) == 0); }
 

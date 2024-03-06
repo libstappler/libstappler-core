@@ -84,6 +84,18 @@ inline bool checkIfComparationIsValid(Type t, Comparation c, Flags f) {
 	switch (t) {
 	case Type::Integer:
 	case Type::Object:
+		switch (c) {
+		case Comparation::Includes:
+		case Comparation::Prefix:
+		case Comparation::Suffix:
+		case Comparation::WordPart:
+			return false;
+			break;
+		default:
+			return true;
+			break;
+		}
+		break;
 	case Type::Float:
 		switch (c) {
 		case Comparation::Includes:
@@ -132,6 +144,8 @@ inline bool checkIfComparationIsValid(Type t, Comparation c, Flags f) {
 		case Comparation::NotEqual:
 		case Comparation::IsNull:
 		case Comparation::IsNotNull:
+		case Comparation::In:
+		case Comparation::NotIn:
 			return true;
 			break;
 		case Comparation::Prefix:

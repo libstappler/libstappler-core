@@ -58,6 +58,16 @@ static inline void Query_writeComparationStr(Query<Binder, Interface> &q, typena
 	stream << ")";
 }
 
+template <typename Binder, typename Interface, typename Value1>
+static inline void Query_writeComparationStrArray(Query<Binder, Interface> &q, typename Interface::StringStreamType &stream,
+		const typename Query<Binder, Interface>::Field &f, const StringView &cmp, Value1 &&v1) {
+	stream << "(";
+	if (!f.source.empty()) { stream << "\"" << f.source << "\"."; }
+	Query_writeFieldName<Interface>(stream, f.name, f.plain) << cmp;
+	q.writeBindArray(forward<Value1>(v1));
+	stream << ")";
+}
+
 template <typename Binder, typename Interface, typename Value1, typename Value2>
 static inline void Query_writeComparationStr(Query<Binder, Interface> &q, typename Interface::StringStreamType &stream,
 		const typename Query<Binder, Interface>::Field &f, const StringView &cmp1, Value1 &&v1, const StringView &cmp2, Value2 &&v2, const StringView &op) {
@@ -132,8 +142,8 @@ inline void Query_writeComparation(Query<Binder, Interface> &q, typename Interfa
 	case Comparation::NotBetweenEquals:	Query_writeComparationStr(q, stream, f, "<",  std::forward<Value1>(v1), ">",  std::forward<Value2>(v2), "OR"); break;
 	case Comparation::Includes:			Query_writeComparationStr(q, stream, f, "@@", std::forward<Value1>(v1)); break;
 	case Comparation::Between:			Query_writeComparationBetween(q, stream, f, std::forward<Value1>(v1), std::forward<Value2>(v2)); break;
-	case Comparation::In:				Query_writeComparationStr(q, stream, f, " IN ", std::forward<Value1>(v1)); break;
-	case Comparation::NotIn:			Query_writeComparationStr(q, stream, f, " NOT IN ", std::forward<Value1>(v1)); break;
+	case Comparation::In:				Query_writeComparationStrArray(q, stream, f, " IN ", std::forward<Value1>(v1)); break;
+	case Comparation::NotIn:			Query_writeComparationStrArray(q, stream, f, " NOT IN ", std::forward<Value1>(v1)); break;
 	case Comparation::IsNull:			Query_writeComparationStrNoArg(q, stream, f, " IS NULL"); break;
 	case Comparation::IsNotNull:		Query_writeComparationStrNoArg(q, stream, f, " IS NOT NULL"); break;
 	case Comparation::Prefix:			Query_writeComparationStr(q, stream, f, " LIKE ", makePatternComparator(cmp, std::forward<Value1>(v1))); break;

@@ -358,7 +358,7 @@ inline const Vec3 operator*(const Mat4& m, const Vec3& v) {
 		Vec3 vec;
 		float w;
 	} s;
-	m.transformVector(v.x, v.y, v.z, 0.0f, &s.vec.x);
+	m.transformVector(v.x, v.y, v.z, 1.0f, &s.vec.x);
 	return s.vec;
 }
 
@@ -368,7 +368,7 @@ inline const Vec2 operator*(const Mat4& m, const Vec2& v) {
 		float z;
 		float w;
 	} s;
-	m.transformVector(v.x, v.y, 0.0f, 0.0f, &s.vec.x);
+	m.transformVector(v.x, v.y, 1.0f, 1.0f, &s.vec.x);
 	return s.vec;
 }
 

@@ -112,16 +112,16 @@ class MultiHandle : public Interface::AllocBaseType {
 public:
 	// handle should be preserved until operation ends
 	// multihandle do not stores handles by itself
-	void addHandle(Handle<Interface> *handle, void *userdata) {
+	void addHandle(Handle<Interface> *handle, RefBase<Interface> *userdata) {
 		pending.emplace_back(pair(handle, userdata));
 	}
 
 	// sync interface:
 	// returns completed handles, so it can be immediately recharged with addHandle
-	bool perform(const Callback<bool(Handle<Interface> *, void *)> &);
+	bool perform(const Callback<bool(Handle<Interface> *, RefBase<Interface> *)> &);
 
 protected:
-	typename Interface::template VectorType<Pair<Handle<Interface> *, void *>> pending;
+	typename Interface::template VectorType<Pair<Handle<Interface> *, Rc<RefBase<Interface>>>> pending;
 };
 
 }

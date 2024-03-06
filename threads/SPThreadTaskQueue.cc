@@ -87,6 +87,7 @@ struct TaskQueue::WorkerContext {
 		std::condition_variable condition;
 	};
 
+	memory::pool_t *pool;
 	TaskQueue *queue;
 	Flags flags;
 
@@ -102,6 +103,8 @@ struct TaskQueue::WorkerContext {
 	std::atomic<size_t> tasksCounter = 0;
 
 	WorkerContext(TaskQueue *queue, Flags flags) : queue(queue), flags(flags) {
+		pool = memory::pool::create(memory::app_root_pool);
+
 		finalized = false;
 
 		if ((flags & Flags::LocalQueue) != Flags::None) {
@@ -119,6 +122,9 @@ struct TaskQueue::WorkerContext {
 		if (conditionAny) { delete conditionAny; }
 		if (conditionGeneral) { delete conditionGeneral; }
 		if (exit) { delete exit; }
+		if (pool) {
+			memory::pool::destroy(pool);
+		}
 	}
 
 	bool isWaitEnabled() const {
@@ -395,12 +401,21 @@ void TaskQueue::update(uint32_t *count) {
 
 	_outputMutex.unlock();
 
+	if (_context) {
+		memory::pool::push(_context->pool);
+	}
+
 	for (auto &task : stack) {
 		task->onComplete();
 	}
 
 	for (auto &task : callbacks) {
 		task.first();
+	}
+
+	if (_context) {
+		memory::pool::pop();
+		memory::pool::clear(_context->pool);
 	}
 
     if (count) {

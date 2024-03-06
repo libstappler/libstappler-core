@@ -24,11 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_STRING_SPBYTEORDER_H_
 #define STAPPLER_CORE_STRING_SPBYTEORDER_H_
 
-#include <bit>
-#include <algorithm>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
+#include "SPCore.h"
 
 #ifndef __CDT_PARSER__
 #ifndef SPINLINE

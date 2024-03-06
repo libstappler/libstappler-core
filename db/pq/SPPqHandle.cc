@@ -337,14 +337,14 @@ void PgQueryInterface::bindIntVector(Binder &, StringStream &query, const Vector
 }
 
 void PgQueryInterface::bindDoubleVector(Binder &b, StringStream &query, const Vector<double> &vec) {
-		query << "(";
-		bool start = true;
-		for (auto &it : vec) {
-			if (start) { start = false; } else { query << ","; }
-			bindDouble(b, query, it);
-		}
-		query << ")";
+	query << "(";
+	bool start = true;
+	for (auto &it : vec) {
+		if (start) { start = false; } else { query << ","; }
+		bindDouble(b, query, it);
 	}
+	query << ")";
+}
 
 void PgQueryInterface::bindStringVector(Binder &b, StringStream &query, const Vector<StringView> &vec) {
 	query << "(";

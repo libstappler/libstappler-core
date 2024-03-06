@@ -222,26 +222,26 @@ void SvgReader::onBeginTag(Parser &p, Tag &tag) {
 		tag.rpath.setParams(p.tagStack.back().rpath.getParams());
 	}
 
-	if (tag.name.compare("rect")) {
+	if (tag.name.equals("rect")) {
 		tag.shape = SvgTag::Rect;
-	} else if (tag.name.compare("circle")) {
+	} else if (tag.name.equals("circle")) {
 		tag.shape = SvgTag::Circle;
-	} else if (tag.name.compare("ellipse")) {
+	} else if (tag.name.equals("ellipse")) {
 		tag.shape = SvgTag::Ellipse;
-	} else if (tag.name.compare("line")) {
+	} else if (tag.name.equals("line")) {
 		tag.shape = SvgTag::Line;
-	} else if (tag.name.compare("polyline")) {
+	} else if (tag.name.equals("polyline")) {
 		tag.shape = SvgTag::Polyline;
-	} else if (tag.name.compare("polygon")) {
+	} else if (tag.name.equals("polygon")) {
 		tag.shape = SvgTag::Polygon;
-	} else if (tag.name.compare("use")) {
+	} else if (tag.name.equals("use")) {
 		tag.shape = SvgTag::Use;
 		tag.mat = Mat4::IDENTITY;
 	}
 }
 
 void SvgReader::onEndTag(Parser &p, Tag &tag, bool isClosed) {
-	if (tag.name.compare("svg")) {
+	if (tag.name.equals("svg")) {
 		_squareLength = sqrtf((_width * _width + _height * _height) / 2.0f);
 	}
 
@@ -280,7 +280,7 @@ void SvgReader::onEndTag(Parser &p, Tag &tag, bool isClosed) {
 }
 
 void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &value) {
-	if (name.compare("opacity")) {
+	if (name.equals("opacity")) {
 		value.readFloat().unwrap([&] (float op) {
 			if (op <= 0.0f) {
 				tag.getPath().setFillOpacity(0);
@@ -293,8 +293,8 @@ void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &val
 				tag.getPath().setStrokeOpacity(255 * op);
 			}
 		});
-	} else if (name.compare("fill")) {
-		if (value.compare("none")) {
+	} else if (name.equals("fill")) {
+		if (value.equals("none")) {
 			tag.getPath().setStyle(tag.getPath().getStyle() & (~DrawStyle::Fill));
 		} else {
 			Color3B color;
@@ -303,13 +303,13 @@ void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &val
 				tag.getPath().setStyle(tag.getPath().getStyle() | DrawStyle::Fill);
 			}
 		}
-	} else if (name.compare("fill-rule")) {
-		if (value.compare("nonzero")) {
+	} else if (name.equals("fill-rule")) {
+		if (value.equals("nonzero")) {
 			tag.getPath().setWindingRule(Winding::NonZero);
-		} else if (value.compare("evenodd")) {
+		} else if (value.equals("evenodd")) {
 			tag.getPath().setWindingRule(Winding::EvenOdd);
 		}
-	} else if (name.compare("fill-opacity")) {
+	} else if (name.equals("fill-opacity")) {
 		value.readFloat().unwrap([&] (float op) {
 			if (op <= 0.0f) {
 				tag.getPath().setFillOpacity(0);
@@ -319,8 +319,8 @@ void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &val
 				tag.getPath().setFillOpacity(255 * op);
 			}
 		});
-	} else if (name.compare("stroke")) {
-		if (value.compare("none")) {
+	} else if (name.equals("stroke")) {
+		if (value.equals("none")) {
 			tag.getPath().setStyle(tag.getPath().getStyle() & (~DrawStyle::Stroke));
 		} else {
 			Color3B color;
@@ -329,7 +329,7 @@ void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &val
 				tag.getPath().setStyle(tag.getPath().getStyle() | DrawStyle::Stroke);
 			}
 		}
-	} else if (name.compare("stroke-opacity")) {
+	} else if (name.equals("stroke-opacity")) {
 		value.readFloat().unwrap([&] (float op) {
 			if (op <= 0.0f) {
 				tag.getPath().setStrokeOpacity(0);
@@ -339,28 +339,28 @@ void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &val
 				tag.getPath().setStrokeOpacity(255 * op);
 			}
 		});
-	} else if (name.compare("stroke-width")) {
+	} else if (name.equals("stroke-width")) {
 		auto val = svg_readCoordValue(value, _squareLength);
 		if (!isnan(val)) {
 			tag.getPath().setStrokeWidth(val);
 		}
-	} else if (name.compare("stroke-linecap")) {
-		if (value.compare("butt")) {
+	} else if (name.equals("stroke-linecap")) {
+		if (value.equals("butt")) {
 			tag.getPath().setLineCup(LineCup::Butt);
-		} else if (value.compare("round")) {
+		} else if (value.equals("round")) {
 			tag.getPath().setLineCup(LineCup::Round);
-		} else if (value.compare("square")) {
+		} else if (value.equals("square")) {
 			tag.getPath().setLineCup(LineCup::Square);
 		}
-	} else if (name.compare("stroke-linejoin")) {
-		if (value.compare("miter")) {
+	} else if (name.equals("stroke-linejoin")) {
+		if (value.equals("miter")) {
 			tag.getPath().setLineJoin(LineJoin::Miter);
-		} else if (value.compare("round")) {
+		} else if (value.equals("round")) {
 			tag.getPath().setLineJoin(LineJoin::Round);
-		} else if (value.compare("bevel")) {
+		} else if (value.equals("bevel")) {
 			tag.getPath().setLineJoin(LineJoin::Bevel);
 		}
-	} else if (name.compare("stroke-miterlimit")) {
+	} else if (name.equals("stroke-miterlimit")) {
 		value.readFloat().unwrap([&] (float op) {
 			if (op > 1.0f) {
 				tag.getPath().setMiterLimit(op);
@@ -386,104 +386,104 @@ void SvgReader::onStyle(Tag &tag, StringReader &value) {
 }
 
 void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringReader &value) {
-	if (tag.name.compare("svg")) {
-		if (name.compare("height")) {
+	if (tag.name.equals("svg")) {
+		if (name.equals("height")) {
 			auto val = svg_readCoordValue(value, 0.0f);
 			if (!isnan(val)) {
 				_height = val;
 			}
-		} else if (name.compare("width")) {
+		} else if (name.equals("width")) {
 			auto val = svg_readCoordValue(value, 0.0f);
 			if (!isnan(val)) {
 				_width = val;
 			}
-		} else if (name.compare("viewbox")) {
+		} else if (name.equals("viewbox")) {
 			_viewBox = svg_readViewBox(value);
 		}
-	} else if (tag.name.compare("path")) {
-		if (name.compare("d")) {
+	} else if (tag.name.equals("path")) {
+		if (name.equals("d")) {
 			tag.getPath().init(value);
 		}
 	}
 
-	if (name.compare("fill") || name.compare("fill-rule") || name.compare("fill-opacity") || name.compare("stroke")
-			|| name.compare("stroke-opacity") || name.compare("stroke-width") || name.compare("stroke-linecap")
-			|| name.compare("stroke-linejoin") || name.compare("stroke-miterlimit") || name.compare("opacity")) {
+	if (name.equals("fill") || name.equals("fill-rule") || name.equals("fill-opacity") || name.equals("stroke")
+			|| name.equals("stroke-opacity") || name.equals("stroke-width") || name.equals("stroke-linecap")
+			|| name.equals("stroke-linejoin") || name.equals("stroke-miterlimit") || name.equals("opacity")) {
 		onStyleParameter(tag, name, value);
-	} else if (name.compare("transform")) {
+	} else if (name.equals("transform")) {
 		tag.getPath().applyTransform(svg_parseTransform(value));
-	} else if (name.compare("style")) {
+	} else if (name.equals("style")) {
 		onStyle(tag, value);
-	} else if (name.compare("id")) {
+	} else if (name.equals("id")) {
 		tag.id = value;
 	} else {
 		switch (tag.shape) {
 		case SvgTag::Rect:
-			if (name.compare("x")) {
+			if (name.equals("x")) {
 				tag.mat.m[0] = svg_readCoordValue(value, _width);
-			} else if (name.compare("y")) {
+			} else if (name.equals("y")) {
 				tag.mat.m[1] = svg_readCoordValue(value, _height);
-			} else if (name.compare("width")) {
+			} else if (name.equals("width")) {
 				tag.mat.m[2] = svg_readCoordValue(value, _width);
-			} else if (name.compare("height")) {
+			} else if (name.equals("height")) {
 				tag.mat.m[3] = svg_readCoordValue(value, _height);
-			} else if (name.compare("rx")) {
+			} else if (name.equals("rx")) {
 				tag.mat.m[4] = svg_readCoordValue(value, _width);
-			} else if (name.compare("ry")) {
+			} else if (name.equals("ry")) {
 				tag.mat.m[5] = svg_readCoordValue(value, _height);
 			}
 			break;
 		case SvgTag::Circle:
-			if (name.compare("cx")) {
+			if (name.equals("cx")) {
 				tag.mat.m[0] = svg_readCoordValue(value, _width);
-			} else if (name.compare("cy")) {
+			} else if (name.equals("cy")) {
 				tag.mat.m[1] = svg_readCoordValue(value, _height);
-			} else if (name.compare("r")) {
+			} else if (name.equals("r")) {
 				tag.mat.m[2] = svg_readCoordValue(value, _width);
 			}
 			break;
 		case SvgTag::Ellipse:
-			if (name.compare("cx")) {
+			if (name.equals("cx")) {
 				tag.mat.m[0] = svg_readCoordValue(value, _width);
-			} else if (name.compare("cy")) {
+			} else if (name.equals("cy")) {
 				tag.mat.m[1] = svg_readCoordValue(value, _height);
-			} else if (name.compare("rx")) {
+			} else if (name.equals("rx")) {
 				tag.mat.m[2] = svg_readCoordValue(value, _width);
-			} else if (name.compare("ry")) {
+			} else if (name.equals("ry")) {
 				tag.mat.m[3] = svg_readCoordValue(value, _height);
 			}
 			break;
 		case SvgTag::Line:
-			if (name.compare("x1")) {
+			if (name.equals("x1")) {
 				tag.mat.m[0] = svg_readCoordValue(value, _width);
-			} else if (name.compare("y1")) {
+			} else if (name.equals("y1")) {
 				tag.mat.m[1] = svg_readCoordValue(value, _height);
-			} else if (name.compare("x2")) {
+			} else if (name.equals("x2")) {
 				tag.mat.m[2] = svg_readCoordValue(value, _width);
-			} else if (name.compare("y2")) {
+			} else if (name.equals("y2")) {
 				tag.mat.m[3] = svg_readCoordValue(value, _height);
 			}
 			break;
 		case SvgTag::Polyline:
-			if (name.compare("points")) {
+			if (name.equals("points")) {
 				svg_readPointCoords(tag.getWriter(), value);
 			}
 			break;
 		case SvgTag::Polygon:
-			if (name.compare("points")) {
+			if (name.equals("points")) {
 				svg_readPointCoords(tag.getWriter(), value);
 			}
 			break;
 		case SvgTag::Use:
-			if (name.compare("x")) {
+			if (name.equals("x")) {
 				tag.mat.translate(svg_readCoordValue(value, _width), 0.0f, 0.0f);
-			} else if (name.compare("y")) {
+			} else if (name.equals("y")) {
 				tag.mat.translate(0.0f, svg_readCoordValue(value, _width), 0.0f);
-			} else if (name.compare("transform")) {
+			} else if (name.equals("transform")) {
 				tag.mat.multiply(svg_parseTransform(value));
-			} else if (name.compare("id")) {
+			} else if (name.equals("id")) {
 				tag.id = value;
-			} else if (name.compare("xlink:href")) {
+			} else if (name.equals("xlink:href")) {
 				tag.ref = value;
 			}
 			break;

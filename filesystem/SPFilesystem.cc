@@ -316,12 +316,17 @@ bool exists(StringView ipath) {
 	}
 }
 
-bool stat(StringView path, Stat &stat) {
-	if (filepath::inAppBundle(path)) {
-		return filesystem::platform::_stat(path, stat);
+bool stat(StringView ipath, Stat &stat) {
+	if (filepath::isAbsolute(ipath)) {
+		return filesystem::native::stat_fn(ipath, stat);
+	} else if (filepath::isBundled(ipath)) {
+		return filesystem::platform::_stat(ipath, stat);
+	} else if (!filepath::isAboveRoot(ipath) && filesystem::platform::_stat(ipath, stat)) {
+		return true;
+	} else {
+		auto path = filepath::absolute<memory::StandartInterface>(ipath);
+		return filesystem::native::stat_fn(path, stat);
 	}
-
-	return filesystem::native::stat_fn(path, stat);
 }
 
 bool remove(StringView ipath, bool recursive, bool withDirs) {

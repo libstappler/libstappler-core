@@ -110,6 +110,17 @@ struct SimpleBinder : public Interface::AllocBaseType {
 			break;
 		}
 	}
+	void writeBindArray(std::ostream &stream, const data::ValueTemplate<Interface> &val) {
+		stream << "(";
+		bool first = true;
+		if (val.isArray()) {
+			for (auto &it : val.asArray()) {
+				if (first) { first = false; } else { stream << ","; }
+				stream << it;
+			}
+		}
+		stream << ")";
+	}
 };
 
 template <typename Binder, typename Interface>
@@ -508,6 +519,9 @@ public:
 	template <typename Value>
 	void writeBind(Value &&);
 
+	template <typename Value>
+	void writeBindArray(Value &&);
+
 	void writeBind(const RawString &);
 	void writeBind(const RawStringView &);
 	void writeBind(const Callback<void(Select &)> &);
@@ -534,6 +548,11 @@ struct BinderTraits {
 	template <typename V>
 	static void writeBind(Query<Binder, Interface> &q, Binder &b, V &&val) {
 		b.writeBind(q.getStream(), forward<V>(val));
+	}
+
+	template <typename V>
+	static void writeBindArray(Query<Binder, Interface> &q, Binder &b, V &&val) {
+		b.writeBindArray(q.getStream(), forward<V>(val));
 	}
 };
 
@@ -575,6 +594,12 @@ template <typename Binder, typename Interface>
 template <typename Value>
 void Query<Binder, Interface>::writeBind(Value &&val) {
 	BinderTraits<Binder, Interface, typename std::remove_reference<Value>::type>::writeBind(*this, this->binder, forward<Value>(val));
+}
+
+template <typename Binder, typename Interface>
+template <typename Value>
+void Query<Binder, Interface>::writeBindArray(Value &&val) {
+	BinderTraits<Binder, Interface, typename std::remove_reference<Value>::type>::writeBindArray(*this, this->binder, forward<Value>(val));
 }
 
 template <typename Binder, typename Interface>

@@ -213,7 +213,7 @@ struct Parser {
 					do {
 						-- it;
 						auto &name = it->getName();
-						if (tag.size() == name.size() && tag.compare(name.data(), name.size())) {
+						if (tag.size() == name.size() && tag.equals(name.data(), name.size())) {
 							// close all tag after <tag>
 							auto nit = tagStack.end();
 							do {

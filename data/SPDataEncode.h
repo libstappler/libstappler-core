@@ -104,7 +104,7 @@ struct EncodeFormat {
 
 uint8_t *getLZ4EncodeState();
 size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t destSize, EncodeFormat::Compression c);
-void writeCompressionMark(uint8_t *data, size_t sourceSize, EncodeFormat::Compression c);
+void writeCompressionMark(uint8_t *data, size_t sourceSize, EncodeFormat::Compression c, uint8_t padding = 0);
 
 template <typename Interface>
 auto compress(const uint8_t *, size_t, EncodeFormat::Compression, bool conditional) -> typename Interface::BytesType;

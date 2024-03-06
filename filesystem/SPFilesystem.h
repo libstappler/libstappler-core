@@ -231,6 +231,8 @@ auto readIntoMemory(StringView ipath, size_t off = 0, size_t size = maxOf<size_t
 	return typename Interface::BytesType();
 }
 
+StringView detectMimeType(StringView path);
+
 }
 
 

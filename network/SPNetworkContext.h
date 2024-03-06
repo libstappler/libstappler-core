@@ -48,7 +48,7 @@ namespace STAPPLER_VERSIONIZED stappler::network {
 
 template <typename Interface>
 struct Context {
-	void *userdata = nullptr;
+	Rc<RefBase<Interface>> userdata;
 	CURL *curl = nullptr;
 	CURLSH *share = nullptr;
 	Handle<Interface> *origHandle = nullptr;

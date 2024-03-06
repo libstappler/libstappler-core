@@ -749,39 +749,39 @@ static bool readHashColor(const StringView &origStr, Color4B &color) {
 }
 
 static bool readNamedColor(const StringView &origStr, Color3B &color) {
-	if (origStr.compare("white")) {
+	if (origStr.equals("white")) {
 		color = Color3B::WHITE;
-	} else if (origStr.compare("silver")) {
+	} else if (origStr.equals("silver")) {
 		color = Color3B(192,192,192);
-	} else if (origStr.compare("gray") || origStr.compare("grey")) {
+	} else if (origStr.equals("gray") || origStr.equals("grey")) {
 		color = Color3B(128,128,128);
-	} else if (origStr.compare("black")) {
+	} else if (origStr.equals("black")) {
 		color = Color3B::BLACK;
-	} else if (origStr.compare("maroon")) {
+	} else if (origStr.equals("maroon")) {
 		color = Color3B(128,0,0);
-	} else if (origStr.compare("red")) {
+	} else if (origStr.equals("red")) {
 		color = Color3B(255,0,0);
-	} else if (origStr.compare("orange")) {
+	} else if (origStr.equals("orange")) {
 		color = Color3B(255,165,0);
-	} else if (origStr.compare("yellow")) {
+	} else if (origStr.equals("yellow")) {
 		color = Color3B(255,255,0);
-	} else if (origStr.compare("olive")) {
+	} else if (origStr.equals("olive")) {
 		color = Color3B(128,128,0);
-	} else if (origStr.compare("lime")) {
+	} else if (origStr.equals("lime")) {
 		color = Color3B(0,255,0);
-	} else if (origStr.compare("green")) {
+	} else if (origStr.equals("green")) {
 		color = Color3B(0,128,0);
-	} else if (origStr.compare("aqua")) {
+	} else if (origStr.equals("aqua")) {
 		color = Color3B(0,255,255);
-	} else if (origStr.compare("blue")) {
+	} else if (origStr.equals("blue")) {
 		color = Color3B(0,0,255);
-	} else if (origStr.compare("navy")) {
+	} else if (origStr.equals("navy")) {
 		color = Color3B(0,0,128);
-	} else if (origStr.compare("teal")) {
+	} else if (origStr.equals("teal")) {
 		color = Color3B(0,128,128);
-	} else if (origStr.compare("fuchsia")) {
+	} else if (origStr.equals("fuchsia")) {
 		color = Color3B(255,0,255);
-	} else if (origStr.compare("purple")) {
+	} else if (origStr.equals("purple")) {
 		color = Color3B(128,0,128);
 	} else if (!table::getColor(origStr, color)) {
 		return false;

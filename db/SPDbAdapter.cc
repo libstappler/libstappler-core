@@ -702,6 +702,46 @@ void Binder::writeBind(StringStream &query, const Vector<StringView> &vec) {
 	_iface->bindStringVector(*this, query, vec);
 }
 
+void Binder::writeBindArray(StringStream &query, const Vector<int64_t> &vec) {
+	_iface->bindIntVector(*this, query, vec);
+}
+
+void Binder::writeBindArray(StringStream &query, const Vector<double> &vec) {
+	_iface->bindDoubleVector(*this, query, vec);
+}
+
+void Binder::writeBindArray(StringStream &query, const Vector<StringView> &vec) {
+	_iface->bindStringVector(*this, query, vec);
+}
+
+void Binder::writeBindArray(StringStream &query, const Value &val) {
+	if (val.isArray()) {
+		if (val.getValue(0).isInteger()) {
+			Vector<int64_t> vec;
+			for (auto &it : val.asArray()) {
+				vec.emplace_back(it.getInteger());
+			}
+			_iface->bindIntVector(*this, query, vec);
+		} else if (val.getValue(0).isDouble()) {
+			Vector<double> vec;
+			for (auto &it : val.asArray()) {
+				vec.emplace_back(it.getDouble());
+			}
+			_iface->bindDoubleVector(*this, query, vec);
+		} else if (val.getValue(0).isString()) {
+			Vector<StringView> vec;
+			for (auto &it : val.asArray()) {
+				vec.emplace_back(it.getString());
+			}
+			_iface->bindStringVector(*this, query, vec);
+		} else {
+			log::error("db::Binder", "Malformed Value for writeBindArray - not an array");
+		}
+	} else {
+		log::error("db::Binder", "Malformed Value for writeBindArray - not an array");
+	}
+}
+
 void Binder::clear() {
 	_iface->clear();
 }

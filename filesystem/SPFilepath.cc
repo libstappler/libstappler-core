@@ -407,19 +407,19 @@ size_t extensionCount(StringView path) {
 
 StringView extensionForContentType(StringView ct) {
 	// TODO: reimplement with list from Serenity
-	if (ct.compare("application/pdf") == 0 || ct.compare("application/x-pdf") == 0) {
+	if (ct.equals("application/pdf") == 0 || ct.equals("application/x-pdf") == 0) {
 		return ".pdf";
-	} else if (ct.compare("image/jpeg") == 0 || ct.compare("image/pjpeg") == 0) {
+	} else if (ct.equals("image/jpeg") == 0 || ct.equals("image/pjpeg") == 0) {
 		return ".jpeg";
-	} else if (ct.compare("image/png") == 0) {
+	} else if (ct.equals("image/png") == 0) {
 		return ".png";
-	} else if (ct.compare("image/gif") == 0) {
+	} else if (ct.equals("image/gif") == 0) {
 		return ".gif";
-	} else if (ct.compare("image/tiff") == 0) {
+	} else if (ct.equals("image/tiff") == 0) {
 		return ".tiff";
-	} else if (ct.compare("application/json") == 0) {
+	} else if (ct.equals("application/json") == 0) {
 		return ".json";
-	} else if (ct.compare("application/zip") == 0) {
+	} else if (ct.equals("application/zip") == 0) {
 		return ".zip";
 	}
 	return StringView();

@@ -75,7 +75,7 @@ bool Handle<memory::StandartInterface>::perform() {
 }
 
 template <>
-bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memory::PoolInterface> *, void *)> &cb) {
+bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memory::PoolInterface> *, RefBase<memory::PoolInterface> *)> &cb) {
 	auto m = curl_multi_init();
 	memory::PoolInterface::MapType<CURL *, Context<memory::PoolInterface>> handles;
 
@@ -158,7 +158,7 @@ bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memo
 }
 
 template <>
-bool MultiHandle<memory::StandartInterface>::perform(const Callback<bool(Handle<memory::StandartInterface> *, void *)> &cb) {
+bool MultiHandle<memory::StandartInterface>::perform(const Callback<bool(Handle<memory::StandartInterface> *, RefBase<memory::StandartInterface> *)> &cb) {
 	auto m = curl_multi_init();
 	memory::StandartInterface::MapType<CURL *, Context<memory::StandartInterface>> handles;
 
