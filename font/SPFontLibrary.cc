@@ -36,6 +36,7 @@ namespace STAPPLER_VERSIONIZED stappler::font {
 #include "SPFont-RobotoMono-Italic-VariableFont_wght.ttf.cc"
 #include "SPFont-RobotoMono-VariableFont_wght.ttf.cc"
 #include "SPFont-RobotoFlex-VariableFont.ttf.cc"
+#include "SPFont-DejaVuSansStappler.cc"
 
 FontFaceObjectHandle::~FontFaceObjectHandle() {
 	if (_onDestroy) {
@@ -69,6 +70,9 @@ BytesView FontLibrary::getFont(DefaultFontName name) {
 	case DefaultFontName::RobotoMono_Italic_VariableFont:
 		return BytesView(reinterpret_cast<const uint8_t *>(s_font_RobotoMono_Italic_VariableFont), sizeof(s_font_RobotoMono_Italic_VariableFont));
 		break;
+	case DefaultFontName::DejaVuSans:
+		return BytesView(reinterpret_cast<const uint8_t *>(s_font_DejaVuSansStappler), sizeof(s_font_DejaVuSansStappler));
+		break;
 	}
 	return BytesView();
 }
@@ -79,6 +83,7 @@ StringView FontLibrary::getFontName(DefaultFontName name) {
 	case DefaultFontName::RobotoFlex_VariableFont: return StringView("RobotoFlex_VariableFont"); break;
 	case DefaultFontName::RobotoMono_VariableFont: return StringView("RobotoMono_VariableFont"); break;
 	case DefaultFontName::RobotoMono_Italic_VariableFont: return StringView("RobotoMono_Italic_VariableFont"); break;
+	case DefaultFontName::DejaVuSans: return StringView("DejaVuSans"); break;
 	}
 	return StringView();
 }
@@ -94,7 +99,8 @@ FontLibrary::~FontLibrary() {
 	}
 }
 
-Rc<FontFaceData> FontLibrary::openFontData(StringView dataName, FontLayoutParameters params, const Callback<FontData()> &dataCallback) {
+Rc<FontFaceData> FontLibrary::openFontData(StringView dataName, FontLayoutParameters params,
+		bool isParamsPreconfigured, const Callback<FontData()> &dataCallback) {
 	std::unique_lock lock(_mutex);
 
 	auto it = _data.find(dataName);
@@ -126,7 +132,10 @@ Rc<FontFaceData> FontLibrary::openFontData(StringView dataName, FontLayoutParame
 
 		auto face = newFontFace(dataObject->getView());
 		lock.unlock();
-		dataObject->inspectVariableFont(params, face);
+		if (!isParamsPreconfigured) {
+			params = dataObject->acquireDefaultParams(face);
+		}
+		dataObject->inspectVariableFont(params, _library, face);
 		lock.lock();
 		doneFontFace(face);
 	}
@@ -147,7 +156,7 @@ Rc<FontFaceObject> FontLibrary::openFontFace(StringView dataName, const FontSpec
 	auto it = _data.find(dataName);
 	if (it != _data.end()) {
 		auto face = newFontFace(it->second->getView());
-		auto ret = Rc<FontFaceObject>::create(faceName, it->second, face, spec, getNextId());
+		auto ret = Rc<FontFaceObject>::create(faceName, it->second, _library, face, spec, getNextId());
 		if (ret) {
 			_faces.emplace(ret->getName(), ret);
 		} else {
@@ -175,7 +184,7 @@ Rc<FontFaceObject> FontLibrary::openFontFace(StringView dataName, const FontSpec
 	if (dataObject) {
 		_data.emplace(dataObject->getName(), dataObject);
 		auto face = newFontFace(dataObject->getView());
-		auto ret = Rc<FontFaceObject>::create(faceName, it->second, face, spec, getNextId());
+		auto ret = Rc<FontFaceObject>::create(faceName, it->second, _library, face, spec, getNextId());
 		if (ret) {
 			_faces.emplace(ret->getName(), ret);
 		} else {
@@ -199,7 +208,7 @@ Rc<FontFaceObject> FontLibrary::openFontFace(const Rc<FontFaceData> &dataObject,
 	} while (0);
 
 	auto face = newFontFace(dataObject->getView());
-	auto ret = Rc<FontFaceObject>::create(faceName, dataObject, face, spec, getNextId());
+	auto ret = Rc<FontFaceObject>::create(faceName, dataObject, _library, face, spec, getNextId());
 	if (ret) {
 		_faces.emplace(ret->getName(), ret);
 	} else {
@@ -291,7 +300,7 @@ Rc<FontFaceObjectHandle> FontLibrary::makeThreadHandle(const Rc<FontFaceObject> 
 	std::unique_lock lock(_mutex);
 	auto face = newFontFace(obj->getData()->getView());
 	lock.unlock();
-	auto target = Rc<FontFaceObject>::create(obj->getName(), obj->getData(), face, obj->getSpec(), obj->getId());
+	auto target = Rc<FontFaceObject>::create(obj->getName(), obj->getData(), _library, face, obj->getSpec(), obj->getId());
 
 	if (it == _threads.end()) {
 		it = _threads.emplace(obj.get(), Map<std::thread::id, Rc<FontFaceObjectHandle>>()).first;

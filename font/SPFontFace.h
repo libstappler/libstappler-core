@@ -42,7 +42,9 @@ public:
 	bool init(StringView, Bytes &&);
 	bool init(StringView, Function<Bytes()> &&);
 
-	void inspectVariableFont(FontLayoutParameters params, FT_Face);
+	FontLayoutParameters acquireDefaultParams(FT_Face);
+
+	void inspectVariableFont(FontLayoutParameters params, FT_Library lib, FT_Face);
 
 	StringView getName() const { return _name; }
 	BytesView getView() const;
@@ -64,7 +66,7 @@ class FontFaceObject : public RefBase<memory::StandartInterface>, public Interfa
 public:
 	virtual ~FontFaceObject();
 
-	bool init(StringView, const Rc<FontFaceData> &, FT_Face, const FontSpecializationVector &, uint16_t);
+	bool init(StringView, const Rc<FontFaceData> &, FT_Library, FT_Face, const FontSpecializationVector &, uint16_t);
 
 	StringView getName() const { return _name; }
 	uint16_t getId() const { return _id; }
@@ -138,6 +140,8 @@ public:
 	Metrics getMetrics() const;
 	CharShape getChar(char16_t, uint16_t &face) const;
 
+	size_t getTexturesCount() const { return _texturesCount; }
+
 	bool addTextureChars(SpanView<CharLayoutData>) const;
 
 	const Vector<Rc<FontFaceObject>> &getFaces() const;
@@ -153,6 +157,8 @@ protected:
 	Vector<Rc<FontFaceData>> _sources;
 	Vector<Rc<FontFaceObject>> _faces;
 	FontLibrary *_library = nullptr;
+
+	mutable size_t _texturesCount = 0;
 	mutable std::shared_mutex _mutex;
 };
 

@@ -338,7 +338,7 @@ Value SqlHandle::create(Worker &worker, const Vector<InputField> &inputFields, V
 }
 
 Value SqlHandle::save(Worker &worker, uint64_t oid, const Value &data, const Vector<InputField> &inputFields, InputRow &inputRow) {
-	if (!data.isDictionary() || data.empty() || inputFields.empty() || inputRow.values.empty()) {
+	if ((!data.isDictionary() && !data.empty()) || inputFields.empty() || inputRow.values.empty()) {
 		return Value();
 	}
 

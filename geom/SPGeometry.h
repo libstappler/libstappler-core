@@ -309,7 +309,7 @@ struct Rect {
 		return (origin == rect.origin) && (size == rect.size);
 	}
 
-	bool containsPoint(const Vec2& point) const;
+	bool containsPoint(const Vec2& point, float padding = 0.0f) const;
 	bool intersectsRect(const Rect& rect) const;
 	bool intersectsCircle(const Vec2& center, float radius) const;
 

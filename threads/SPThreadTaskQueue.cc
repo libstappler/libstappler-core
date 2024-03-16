@@ -99,9 +99,6 @@ struct TaskQueue::WorkerContext {
 
 	std::vector<Worker *> workers;
 
-	std::atomic<size_t> outputCounter = 0;
-	std::atomic<size_t> tasksCounter = 0;
-
 	WorkerContext(TaskQueue *queue, Flags flags) : queue(queue), flags(flags) {
 		pool = memory::pool::create(memory::app_root_pool);
 
@@ -683,9 +680,17 @@ bool Worker::worker() {
 			if (!_local->queue.empty(lock)) {
 				return true;
 			}
+			if (_queue->queue->_tasksCounter.load() > 0) {
+				// some task received after locking
+				return true;
+			}
 			_queue->wait(lock);
 		} else {
 			std::unique_lock<std::mutex> lock(_queue->queue->_inputMutexQueue);
+			if (_queue->queue->_tasksCounter.load() > 0) {
+				// some task received after locking
+				return true;
+			}
 			_queue->wait(lock);
 			return true;
 		}

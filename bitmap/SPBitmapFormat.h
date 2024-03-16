@@ -58,11 +58,11 @@ enum class PixelFormat {
 };
 
 struct ImageInfo {
-	PixelFormat color;
-	AlphaFormat alpha;
-	uint32_t width;
-	uint32_t height;
-	uint32_t stride;
+	PixelFormat color = PixelFormat::Auto;
+	AlphaFormat alpha = AlphaFormat::Premultiplied;
+	uint32_t width = 0;
+	uint32_t height = 0;
+	uint32_t stride = 0;
 
 	const BitmapFormat *format;
 };

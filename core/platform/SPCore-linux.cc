@@ -57,8 +57,8 @@ struct unistring_iface {
 	int (* u16_casecoll) (const uint16_t *s1, size_t n1, const uint16_t *s2, size_t n2, const char *iso639_language, void *nf, int *resultp) = nullptr;
 
 	void load(Dso &handle) {
-		tolower_fn = handle.sym<decltype(tolower_fn)>("uc_toupper");
-		toupper_fn = handle.sym<decltype(toupper_fn)>("uc_tolower");
+		tolower_fn = handle.sym<decltype(tolower_fn)>("uc_tolower");
+		toupper_fn = handle.sym<decltype(toupper_fn)>("uc_toupper");
 		totitle_fn = handle.sym<decltype(totitle_fn)>("uc_totitle");
 
 		uc_locale_language = handle.sym<decltype(uc_locale_language)>("uc_locale_language");

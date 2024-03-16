@@ -52,6 +52,7 @@ public:
 		RobotoFlex_VariableFont,
 		RobotoMono_VariableFont,
 		RobotoMono_Italic_VariableFont,
+		DejaVuSans
 	};
 
 	struct FontData {
@@ -80,7 +81,7 @@ public:
 	FontLibrary();
 	virtual ~FontLibrary();
 
-	Rc<FontFaceData> openFontData(StringView, FontLayoutParameters params, const Callback<FontData()> & = nullptr);
+	Rc<FontFaceData> openFontData(StringView, FontLayoutParameters params, bool isParamsPreconfigured, const Callback<FontData()> & = nullptr);
 
 	Rc<FontFaceObject> openFontFace(StringView, const FontSpecializationVector &, const Callback<FontData()> &);
 	Rc<FontFaceObject> openFontFace(const Rc<FontFaceData> &, const FontSpecializationVector &);

@@ -409,16 +409,8 @@ inline constexpr auto pair(Args&&... args) -> decltype(std::make_pair(forward<Ar
 	return std::make_pair(forward<Args>(args)...);
 }
 
-#if __CDT_PARSER__
-template <typename T, typename V>
-struct Pair {
-	T first;
-	V second;
-};
-#else
 template <typename T, typename V>
 using Pair = std::pair<T, V>;
-#endif
 
 template <typename T>
 using NumericLimits = std::numeric_limits<T>;

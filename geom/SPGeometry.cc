@@ -147,10 +147,10 @@ bool Metric::readStyleValue(StringView r, bool resolutionMetric, bool allowEmpty
 	return false;
 }
 
-bool Rect::containsPoint(const Vec2& point) const {
+bool Rect::containsPoint(const Vec2& point, float padding) const {
 	bool bRet = false;
 
-	if (point.x >= getMinX() && point.x <= getMaxX() && point.y >= getMinY() && point.y <= getMaxY()) {
+	if (point.x >= getMinX() - padding && point.x <= getMaxX() + padding && point.y >= getMinY() - padding && point.y <= getMaxY() + padding) {
 		bRet = true;
 	}
 

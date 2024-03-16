@@ -63,6 +63,11 @@ struct alignas(16) ColorHCT {
 		color = c;
 	}
 
+	ColorHCT(const Color4F& c, float a)
+	: ColorHCT(c) {
+		data.alpha = a;
+	}
+
 	Color4F asColor4F() const { return color; }
 
 	ColorHCT &operator=(const Color4F &c) { *this = ColorHCT(c); return *this; }

@@ -27,6 +27,7 @@
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 #include FT_MULTIPLE_MASTERS_H
+#include FT_TRUETYPE_TABLES_H
 #include FT_SFNT_NAMES_H
 #include FT_ADVANCES_H
 
@@ -87,7 +88,93 @@ bool FontFaceData::init(StringView name, Function<Bytes()> &&cb) {
 	return true;
 }
 
-void FontFaceData::inspectVariableFont(FontLayoutParameters params, FT_Face face) {
+FontLayoutParameters FontFaceData::acquireDefaultParams(FT_Face face) {
+	FontLayoutParameters sfnt;
+
+	if (face->style_flags & FT_STYLE_FLAG_ITALIC) {
+		sfnt.fontStyle = FontStyle::Italic;
+	}
+
+	if (face->style_flags & FT_STYLE_FLAG_BOLD) {
+		sfnt.fontWeight = FontWeight::Bold;
+	}
+
+	auto table = (TT_OS2 *)FT_Get_Sfnt_Table(face, FT_SFNT_OS2);
+	if (table) {
+		sfnt.fontWeight = FontWeight(table->usWeightClass);
+		switch (table->usWidthClass) {
+		case 1: sfnt.fontStretch = FontStretch::UltraCondensed; break;
+		case 2: sfnt.fontStretch = FontStretch::ExtraCondensed; break;
+		case 3: sfnt.fontStretch = FontStretch::Condensed; break;
+		case 4: sfnt.fontStretch = FontStretch::SemiCondensed; break;
+		case 5: sfnt.fontStretch = FontStretch::Normal; break;
+		case 6: sfnt.fontStretch = FontStretch::SemiExpanded; break;
+		case 7: sfnt.fontStretch = FontStretch::Expanded; break;
+		case 8: sfnt.fontStretch = FontStretch::ExtraExpanded; break;
+		case 9: sfnt.fontStretch = FontStretch::UltraExpanded; break;
+		default: break;
+		}
+
+		if (table->panose[0] == 2) {
+			// only for Latin Text
+			FontLayoutParameters panose;
+			switch (table->panose[2]) {
+			case 2: panose.fontWeight = FontWeight::ExtraLight; break;
+			case 3: panose.fontWeight = FontWeight::Light; break;
+			case 4: panose.fontWeight = FontWeight::Thin; break;
+			case 5: panose.fontWeight = FontWeight::Normal; break;
+			case 6: panose.fontWeight = FontWeight::Medium; break;
+			case 7: panose.fontWeight = FontWeight::SemiBold; break;
+			case 8: panose.fontWeight = FontWeight::Bold; break;
+			case 9: panose.fontWeight = FontWeight::ExtraBold; break;
+			case 10: panose.fontWeight = FontWeight::Heavy; break;
+			case 11: panose.fontWeight = FontWeight::Black; break;
+			default: break;
+			}
+
+			switch (table->panose[3]) {
+			case 2: panose.fontStretch = FontStretch::Normal; break;
+			case 5: panose.fontStretch = FontStretch::Expanded; break;
+			case 6: panose.fontStretch = FontStretch::Condensed; break;
+			case 7: panose.fontStretch = FontStretch::ExtraExpanded; break;
+			case 8: panose.fontStretch = FontStretch::ExtraCondensed; break;
+			default: break;
+			}
+
+			switch (table->panose[7]) {
+			case 5: panose.fontStyle = FontStyle::Oblique; break;
+			case 9: panose.fontStyle = FontStyle::Oblique; break;
+			case 10: panose.fontStyle = FontStyle::Oblique; break;
+			case 11: panose.fontStyle = FontStyle::Oblique; break;
+			case 12: panose.fontStyle = FontStyle::Oblique; break;
+			case 13: panose.fontStyle = FontStyle::Oblique; break;
+			case 14: panose.fontStyle = FontStyle::Oblique; break;
+			default: break;
+			}
+
+			if (panose.fontWeight != sfnt.fontWeight) {
+				if (panose.fontWeight != FontWeight::Normal) {
+					sfnt.fontWeight = panose.fontWeight;
+				}
+			}
+
+			if (panose.fontStretch != sfnt.fontStretch) {
+				if (panose.fontStretch != FontStretch::Normal) {
+					sfnt.fontStretch = panose.fontStretch;
+				}
+			}
+
+			if (sfnt.fontStyle == FontStyle::Normal && panose.fontStyle != sfnt.fontStyle) {
+				sfnt.fontStyle = panose.fontStyle;
+			}
+		}
+	} else {
+		log::error("font::FontFaceData", "No preconfigured style or OS/2 table for font: ", _name);
+	}
+	return sfnt;
+}
+
+void FontFaceData::inspectVariableFont(FontLayoutParameters params, FT_Library lib, FT_Face face) {
 	FT_MM_Var *masters = nullptr;
 	FT_Get_MM_Var(face, &masters);
 
@@ -130,6 +217,8 @@ void FontFaceData::inspectVariableFont(FontLayoutParameters params, FT_Face face
 					<< (masters->axis[i].minimum >> 16) << " - " << (masters->axis[i].maximum >> 16)
 					<< " def: "<< (masters->axis[i].def >> 16) << "\n"; */
 		}
+
+		FT_Done_MM_Var(lib, masters);
 	}
 
 	_params = params;
@@ -145,7 +234,7 @@ FontSpecializationVector FontFaceData::getSpecialization(const FontSpecializatio
 
 FontFaceObject::~FontFaceObject() { }
 
-bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Face face, const FontSpecializationVector &spec, uint16_t id) {
+bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Library lib, FT_Face face, const FontSpecializationVector &spec, uint16_t id) {
 	auto err = FT_Select_Charmap(face, FT_ENCODING_UNICODE);
 	if (err != FT_Err_Ok) {
 		return false;
@@ -200,6 +289,7 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Face
 			}
 
 			FT_Set_Var_Design_Coordinates(face, vector.size(), vector.data());
+			FT_Done_MM_Var(lib, masters);
 		}
 	}
 
@@ -591,6 +681,7 @@ bool FontFaceSet::addTextureChars(SpanView<CharLayoutData> chars) const {
 		for (auto &f : _faces) {
 			if (f && f->getId() == it.face) {
 				if (f->addRequiredChar(it.charID)) {
+					++ _texturesCount;
 					ret = true;
 					break;
 				}
