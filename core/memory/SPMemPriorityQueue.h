@@ -226,6 +226,19 @@ public:
 
 	// pop node, move value into temporary, then free node, then call callback
 	// optimized for long callbacks and simple move constructor
+	bool pop_prefix(std::unique_lock<LockInterface> &lock, const callback<void(PriorityType, Value &&)> &cb) {
+		if (auto node = popNode(lock)) {
+			auto p = node->priority;
+			Value * val = (Value *)(node->storage.buffer);
+			Value tmp(move(*val));
+			val->~Value();
+			freeNode(node);
+			cb(p, move(tmp));
+			return true;
+		}
+		return false;
+	}
+
 	bool pop_prefix(const callback<void(PriorityType, Value &&)> &cb) {
 		if (auto node = popNode()) {
 			auto p = node->priority;
@@ -241,6 +254,17 @@ public:
 
 	// pop node, run callback on value, directly stored in node, then free node
 	// no additional move, but with extra cost for detached node, that blocked until callback ends
+	bool pop_direct(std::unique_lock<LockInterface> &lock, const callback<void(PriorityType, Value &&)> &cb) {
+		if (auto node = popNode(lock)) {
+			Value * val = (Value *)(node->storage.buffer);
+			cb(node->priority, move(*val));
+			val->~Value();
+			freeNode(node);
+			return true;
+		}
+		return false;
+	}
+
 	bool pop_direct(const callback<void(PriorityType, Value &&)> &cb) {
 		if (auto node = popNode()) {
 			Value * val = (Value *)(node->storage.buffer);
@@ -292,8 +316,12 @@ protected:
 	// - free (blocking)
 
 	Node *popNode() {
-		Node *ret = nullptr;
 		std::unique_lock<LockInterface> lock(_queue.lock);
+		return popNode(lock);
+	}
+
+	Node *popNode(std::unique_lock<LockInterface> &lock) {
+		Node *ret = nullptr;
 		if (_queue.first) {
 			ret = _queue.first;
 			if (_queue.first == _queue.last) {

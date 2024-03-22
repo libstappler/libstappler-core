@@ -108,7 +108,7 @@ struct ArchiveHierarchy {
 				auto iit = files.begin();
 				while (iit != files.end()) {
 					if (!originPath.empty()) {
-						cb(string::ToStringTraits<Interface>::toString(originPath, "/", iit->name), true);
+						cb(string::toString<Interface>(originPath, "/", iit->name), true);
 					} else {
 						cb(iit->name, true);
 					}
@@ -146,7 +146,7 @@ struct ArchiveHierarchy {
 				auto iit = files.begin();
 				while (iit != files.end()) {
 					if (!originPath.empty()) {
-						if (!cb(string::ToStringTraits<Interface>::toString(originPath, "/", iit->name), true)) {
+						if (!cb(string::toString<Interface>(originPath, "/", iit->name), true)) {
 							return false;
 						}
 					} else {
@@ -384,7 +384,7 @@ struct PathSource {
 
 		auto path = _getPlatformPath(ipath);
 		if (assetsRoot) {
-			return _archive.exists(string::ToStringTraits<Interface>::toString("assets/", path));
+			return _archive.exists(string::toString<Interface>("assets/", path));
 		} else {
 			return _archive.exists(path);
 		}
@@ -397,7 +397,7 @@ struct PathSource {
 
 		auto path = _getPlatformPath(ipath);
 		if (assetsRoot) {
-			return _archive.stat(string::ToStringTraits<Interface>::toString("assets/", path), stat);
+			return _archive.stat(string::toString<Interface>("assets/", path), stat);
 		} else {
 			return _archive.stat(path, stat);
 		}
@@ -423,7 +423,7 @@ struct PathSource {
 	void ftw(StringView ipath, const Callback<void(StringView path, bool isFile)> &cb, int depth, bool dirFirst, bool assetsRoot) {
 		auto path = _getPlatformPath(ipath);
 		if (assetsRoot) {
-			_archive.ftw(string::ToStringTraits<Interface>::toString("assets/", path), cb, depth, dirFirst);
+			_archive.ftw(string::toString<Interface>("assets/", path), cb, depth, dirFirst);
 		} else {
 			_archive.ftw(path, cb, depth, dirFirst);
 		}
@@ -432,7 +432,7 @@ struct PathSource {
 	bool ftw_b(StringView ipath, const Callback<bool(StringView path, bool isFile)> &cb, int depth, bool dirFirst, bool assetsRoot) {
 		auto path = _getPlatformPath(ipath);
 		if (assetsRoot) {
-			return _archive.ftw_b(string::ToStringTraits<Interface>::toString("assets/", path), cb, depth, dirFirst);
+			return _archive.ftw_b(string::toString<Interface>("assets/", path), cb, depth, dirFirst);
 		} else {
 			return _archive.ftw_b(path, cb, depth, dirFirst);
 		}

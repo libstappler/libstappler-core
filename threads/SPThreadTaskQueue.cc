@@ -418,6 +418,10 @@ void TaskQueue::update(uint32_t *count) {
     if (count) {
     	*count += stack.size() + callbacks.size();
     }
+
+    if (_context && _tasksCounter.load() > 0) {
+    	_context->notifyAll();
+    }
 }
 
 void TaskQueue::onMainThread(Rc<Task> &&task) {

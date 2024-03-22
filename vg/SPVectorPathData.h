@@ -76,7 +76,7 @@ struct PathWriter;
 template <typename Interface>
 struct PathData : Interface::AllocBaseType {
 	template <typename Value>
-	using Vector = typename Interface::VectorType<Value>;
+	using Vector = typename Interface::template VectorType<Value>;
 
 	Vector<CommandData> points;
 	Vector<Command> commands;

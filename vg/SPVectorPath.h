@@ -58,6 +58,9 @@ public:
 	bool init(FilePath &&);
 	bool init(BytesView);
 
+	bool init(const PathData<memory::StandartInterface> &);
+	bool init(const PathData<memory::PoolInterface> &);
+
 	VectorPath & addPath(const VectorPath &);
 	VectorPath & addPath(BytesView);
 	VectorPath & addPath(StringView);

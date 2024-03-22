@@ -97,19 +97,19 @@ struct InterfaceObject {
 	using Bytes = typename Interface::BytesType;
 
 	template <typename Value>
-	using BasicString = typename Interface::BasicStringType<Value>;
+	using BasicString = typename Interface::template BasicStringType<Value>;
 
 	template <typename Value>
-	using Vector = typename Interface::VectorType<Value>;
+	using Vector = typename Interface::template VectorType<Value>;
 
 	template <typename K, typename V, typename Compare = std::less<>>
-	using Map = typename Interface::MapType<K, V, Compare>;
+	using Map = typename Interface::template MapType<K, V, Compare>;
 
 	template <typename T, typename Compare = std::less<>>
-	using Set = typename Interface::SetType<T, Compare>;
+	using Set = typename Interface::template SetType<T, Compare>;
 
 	template <typename T>
-	using Function = typename Interface::FunctionType<T>;
+	using Function = typename Interface::template FunctionType<T>;
 
 	using StringStream = typename Interface::StringStreamType;
 };

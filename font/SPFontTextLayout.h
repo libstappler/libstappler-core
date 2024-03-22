@@ -107,7 +107,7 @@ struct RangeLineIterator {
 template <typename Interface>
 struct TextLayoutData : public Interface::AllocBaseType {
 	template <typename Value>
-	using Vector = typename Interface::VectorType<Value>;
+	using Vector = typename Interface::template VectorType<Value>;
 
 	Vector< RangeLayoutData > ranges;
 	Vector< CharLayoutData > chars;

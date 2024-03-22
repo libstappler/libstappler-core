@@ -55,6 +55,19 @@ bool VectorPath::init(BytesView data) {
 	return _data.getWriter().readFromBytes(data);
 }
 
+bool VectorPath::init(const PathData<memory::StandartInterface> &data) {
+	_data.clear();
+	_data = data;
+	return true;
+}
+
+bool VectorPath::init(const PathData<memory::PoolInterface> &data) {
+	_data.clear();
+	_data.params = data.params;
+	_data.points = makeSpanView(data.points).vec<Interface>();
+	_data.commands = makeSpanView(data.commands).vec<Interface>();
+	return true;
+}
 
 VectorPath::VectorPath(const VectorPath &path) : _data(path._data) { }
 

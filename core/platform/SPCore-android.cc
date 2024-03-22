@@ -30,15 +30,22 @@
 #include <unicode/urename.h>
 #include <unicode/ustring.h>
 
+#include <sys/random.h>
+
 #include <jni.h>
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
+
+	static std::mutex s_collatorMutex;
 
 struct IcuJave {
 	bool attached = false;
 	JavaVM *vm = nullptr;
 	JNIEnv *env = nullptr;
-	jclass cl = nullptr;
+	jclass charClass = nullptr;
+
+	jclass collatorClass = nullptr;
+
 	jmethodID toLowerChar = nullptr;
 	jmethodID toUpperChar = nullptr;
 	jmethodID toTitleChar = nullptr;
@@ -47,9 +54,21 @@ struct IcuJave {
 	jmethodID toUpperString = nullptr;
 	jmethodID toTitleString = nullptr;
 
+	jmethodID getInstance = nullptr;
+	jmethodID setStrength = nullptr;
+	jmethodID _compare = nullptr;
+
+	int PRIMARY;
+	int SECONDARY;
+	int TERTIARY;
+	int QUATERNARY;
+
 	~IcuJave() {
-		if (env && cl) {
-			env->DeleteGlobalRef(cl);
+		if (env && collatorClass) {
+			env->DeleteGlobalRef(collatorClass);
+		}
+		if (env && charClass) {
+			env->DeleteGlobalRef(charClass);
 		}
 		if (attached) {
 			vm->DetachCurrentThread();
@@ -62,14 +81,30 @@ struct IcuJave {
 		attached = a;
 
 		auto tmp = env->FindClass("android/icu/lang/UCharacter");
-		cl = static_cast<jclass>(env->NewGlobalRef(static_cast<jobject>(tmp)));
-		toLowerChar = env->GetStaticMethodID(cl, "toLowerCase", "(I)I");
-		toUpperChar = env->GetStaticMethodID(cl, "toUpperCase", "(I)I");
-		toTitleChar = env->GetStaticMethodID(cl, "toTitleCase", "(I)I");
+		charClass = static_cast<jclass>(env->NewGlobalRef(static_cast<jobject>(tmp)));
+		toLowerChar = env->GetStaticMethodID(charClass, "toLowerCase", "(I)I");
+		toUpperChar = env->GetStaticMethodID(charClass, "toUpperCase", "(I)I");
+		toTitleChar = env->GetStaticMethodID(charClass, "toTitleCase", "(I)I");
 
-		toLowerString = env->GetStaticMethodID(cl, "toLowerCase", "(Ljava/lang/String;)Ljava/lang/String;");
-		toUpperString = env->GetStaticMethodID(cl, "toUpperCase", "(Ljava/lang/String;)Ljava/lang/String;");
-		toTitleString = env->GetStaticMethodID(cl, "toTitleCase", "(Ljava/lang/String;Landroid/icu/text/BreakIterator;)Ljava/lang/String;");
+		toLowerString = env->GetStaticMethodID(charClass, "toLowerCase", "(Ljava/lang/String;)Ljava/lang/String;");
+		toUpperString = env->GetStaticMethodID(charClass, "toUpperCase", "(Ljava/lang/String;)Ljava/lang/String;");
+		toTitleString = env->GetStaticMethodID(charClass, "toTitleCase", "(Ljava/lang/String;Landroid/icu/text/BreakIterator;)Ljava/lang/String;");
+
+		jclass tmpCollator = env->FindClass("android/icu/text/Collator");
+		collatorClass = static_cast<jclass>(env->NewGlobalRef(static_cast<jobject>(tmpCollator)));
+		getInstance = env->GetStaticMethodID(tmpCollator, "getInstance", "()Landroid/icu/text/Collator;");
+		setStrength = env->GetMethodID(tmpCollator, "setStrength", "(I)V");
+		_compare = env->GetMethodID(tmpCollator, "compare", "(Ljava/lang/String;Ljava/lang/String;)I");
+
+		auto pField = env->GetStaticFieldID(tmpCollator, "PRIMARY", "I");
+		auto sField = env->GetStaticFieldID(tmpCollator, "SECONDARY", "I");
+		auto tField = env->GetStaticFieldID(tmpCollator, "TERTIARY", "I");
+		auto qField = env->GetStaticFieldID(tmpCollator, "QUATERNARY", "I");
+
+		PRIMARY = env->GetStaticIntField(tmpCollator, pField);
+		SECONDARY = env->GetStaticIntField(tmpCollator, sField);
+		TERTIARY = env->GetStaticIntField(tmpCollator, tField);
+		QUATERNARY = env->GetStaticIntField(tmpCollator, qField);
 	}
 
 	char32_t tolower(char32_t c) {
@@ -77,7 +112,7 @@ struct IcuJave {
 			return c;
 		}
 
-		return char32_t(env->CallStaticIntMethod(cl, toLowerChar, jint(c)));
+		return char32_t(env->CallStaticIntMethod(charClass, toLowerChar, jint(c)));
 	}
 
 	char32_t toupper(char32_t c) {
@@ -85,7 +120,7 @@ struct IcuJave {
 			return c;
 		}
 
-		return char32_t(env->CallStaticIntMethod(cl, toUpperChar, jint(c)));
+		return char32_t(env->CallStaticIntMethod(charClass, toUpperChar, jint(c)));
 	}
 
 	char32_t totitle(char32_t c) {
@@ -93,7 +128,7 @@ struct IcuJave {
 			return c;
 		}
 
-		return char32_t(env->CallStaticIntMethod(cl, toTitleChar, jint(c)));
+		return char32_t(env->CallStaticIntMethod(charClass, toTitleChar, jint(c)));
 	}
 
 	template <typename Interface>
@@ -103,7 +138,7 @@ struct IcuJave {
 		}
 
 		auto str = env->NewString((jchar *)data.data(), data.size());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(cl, toLowerString, str));
+		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toLowerString, str));
 		auto chars = env->GetStringChars(ret, nullptr);
 
 		auto result = typename Interface::WideStringType((char16_t *)chars, env->GetStringLength(ret));
@@ -122,7 +157,7 @@ struct IcuJave {
 
 		auto str = data.terminated() ? env->NewStringUTF(data.data())
 				: env->NewStringUTF(data.str<memory::StandartInterface>().data());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(cl, toLowerString, str));
+		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toLowerString, str));
 		auto chars = (char *)env->GetStringUTFChars(ret, nullptr);
 
 		auto result = typename Interface::StringType(chars, env->GetStringUTFLength(ret));
@@ -140,7 +175,7 @@ struct IcuJave {
 		}
 
 		auto str = env->NewString((jchar *)data.data(), data.size());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(cl, toUpperString, str));
+		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toUpperString, str));
 		auto chars = env->GetStringChars(ret, nullptr);
 
 		auto result = typename Interface::WideStringType((char16_t *)chars, env->GetStringLength(ret));
@@ -159,7 +194,7 @@ struct IcuJave {
 
 		auto str = data.terminated() ? env->NewStringUTF(data.data())
 									 : env->NewStringUTF(data.str<memory::StandartInterface>().data());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(cl, toUpperString, str));
+		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toUpperString, str));
 		auto chars = (char *)env->GetStringUTFChars(ret, nullptr);
 
 		auto result = typename Interface::StringType(chars, env->GetStringUTFLength(ret));
@@ -177,7 +212,7 @@ struct IcuJave {
 		}
 
 		auto str = env->NewString((jchar *)data.data(), data.size());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(cl, toTitleString, str, nullptr));
+		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toTitleString, str, nullptr));
 		auto chars = env->GetStringChars(ret, nullptr);
 
 		auto result = typename Interface::WideStringType((char16_t *)chars, env->GetStringLength(ret));
@@ -196,7 +231,7 @@ struct IcuJave {
 
 		auto str = data.terminated() ? env->NewStringUTF(data.data())
 									 : env->NewStringUTF(data.str<memory::StandartInterface>().data());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(cl, toTitleString, str, nullptr));
+		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toTitleString, str, nullptr));
 		auto chars = (char *)env->GetStringUTFChars(ret, nullptr);
 
 		auto result = typename Interface::StringType(chars, env->GetStringUTFLength(ret));
@@ -205,6 +240,54 @@ struct IcuJave {
 		env->DeleteLocalRef(ret);
 		env->DeleteLocalRef(str);
 		return result;
+	}
+
+	int compare(StringView l, StringView r, bool caseInsensetive) {
+		if (!env) {
+			return string::compare_c(l, r);
+		}
+
+		int ret = 0;
+		auto strL = l.terminated() ? env->NewStringUTF(l.data())
+								   : env->NewStringUTF(l.str<memory::StandartInterface>().data());
+		auto strR = r.terminated() ? env->NewStringUTF(r.data())
+								   : env->NewStringUTF(r.str<memory::StandartInterface>().data());
+
+		auto coll = env->CallStaticObjectMethod(collatorClass, getInstance);
+		if (coll) {
+			env->CallVoidMethod(coll, setStrength, caseInsensetive ? SECONDARY : TERTIARY);
+			ret = env->CallIntMethod(coll, _compare, strL, strR);
+			env->DeleteLocalRef(coll);
+		} else {
+			ret = string::compare_c(l, r);
+		}
+
+		env->DeleteLocalRef(strL);
+		env->DeleteLocalRef(strR);
+		return ret;
+	}
+
+	int compare(WideStringView l, WideStringView r, bool caseInsensetive) {
+		if (!env) {
+			return string::compare_c(l, r);
+		}
+
+		int ret = 0;
+		auto strL = env->NewString((jchar *)l.data(), l.size());
+		auto strR = env->NewString((jchar *)r.data(), r.size());
+
+		auto coll = env->CallStaticObjectMethod(collatorClass, getInstance);
+		if (coll) {
+			env->CallVoidMethod(coll, setStrength, caseInsensetive ? SECONDARY : TERTIARY);
+			ret = env->CallIntMethod(coll, _compare, strL, strR);
+			env->DeleteLocalRef(coll);
+		} else {
+			ret = string::compare_c(l, r);
+		}
+
+		env->DeleteLocalRef(strL);
+		env->DeleteLocalRef(strR);
+		return ret;
 	}
 };
 
@@ -286,6 +369,10 @@ namespace i18n {
 	}
 #endif
 
+	using cmp_fn = int32_t (*) (const char16_t *s1, int32_t length1, const char16_t *s2, int32_t length2, int8_t codePointOrder);
+	using case_cmp_fn =  int32_t (*) ( const char16_t *s1, int32_t length1, const char16_t *s2, int32_t length2,
+			uint32_t options, int *pErrorCode);
+
 	static JavaVM *s_vm = nullptr;
 	static int32_t s_sdk = 0;
 	static thread_local IcuJave tl_interface;
@@ -303,6 +390,9 @@ namespace i18n {
 
 	static int32_t (*strToTitle_fn)(char16_t *dest, int32_t destCapacity, const char16_t *src, int32_t srcLength,
 			void *iter, const char *locale, int *pErrorCode) = nullptr;
+
+	static cmp_fn u_strCompare = nullptr;
+	static case_cmp_fn u_strCaseCompare = nullptr;
 
 	static JNIEnv *getEnv() {
 		void *ret = nullptr;
@@ -339,6 +429,9 @@ namespace i18n {
 			strToLower_fn = s_icu.sym<decltype(strToLower_fn)>("u_strToLower");
 			strToUpper_fn = s_icu.sym<decltype(strToUpper_fn)>("u_strToUpper");
 			strToTitle_fn = s_icu.sym<decltype(strToTitle_fn)>("u_strToTitle");
+
+			u_strCompare = s_icu.sym<decltype(u_strCompare)>("u_strCompare");
+			u_strCaseCompare = s_icu.sym<decltype(u_strCaseCompare)>("u_strCaseCompare");
 		}
 	}
 
@@ -520,6 +613,44 @@ auto totitle<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 template <>
 auto totitle<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
 	return i18n::totitle<memory::StandartInterface>(data);
+}
+
+int compare_u(StringView l, StringView r) {
+	if (i18n::u_strCompare) {
+		auto lStr = string::toUtf16<memory::StandartInterface>(l);
+		auto rStr = string::toUtf16<memory::StandartInterface>(r);
+		return i18n::u_strCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(), 1);
+	}
+	return i18n::getInerface()->compare(l, r, false);
+}
+
+int compare_u(WideStringView l, WideStringView r) {
+	if (i18n::u_strCompare) {
+		return i18n::u_strCompare(l.data(), l.size(), r.data(), r.size(), 1);
+	}
+	return i18n::getInerface()->compare(l, r, false);
+}
+int caseCompare_u(StringView l, StringView r) {
+	if (i18n::u_strCaseCompare) {
+		int status = 0;
+		auto lStr = string::toUtf16<memory::StandartInterface>(l);
+		auto rStr = string::toUtf16<memory::StandartInterface>(r);
+		return i18n::u_strCaseCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(), U_COMPARE_CODE_POINT_ORDER, &status);
+	}
+	return i18n::getInerface()->compare(l, r, true);
+}
+
+int caseCompare_u(WideStringView l, WideStringView r) {
+	if (i18n::u_strCaseCompare) {
+		int status = 0;
+		return i18n::u_strCaseCompare(l.data(), l.size(), r.data(), r.size(), U_COMPARE_CODE_POINT_ORDER, &status);
+	}
+	return i18n::getInerface()->compare(l, r, true);
+}
+
+size_t makeRandomBytes(uint8_t * buf, size_t count) {
+	::arc4random_buf(buf, count);
+	return count;
 }
 
 }

@@ -75,6 +75,9 @@ struct Metric {
 	Metric() = default;
 
 	bool readStyleValue(StringView r, bool resolutionMetric, bool allowEmptyMetric);
+
+	inline bool operator == (const Metric &other) const = default;
+	inline bool operator != (const Metric &other) const = default;
 };
 
 struct Size2 {

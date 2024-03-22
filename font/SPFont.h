@@ -156,10 +156,11 @@ struct FontCharStorage {
 
 	const Value *get(char16_t ch) const {
 		auto cellId = ch / 256;
-		if (!cells[cellId]) {
+		auto cell = cells[cellId];
+		if (!cell) {
 			return nullptr;
 		}
-		return &(cells[cellId]->at(ch % 256));
+		return &(cell->at(ch % 256));
 	}
 
 	template <typename Callback>

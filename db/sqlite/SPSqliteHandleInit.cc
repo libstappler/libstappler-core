@@ -806,7 +806,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				table.cols.emplace("word", ColRec(ColRec::Type::Int8));
 
 				table.indexes.emplace(toString(name, "_idx_word"), "word");
-				tables.emplace(StringView(name).pdup(), std::move(table)).first;
+				tables.emplace(StringView(name).pdup(), std::move(table));
 
 				do {
 					TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
