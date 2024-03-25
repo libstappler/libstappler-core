@@ -120,7 +120,7 @@ using iter_reference_t = typename T::reference;
 #endif
 #endif
 
-#if __LCC__ && __LCC__ <= 126
+#if __LCC__ && __LCC__ <= 127
 #define SP_HAVE_THREE_WAY_COMPARISON 0
 #elif __cpp_impl_three_way_comparison >= 201711
 #define SP_HAVE_THREE_WAY_COMPARISON 1
@@ -136,7 +136,7 @@ using iter_reference_t = typename T::reference;
 #define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type) constexpr auto operator<=>(const Type &) const = default;
 #define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type) friend constexpr auto operator<=>(const Type&, const Type &) = default;
 #else
-#if __LCC__ && __LCC__ >= 126
+#if __LCC__ && __LCC__ >= 127
 #define SP_THREE_WAY_COMPARISON_TYPE(Type) \
 	bool operator==(const Type&) const = default;\
 	bool operator!=(const Type&) const = default;\
