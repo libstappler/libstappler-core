@@ -21,6 +21,7 @@
  **/
 
 #include "SPFilesystem.h"
+#include "SPString.h"
 
 #if MODULE_STAPPLER_BITMAP
 #include "SPBitmap.h"
@@ -844,6 +845,7 @@ StringView detectMimeType(StringView path) {
 		return bitmap::getMimeType(fmt.second);
 	}
 #endif
+	return StringView();
 }
 
 }

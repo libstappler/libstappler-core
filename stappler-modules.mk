@@ -43,4 +43,5 @@ include $(STAPPLER_MODULE_DIR)/font/font.mk
 include $(STAPPLER_MODULE_DIR)/tess/tess.mk
 include $(STAPPLER_MODULE_DIR)/vg/vg.mk
 include $(STAPPLER_MODULE_DIR)/zip/zip.mk
+include $(STAPPLER_MODULE_DIR)/wasm/wasm.mk
 include $(STAPPLER_MODULE_DIR)/backtrace.mk
