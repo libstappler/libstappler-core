@@ -30,7 +30,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::data::json {
 
 template <typename StringType>
-inline void encodeString(std::ostream &stream, const StringType &str) {
+inline void encodeString(const Callback<void(StringView)> &stream, const StringType &str) {
 	stream << '"';
 	for (auto &i : str) {
 		switch (i) {
@@ -41,11 +41,10 @@ inline void encodeString(std::ostream &stream, const StringType &str) {
 		case '\b' : stream << "\\b"; break;
 		case '\\' : stream << "\\\\"; break;
 		case '\"' : stream << "\\\""; break;
-		case ' ' : stream << " "; break;
+		case ' ' : stream << ' '; break;
 		default:
 			if (i >= 0 && i <= 0x20) {
-				stream << "\\u" << std::setfill('0') << std::setw(4)
-					<< std::hex << (int32_t)i << std::dec << std::setw(1) << std::setfill(' ');
+				stream << "\\u00" << base16::charToHex(i, true);
 			} else {
 				stream << i;
 			}
@@ -60,10 +59,10 @@ struct RawEncoder : public Interface::AllocBaseType {
 	using InterfaceType = Interface;
 	using ValueType = ValueTemplate<Interface>;
 
-	inline RawEncoder(std::ostream *s) : stream(s) { }
+	inline RawEncoder(const Callback<void(StringView)> *s) : stream(s) { }
 
 	inline void writeData(const char *data, size_t size) {
-		stream->write(data, size);
+		(*stream) << StringView(data, size);
 	}
 
 	inline void writeData(const char *data) {
@@ -71,16 +70,14 @@ struct RawEncoder : public Interface::AllocBaseType {
 	}
 
 	inline void writeChar(char c) {
-		stream->put(c);
+		(*stream) << c;
 	}
 
 	inline void write(nullptr_t) { writeData("null", "null"_len); }
 	inline void write(bool value) { writeData((value)?"true":"false"); }
 	inline void write(int64_t value) { (*stream) << value; }
 	inline void write(double value) {
-		// default stream output strips '.0' at the end, that broke CBOR compatibility
-		std::array<char, string::DOUBLE_MAX_DIGITS> buf = { 0 };
-		stream->write(buf.data(), string::_dtoa(value, buf.data(), buf.size()));
+		(*stream) << value;
 	}
 
 	inline void write(const typename ValueType::StringType &str) {
@@ -89,7 +86,9 @@ struct RawEncoder : public Interface::AllocBaseType {
 
 	inline void write(const typename ValueType::BytesType &data) {
 		(*stream) << '"' << "BASE64:";
-		base64url::encode(*stream, data);
+		base64url::encode([&] (char c) {
+			*stream << c;
+		}, data);
 		(*stream) << '"';
 	}
 	inline void onBeginArray(const typename ValueType::ArrayType &arr) { (*stream) << '['; }
@@ -99,7 +98,7 @@ struct RawEncoder : public Interface::AllocBaseType {
 	inline void onKey(const typename ValueType::StringType &str) { write(str); (*stream) << ':'; }
 	inline void onNextValue() { (*stream) << ','; }
 
-	std::ostream *stream = nullptr;
+	const Callback<void(StringView)> *stream = nullptr;
 };
 
 template <typename Interface>
@@ -107,7 +106,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	using InterfaceType = Interface;
 	using ValueType = ValueTemplate<Interface>;
 
-	PrettyEncoder(std::ostream *s, bool tM = false) : timeMarkers(tM), stream(s) { }
+	PrettyEncoder(const Callback<void(StringView)> *s, bool tM = false) : timeMarkers(tM), stream(s) { }
 
 	void write(nullptr_t) { (*stream) << "null"; offsetted = false; }
 	void write(bool value) { (*stream) << ((value)?"true":"false"); offsetted = false; }
@@ -124,9 +123,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 		}
 	}
 	void write(double value) {
-		// default stream output strips '.0' at the end, that broke CBOR compatibility
-		std::array<char, string::DOUBLE_MAX_DIGITS> buf = { 0 };
-		stream->write(buf.data(), string::_dtoa(value, buf.data(), buf.size()));
+		(*stream) << value;
 		offsetted = false;
 	}
 
@@ -137,7 +134,9 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 
 	void write(const typename ValueType::BytesType &data) {
 		(*stream) << '"'  << "BASE64:";
-		base64url::encode(*stream, data);
+		base64url::encode([&] (char c) {
+			*stream << c;
+		}, data);
 		(*stream) << '"';
 		offsetted = false;
 	}
@@ -237,13 +236,13 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	bool popComplex = false;
 	bool offsetted = false;
 	bool timeMarkers = false;
-	std::ostream *stream;
+	const Callback<void(StringView)> *stream = nullptr;
 	StringView lastKey;
 	typename Interface::template ArrayType<bool> bstack;
 };
 
 template <typename Interface>
-inline void write(std::ostream &stream, const ValueTemplate<Interface> &val, bool pretty, bool timeMarkers = false) {
+inline void write(const Callback<void(StringView)> &stream, const ValueTemplate<Interface> &val, bool pretty, bool timeMarkers = false) {
 	if (pretty) {
 		PrettyEncoder<Interface> encoder(&stream, timeMarkers);
 		val.encode(encoder);
@@ -255,9 +254,11 @@ inline void write(std::ostream &stream, const ValueTemplate<Interface> &val, boo
 
 template <typename Interface>
 inline auto write(const ValueTemplate<Interface> &val, bool pretty = false, bool timeMarkers = false) -> typename Interface::StringType {
-	typename Interface::StringStreamType stream;
-	write<Interface>(stream, val, pretty, timeMarkers);
-	return stream.str();
+	typename Interface::StringType stream;
+	write<Interface>([&] (StringView str) {
+		stream.append(str.data(), str.size());
+	}, val, pretty, timeMarkers);
+	return stream;
 }
 
 template <typename Interface>
@@ -265,7 +266,9 @@ bool save(const ValueTemplate<Interface> &val, StringView ipath, bool pretty, bo
 	auto path = filesystem::native::posixToNative<Interface>(ipath);
 	std::ofstream stream(path.data());
 	if (stream.is_open()) {
-		write(stream, val, pretty, timeMarkers);
+		write([&] (StringView str) {
+			stream.write(str.data(), str.size());
+		}, val, pretty, timeMarkers);
 		stream.flush();
 		stream.close();
 		return true;

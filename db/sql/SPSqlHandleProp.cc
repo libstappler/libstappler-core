@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPSqlHandle.h"
+#include "SPSqlDriver.h"
 #include "SPDbScheme.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
@@ -617,11 +618,21 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 				}
 			}
 			break;
-		default: {
+		case db::Type::Object: {
+			if (f.isReference()) {
+				auto ref = static_cast<const FieldObject *>(f.getSlot());
+				if (ref->onRemove == RemovePolicy::StrongReference) {
+					if (auto obj = Worker(w).get(oid, { f.getName() })) {
+						Worker(*ref->scheme, w.transaction()).remove(obj.getInteger("__oid"));
+					}
+				}
+			}
 			Value patch;
 			patch.setValue(Value(), f.getName().str<Interface>());
-			Worker(w).update(oid, patch);
+			ret = Worker(w).update(oid, patch);
+			break;
 		}
+		default:
 			break;
 		}
 		break;

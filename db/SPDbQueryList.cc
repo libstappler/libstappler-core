@@ -495,7 +495,8 @@ bool QueryList::empty() const {
 
 bool QueryList::isDeltaApplicable() const {
 	const QueryList::Item &item = getItems().back();
-	if ((queries.size() == 1 || (isView() && queries.size() == 2 && queries.front().query.getSelectIds().size() == 1))
+	if ((queries.size() == 1 || (isView() && queries.size() == 2
+			&& (queries.front().query.getSelectIds().size() == 1 || queries.front().query.getLimitValue() == 1)))
 			&& !item.query.hasSelectName() && !item.query.hasSelectList()) {
 		return true;
 	}
@@ -740,65 +741,53 @@ static uint16_t QueryList_decodeInclude(const ApplicationInterface *app, const S
 	return depth;
 }
 
-static ContinueToken QueryList_decodeToken(const ApplicationInterface *app, const Scheme &scheme, const Value &val) {
-	if (val.isArray() && val.size() == 3) {
-		auto fStr = StringView(val.getString(0));
-		if (fStr == "__oid" || scheme.getField(fStr)) {
-			int64_t count = stappler::math::clamp(val.getInteger(1), QueryList::MinSoftLimit, QueryList::MaxSoftLimit);
-			Ordering ord = Ordering::Ascending;
-			auto &v = val.getValue(2);
-			if ((v.isInteger() && v.getInteger() == 1) || (v.isString() && v.getString() == "desc")) {
-				ord = Ordering::Descending;
-			}
-			return ContinueToken(fStr, count, ord == Ordering::Descending);
-		} else {
-			app->error("QueryList", "Invalid token field", Value(val));
-		}
-	} else if (val.isArray() && val.size() == 2) {
-		auto &first = val.getValue(0);
-		auto &second = val.getValue(1);
+static Ordering QueryList_getTokenOrdering(const Value &v) {
+	return ((v.isInteger() && v.getInteger() == 1) || (v.isString() && v.getString() == "desc")) ? Ordering::Descending : Ordering::Ascending;
+}
 
-		if (first.isString()) {
-			auto fStr = StringView(first.getString());
-			if (fStr == "__oid" || scheme.getField(fStr)) {
-				int64_t count = stappler::math::clamp(second.getInteger(), QueryList::MinSoftLimit, QueryList::MaxSoftLimit);
-				Ordering ord = Ordering::Ascending;
-				return ContinueToken(fStr, count, ord == Ordering::Descending);
-			} else {
-				app->error("QueryList", "Invalid token field", Value(val));
-			}
-		} else if (first.isInteger()) {
-			int64_t count = stappler::math::clamp(first.getInteger(), QueryList::MinSoftLimit, QueryList::MaxSoftLimit);
-			Ordering ord = Ordering::Ascending;
-			if ((second.isInteger() && second.getInteger() == 1) || (second.isString() && second.getString() == "desc")) {
-				ord = Ordering::Descending;
-			}
-			return ContinueToken("__oid", count, ord == Ordering::Descending);
+static ContinueToken QueryList_decodeToken(const ApplicationInterface *app, const Scheme &scheme, const Value &val) {
+	StringView fStr = StringView("__oid");
+	int64_t count = QueryList::DefaultSoftLimit;
+	Ordering ord = Ordering::Ascending;
+
+	if (val.isArray() && val.size() == 3) {
+		fStr = StringView(val.getString(0));
+		count = val.getInteger(1);
+		ord = QueryList_getTokenOrdering(val.getValue(2));
+	} else if (val.isArray() && val.size() == 2) {
+		if (val.getValue(0).isString()) {
+			fStr = StringView(val.getValue(0).getString());
+			count = val.getInteger(1);
+		} else if (val.getValue(0).isInteger()) {
+			count = val.getInteger(0);
+			ord = QueryList_getTokenOrdering(val.getValue(1));
 		}
 	} else {
 		auto &v = (val.isArray() && val.size() == 1) ? val.getValue(0) : val;
 		if (v.isInteger()) {
-			int64_t count = stappler::math::clamp(v.getInteger(), QueryList::MinSoftLimit, QueryList::MaxSoftLimit);
-			Ordering ord = Ordering::Ascending;
-			return ContinueToken("__oid", count, ord == Ordering::Descending);
+			count = v.getInteger();
 		} else if (v.isString()) {
-			auto vStr = StringView(v.getString());
+			auto &vStr = v.getString();
 			if (stappler::valid::validateNumber(vStr)) {
-				int64_t count = stappler::math::clamp(vStr.readInteger().get(), QueryList::MinSoftLimit, QueryList::MaxSoftLimit);
-				Ordering ord = Ordering::Ascending;
-				return ContinueToken("__oid", count, ord == Ordering::Descending);
+				count = v.getInteger();
 			} else if (vStr == "asc") {
-				return ContinueToken("__oid", QueryList::DefaultSoftLimit, false);
+				ord = Ordering::Ascending;
 			} else if (vStr == "desc") {
-				return ContinueToken("__oid", QueryList::DefaultSoftLimit, true);
-			} else if (vStr == "__oid" || scheme.getField(vStr)) {
-				return ContinueToken(vStr, QueryList::DefaultSoftLimit, true);
+				ord = Ordering::Descending;
+			} else if (scheme.getField(vStr)) {
+				fStr = vStr;
 			} else {
 				app->error("QueryList", "Invalid token field", Value(val));
 			}
 		}
 	}
-	return ContinueToken();
+
+	count = stappler::math::clamp(count, QueryList::MinSoftLimit, QueryList::MaxSoftLimit);
+	if (scheme.getField(fStr) == nullptr) {
+		app->error("QueryList", "Invalid token field", Value(val));
+	}
+
+	return ContinueToken(fStr, count, ord == Ordering::Descending);
 }
 
 bool QueryList::apply(const Value &val) {

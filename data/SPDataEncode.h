@@ -71,7 +71,7 @@ struct EncodeFormat {
 	constexpr EncodeFormat(Format fmt = DefaultFormat, Compression cmp = DefaultCompress, Encryption enc = Unencrypted, StringView = StringView())
 	: format(fmt), compression(cmp), encryption(enc) { }
 
-	constexpr explicit EncodeFormat(long flag)
+	constexpr explicit EncodeFormat(int flag)
 	: format((Format)(flag & 0x0F)), compression((Compression)(flag & 0xF0))
 	, encryption((Encryption)(flag &0xF00)) { }
 
@@ -152,7 +152,7 @@ struct EncodeTraits {
 		return ret;
 	}
 
-	static bool write(std::ostream &stream, const ValueType &data, EncodeFormat fmt) {
+	static bool write(const Callback<void(StringView)> &stream, const ValueType &data, EncodeFormat fmt) {
 		if (fmt.isRaw()) {
 			switch (fmt.format) {
 			case EncodeFormat::Json: json::write(stream, data, false); return true; break;
@@ -160,7 +160,10 @@ struct EncodeTraits {
 			case EncodeFormat::PrettyTime: json::write(stream, data, true, true); return true; break;
 			case EncodeFormat::Cbor:
 			case EncodeFormat::DefaultFormat:
-				return cbor::write(stream, data);
+				return cbor::write([&] (BytesView bytes) {
+					StringView str; str.set((const char *)bytes.data(), bytes.size());
+					stream(str);
+				}, data);
 				break;
 			case EncodeFormat::Serenity: serenity::write(stream, data, false); return true; break;
 			case EncodeFormat::SerenityPretty: serenity::write(stream, data, true); return true; break;
@@ -168,7 +171,8 @@ struct EncodeTraits {
 		} else {
 			auto ret = write(data, fmt);
 			if (!ret.empty()) {
-				stream.write((const char *)ret.data(), ret.size());
+				StringView str; str.set((const char *)ret.data(), ret.size());
+				stream << str;
 				return true;
 			}
 			return false;
@@ -218,7 +222,7 @@ write(const ValueTemplate<Interface> &data, EncodeFormat fmt = EncodeFormat(), s
 }
 
 template <typename Interface> inline bool
-write(std::ostream &stream, const ValueTemplate<Interface> &data, EncodeFormat fmt = EncodeFormat()) {
+write(const Callback<void(StringView)> &stream, const ValueTemplate<Interface> &data, EncodeFormat fmt = EncodeFormat()) {
 	return EncodeTraits<Interface>::write(stream, data, fmt);
 }
 
@@ -275,7 +279,9 @@ operator<<(std::basic_ostream<CharT, Traits> & stream, EncodeFormat::Format f) {
 template<typename CharT, typename Traits, typename Interface> inline std::basic_ostream<CharT, Traits>&
 operator<<(std::basic_ostream<CharT, Traits> & stream, const ValueTemplate<Interface> &val) {
 	EncodeFormat fmt(stream.iword( EncodeFormat::EncodeStreamIndex ));
-	write<Interface>(stream, val, fmt);
+	write<Interface>([&] (StringViewBase<CharT> str) {
+		stream << str;
+	}, val, fmt);
 	return stream;
 }
 

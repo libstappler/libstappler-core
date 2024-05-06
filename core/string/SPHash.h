@@ -24,8 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_STRING_SPHASH_H_
 #define STAPPLER_CORE_STRING_SPHASH_H_
 
-#include <stdint.h>
-#include <string.h>
+#include "SPCore.h"
 
 // Based on XXH (https://cyan4973.github.io/xxHash/#benchmarks)
 // constexpr implementation from https://github.com/ekpyron/xxhashct

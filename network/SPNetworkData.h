@@ -141,6 +141,7 @@ struct ProcessData {
 	bool reuse = true;
 	bool silent = false;
 	bool performed = false;
+	bool invalidate = false;
 };
 
 template <typename Interface>

@@ -67,7 +67,7 @@ struct Encoder : public Interface::AllocBaseType {
 		}
 	}
 
-	Encoder(std::ostream *s) : type(Stream) {
+	Encoder(const Callback<void(BytesView)> *s) : type(Stream) {
 		stream = s;
 		if (isOpen()) {
 			cbor::_writeId(*this);
@@ -97,7 +97,7 @@ struct Encoder : public Interface::AllocBaseType {
 	~Encoder() {
 		switch (type) {
 		case File: file->flush(); file->close(); delete file; break;
-		case Stream: stream->flush(); break;
+		case Stream: break;
 		case Vector: delete buffer; break;
 		default: break;
 		}
@@ -106,7 +106,7 @@ struct Encoder : public Interface::AllocBaseType {
 	void emplace(uint8_t c) {
 		switch (type) {
 		case File: file->put(c); break;
-		case Stream: stream->put(c); break;
+		case Stream: (*stream) << c; break;
 		case Buffered:
 		case Vector:
 			buffer->emplace_back(c);
@@ -123,7 +123,7 @@ struct Encoder : public Interface::AllocBaseType {
 		size_t tmpSize;
 		switch (type) {
 		case File: file->write((const std::ofstream::char_type *)buf, size); break;
-		case Stream: stream->write((const std::ostream::char_type *)buf, size); break;
+		case Stream: (*stream) << BytesView(buf, size); break;
 		case Buffered:
 		case Vector:
 			tmpSize = buffer->size();
@@ -181,7 +181,7 @@ private:
 	union {
 		typename ValueType::BytesType *buffer;
 		std::ofstream *file;
-		std::ostream *stream;
+		const Callback<void(BytesView)> *stream;
 	};
 
 	Type type;
@@ -208,7 +208,7 @@ inline auto write(const ValueTemplate<Interface> &data, size_t reserve = 1_KiB) 
 }
 
 template <typename Interface>
-inline bool write(std::ostream &stream, const ValueTemplate<Interface> &data) {
+inline bool write(const Callback<void(BytesView)> &stream, const ValueTemplate<Interface> &data) {
 	Encoder<Interface> enc(&stream);
 	if (enc.isOpen()) {
 		data.encode(enc);

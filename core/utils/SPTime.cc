@@ -636,7 +636,8 @@ static const char sp_day_snames[7][4] = {
     "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
 };
 
-void sp_time_exp_t::encodeRfc822(char *date_str) const {
+size_t sp_time_exp_t::encodeRfc822(char *date_str) const {
+	auto start = date_str;
 	const char *s;
 	int real_year;
 
@@ -677,9 +678,11 @@ void sp_time_exp_t::encodeRfc822(char *date_str) const {
 	*date_str++ = 'M';
 	*date_str++ = 'T';
 	*date_str++ = 0;
+	return date_str - start - 1;
 }
 
-void sp_time_exp_t::encodeCTime(char *date_str) const {
+size_t sp_time_exp_t::encodeCTime(char *date_str) const {
+	auto start = date_str;
 	const char *s;
 	int real_year;
 
@@ -714,9 +717,11 @@ void sp_time_exp_t::encodeCTime(char *date_str) const {
 	*date_str++ = real_year % 100 / 10 + '0';
 	*date_str++ = real_year % 10 + '0';
 	*date_str++ = 0;
+	return date_str - start - 1;
 }
 
-void sp_time_exp_t::encodeIso8601(char *date_str, size_t precision) const {
+size_t sp_time_exp_t::encodeIso8601(char *date_str, size_t precision) const {
+	auto start = date_str;
 	int real_year;
 
 	real_year = 1900 + tm_year;
@@ -763,6 +768,7 @@ void sp_time_exp_t::encodeIso8601(char *date_str, size_t precision) const {
 
 	*date_str++ = 'Z';							// 20
 	*date_str++ = 0;
+	return date_str - start - 1;
 }
 
 Time Time::fromCompileTime(const char *date, const char *time) {

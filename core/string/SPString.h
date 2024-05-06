@@ -84,37 +84,7 @@ struct InterfaceForString<const typename memory::PoolInterface::WideStringType> 
 	using Type = memory::PoolInterface;
 };
 
-
-inline char32_t utf8Decode32(char_const_ptr_ref_t ptr) {
-	uint8_t len = 0;
-	auto ret = unicode::utf8Decode32(ptr, len);
-	ptr += len;
-	return ret;
-}
-
-char32_t utf8HtmlDecode32(char_const_ptr_ref_t utf8);
-
 bool isValidUtf8(StringView);
-
-template <typename StringType>
-inline uint8_t utf8Encode(StringType &str, char16_t c);
-
-template <typename StringType>
-inline uint8_t utf8Encode(StringType &str, char32_t c);
-
-inline uint8_t utf8Encode(std::ostream &str, char16_t c) SPINLINE;
-inline uint8_t utf8Encode(std::ostream &str, char32_t c) SPINLINE;
-
-template <typename StringType>
-inline uint8_t utf16Encode(StringType &str, char32_t c);
-
-inline uint8_t utf16Encode(std::basic_ostream<char16_t> &str, char32_t c) SPINLINE;
-
-template <typename StringType, typename Interface = typename InterfaceForString<StringType>::Type>
-StringType &tolower(StringType & str);
-
-template <typename StringType, typename Interface = typename InterfaceForString<StringType>::Type>
-StringType &toupper(StringType & str);
 
 template <typename Interface>
 auto toupper(const StringView & str) -> typename Interface::StringType;
@@ -347,16 +317,6 @@ inline auto toStringConcat(const Container &c, const Sep &s) -> StringType {
 
 namespace STAPPLER_VERSIONIZED stappler::string {
 
-template <typename StringType, typename Interface>
-inline StringType &tolower(StringType & str) {
-	return StringTraits<Interface>::tolower(str);
-}
-
-template <typename StringType, typename Interface>
-inline StringType &toupper(StringType & str) {
-	return StringTraits<Interface>::toupper(str);
-}
-
 template <typename Interface>
 auto toupper(const StringView & str) -> typename Interface::StringType {
 	return StringTraits<Interface>::toupper(str);
@@ -519,7 +479,7 @@ auto StringTraits<Interface>::toUtf16(char32_t ch) -> WideString {
 	const auto size = string::getUtf16Length(ch);
 	WideString utf16_str; utf16_str.reserve(size);
 
-	utf16Encode(utf16_str, ch);
+	unicode::utf16Encode(utf16_str, ch);
 
     return utf16_str;
 }
@@ -529,20 +489,13 @@ auto StringTraits<Interface>::toUtf16(const StringView &utf8_str) -> WideString 
 	const auto size = string::getUtf16Length(utf8_str);
 	WideString utf16_str; utf16_str.reserve(size);
 
-	auto ptr = char_const_ptr_t(utf8_str.data());
+	uint8_t offset = 0;
+	auto ptr = utf8_str.data();
 	auto end = ptr + utf8_str.size();
 	while (ptr < end) {
-		auto c = utf8Decode32(ptr);
-		if (c < 0xD800) {
-			utf16_str.push_back(char16_t(c));
-		} else if (c <= 0xDFFF) {
-			// do nothing, wrong encoding
-		} else if (c < 0x10000) {
-			utf16_str.push_back(char16_t(c));
-		} else {
-			utf16_str.push_back(char16_t(((0b1111'1111'1100'0000'0000 & c) >> 10) + 0xD800));
-			utf16_str.push_back(char16_t(((0b0000'0000'0011'1111'1111 & c) >> 00) + 0xDC00));
-		}
+		auto c = unicode::utf8Decode32(ptr, offset);
+		unicode::utf16Encode(utf16_str, c);
+		ptr += offset;
 	}
 
     return utf16_str;
@@ -553,20 +506,13 @@ auto StringTraits<Interface>::toUtf16Html(const StringView &utf8_str) -> WideStr
 	const auto size = string::getUtf16HtmlLength(utf8_str);
 	WideString utf16_str; utf16_str.reserve(size);
 
-	auto ptr = char_const_ptr_t(utf8_str.data());
+	uint8_t offset = 0;
+	auto ptr = utf8_str.data();
 	auto end = ptr + utf8_str.size();
 	while (ptr < end) {
-		auto c = utf8HtmlDecode32(ptr);
-		if (c < 0xD800) {
-			utf16_str.push_back(char16_t(c));
-		} else if (c <= 0xDFFF) {
-			// do nothing, wrong encoding
-		} else if (c < 0x10000) {
-			utf16_str.push_back(char16_t(c));
-		} else {
-			utf16_str.push_back(char16_t(((0b1111'1111'1100'0000'0000 & c) >> 10) + 0xD800));
-			utf16_str.push_back(char16_t(((0b0000'0000'0011'1111'1111 & c) >> 00) + 0xDC00));
-		}
+		auto c = unicode::utf8HtmlDecode32(ptr, offset);
+		unicode::utf16Encode(utf16_str, c);
+		ptr += offset;
 	}
 
 	return utf16_str;
@@ -577,10 +523,13 @@ auto StringTraits<Interface>::toUtf8(const WideStringView &str) -> String {
 	const auto size = string::getUtf8Length(str);
 	String ret; ret.reserve(size);
 
+	uint8_t offset;
 	auto ptr = str.data();
 	auto end = ptr + str.size();
 	while (ptr < end) {
-		utf8Encode(ret, *ptr++);
+		auto c = unicode::utf16Decode32(ptr, offset);
+		unicode::utf8Encode(ret, c);
+		ptr += offset;
 	}
 
 	return ret;
@@ -589,14 +538,14 @@ auto StringTraits<Interface>::toUtf8(const WideStringView &str) -> String {
 template <typename Interface>
 auto StringTraits<Interface>::toUtf8(char16_t c) -> String {
 	String ret; ret.reserve(unicode::utf8EncodeLength(c));
-	utf8Encode(ret, c);
+	unicode::utf8Encode(ret, c);
 	return ret;
 }
 
 template <typename Interface>
 auto StringTraits<Interface>::toUtf8(char32_t c) -> String {
 	String ret; ret.reserve(unicode::utf8EncodeLength(c));
-	utf8Encode(ret, c);
+	unicode::utf8Encode(ret, c);
 	return ret;
 }
 
@@ -646,12 +595,14 @@ auto StringTraits<Interface>::decodeHtml(const StringView &utf8_str) -> String {
 	const auto size = string::getUtf8HtmlLength(utf8_str);
 	String result_str; result_str.reserve(size);
 
-	auto ptr = char_const_ptr_t(utf8_str.data());
+	uint8_t offset = 0;
+	auto ptr = utf8_str.data();
 	auto end = ptr + utf8_str.size();
 	while (ptr < end) {
 		if (*ptr == '&') {
-			auto c = utf8HtmlDecode32(ptr);
+			auto c = unicode::utf8HtmlDecode32(ptr, offset);
 			unicode::utf8Encode(result_str, c);
+			ptr += offset;
 		} else {
 			result_str.emplace_back(*ptr);
 			++ ptr;
@@ -668,121 +619,6 @@ bool StringTraits<Interface>::isUrlencodeChar(char c) {
 		return false;
 	} else {
 		return true;
-	}
-}
-
-template <typename StringType>
-uint8_t utf8Encode(StringType &str, char16_t c) {
-	if (c < 0x80) {
-		str.push_back(char(c));
-		return 1;
-	} else if (c < 0x800) {
-		str.push_back(char(0xc0 | (c >> 6)));
-		str.push_back(char(0x80 | (c & 0x3f)));
-		return 2;
-	} else {
-		str.push_back(char(0xe0 | (c >> 12)));
-		str.push_back(char(0x80 | (c >> 6 & 0x3f)));
-		str.push_back(char(0x80 | (c & 0x3f)));
-		return 3;
-	}
-}
-
-inline uint8_t utf8Encode(std::ostream &str, char16_t c) {
-	if (c < 0x80) {
-		str << (char(c));
-		return 1;
-	} else if (c < 0x800) {
-		str << (char(0xc0 | (c >> 6)));
-		str << (char(0x80 | (c & 0x3f)));
-		return 2;
-	} else {
-		str << (char(0xe0 | (c >> 12)));
-		str << (char(0x80 | (c >> 6 & 0x3f)));
-		str << (char(0x80 | (c & 0x3f)));
-		return 3;
-	}
-}
-
-template <typename StringType>
-uint8_t utf8Encode(StringType &str, char32_t c) {
-	if (c < 0x80) {
-		str.push_back(char(c));
-		return 1;
-	} else if (c < 0x800) {
-		str.push_back(char(0xc0 | (c >> 6)));
-		str.push_back(char(0x80 | (c & 0x3f)));
-		return 2;
-	} else if (c < 0xFFFF) {
-		str.push_back(char(0xe0 | (c >> 12 & 0x0F)));
-		str.push_back(char(0x80 | (c >> 6 & 0x3f)));
-		str.push_back(char(0x80 | (c & 0x3f)));
-		return 3;
-	} else if (c < 0x10FFFF) {
-		str.push_back(char(0xf0 | (c >> 18 & 0x07)));
-		str.push_back(char(0x80 | (c >> 12 & 0x3F)));
-		str.push_back(char(0x80 | (c >> 6 & 0x3f)));
-		str.push_back(char(0x80 | (c & 0x3f)));
-		return 3;
-	} else {
-		// non-unicode char
-		return 0;
-	}
-}
-
-inline uint8_t utf8Encode(std::ostream &str, char32_t c) {
-	if (c < 0x80) {
-		str << (char(c));
-		return 1;
-	} else if (c < 0x800) {
-		str << (char(0xc0 | (c >> 6)));
-		str << (char(0x80 | (c & 0x3f)));
-		return 2;
-	} else if (c < 0xFFFF) {
-		str << (char(0xe0 | (c >> 12 & 0x0F)));
-		str << (char(0x80 | (c >> 6 & 0x3f)));
-		str << (char(0x80 | (c & 0x3f)));
-		return 3;
-	} else if (c < 0x10FFFF) {
-		str << (char(0xf0 | (c >> 18 & 0x07)));
-		str << (char(0x80 | (c >> 12 & 0x3F)));
-		str << (char(0x80 | (c >> 6 & 0x3f)));
-		str << (char(0x80 | (c & 0x3f)));
-		return 3;
-	} else {
-		// non-unicode char
-		return 0;
-	}
-}
-
-template <typename StringType>
-uint8_t utf16Encode(StringType &str, char32_t c) {
-	if (c <= 0xFFFF) {
-		str.push_back(char16_t(c & 0xFFFF));
-		return 1;
-	} else if (c > 0x0010FFFF) {
-		str.push_back(char16_t(0xFFFD));
-		return 1;
-	} else {
-		c -= 0x0010000UL;
-		str.push_back(char16_t((c >> 10) + 0xD800));
-		str.push_back(char16_t((c & 0x3FFUL) + 0xDC00));
-		return 2;
-	}
-}
-
-inline uint8_t utf16Encode(std::basic_ostream<char16_t> &str, char32_t c) {
-	if (c <= 0xFFFF) {
-		str.put(char16_t(c & 0xFFFF));
-		return 1;
-	} else if (c > 0x0010FFFF) {
-		str.put(char16_t(0xFFFD));
-		return 1;
-	} else {
-		c -= 0x0010000UL;
-		str.put(char16_t((c >> 10) + 0xD800));
-		str.put(char16_t((c & 0x3FFUL) + 0xDC00));
-		return 2;
 	}
 }
 

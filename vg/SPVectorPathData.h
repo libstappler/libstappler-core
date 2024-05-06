@@ -46,6 +46,7 @@ union CommandData {
 
 	CommandData(float x, float y) { p.x = x; p.y = y; }
 	CommandData(float r, bool a, bool b) { f.v = r; f.a = a; f.b = b; }
+	CommandData() { p = {0.0f, 0.0f}; }
 };
 
 enum class Command : uint8_t { // use hint to decode data from `_points` vector

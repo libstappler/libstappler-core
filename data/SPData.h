@@ -148,6 +148,11 @@ auto parseCommandLineOptions(int argc, const char16_t * wargv[],
 	return parseCommandLineOptions<Interface, Output>(argc, argv.data(), switchCallback, stringCallback);
 }
 
+constexpr StringView MIME_URLENCODED("application/x-www-form-urlencoded");
+constexpr StringView MIME_SERENITY("application/x-serenity-urlencoded");
+constexpr StringView MIME_JSON("application/json");
+constexpr StringView MIME_CBOR("application/cbor");
+
 // decode x-www-urlencoded into data
 template <typename Interface>
 auto readUrlencoded(StringView, size_t maxVarSize = maxOf<size_t>()) -> data::ValueTemplate<Interface>;

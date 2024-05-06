@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "SPSqlQuery.h"
 #include "SPSqlHandle.h"
+#include "SPSqlDriver.h"
 #include "SPDbScheme.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
@@ -112,28 +113,31 @@ static inline auto SqlQuery_makeSoftLimitWith(SqlQuery::Context &ictx,
 }
 
 template <typename Clause>
-static inline auto SqlQuery_makeWhereClause(const Driver *driver, SqlQuery::Context &ctx, Clause &tmp, const StringView &lName = StringView(), uint64_t oid = 0) {
-	if (ctx.query->hasSelect()) {
-		for (auto &it : ctx.query->getSelectList()) {
-			auto f = ctx.scheme->getField(it.field);
-			switch (f->getType()) {
-			case db::Type::Custom: {
-				auto c = f->getSlot<FieldCustom>();
-				if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
-					if (info->writeFrom) {
-						info->writeFrom(*c, *ctx.scheme, tmp, it.compare, it.value1, it.value2);
-					}
+static void SqlQuery_makeCustomFrom(const Driver *driver, SqlQuery &q, Clause &tmp, const Query &query, const Scheme &scheme) {
+	for (auto &it : query.getSelectList()) {
+		auto f = scheme.getField(it.field);
+		switch (f->getType()) {
+		case db::Type::Custom: {
+			auto c = f->getSlot<FieldCustom>();
+			if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
+				if (info->writeFrom) {
+					info->writeFrom(*c, scheme, tmp, it.compare, it.value1, it.value2);
 				}
-				break;
 			}
-			case db::Type::FullTextView:
-				ctx._this->writeFullTextFrom(tmp, *ctx.scheme, f, it);
-				break;
-			default:
-				break;
-			}
+			break;
+		}
+		case db::Type::FullTextView:
+			q.writeFullTextFrom(tmp, scheme, f, it);
+			break;
+		default:
+			break;
 		}
 	}
+}
+
+template <typename Clause>
+static inline auto SqlQuery_makeWhereClause(const Driver *driver, SqlQuery::Context &ctx, Clause &tmp, const StringView &lName = StringView(), uint64_t oid = 0) {
+	SqlQuery_makeCustomFrom(driver, *ctx._this, tmp, *ctx.query, *ctx.scheme);
 
 	bool isAsc = ctx.query->getOrdering() == Ordering::Ascending;
 	if (ctx.query->hasSelect() || !ctx.softLimitField.empty() || !lName.empty()) {
@@ -416,6 +420,8 @@ void SqlQuery::writeOrdering(SqlQuery::SelectFrom &s, const db::Scheme &scheme, 
 void SqlQuery::writeQueryReqest(SqlQuery::SelectFrom &s, const db::QueryList::Item &item) {
 	auto &q = item.query;
 	if (!item.all && !item.query.empty()) {
+		SqlQuery_makeCustomFrom(_driver, *this, s, item.query, *item.scheme);
+
 		auto w = s.where();
 		writeWhere(w, db::Operator::And, *item.scheme, q);
 	}

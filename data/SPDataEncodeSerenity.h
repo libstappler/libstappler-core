@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::data::serenity {
 bool shouldEncodePercent(char c);
 
 template <typename StringType>
-inline void encodeString(std::ostream &stream, const StringType &str) {
+inline void encodeString(const Callback<void(StringView)> &stream, const StringType &str) {
 	for (auto &i : str) {
 		if (shouldEncodePercent(i)) {
 			stream << '%' << base16::charToHex(i);
@@ -53,7 +53,7 @@ struct RawEncoder : public Interface::AllocBaseType {
 		Plain,
 	};
 
-	inline RawEncoder(std::ostream *stream) : stream(stream) { }
+	inline RawEncoder(const Callback<void(StringView)> *s) : stream(s) { }
 
 	inline void write(nullptr_t) { (*stream) << "null"; }
 	inline void write(bool value) { (*stream) << ((value)?"true":"false"); }
@@ -130,7 +130,7 @@ struct RawEncoder : public Interface::AllocBaseType {
 	}
 
 	bool preventKey = false;
-	std::ostream *stream;
+	const Callback<void(StringView)> *stream;
 	Type type = Type::Dict;
 };
 
@@ -145,7 +145,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 		Plain,
 	};
 
-	PrettyEncoder(std::ostream *stream) : stream(stream) { }
+	PrettyEncoder(const Callback<void(StringView)> *stream) : stream(stream) { }
 
 	void write(nullptr_t) { (*stream) << "null"; offsetted = false; }
 	void write(bool value) { (*stream) << ((value)?"true":"false"); offsetted = false; }
@@ -284,13 +284,13 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	size_t depth = 0;
 	bool popComplex = false;
 	bool offsetted = false;
-	std::ostream *stream;
+	const Callback<void(StringView)> *stream;
 	typename Interface::template ArrayType<bool> bstack;
 	Type type = Type::Dict;
 };
 
 template <typename Interface>
-inline void write(std::ostream &stream, const ValueTemplate<Interface> &val, bool pretty) {
+inline void write(const Callback<void(StringView)> &stream, const ValueTemplate<Interface> &val, bool pretty) {
 	if (pretty) {
 		PrettyEncoder<Interface> encoder(&stream);
 		val.encode(encoder);
@@ -302,9 +302,11 @@ inline void write(std::ostream &stream, const ValueTemplate<Interface> &val, boo
 
 template <typename Interface>
 inline auto write(const ValueTemplate<Interface> &val, bool pretty = false) -> typename Interface::StringType {
-	typename Interface::StringStreamType stream;
-	write<Interface>(stream, val, pretty);
-	return stream.str();
+	typename Interface::StringType stream;
+	write<Interface>([&] (StringView str) {
+		stream.append(str.data(), str.size());
+	}, val, pretty);
+	return stream;
 }
 
 template <typename Interface>
@@ -312,7 +314,9 @@ bool save(const ValueTemplate<Interface> &val, StringView ipath, bool pretty) {
 	auto path = filesystem::native::posixToNative<Interface>(ipath);
 	std::ofstream stream(path.data());
 	if (stream.is_open()) {
-		write(stream, val, pretty);
+		write([&] (StringView str) {
+			stream.write(str.data(), str.size());
+		}, val, pretty);
 		stream.flush();
 		stream.close();
 		return true;

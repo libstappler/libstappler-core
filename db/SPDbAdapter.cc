@@ -44,7 +44,7 @@ void ApplicationInterface::scheduleAyncDbTask(const Callback<Function<void(const
 	::abort();
 }
 
-StringView ApplicationInterface::getDocuemntRoot() const {
+StringView ApplicationInterface::getDocumentRoot() const {
 	return filesystem::writablePath<Interface>();
 }
 
@@ -57,7 +57,7 @@ void ApplicationInterface::pushDebugMessage(Value &&val) const {
 }
 
 void ApplicationInterface::reportDbUpdate(StringView data, bool successful) {
-	auto dir = filepath::merge<Interface>(getDocuemntRoot(), ".reports");
+	auto dir = filepath::merge<Interface>(getDocumentRoot(), ".reports");
 	filesystem::mkdir(dir);
 	auto path = toString(dir, "/update.", stappler::Time::now().toMilliseconds(), ".sql");
 	stappler::filesystem::write(path, (const uint8_t *)data.data(), data.size());

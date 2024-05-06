@@ -24,13 +24,18 @@
 #include "SPSqliteDriver.h"
 #include "SPSqliteDriverHandle.h"
 #include "SPSqliteHandle.h"
+#include "SPDbFieldExtensions.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
+static void sp_ts_update_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args);
+static void sp_ts_rank_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args);
+static void sp_ts_query_valid_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args);
+
 constexpr static auto DATABASE_DEFAULTS = StringView(R"Sql(
 CREATE TABLE IF NOT EXISTS "__objects" (
-	"__oid" BIGINT NOT NULL DEFAULT 0,
-	"control" INT NOT NULL PRIMARY KEY DEFAULT 0
+	"control" INT NOT NULL PRIMARY KEY DEFAULT 0,
+	"__oid" BIGINT NOT NULL DEFAULT 0
 ) WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS "__removed" (
@@ -71,8 +76,6 @@ CREATE INDEX IF NOT EXISTS "__broadcasts_idx_date" ON "__broadcasts" ("date");
 CREATE INDEX IF NOT EXISTS "__login_idx_user" ON "__login" ("user");
 CREATE INDEX IF NOT EXISTS "__login_idx_date" ON "__login" ("date");
 CREATE UNIQUE INDEX IF NOT EXISTS "__words_idx_id" ON "__words" ("id");
-
-INSERT OR IGNORE INTO "__objects" ("__oid") VALUES (0);
 )Sql");
 
 Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path) {
@@ -235,7 +238,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 #endif
 		if (!dbname.is('/') && !dbname.is(':')) {
 			if (_application) {
-				dbname = StringView(filepath::merge<Interface>(_application->getDocuemntRoot(), dbname)).pdup();
+				dbname = StringView(filepath::merge<Interface>(_application->getDocumentRoot(), dbname)).pdup();
 			} else {
 				dbname = StringView(filesystem::writablePath<Interface>(dbname)).pdup();
 			}
@@ -316,10 +319,23 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 			h->mutex.lock();
 
 			do {
-				StringView str("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
+				StringView getStmt("SELECT \"__oid\" FROM \"__objects\" WHERE \"control\" = 0;");
+				sqlite3_stmt *gstmt = nullptr;
+				auto err = sqlite3_prepare_v3(db, getStmt.data(), getStmt.size(), 0, &gstmt, nullptr);
+				err = sqlite3_step(gstmt);
+				if (err == SQLITE_DONE) {
+					StringView createStmt("INSERT OR IGNORE INTO \"__objects\" (\"__oid\") VALUES (0);");
+					sqlite3_stmt *cstmt = nullptr;
+					err = sqlite3_prepare_v3(db, createStmt.data(), createStmt.size(), 0, &cstmt, nullptr);
+					err = sqlite3_step(cstmt);
+					sqlite3_finalize(cstmt);
+				}
+				sqlite3_finalize(gstmt);
+
+				StringView oidStmt("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
 
 				sqlite3_stmt *stmt = nullptr;
-				auto err = sqlite3_prepare_v3(db, str.data(), str.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+				err = sqlite3_prepare_v3(db, oidStmt.data(), oidStmt.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
 				if (err == SQLITE_OK) {
 					h->oidQuery = stmt;
 				}
@@ -455,22 +471,22 @@ Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView mem)
 	_driverPath = mem.pdup();
 
 	auto it = _customFields.emplace(FieldIntArray::FIELD_NAME);
-	if (!FieldIntArray::regsterForSqlite(it.first->second)) {
+	if (!FieldIntArray::registerForSqlite(it.first->second)) {
 		_customFields.erase(it.first);
 	}
 
 	it = _customFields.emplace(FieldBigIntArray::FIELD_NAME);
-	if (!FieldBigIntArray::regsterForSqlite(it.first->second)) {
+	if (!FieldBigIntArray::registerForSqlite(it.first->second)) {
 		_customFields.erase(it.first);
 	}
 
 	it = _customFields.emplace(FieldPoint::FIELD_NAME);
-	if (!FieldPoint::regsterForSqlite(it.first->second)) {
+	if (!FieldPoint::registerForSqlite(it.first->second)) {
 		_customFields.erase(it.first);
 	}
 
 	it = _customFields.emplace(FieldTextArray::FIELD_NAME);
-	if (!FieldTextArray::regsterForSqlite(it.first->second)) {
+	if (!FieldTextArray::registerForSqlite(it.first->second)) {
 		_customFields.erase(it.first);
 	}
 }

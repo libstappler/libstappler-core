@@ -29,7 +29,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 class Driver;
-class QueryStorageHandle;
+struct QueryStorageHandle;
 
 using Result = db::Result;
 
@@ -46,6 +46,8 @@ public:
 	static String getNameForDelta(const Scheme &scheme);
 
 	SqlHandle(const Driver *);
+
+	const Driver *getDriver() const { return _driver; }
 
 	virtual bool set(const CoderSource &, const Value &, stappler::TimeInterval) override;
 	virtual Value get(const CoderSource &) override;

@@ -137,6 +137,26 @@ inline void streamWrite(const FunctionalStream &stream, uint32_t i) {
 }
 
 template <typename FunctionalStream>
+inline void streamWrite(const FunctionalStream &stream, int16_t i) {
+	streamWrite(stream, int64_t(i));
+}
+
+template <typename FunctionalStream>
+inline void streamWrite(const FunctionalStream &stream, uint16_t i) {
+	streamWrite(stream, uint64_t(i));
+}
+
+template <typename FunctionalStream>
+inline void streamWrite(const FunctionalStream &stream, int8_t i) {
+	streamWrite(stream, int64_t(i));
+}
+
+template <typename FunctionalStream>
+inline void streamWrite(const FunctionalStream &stream, uint8_t i) {
+	streamWrite(stream, uint64_t(i));
+}
+
+template <typename FunctionalStream>
 inline void streamWrite(const FunctionalStream &stream, char32_t c) {
 	if constexpr (sizeof(typename FunctionalStreamTraits<FunctionalStream>::CharType) == 1) {
 		std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType, 6> buf = { 0 };
@@ -228,6 +248,36 @@ inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &c
 
 inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, const StringViewUtf8 &val) -> const memory::function<void(StringViewUtf8)> & {
 	detail::streamWrite(cb, val);
+	return cb;
+}
+
+inline auto operator<<(const Callback<void(BytesView)> &cb, const BytesView &val) -> const Callback<void(BytesView)> & {
+	cb(val);
+	return cb;
+}
+
+inline auto operator<<(const Callback<void(BytesView)> &cb, const uint8_t &val) -> const Callback<void(BytesView)> & {
+	cb(BytesView(&val, 1));
+	return cb;
+}
+
+inline auto operator<<(const std::function<void(BytesView)> &cb, const BytesView &val) -> const std::function<void(BytesView)> & {
+	cb(val);
+	return cb;
+}
+
+inline auto operator<<(const std::function<void(BytesView)> &cb, const uint8_t &val) -> const std::function<void(BytesView)> & {
+	cb(BytesView(&val, 1));
+	return cb;
+}
+
+inline auto operator<<(const memory::function<void(BytesView)> &cb, const BytesView &val) -> const memory::function<void(BytesView)> & {
+	cb(val);
+	return cb;
+}
+
+inline auto operator<<(const memory::function<void(BytesView)> &cb, const uint8_t &val) -> const memory::function<void(BytesView)> & {
+	cb(BytesView(&val, 1));
 	return cb;
 }
 

@@ -312,7 +312,7 @@ inline CoderSource::CoderSource(const BytesReader<char> &d)
 : _data((const uint8_t *)d.data(), d.size()) { }
 
 template <size_t Size>
-inline CoderSource::CoderSource(const std::array<uint8_t, Size> &d) : _data(d.data(), Size) { }
+inline CoderSource::CoderSource(const std::array<uint8_t, Size> &d) : _data(d.data(), Size), _offset(0) { }
 
 inline CoderSource::CoderSource() { }
 

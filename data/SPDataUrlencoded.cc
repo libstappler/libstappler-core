@@ -133,11 +133,11 @@ size_t UrlencodeParser<Interface>::read(const uint8_t * s, size_t count) {
 			str = r.readUntil<NextToken>();
 		}
 
-		if (buf.empty() && (!r.empty() || length == 0) && !r.is('+')) {
+		if (buf.empty() && (!r.empty() || length == 0) && !r.is('+') && !r.is('%')) {
 			flush(str);
 		} else {
 			bufferize(str);
-			if (!r.empty() && !r.is('+')) {
+			if (!r.empty() && !r.is('+') && !r.is('%')) {
 				Reader tmp = buf.get();
 				flush(tmp);
 			}

@@ -239,6 +239,7 @@ struct WebpStruct {
 		}
 
 		WebPPicture pic;
+		WebPPictureInit(&pic);
 
 		pic.use_argb = 1;
 		pic.width = state.width;

@@ -88,6 +88,12 @@ static bool validateHost(StringView &r);
 
 }
 
+namespace STAPPLER_VERSIONIZED stappler::platform {
+
+size_t makeRandomBytes(uint8_t * buf, size_t count);
+
+}
+
 namespace STAPPLER_VERSIONIZED stappler::valid {
 
 inline auto Config_getInternalPasswordKey() { return "Serenity Password Salt"_weak; }

@@ -81,9 +81,9 @@ struct sp_time_exp_t {
 	int64_t gmt_geti() const;
 	int64_t ltz_geti() const;
 
-	void encodeRfc822(char *) const;
-	void encodeCTime(char *) const;
-	void encodeIso8601(char *, size_t precision) const;
+	size_t encodeRfc822(char *) const;
+	size_t encodeCTime(char *) const;
+	size_t encodeIso8601(char *, size_t precision) const;
 };
 
 class TimeStorage {
@@ -215,16 +215,14 @@ public:
 	auto toRfc822() const -> typename Interface::StringType {
 		sp_time_exp_t xt(*this);
 		char buf[30] = { 0 };
-		xt.encodeRfc822(buf);
-		return typename Interface::StringType(buf, 29);
+		return typename Interface::StringType(buf, xt.encodeRfc822(buf));
 	}
 
 	template <typename Interface>
 	auto toCTime() const -> typename Interface::StringType {
 		sp_time_exp_t xt(*this, true);
 		char buf[25] = { 0 };
-		xt.encodeCTime(buf);
-		return typename Interface::StringType(buf, 24);
+		return typename Interface::StringType(buf, xt.encodeCTime(buf));
 	}
 
 	// ISO 8601 dateTime format, used by XML/Atom
@@ -237,8 +235,7 @@ public:
 	auto toIso8601(size_t precision = 0) const -> typename Interface::StringType {
 		sp_time_exp_t xt(*this, false);
 		char buf[30] = { 0 };
-		xt.encodeIso8601(buf, precision);
-		return typename Interface::StringType(buf, strlen(buf));
+		return typename Interface::StringType(buf, xt.encodeIso8601(buf, precision));
 	}
 
 	template <typename Interface>
@@ -270,12 +267,12 @@ public:
 	Time & operator= (const Time &other) { _value = other._value; return *this; }
 	Time & operator= (Time &&other) { _value = other._value; return *this; }
 
+	size_t encodeToFormat(char *, size_t, const char *fmt) const;
+
 protected:
     friend class TimeInterval;
 
     using TimeStorage::TimeStorage;
-
-	size_t encodeToFormat(char *, size_t, const char *fmt) const ;
 };
 
 constexpr TimeInterval operator"" _sec ( unsigned long long int val ) { return TimeInterval::seconds((time_t)val); }

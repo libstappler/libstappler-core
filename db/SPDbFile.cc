@@ -38,7 +38,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db {
 
 String File::getFilesystemPath(const ApplicationInterface *app, uint64_t oid) {
-	return toString(app->getDocuemntRoot(), "/uploads/", oid);
+	return toString(app->getDocumentRoot(), "/uploads/", oid);
 }
 
 static bool File_isImage(const StringView &type) {

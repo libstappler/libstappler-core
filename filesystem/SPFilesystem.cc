@@ -207,6 +207,7 @@ typename File::int_type File::xsputc(int_type c) {
 	if (is_open() && !_isBundled) {
 		ret = fputc(c, _nativeFile);
 	}
+	++ _size;
 	return ret;
 }
 
@@ -217,6 +218,7 @@ typename File::streamsize File::xsputn(const char* s, streamsize n) {
 			ret = n;
 		}
 	}
+	_size += n;
 	return ret;
 }
 

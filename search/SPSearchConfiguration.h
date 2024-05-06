@@ -106,7 +106,7 @@ protected:
 
 	StemmerEnv *getEnvForToken(ParserToken) const;
 
-	void doStemQuery(Vector<String>, const SearchQuery &query) const;
+	void doStemQuery(Vector<String> &, const SearchQuery &query) const;
 
 	Data *data;
 };

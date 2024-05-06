@@ -57,6 +57,7 @@ public:
 	function(const allocator_type &alloc = allocator_type()) noexcept : mAllocator(alloc), mCallback(nullptr) { }
 
 	function(nullptr_t, const allocator_type &alloc = allocator_type()) noexcept : mAllocator(alloc), mCallback(nullptr) { }
+
 	function &operator= (nullptr_t) noexcept { clear(); mCallback = nullptr; return *this; }
 
 	function(const function & other, const allocator_type &alloc = allocator_type()) noexcept : mAllocator(alloc) {
@@ -121,6 +122,7 @@ public:
 	}
 
 	constexpr bool operator == (nullptr_t) const noexcept { return mCallback == nullptr; }
+
 	constexpr bool operator != (nullptr_t) const noexcept { return mCallback != nullptr; }
 
 	constexpr explicit operator bool () const noexcept { return mCallback != nullptr; }
@@ -128,6 +130,7 @@ public:
 	constexpr bool operator == (const function & other) const noexcept {
 		return mAllocator == other.mAllocator && mCallback == other.mCallback && mBuffer == other.mBuffer;
 	}
+
 	constexpr bool operator != (const function & other) const noexcept {
 		return mAllocator != other.mAllocator || mCallback != other.mCallback || mBuffer != other.mBuffer;
 	}
@@ -287,6 +290,7 @@ public:
 	}
 
 	constexpr bool operator==(nullptr_t) const noexcept { return mFunctor == nullptr || mCallback == nullptr; }
+
 	constexpr bool operator!=(nullptr_t) const noexcept { return mFunctor != nullptr && mCallback != nullptr; }
 
 	constexpr explicit operator bool () const noexcept { return mFunctor != nullptr && mCallback != nullptr; }

@@ -24,6 +24,7 @@ THE SOFTWARE.
 #include "SPSqlDriver.h"
 #include "SPPqDriver.h"
 #include "SPSqliteDriver.h"
+#include "SPDbAdapter.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
 

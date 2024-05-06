@@ -94,7 +94,7 @@ public:
 	Map<StringView, const void *> *getCurrentQueryStorage() const;
 
 protected:
-	friend class QueryStorageHandle;
+	friend struct QueryStorageHandle;
 
 	Map<StringView, const void *> *registerQueryStorage(StringView) const;
 	void unregisterQueryStorage(StringView) const;

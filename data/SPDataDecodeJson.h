@@ -121,7 +121,7 @@ inline void Decoder<Interface>::parseBufferString(StringType &ref) {
 			if (r.is('u')) {
 				++ r;
 				if (r >= 4) {
-					string::utf8Encode(ref, char16_t(base16::hexToChar(r[0], r[1]) << 8 | base16::hexToChar(r[2], r[3]) ));
+					unicode::utf8Encode(ref, char16_t(base16::hexToChar(r[0], r[1]) << 8 | base16::hexToChar(r[2], r[3]) ));
 					r += 4;
 				} else {
 					r.clear();

@@ -32,8 +32,8 @@ template <char... Chars>
 struct metastring {
 	template <typename Interface>
 	static constexpr auto string() -> typename Interface::StringType { return { Chars ... }; }
-	static constexpr std::array<char, sizeof... (Chars)> std_string() { return { Chars ... }; }
-	static constexpr std::array<char, sizeof... (Chars)> memory_string() { return { Chars ... }; }
+	static std::string std_string() { return { Chars ... }; }
+	static memory::string memory_string() { return { Chars ... }; }
 	static constexpr std::array<char, sizeof... (Chars)> array() { return {{ Chars ... }}; }
 
 	template <typename Interface>

@@ -685,22 +685,22 @@ Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView path, const v
 
 	if (_handle) {
 		auto it = _customFields.emplace(FieldIntArray::FIELD_NAME);
-		if (!FieldIntArray::regsterForPostgres(it.first->second)) {
+		if (!FieldIntArray::registerForPostgres(it.first->second)) {
 			_customFields.erase(it.first);
 		}
 
 		it = _customFields.emplace(FieldBigIntArray::FIELD_NAME);
-		if (!FieldBigIntArray::regsterForPostgres(it.first->second)) {
+		if (!FieldBigIntArray::registerForPostgres(it.first->second)) {
 			_customFields.erase(it.first);
 		}
 
 		it = _customFields.emplace(FieldPoint::FIELD_NAME);
-		if (!FieldPoint::regsterForPostgres(it.first->second)) {
+		if (!FieldPoint::registerForPostgres(it.first->second)) {
 			_customFields.erase(it.first);
 		}
 
 		it = _customFields.emplace(FieldTextArray::FIELD_NAME);
-		if (!FieldTextArray::regsterForPostgres(it.first->second)) {
+		if (!FieldTextArray::registerForPostgres(it.first->second)) {
 			_customFields.erase(it.first);
 		}
 	}

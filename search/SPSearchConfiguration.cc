@@ -388,7 +388,11 @@ Bytes Configuration::encodeSearchVectorData(const SearchVector &data, SearchData
 		}
 	}
 	auto result = enc.data();
-	return data::compress<Interface>(result.data(), result.size(), EncodeFormat::Compression::LZ4HCCompression, true);
+	auto r = data::compress<Interface>(result.data(), result.size(), EncodeFormat::Compression::LZ4HCCompression, true);
+	if (r.empty()) {
+		return result;
+	}
+	return r;
 }
 
 void Configuration::stemHtml(const StringView &str, const StemWordCallback &cb) const {
@@ -780,7 +784,7 @@ Vector<String> Configuration::stemQuery(const SearchQuery &query) const {
 	return queryList;
 }
 
-void Configuration::doStemQuery(Vector<String> queryList, const SearchQuery &query) const {
+void Configuration::doStemQuery(Vector<String> &queryList, const SearchQuery &query) const {
 	if (!query.value.empty()) {
 		emplace_ordered(queryList, query.value);
 	}

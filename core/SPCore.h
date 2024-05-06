@@ -60,6 +60,9 @@ THE SOFTWARE.
 #define MODULE_STAPPLER_DB 1
 #define MODULE_STAPPLER_ZIP 1
 
+#define MODULE_STAPPLER_WEBSERVER_WEBSERVER 1
+#define MODULE_STAPPLER_WEBSERVER_UNIX 1
+
 #define MODULE_XENOLITH_CORE 1
 #define MODULE_XENOLITH_APPLICATION 1
 #define MODULE_XENOLITH_BACKEND_VK 1
@@ -305,12 +308,15 @@ _LIBCPP_END_NAMESPACE_STD
 // GCC-specific formatting attribute
 #if defined(__GNUC__) && (__GNUC__ >= 4)
 #define SPPRINTF(formatPos, argPos) __attribute__((__format__(printf, formatPos, argPos)))
+#define SP_COVERAGE_TRIVIAL __attribute__ ((no_profile_instrument_function))
 #elif defined(__has_attribute)
 #if __has_attribute(format)
 #define SPPRINTF(formatPos, argPos) __attribute__((__format__(printf, formatPos, argPos)))
 #endif // __has_attribute(format)
+#define SP_COVERAGE_TRIVIAL
 #else
 #define SPPRINTF(formatPos, argPos)
+#define SP_COVERAGE_TRIVIAL
 #endif
 
 #define SP_EXTERN_C			extern "C"
@@ -548,17 +554,17 @@ StringToNumber<double>(const char *ptr, char ** tail, int base) -> double {
  * on this enum class
  */
 #define SP_DEFINE_ENUM_AS_MASK(Type) \
-	constexpr inline Type operator | (const Type &l, const Type &r) { return Type(stappler::toInt(l) | stappler::toInt(r)); } \
-	constexpr inline Type operator & (const Type &l, const Type &r) { return Type(stappler::toInt(l) & stappler::toInt(r)); } \
-	constexpr inline Type operator ^ (const Type &l, const Type &r) { return Type(stappler::toInt(l) ^ stappler::toInt(r)); } \
-	constexpr inline Type & operator |= (Type &l, const Type &r) { l = Type(stappler::toInt(l) | stappler::toInt(r)); return l; } \
-	constexpr inline Type & operator &= (Type &l, const Type &r) { l = Type(stappler::toInt(l) & stappler::toInt(r)); return l; } \
-	constexpr inline Type & operator ^= (Type &l, const Type &r) { l = Type(stappler::toInt(l) ^ stappler::toInt(r)); return l; } \
-	constexpr inline bool operator == (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) == r; } \
-	constexpr inline bool operator == (const std::underlying_type<Type>::type &l, const Type &r) { return l == stappler::toInt(r); } \
-	constexpr inline bool operator != (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) != r; } \
-	constexpr inline bool operator != (const std::underlying_type<Type>::type &l, const Type &r) { return l != stappler::toInt(r); } \
-	constexpr inline Type operator~(const Type &t) { return Type(~stappler::toInt(t)); }
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator | (const Type &l, const Type &r) { return Type(stappler::toInt(l) | stappler::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator & (const Type &l, const Type &r) { return Type(stappler::toInt(l) & stappler::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator ^ (const Type &l, const Type &r) { return Type(stappler::toInt(l) ^ stappler::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator |= (Type &l, const Type &r) { l = Type(stappler::toInt(l) | stappler::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator &= (Type &l, const Type &r) { l = Type(stappler::toInt(l) & stappler::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator ^= (Type &l, const Type &r) { l = Type(stappler::toInt(l) ^ stappler::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) == r; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const std::underlying_type<Type>::type &l, const Type &r) { return l == stappler::toInt(r); } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) != r; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const std::underlying_type<Type>::type &l, const Type &r) { return l != stappler::toInt(r); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator~(const Type &t) { return Type(~stappler::toInt(t)); }
 
 
 /** Value wrapper is a syntactic sugar struct, that allow you to create

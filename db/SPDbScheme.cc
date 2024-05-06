@@ -443,7 +443,7 @@ bool Scheme::save(const Transaction &t, Object *obj) const {
 	Set<const Field *> fields;
 
 	Value tmp(obj->_data);
-	return t.save(w, obj->getObjectId(), tmp, obj->_data, fields);
+	return t.save(w, obj->getObjectId(), tmp, obj->_data, fields) ? true : false;
 }
 
 bool Scheme::hasFiles() const {
@@ -757,7 +757,7 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, uint64_t oid, const Field &f,
 		break;
 	case Action::Remove:
 		return Value(w.perform([&] (const Transaction &t) -> bool {
-			return t.field(a, w, oid, f, std::move(patch)).asBool();
+			return t.field(a, w, oid, f, std::move(patch)) ? true : false;
 		}));
 		break;
 	case Action::Append:

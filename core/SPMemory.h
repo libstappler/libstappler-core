@@ -51,6 +51,7 @@ public:
 
 	void clear() const { clear_fn(target); }
 	void reserve(size_t count) const { reserve_fn(target, count); }
+	void resize(size_t count) const { resize_fn(target, count); }
 
 	explicit operator bool () const { return target != nullptr; }
 
@@ -71,6 +72,7 @@ public:
 	T * (*end_fn) (void *) = nullptr;
 	void (*clear_fn) (void *) = nullptr;
 	void (*reserve_fn) (void *, size_t) = nullptr;
+	void (*resize_fn) (void *, size_t) = nullptr;
 };
 
 }
@@ -380,6 +382,8 @@ VectorAdapter<T>::VectorAdapter(memory::StandartInterface::VectorType<T> &vec)
 	((mem_std::Vector<T> *)target)->clear();
 }), reserve_fn([] (void *target, size_t s) {
 	((mem_std::Vector<T> *)target)->reserve(s);
+}), resize_fn([] (void *target, size_t s) {
+	((mem_std::Vector<T> *)target)->resize(s);
 }) { }
 
 template <typename T>
@@ -404,6 +408,8 @@ VectorAdapter<T>::VectorAdapter(memory::PoolInterface::VectorType<T> &vec)
 	((mem_pool::Vector<T> *)target)->clear();
 }), reserve_fn([] (void *target, size_t s) {
 	((mem_pool::Vector<T> *)target)->reserve(s);
+}), resize_fn([] (void *target, size_t s) {
+	((mem_pool::Vector<T> *)target)->resize(s);
 }) { }
 
 }

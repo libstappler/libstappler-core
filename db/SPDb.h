@@ -87,6 +87,8 @@ struct InputConfig {
 		FilesAsData = 8,
 	};
 
+	static bool isFileAsDataSupportedForType(StringView);
+
 	void updateLimits(const Map<String, Field> &vec);
 
 	Require required = Require::None;

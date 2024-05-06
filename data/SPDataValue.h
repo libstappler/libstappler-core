@@ -290,10 +290,7 @@ public:
 
 	Self slice(int start, int count);
 
-	operator bool() const noexcept { return (_type != Type::EMPTY && _type != Type::NONE); }
-	operator int32_t() const noexcept = delete; // internal protection for bool-to-int cast
-	operator int64_t() const noexcept = delete; // internal protection for bool-to-int cast
-	operator size_t() const noexcept = delete; // internal protection for bool-to-int cast
+	explicit operator bool() const noexcept { return (_type != Type::EMPTY && _type != Type::NONE); }
 
 	int64_t asInteger() const;
 	double asDouble() const;
@@ -1045,7 +1042,7 @@ bool ValueTemplate<Interface>::erase(Key &&key) {
 			return false;
 		}
 
-		if (key < arrayVal->size()) {
+		if (size_t(key) < arrayVal->size()) {
 			arrayVal->erase(arrayVal->begin() + key);
 			return true;
 		}

@@ -67,7 +67,7 @@ static bool writePgIntArray(StringStream &query, const Value &val) {
 	return false;
 }
 
-bool FieldIntArray::regsterForPostgres(CustomFieldInfo &info) {
+bool FieldIntArray::registerForPostgres(CustomFieldInfo &info) {
 	info.isIndexable = true;
 	info.typeName = "integer[]";
 	info.readFromStorage = [] (const FieldCustom &, const ResultCursor &iface, size_t field) -> Value {
@@ -121,7 +121,7 @@ bool FieldIntArray::regsterForPostgres(CustomFieldInfo &info) {
 	return true;
 }
 
-bool FieldIntArray::regsterForSqlite(CustomFieldInfo &info) {
+bool FieldIntArray::registerForSqlite(CustomFieldInfo &info) {
 	info.isIndexable = false;
 	info.typeName = "BLOB";
 	info.readFromStorage = [] (const FieldCustom &, const ResultCursor &iface, size_t field) -> Value {
@@ -187,7 +187,7 @@ bool FieldIntArray::isSimpleLayout() const {
 	return true;
 }
 
-bool FieldBigIntArray::regsterForPostgres(CustomFieldInfo &info) {
+bool FieldBigIntArray::registerForPostgres(CustomFieldInfo &info) {
 	info.isIndexable = true;
 	info.typeName = "bigint[]";
 	info.readFromStorage = [] (const FieldCustom &, const ResultCursor &iface, size_t field) -> Value {
@@ -241,7 +241,7 @@ bool FieldBigIntArray::regsterForPostgres(CustomFieldInfo &info) {
 	return true;
 }
 
-bool FieldBigIntArray::regsterForSqlite(CustomFieldInfo &info) {
+bool FieldBigIntArray::registerForSqlite(CustomFieldInfo &info) {
 	info.isIndexable = false;
 	info.typeName = "BLOB";
 	info.readFromStorage = [] (const FieldCustom &, const ResultCursor &iface, size_t field) -> Value {
@@ -307,7 +307,7 @@ bool FieldBigIntArray::isSimpleLayout() const {
 	return true;
 }
 
-bool FieldPoint::regsterForPostgres(CustomFieldInfo &info) {
+bool FieldPoint::registerForPostgres(CustomFieldInfo &info) {
 	info.isIndexable = true;
 	info.typeName = "point";
 	info.readFromStorage = [] (const FieldCustom &, const ResultCursor &iface, size_t field) -> Value {
@@ -357,7 +357,7 @@ bool FieldPoint::regsterForPostgres(CustomFieldInfo &info) {
 	return true;
 }
 
-bool FieldPoint::regsterForSqlite(CustomFieldInfo &info) {
+bool FieldPoint::registerForSqlite(CustomFieldInfo &info) {
 	info.isIndexable = false;
 	info.typeName = "BLOB";
 	info.readFromStorage = [] (const FieldCustom &, const ResultCursor &iface, size_t field) -> Value {
@@ -388,7 +388,7 @@ bool FieldPoint::isSimpleLayout() const {
 	return true;
 }
 
-bool FieldTextArray::regsterForPostgres(CustomFieldInfo &info) {
+bool FieldTextArray::registerForPostgres(CustomFieldInfo &info) {
 	info.isIndexable = true;
 	info.typeName = "text[]";
 	info.readFromStorage = [] (const FieldCustom &, const ResultCursor &iface, size_t field) -> Value {
@@ -476,7 +476,7 @@ bool FieldTextArray::regsterForPostgres(CustomFieldInfo &info) {
 	return true;
 }
 
-bool FieldTextArray::regsterForSqlite(CustomFieldInfo &info) {
+bool FieldTextArray::registerForSqlite(CustomFieldInfo &info) {
 	info.isIndexable = false;
 	info.typeName = "BLOB";
 	info.readFromStorage = [] (const FieldCustom &, const ResultCursor &iface, size_t field) -> Value {

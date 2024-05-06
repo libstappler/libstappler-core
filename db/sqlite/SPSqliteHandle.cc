@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "SPSqliteHandle.h"
 #include "SPSqliteDriver.h"
+#include "SPSqliteDriverHandle.h"
 #include "sqlite3.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {

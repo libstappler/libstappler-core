@@ -87,7 +87,27 @@ private:
 	template <typename T>
 	auto convert(const uint8_t *data) -> T;
 
+	bool match (CharType c) { return false; }
+	template <uint8_t Arg, uint8_t ... Args> bool match (CharType c);
+
 public:
+	template<uint8_t ... Args> void skipChars();
+	template<uint8_t ... Args> void skipUntil();
+
+	template<uint8_t ... Args> void backwardSkipChars();
+	template<uint8_t ... Args> void backwardSkipUntil();
+
+	template<uint8_t ... Args> Self readChars();
+	template<uint8_t ... Args> Self readUntil();
+
+	template<uint8_t ... Args> Self backwardReadChars();
+	template<uint8_t ... Args> Self backwardReadUntil();
+
+	template <uint8_t ... Args> void trimChars();
+	template <uint8_t ... Args> void trimUntil();
+
+	template<typename Separator, typename Callback> void split(const Callback &cb) const;
+
 	uint64_t readUnsigned64();
 	uint32_t readUnsigned32();
 	uint32_t readUnsigned24();
@@ -251,6 +271,121 @@ auto BytesViewTemplate<Endianess>::convert(const uint8_t *data) -> T {
 	memcpy(&res, data, sizeof(T));
 	return Converter<T>::Swap(res);
 };
+
+template <Endian Endianess>
+template<uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::skipChars() -> void {
+	size_t offset = 0;
+	while (this->len > offset && match<Args...>(this->ptr[offset])) {
+		++offset;
+	}
+	auto off = std::min(offset, this->len);
+	this->len -= off;
+	this->ptr += off;
+}
+
+template <Endian Endianess>
+template<uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::skipUntil() -> void {
+	size_t offset = 0;
+	while (this->len > offset && !match<Args...>(this->ptr[offset])) {
+		++offset;
+	}
+	auto off = std::min(offset, this->len);
+	this->len -= off;
+	this->ptr += off;
+}
+
+template <Endian Endianess>
+template<uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::backwardSkipChars() -> void {
+	while (this->len > 0 && match<Args...>(this->ptr[this->len - 1])) {
+		-- this->len;
+	}
+}
+
+template <Endian Endianess>
+template<uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::backwardSkipUntil() -> void {
+	while (this->len > 0 && !match<Args...>(this->ptr[this->len - 1])) {
+		-- this->len;
+	}
+}
+
+template <Endian Endianess>
+template <uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::readChars() -> Self {
+	auto tmp = *this;
+	skipChars<Args ...>();
+	return Self(tmp.data(), tmp.size() - this->size());
+}
+
+template <Endian Endianess>
+template <uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::readUntil() -> Self {
+	auto tmp = *this;
+	skipUntil<Args ...>();
+	return Self(tmp.data(), tmp.size() - this->size());
+}
+
+template <Endian Endianess>
+template<uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::backwardReadChars() -> Self {
+	auto tmp = *this;
+	backwardSkipChars<Args ...>();
+	return Self(this->data() + this->size(), tmp.size() - this->size());
+}
+
+template <Endian Endianess>
+template<uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::backwardReadUntil() -> Self {
+	auto tmp = *this;
+	backwardSkipUntil<Args ...>();
+	return Self(this->data() + this->size(), tmp.size() - this->size());
+}
+
+template <Endian Endianess>
+template<typename Separator, typename Callback>
+auto BytesViewTemplate<Endianess>::split(const Callback &cb) const -> void {
+	Self str(*this);
+	while (!str.empty()) {
+		str.skipChars<Separator>();
+		auto tmp = str.readUntil<Separator>();
+		if (!tmp.empty()) {
+			cb(tmp);
+		}
+	}
+}
+
+template <Endian Endianess>
+template<uint8_t ... Args>
+auto BytesViewTemplate<Endianess>::trimChars() -> void {
+	this->skipChars<Args...>();
+	if (!this->empty()) {
+		this->backwardSkipChars<Args...>();
+	}
+}
+
+template <Endian Endianess>
+template <uint8_t... Args>
+auto BytesViewTemplate<Endianess>::trimUntil() -> void {
+	this->skipUntil<Args...>();
+	if (!this->empty()) {
+		this->backwardSkipUntil<Args...>();
+	}
+}
+
+template <Endian Endianess>
+template <uint8_t Arg, uint8_t ...Args>
+auto BytesViewTemplate<Endianess>::match(CharType c) -> bool {
+	if (c == Arg) {
+		return true;
+	}
+	if constexpr (sizeof...(Args) > 0) {
+		return match<Args...>(c);
+	}
+	return false;
+}
 
 template <Endian Endianess>
 auto BytesViewTemplate<Endianess>::readUnsigned64() -> uint64_t {

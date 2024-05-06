@@ -27,6 +27,9 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
+template <typename Clause>
+static void SqlQuery_makeCustomFrom(const Driver *driver, SqlQuery &q, Clause &tmp, const Query &query, const Scheme &scheme);
+
 static bool Handle_hasPostUpdate(const SpanView<InputField> &idata, const SpanView<InputRow> &inputRows) {
 	size_t i = 0;
 	for (auto &it : idata) {
@@ -169,6 +172,8 @@ Value SqlHandle::create(Worker &worker, const Vector<InputField> &inputFields, V
 		for (size_t idx = 0; idx < inputFields.size(); ++ idx) {
 			auto f = inputFields[idx].field;
 			switch (f->getType()) {
+			case Type::Set:
+			case Type::Array:
 			case Type::Virtual:
 				break;
 			default:
@@ -199,7 +204,15 @@ Value SqlHandle::create(Worker &worker, const Vector<InputField> &inputFields, V
 		makeQuery([&, this] (SqlQuery &query) {
 			auto ins = query.insert(scheme.getName());
 			for (auto &it : inputFields) {
-				ins.field(it.field->getName());
+				switch (it.field->getType()) {
+				case Type::Set:
+				case Type::Array:
+				case Type::Virtual:
+					break;
+				default:
+					ins.field(it.field->getName());
+					break;
+				}
 			}
 
 			auto val = ins.values();
@@ -363,8 +376,10 @@ Value SqlHandle::save(Worker &worker, uint64_t oid, const Value &data, const Vec
 			case Type::Virtual:
 				break;
 			case Type::Object:
-				if (v.hasValue() && v.value.isDictionary("__oid")) {
-					upd.set(f.field->getName(), oid);
+				if (v.hasValue() && v.value.isDictionary() && v.value.isInteger("__oid")) {
+					upd.set(f.field->getName(), v.value.getInteger("__oid"));
+				} else if (v.value.isInteger()) {
+					upd.set(f.field->getName(), v.value.getInteger());
 				}
 				break;
 			default:
@@ -459,6 +474,8 @@ size_t SqlHandle::count(Worker &worker, const db::Query &q) {
 		auto ordField = q.getQueryField();
 		if (ordField.empty()) {
 			auto f = query.select().count().from(scheme.getName());
+
+			SqlQuery_makeCustomFrom(_driver, query, f, q, scheme);
 
 			if (!q.empty()) {
 				auto w = f.where();

@@ -171,7 +171,7 @@ Pair<FILE *, uint64_t> _openFile(const StringView &filename, bool readOnly, bool
 			if (!readOnly) {
 				if (!resume) {
 					filesystem::remove(path);
-					file = filesystem::native::fopen_fn(path, "wb");
+					file = filesystem::native::fopen_fn(path, "w+b");
 				} else {
 					file = filesystem::native::fopen_fn(path, "a+b");
 				}
@@ -181,7 +181,7 @@ Pair<FILE *, uint64_t> _openFile(const StringView &filename, bool readOnly, bool
 		}
 	} else {
 		if (!readOnly) {
-			file = filesystem::native::fopen_fn(path, "wb");
+			file = filesystem::native::fopen_fn(path, "w+b");
 		}
 	}
     return pair(file, pos);
@@ -450,14 +450,17 @@ static void _setupSendData(bool &check, const HandleData<Interface> &iface, CURL
 	            SetOpt(check, curl, CURLOPT_READFUNCTION, (void *)NULL);
 	            SetOpt(check, curl, CURLOPT_READDATA, outputFile);
 	            SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, size);
+		        SetOpt(check, curl, CURLOPT_INFILESIZE, size);
 			}
 		} else if constexpr (std::is_same_v<T, typename HandleData<Interface>::IOCallback>) {
 			SetOpt(check, curl, CURLOPT_READFUNCTION, _readData<Interface>);
 			SetOpt(check, curl, CURLOPT_READDATA, &iface);
 			SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, iface.send.size);
+            SetOpt(check, curl, CURLOPT_INFILESIZE, iface.send.size);
 		} else if constexpr (std::is_same_v<T, typename HandleData<Interface>::Bytes>) {
 			SetOpt(check, curl, CURLOPT_POSTFIELDS, arg.data());
 			SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, arg.size());
+            SetOpt(check, curl, CURLOPT_INFILESIZE, arg.size());
 		}
 	}, iface.send.data);
 }
@@ -481,13 +484,13 @@ static bool _setupMethodPost(const HandleData<Interface> &iface, CURL *curl, FIL
 template <typename Interface>
 static bool _setupMethodPut(const HandleData<Interface> &iface, CURL *curl, FILE * & outputFile) {
 	bool check = true;
-    SetOpt(check, curl, CURLOPT_UPLOAD, 1);
 
-	SetOpt(check, curl, CURLOPT_READFUNCTION, (void *)NULL);
-	SetOpt(check, curl, CURLOPT_READDATA, (void *)NULL);
-    SetOpt(check, curl, CURLOPT_INFILESIZE, 0);
+	SetOpt(check, curl, CURLOPT_UPLOAD, 1);
+	SetOpt(check, curl, CURLOPT_READFUNCTION, (void*) NULL);
+	SetOpt(check, curl, CURLOPT_READDATA, (void*) NULL);
+	SetOpt(check, curl, CURLOPT_CUSTOMREQUEST, "PUT");
 
-    _setupSendData(check, iface, curl, outputFile);
+	_setupSendData(check, iface, curl, outputFile);
 
 	return check;
 }
@@ -495,8 +498,8 @@ static bool _setupMethodPut(const HandleData<Interface> &iface, CURL *curl, FILE
 template <typename Interface>
 static bool _setupMethodDelete(const HandleData<Interface> &iface, CURL *curl) {
 	bool check = true;
-    SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
-    SetOpt(check, curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+	SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
+	SetOpt(check, curl, CURLOPT_CUSTOMREQUEST, "DELETE");
 	return check;
 }
 
@@ -505,7 +508,6 @@ static bool _setupMethodSmpt(const HandleData<Interface> &iface, CURL *curl, FIL
 	bool check = true;
 
     SetOpt(check, curl, CURLOPT_UPLOAD, 1);
-
 	SetOpt(check, curl, CURLOPT_READFUNCTION, (void *)NULL);
 	SetOpt(check, curl, CURLOPT_READDATA, (void *)NULL);
     SetOpt(check, curl, CURLOPT_INFILESIZE, 0);
@@ -675,7 +677,22 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callb
 			log::format(log::Error, "CURL", "fail to perform %s: (%ld) %s", iface.send.url.data(), iface.process.errorCode, ctx->error.data());
 		}
 		iface.process.error = ctx->error.data();
+		if (iface.process.debug) {
+	        std::visit([&] (auto &&arg) {
+				using T = std::decay_t<decltype(arg)>;
+				if constexpr (std::is_same_v<T, typename HandleData<Interface>::String>) {
+					std::cout << "Input file: " << arg << "\n";
+				}
+			}, iface.receive.data);
+		}
 		ctx->success = false;
+	}
+
+	if (!iface.process.cookieFile.empty()) {
+		auto it = iface.receive.parsed.find("set-cookie");
+		if (it != iface.receive.parsed.end()) {
+			iface.process.invalidate = true;
+		}
 	}
 
 	if (onAfterPerform) {
@@ -722,7 +739,7 @@ bool perform(HandleData<memory::PoolInterface> &iface, const Callback<bool(CURL 
 	Context<memory::PoolInterface> ctx;
 	ctx.curl = CurlHandle_getHandle(iface.process.reuse, p);
 	auto ret = _perform<memory::PoolInterface>(ctx, iface, onBeforePerform, onAfterPerform);
-	CurlHandle_releaseHandle(ctx.curl, iface.process.reuse, ctx.code == CURLE_OK, p);
+	CurlHandle_releaseHandle(ctx.curl, iface.process.reuse, !iface.process.invalidate && ctx.code == CURLE_OK, p);
 	return ret;
 }
 
@@ -731,7 +748,7 @@ bool perform(HandleData<memory::StandartInterface> &iface, const Callback<bool(C
 	Context<memory::StandartInterface> ctx;
 	ctx.curl = CurlHandle_getHandle(iface.process.reuse, nullptr);
 	auto ret = _perform<memory::StandartInterface>(ctx, iface, onBeforePerform, onAfterPerform);
-	CurlHandle_releaseHandle(ctx.curl, iface.process.reuse, ctx.code == CURLE_OK, nullptr);
+	CurlHandle_releaseHandle(ctx.curl, iface.process.reuse, !iface.process.invalidate && ctx.code == CURLE_OK, nullptr);
 	return ret;
 }
 

@@ -284,11 +284,11 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				switch (t.type) {
 				case TriggerRec::Delete:
 					outstream << " WHEN OLD.\"" << t.sourceField << "\" IS NOT NULL BEGIN"
-							"\n\tINSERT INTO __removed (__oid) VALUES (OLD.\"" << t.sourceField << "\");\nEND;\n";
+							"\n\tINSERT OR IGNORE INTO __removed (__oid) VALUES (OLD.\"" << t.sourceField << "\");\nEND;\n";
 					break;
 				case TriggerRec::Update:
 					outstream << " WHEN OLD.\"" << t.sourceField << "\" IS NOT NULL BEGIN"
-							"\n\tINSERT INTO __removed (__oid) VALUES (OLD.\"" << t.sourceField << "\");\nEND;\n";
+							"\n\tINSERT OR IGNORE INTO __removed (__oid) VALUES (OLD.\"" << t.sourceField << "\");\nEND;\n";
 					break;
 				default:
 					break;
@@ -381,21 +381,21 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(OLD.__oid," << stappler::toInt(DeltaAction::Delete) << ",sp_sqlite_now(),stellator_user());"
+						"(OLD.__oid," << stappler::toInt(DeltaAction::Delete) << ",sp_sqlite_now(),sp_sqlite_user());"
 						"\nEND;\n";
 				break;
 			case TriggerRec::Update:
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(NEW.__oid," << stappler::toInt(DeltaAction::Update) << ",sp_sqlite_now(),stellator_user());"
+						"(NEW.__oid," << stappler::toInt(DeltaAction::Update) << ",sp_sqlite_now(),sp_sqlite_user());"
 						"\nEND;\n";
 				break;
 			case TriggerRec::Insert:
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(OLD.__oid," << stappler::toInt(DeltaAction::Create) << ",sp_sqlite_now(),stellator_user());"
+						"(NEW.__oid," << stappler::toInt(DeltaAction::Create) << ",sp_sqlite_now(),sp_sqlite_user());"
 						"\nEND;\n";
 				break;
 			}
@@ -405,21 +405,21 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(OLD.\"" << t.tagField << "\",OLD.\"" << t.targetField  << "\",sp_sqlite_now(),stellator_user());"
+						"(OLD.\"" << t.tagField << "\",OLD.\"" << t.targetField  << "\",sp_sqlite_now(),sp_sqlite_user());"
 						"\nEND;\n";
 				break;
 			case TriggerRec::Update:
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",sp_sqlite_now(),stellator_user());"
+						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",sp_sqlite_now(),sp_sqlite_user());"
 						"\nEND;\n";
 				break;
 			case TriggerRec::Insert:
 				writeTriggerHeader(name, t,StringView());
 				outstream << " BEGIN"
 						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",sp_sqlite_now(),stellator_user());"
+						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",sp_sqlite_now(),sp_sqlite_user());"
 						"\nEND;\n";
 				break;
 			}
@@ -724,19 +724,20 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 			case db::Type::View: {
 				auto slot = static_cast<const db::FieldView *>(f.getSlot());
 
-				String name = toString(it.first, "_f_", fit.first, "_view");
+				String viewName = toString(it.first, "_f_", fit.first, "_view");
 				auto & source = it.first;
 				auto target = slot->scheme->getName();
 
 				TableRec table;
 				table.viewScheme = it.second;
 				table.viewField = slot;
+				table.cols.emplace("__vid", ColRec(ColRec::Type::Int8, ColRec::PrimaryKey));
 				table.cols.emplace(toString(source, "_id"), ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
 				table.cols.emplace(toString(target, "_id"), ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
 
 				do {
 					TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, source, "__oid",
-							name, toString(source, "_id"));
+							viewName, toString(source, "_id"));
 					trigger.rootField = &fit.second;
 					auto triggerName = trigger.makeName();
 					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
@@ -746,7 +747,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					auto targetIt = tables.find(target);
 					if (targetIt != tables.end()) {
 						TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, target, "__oid",
-								name, toString(target, "_id"));
+								viewName, toString(target, "_id"));
 						trigger.rootField = &fit.second;
 						trigger.rootScheme = scheme;
 						auto triggerName = trigger.makeName();
@@ -754,13 +755,14 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					}
 				} while (0);
 
-				table.indexes.emplace(toString(name, "_idx_", source), toString(source, "_id"));
-				table.indexes.emplace(toString(name, "_idx_", target), toString(target, "_id"));
+				table.indexes.emplace(toString(viewName, "_idx_", source), toString(source, "_id"));
+				table.indexes.emplace(toString(viewName, "_idx_", target), toString(target, "_id"));
 
-				auto tblIt = tables.emplace(StringView(name).pdup(), std::move(table)).first;
+				auto tblIt = tables.emplace(StringView(viewName).pdup(), std::move(table)).first;
 
 				if (slot->delta) {
 					String deltaName = toString(it.first, "_f_", fit.first, "_delta");
+					table.cols.emplace("id", ColRec(ColRec::Type::Int8, ColRec::PrimaryKey));
 					table.cols.emplace("tag", ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
 					table.cols.emplace("object", ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
 					table.cols.emplace("time", ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
@@ -771,27 +773,27 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					table.indexes.emplace(deltaName + "_idx_time", "time");
 
 					do {
-						TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, name, "__delta", deltaName, toString(target, "_id"));
+						TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
 						tblIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
 					} while (0);
 
 					do {
-						TriggerRec trigger(TriggerRec::Update, TriggerRec::After, name, "__delta", deltaName, toString(target, "_id"));
+						TriggerRec trigger(TriggerRec::Update, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
 						tblIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
 					} while (0);
 
 					do {
-						TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, name, "__delta", deltaName, toString(target, "_id"));
+						TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
 						tblIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
 					} while (0);
 
-					tables.emplace(StringView(name).pdup(), std::move(table));
+					tables.emplace(StringView(deltaName).pdup(), std::move(table));
 				}
 				break;
 			}
@@ -1149,14 +1151,12 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 	StringStream stream;
 	TableRec::writeCompareResult(*this, stream, requiredTables, existedTables, s);
 
-	auto name = toString(".reports/update.", stappler::Time::now().toMilliseconds(), ".sql");
 	if (!stream.empty()) {
 		bool success = true;
 		if (!performSimpleQuery(stream.weak(), [&] (const Value &errInfo) {
 			stream << "Server: " << cfg.name << "\n";
 			stream << "\nErrorInfo: " << EncodeFormat::Pretty << errInfo << "\n";
 		})) {
-			log::error("Database", "Fail to perform update ", name.c_str());
 			endTransaction();
 			success = false;
 		}

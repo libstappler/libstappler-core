@@ -93,6 +93,8 @@ public:
 	Self & set(const PoolString &str);
 	Self & set(const StdString &str);
 	Self & set(const Self &str);
+
+	// unsafe set, without length-check
 	Self & set(const CharType *p, size_t l);
 
 	bool is(const CharType &c) const;
@@ -801,9 +803,9 @@ template <typename _CharType>
 auto StringViewBase<_CharType>::readFloat() -> Result<float> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
-	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = string::readNumber<float>(targetPtr, targetLen, 0);
-	this->ptr = targetPtr; this->len = targetLen;
+	uint8_t offset = 0;
+	auto ret = string::readNumber<float>(tmp.ptr, tmp.len, 0, offset);
+	this->ptr += offset; this->len -= offset;
 	return ret;
 }
 
@@ -811,9 +813,9 @@ template <typename _CharType>
 auto StringViewBase<_CharType>::readDouble() -> Result<double> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
-	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = string::readNumber<double>(targetPtr, targetLen, 0);
-	this->ptr = targetPtr; this->len = targetLen;
+	uint8_t offset = 0;
+	auto ret = string::readNumber<double>(tmp.ptr, tmp.len, 0, offset);
+	this->ptr += offset; this->len -= offset;
 	return ret;
 }
 
@@ -821,9 +823,9 @@ template <typename _CharType>
 auto StringViewBase<_CharType>::readInteger(int base) -> Result<int64_t> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
-	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = string::readNumber<int64_t>(targetPtr, targetLen, base);
-	this->ptr = targetPtr; this->len = targetLen;
+	uint8_t offset = 0;
+	auto ret = string::readNumber<int64_t>(tmp.ptr, tmp.len, 0, offset);
+	this->ptr += offset; this->len -= offset;
 	return ret;
 }
 
@@ -1164,25 +1166,25 @@ inline StringViewUtf8::operator StringViewBase<char> () const {
 inline Result<float> StringViewUtf8::readFloat() {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
-	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = string::readNumber<float>(targetPtr, targetLen, 0);
-	this->ptr = targetPtr; this->len = targetLen;
+	uint8_t offset = 0;
+	auto ret = string::readNumber<float>(tmp.ptr, tmp.len, 0, offset);
+	this->ptr += offset; this->len -= offset;
 	return ret;
 }
 inline Result<double> StringViewUtf8::readDouble() {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
-	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = string::readNumber<double>(targetPtr, targetLen, 0);
-	this->ptr = targetPtr; this->len = targetLen;
+	uint8_t offset = 0;
+	auto ret = string::readNumber<double>(tmp.ptr, tmp.len, 0, offset);
+	this->ptr += offset; this->len -= offset;
 	return ret;
 }
 inline Result<int64_t> StringViewUtf8::readInteger(int base) {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
-	auto targetPtr = tmp.ptr; auto targetLen = tmp.len;
-	auto ret = string::readNumber<int64_t>(targetPtr, targetLen, base);
-	this->ptr = targetPtr; this->len = targetLen;
+	uint8_t offset = 0;
+	auto ret = string::readNumber<int64_t>(tmp.ptr, tmp.len, 0, offset);
+	this->ptr += offset; this->len -= offset;
 	return ret;
 }
 

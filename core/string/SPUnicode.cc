@@ -31,6 +31,57 @@ THE SOFTWARE.
 #include <dlfcn.h>
 #endif
 
+namespace STAPPLER_VERSIONIZED stappler::unicode {
+
+static char32_t Utf8DecodeHtml32(const char *ptr, uint32_t len) {
+	if (ptr[0] == '#') {
+		if (len > 1 && (ptr[1] == 'x' || ptr[1] == 'X')) {
+			return char32_t(strtol(ptr + 2, nullptr, 16));
+		}
+		return char32_t(strtol(ptr + 1, nullptr, 10));
+	} else if (strncmp(ptr, "amp", len) == 0) {
+		return '&';
+	} else if (strncmp(ptr, "nbsp", len) == 0) {
+		return 0xA0;
+	} else if (strncmp(ptr, "quot", len) == 0) {
+		return '"';
+	} else if (strncmp(ptr, "apos", len) == 0) {
+		return '\'';
+	} else if (strncmp(ptr, "lt", len) == 0) {
+		return '<';
+	} else if (strncmp(ptr, "gt", len) == 0) {
+		return '>';
+	} else if (strncmp(ptr, "shy", len) == 0) {
+		return char32_t(0x00AD);
+	}
+	return 0;
+}
+
+char32_t utf8HtmlDecode32(const char *utf8, uint8_t &offset) {
+	if (utf8[0] == '&') {
+		uint32_t len = 0;
+		while (utf8[len] && utf8[len] != ';' && len < 10) {
+			len ++;
+		}
+
+		char32_t c = 0;
+		if (utf8[len] == ';' && len > 2) {
+			c = Utf8DecodeHtml32(utf8 + 1, len - 2);
+		}
+
+		if (c == 0) {
+			return utf8Decode32(utf8, offset);
+		} else {
+			offset = (len + 1);
+			return c;
+		}
+	} else {
+		return utf8Decode32(utf8, offset);
+	}
+}
+
+}
+
 namespace STAPPLER_VERSIONIZED stappler::string {
 
 SPUNUSED inline size_t Utf8CharLength(const uint8_t *ptr, uint8_t &mask);
@@ -59,53 +110,6 @@ template <class T> static inline T Utf8NextChar(T p, size_t &counter) {
 	return (p + l);
 }
 
-static char32_t Utf8DecodeHtml32(char_const_ptr_t ptr, uint32_t len) {
-	if (ptr[0] == '#') {
-		if (len > 1 && (ptr[1] == 'x' || ptr[1] == 'X')) {
-			return (char32_t)strtol((char_const_ptr_t)(ptr + 2), nullptr, 16);
-		}
-		return (char32_t)strtol((char_const_ptr_t)(ptr + 1), nullptr, 10);
-	} else if (strncmp((char_const_ptr_t)ptr, "amp", len) == 0) {
-		return '&';
-	} else if (strncmp((char_const_ptr_t)ptr, "nbsp", len) == 0) {
-		return 0xA0;
-	} else if (strncmp((char_const_ptr_t)ptr, "quot", len) == 0) {
-		return '"';
-	} else if (strncmp((char_const_ptr_t)ptr, "apos", len) == 0) {
-		return '\'';
-	} else if (strncmp((char_const_ptr_t)ptr, "lt", len) == 0) {
-		return '<';
-	} else if (strncmp((char_const_ptr_t)ptr, "gt", len) == 0) {
-		return '>';
-	} else if (strncmp((char_const_ptr_t)ptr, "shy", len) == 0) {
-		return (char32_t)0x00AD;
-	}
-	return 0;
-}
-
-char32_t utf8HtmlDecode32(char_const_ptr_ref_t utf8) {
-	if (utf8[0] == '&') {
-		uint32_t len = 0;
-		while (utf8[len] && utf8[len] != ';' && len < 10) {
-			len ++;
-		}
-
-		char32_t c = 0;
-		if (utf8[len] == ';' && len > 2) {
-			c = Utf8DecodeHtml32(utf8 + 1, len - 2);
-		}
-
-		if (c == 0) {
-			return utf8Decode32(utf8);
-		} else {
-			utf8 += (len + 1);
-			return c;
-		}
-	} else {
-		return utf8Decode32(utf8);
-	}
-}
-
 bool isValidUtf8(StringView r) {
 	static const uint8_t utf8_valid_data[256] = {
 	//	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f
@@ -119,8 +123,8 @@ bool isValidUtf8(StringView r) {
 		3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 0, 0
 	};
 
-	char_const_ptr_t ptr = r.data();
-	const char_const_ptr_t end = ptr + r.size();
+	auto ptr = r.data();
+	const auto end = ptr + r.size();
 	while (ptr < end && *ptr != 0) {
 		auto l = utf8_valid_data[ ((const uint8_t *)ptr)[0] ];
 		if (l == 0) {
@@ -144,8 +148,8 @@ bool isValidUtf8(StringView r) {
 
 size_t getUtf16Length(const StringView &input) {
 	size_t counter = 0;
-	char_const_ptr_t ptr = input.data();
-	const char_const_ptr_t end = ptr + input.size();
+	auto ptr = input.data();
+	const auto end = ptr + input.size();
 	while (ptr < end && *ptr != 0) {
 		counter += unicode::utf16_length_data[ uint8_t(*ptr) ];
 		ptr += unicode::utf8_length_data[ uint8_t(*ptr) ];
@@ -155,8 +159,8 @@ size_t getUtf16Length(const StringView &input) {
 
 size_t getUtf16HtmlLength(const StringView &input) {
 	size_t counter = 0;
-	char_const_ptr_t ptr = input.data();
-	const char_const_ptr_t end = ptr + input.size();
+	auto ptr = input.data();
+	const auto end = ptr + input.size();
 	while (ptr < end && *ptr != 0) {
 		if (ptr[0] == '&') {
 			uint8_t len = 0;
@@ -184,8 +188,8 @@ size_t getUtf16HtmlLength(const StringView &input) {
 
 size_t getUtf8HtmlLength(const StringView &input) {
 	size_t counter = 0;
-	char_const_ptr_t ptr = input.data();
-	const char_const_ptr_t end = ptr + input.size();
+	auto ptr = input.data();
+	const auto end = ptr + input.size();
 	while (ptr < end && *ptr != 0) {
 		if (ptr[0] == '&') {
 			uint8_t len = 0;
@@ -194,7 +198,7 @@ size_t getUtf8HtmlLength(const StringView &input) {
 			}
 
 			if (ptr[len] == ';' && len > 2) {
-				auto c = Utf8DecodeHtml32(ptr + 1, len - 2);
+				auto c = unicode::Utf8DecodeHtml32(ptr + 1, len - 2);
 				counter += unicode::utf8EncodeLength(c);
 				ptr += len;
 			} else if (ptr[len] == 0) {

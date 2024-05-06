@@ -31,8 +31,8 @@ namespace STAPPLER_VERSIONIZED stappler::db {
 
 struct FieldIntArray : db::FieldCustom {
 	static auto constexpr FIELD_NAME = StringView("INT[]");
-	static bool regsterForPostgres(CustomFieldInfo &);
-	static bool regsterForSqlite(CustomFieldInfo &);
+	static bool registerForPostgres(CustomFieldInfo &);
+	static bool registerForSqlite(CustomFieldInfo &);
 
 	template <typename ... Args>
 	FieldIntArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
@@ -45,8 +45,8 @@ struct FieldIntArray : db::FieldCustom {
 
 struct FieldBigIntArray : db::FieldCustom {
 	static auto constexpr FIELD_NAME = StringView("BIGINT[]");
-	static bool regsterForPostgres(CustomFieldInfo &);
-	static bool regsterForSqlite(CustomFieldInfo &);
+	static bool registerForPostgres(CustomFieldInfo &);
+	static bool registerForSqlite(CustomFieldInfo &);
 
 	template <typename ... Args>
 	FieldBigIntArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
@@ -59,8 +59,8 @@ struct FieldBigIntArray : db::FieldCustom {
 
 struct FieldPoint : db::FieldCustom {
 	static auto constexpr FIELD_NAME = StringView("POINT");
-	static bool regsterForPostgres(CustomFieldInfo &);
-	static bool regsterForSqlite(CustomFieldInfo &);
+	static bool registerForPostgres(CustomFieldInfo &);
+	static bool registerForSqlite(CustomFieldInfo &);
 
 	template <typename ... Args>
 	FieldPoint(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
@@ -73,8 +73,8 @@ struct FieldPoint : db::FieldCustom {
 
 struct FieldTextArray : db::FieldCustom {
 	static auto constexpr FIELD_NAME = StringView("TEXT[]");
-	static bool regsterForPostgres(CustomFieldInfo &);
-	static bool regsterForSqlite(CustomFieldInfo &);
+	static bool registerForPostgres(CustomFieldInfo &);
+	static bool registerForSqlite(CustomFieldInfo &);
 
 	template <typename ... Args>
 	FieldTextArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }

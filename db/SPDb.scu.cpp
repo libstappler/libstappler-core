@@ -234,6 +234,10 @@ static size_t updateFieldLimits(const Map<String, Field> &vec) {
 	return ret;
 }
 
+bool InputConfig::isFileAsDataSupportedForType(StringView type) {
+	return type.starts_with(data::MIME_CBOR) || type.starts_with(data::MIME_JSON);
+}
+
 void InputConfig::updateLimits(const Map<String, Field> &fields) {
 	maxRequestSize = 256 * fields.size();
 	for (auto &it : fields) {

@@ -79,7 +79,7 @@ public:
 	virtual db::Adapter getAdapterFromContext() const;
 	virtual void scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const;
 
-	virtual StringView getDocuemntRoot() const;
+	virtual StringView getDocumentRoot() const;
 
 	virtual const Scheme *getFileScheme() const { return nullptr; }
 	virtual const Scheme *getUserScheme() const { return nullptr; }
