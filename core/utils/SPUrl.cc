@@ -311,6 +311,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 					cb(port, UrlView::UrlToken::Password);
 					++ tmpS;
 					state = UrlView::UrlToken::Host;
+					s = tmpS;
 				} else {
 					tmp = tmp_s.readChars<UnreservedUni, SubDelim>();
 					if (!tmp_s.is('@')) {

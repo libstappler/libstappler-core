@@ -60,7 +60,12 @@ static size_t detectSvgSize(StringView value) {
 }
 
 static bool detectSvg(StringView str, uint32_t &w, uint32_t &h) {
-	str.skipUntilString("<svg", false);
+	str.skipUntilString("<svg", true);
+	if (!str.starts_with("<svg")) {
+		return false;
+	}
+	str += "<svg"_len;
+
 	if (!str.empty() && str.is<StringView::CharGroup<CharGroupId::WhiteSpace>>()) {
 		bool found = false;
 		bool isSvg = false;

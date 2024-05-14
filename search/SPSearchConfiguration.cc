@@ -126,7 +126,7 @@ static bool stemWordDefault(Language lang, StemmerEnv *env, ParserToken tok, Str
 							str.emplace_back('-');
 							++ word2;
 						} else if (word2.is(':')) {
-							str.emplace_back('/');
+							str.emplace_back(':');
 							++ word2;
 						} else {
 							auto space = word2.readChars<StringViewUtf8::CharGroup<CharGroupId::WhiteSpace>>();
@@ -140,10 +140,6 @@ static bool stemWordDefault(Language lang, StemmerEnv *env, ParserToken tok, Str
 						auto r = word.readUntil<StringViewUtf8::CharGroup<CharGroupId::WhiteSpace>>();
 						if (!r.empty()) {
 							str.append(r.data(), r.size());
-						}
-						auto space = word.readChars<StringViewUtf8::CharGroup<CharGroupId::WhiteSpace>>();
-						if (cond && !space.empty() && !r.empty()) {
-							str.emplace_back('/');
 						}
 					}
 				}
@@ -203,10 +199,13 @@ Configuration::~Configuration() {
 
 void Configuration::setLanguage(Language lang) {
 	perform([&, this] {
+		auto prev = data->language;
+		auto prevSec = (prev == Language::Simple) ? Language::Simple : Language::English;
+		auto newSec = (lang == Language::Simple) ? Language::Simple : Language::English;
 		data->language = lang;
 		data->primary = search::getStemmer(data->language);
-		if (!data->secondary) {
-			data->secondary = search::getStemmer((lang == Language::Simple) ? Language::Simple : Language::English);
+		if (prevSec != newSec) {
+			data->secondary = search::getStemmer(newSec);
 		}
 	}, data->pool);
 }
@@ -763,21 +762,6 @@ String Configuration::makeHeadlines(const HeadlineConfig &cfg, const Callback<vo
 	return ret.str();
 }
 
-Vector<String> Configuration::stemQuery(const Vector<SearchData> &query) const {
-	Vector<String> queryList;
-	for (auto &it : query) {
-		stemPhrase(it.buffer, [&] (StringView word, StringView stem, ParserToken tok) {
-			auto it = std::lower_bound(queryList.begin(), queryList.end(), stem);
-			if (it == queryList.end()) {
-				queryList.emplace_back(stem.str<memory::PoolInterface>());
-			} else if (*it != stem) {
-				queryList.emplace(it, stem.str<memory::PoolInterface>());
-			}
-		});
-	}
-	return queryList;
-}
-
 Vector<String> Configuration::stemQuery(const SearchQuery &query) const {
 	Vector<String> queryList;
 	doStemQuery(queryList, query);
@@ -823,6 +807,7 @@ static bool Configuration_parseQueryBlank(Configuration_ParserControl &control, 
 		auto q = control.stack.back();
 		r.skipUntil<StringView::Chars<'"', '|', '!', '(', ')'>>();
 		if (q->block == SearchQuery::Quoted) {
+			// ignore any punctuation within quotes
 			if (r[0] != '"') {
 				++ r;
 				continue;
@@ -849,42 +834,21 @@ static bool Configuration_parseQueryBlank(Configuration_ParserControl &control, 
 			}
 			break;
 		case '|':
-			if (q->block == SearchQuery::Quoted) {
-				control.success = false;
-				control.error = StringView("Invalid '|' token within quote block");
-				if (control.strict) {
-					return false;
-				}
-			} else if (q->op == SearchOp::None) {
-				if (!q->value.empty()) {
-					makeShift(q, SearchOp::Or);
-					auto &top = q->args.emplace_back();
-					control.stack.emplace_back(&top);
-				}
-			} else if (q->op == SearchOp::Or) {
+			if (q->op == SearchOp::Or) {
 				auto &top = q->args.emplace_back();
 				control.stack.emplace_back(&top);
-			} else {
-				if (q->op == SearchOp::And && q->args.size() <= 1) {
-					q->op = SearchOp::Or;
-					auto &top = q->args.emplace_back();
-					control.stack.emplace_back(&top);
-				} else {
-					makeShift(q, SearchOp::Or);
-					auto &top = q->args.emplace_back();
-					control.stack.emplace_back(&top);
-				}
+			} else if (q->op == SearchOp::And && q->args.size() <= 1) {
+				q->op = SearchOp::Or;
+				auto &top = q->args.emplace_back();
+				control.stack.emplace_back(&top);
+			} else if (q->op != SearchOp::None || (q->op == SearchOp::None && !q->value.empty()) ) {
+				makeShift(q, SearchOp::Or);
+				auto &top = q->args.emplace_back();
+				control.stack.emplace_back(&top);
 			}
 			break;
 		case '!': {
-			if (q->block == SearchQuery::Quoted) {
-				control.error = StringView("Invalid '!' token within quote block");
-				if (control.strict) {
-					return false;
-				}
-			} else {
-				control.pushNeg();
-			}
+			control.pushNeg();
 			break;
 		}
 		case '(':
@@ -944,12 +908,6 @@ static bool Configuration_parseQueryWord(Configuration_ParserControl &control, S
 			if (control.strict) {
 				return false;
 			}
-
-			/*SearchQuery tmp = move(*q);
-			q->clear();
-			q->op = SearchOp::And;
-			q->args.emplace_back(move(tmp));
-			q->args.emplace_back(SearchQuery(word, offset, source));*/
 		}
 	} else if (q->op == SearchOp::And || q->op == SearchOp::Follow) {
 		auto &v = q->args.emplace_back(SearchQuery(word, offset, source));
@@ -1036,4 +994,7 @@ bool Configuration::isMatch(const SearchVector &vec, StringView q) const {
 	return query.isMatch(vec);
 }
 
+bool Configuration::isMatch(const SearchVector &vec, const SearchQuery &query) const {
+	return query.isMatch(vec);
+}
 }

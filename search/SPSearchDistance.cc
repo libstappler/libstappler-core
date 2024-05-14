@@ -25,6 +25,27 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::search {
 
+void Distance::Storage::Struct::set(uint8_t idx, Value value) {
+	switch (idx) {
+	case 0: v1 = toInt(value); break;
+	case 1: v2 = toInt(value); break;
+	case 2: v3 = toInt(value); break;
+	case 3: v4 = toInt(value); break;
+	default: break;
+	}
+}
+
+Distance::Value Distance::Storage::Struct::get(uint8_t idx) const {
+	switch (idx) {
+	case 0: return Value(v1); break;
+	case 1: return Value(v2); break;
+	case 2: return Value(v3); break;
+	case 3: return Value(v4); break;
+	default: break;
+	}
+	return Value::Match;
+}
+
 Distance::Storage Distance::Storage::merge(const Storage &first, const Storage &last) {
 	Distance::Storage ret(first);
 	ret.reserve(first.size() + last.size());
@@ -174,7 +195,7 @@ Distance &Distance::operator=(Distance &&dist) noexcept {
 }
 
 bool Distance::empty() const {
-	return _storage.empty();
+	return _storage.empty() && _distance == 0;
 }
 
 size_t Distance::size() const {
@@ -245,7 +266,8 @@ int32_t Distance::diff_canonical(size_t pos, bool forward) const {
 
 size_t Distance::nmatch() const {
 	size_t ret = 0;
-	for (size_t i = 0; i < _storage.size(); ++ i) {
+	size_t storageSize = _storage.size();
+	for (size_t i = 0; i < storageSize; ++ i) {
 		switch (_storage.at(i)) {
 		case Value::Match:
 			++ ret;
@@ -293,6 +315,10 @@ memory::string Distance::info() const {
     }
 
 	return ret;
+}
+
+Distance::Storage Distance::storage() const {
+	return _storage;
 }
 
 }

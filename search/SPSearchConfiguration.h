@@ -84,7 +84,6 @@ public:
 	String makeHeadlines(const HeadlineConfig &, const Callback<void(const Function<bool(const StringView &frag, const StringView &tag)>)> &producer,
 			const Vector<String> &stemList, size_t count = 1) const;
 
-	Vector<String> stemQuery(const Vector<SearchData> &query) const;
 	Vector<String> stemQuery(const SearchQuery &query) const;
 
 	size_t makeSearchVector(SearchVector &, StringView phrase, SearchData::Rank rank = SearchData::Rank::Unknown, size_t counter = 0,

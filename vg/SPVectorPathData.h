@@ -122,6 +122,7 @@ struct PathWriter {
 	void reserve(size_t);
 
 	bool readFromPathString(StringView);
+	bool readFromFileContent(StringView);
 	bool readFromFile(StringView);
 	bool readFromBytes(BytesView);
 

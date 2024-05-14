@@ -146,9 +146,9 @@ SearchIndex::Slice SearchIndex::convertToken(const Node &node, const ResultToken
 	}
 }
 
-void SearchIndex::print() const {
+void SearchIndex::print(const Callback<void(StringView)> &out) const {
 	for (auto &it : _tokens) {
-		std::cout << it.index << " " << makeStringView(it) << " " << _nodes.at(it.index).id << "\n";
+		out << it.index << " " << makeStringView(it) << " " << _nodes.at(it.index).id << "\n";
 	}
 }
 

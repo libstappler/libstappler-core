@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -299,46 +299,33 @@ static BackendCtx s_mbedTLSCtx = {
 	.privImport = [] (KeyContext &ctx, BytesView data, const CoderSource &passwd) {
 		EntropyContext entropy;
 
-		auto key = reinterpret_cast<mbedtls_pk_context *>(&ctx);
-		if (isPemKey(data)) {
-			if (data.data()[data.size() - 1] != 0) {
-				if (data.data()[data.size()] == 0) {
-					auto err = mbedtls_pk_parse_key(key, data.data(), data.size() + 1,
-							passwd.data(), passwd.size(), mbedtls_ctr_drbg_random, &entropy.ctr_drbg);
-					if (err != 0) {
-						mbedtls_pk_free( key );
-						return false;
-					}
-				} else {
-					uint8_t buf[data.size() + 1];
-					memcpy(buf, data.data(), data.size());
-					buf[data.size()] = 0;
-
-					auto err = mbedtls_pk_parse_key(key, buf, data.size() + 1,
-							passwd.data(), passwd.size(), mbedtls_ctr_drbg_random, &entropy.ctr_drbg);
-					if (err != 0) {
-						mbedtls_pk_free( key );
-						return false;
-					}
-				}
-			} else {
-				auto err = mbedtls_pk_parse_key(key, data.data(), data.size(),
-						passwd.data(), passwd.size(), mbedtls_ctr_drbg_random, &entropy.ctr_drbg);
-				if (err != 0) {
-					mbedtls_pk_free( key );
-					return false;
-				}
-			}
-		} else {
-			auto err = mbedtls_pk_parse_key(key, data.data(), data.size(),
+		auto loadKey = [&] (BytesView input) {
+			auto key = reinterpret_cast<mbedtls_pk_context *>(&ctx);
+			auto err = mbedtls_pk_parse_key(key, input.data(), input.size(),
 					passwd.data(), passwd.size(), mbedtls_ctr_drbg_random, &entropy.ctr_drbg);
 			if (err != 0) {
 				mbedtls_pk_free( key );
 				return false;
 			}
+
+			ctx.type = getMbedTLSKeyType(mbedtls_pk_get_type(key));
+			return true;
+		};
+
+		if (!isPemKey(data) || data.data()[data.size() - 1] == 0) {
+			return loadKey(data);
+		} else {
+			if (data.data()[data.size()] == 0) {
+				return loadKey(BytesView(data.data(), data.size() + 1));
+			} else {
+				uint8_t buf[data.size() + 1];
+				memcpy(buf, data.data(), data.size());
+				buf[data.size()] = 0;
+
+				return loadKey(BytesView(buf, data.size() + 1));
+			}
 		}
-		ctx.type = getMbedTLSKeyType(mbedtls_pk_get_type(key));
-		return true;
+		return false;
 	},
 	.privExportPem = [] (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) {
 		uint8_t buf[MBEDTLS_KEY_BUFFER_SIZE];
@@ -346,31 +333,21 @@ static BackendCtx s_mbedTLSCtx = {
 
 		auto key = reinterpret_cast<const mbedtls_pk_context *>(&ctx);
 
-		switch (fmt) {
-		case KeyFormat::PKCS1:
-			if (!passPhrase.empty()) {
-				log::error("Crypto", "Password-encoding is not supported for PKCS1");
-			}
-			ret = mbedtls_pk_write_key_pem(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
-			if (ret > 0) {
-				cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
-				return true;
-			} else if (ret == 0) {
-				auto len = strlen(reinterpret_cast<char *>(buf));
-				if (len < MBEDTLS_KEY_BUFFER_SIZE) {
-					cb(BytesView(buf, len));
-					return true;
-				}
-			}
-			break;
-		case KeyFormat::PKCS8:
-			log::warn("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1");
-			ret = mbedtls_pk_write_key_pem(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
-			if (ret > 0) {
-				cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
+		if (fmt == KeyFormat::PKCS8) { log::error("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1"); }
+
+		if (!passPhrase.empty()) {
+			log::error("Crypto", "Password-encoding is not supported for PKCS1");
+		}
+		ret = mbedtls_pk_write_key_pem(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
+		if (ret > 0) {
+			cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
+			return true;
+		} else if (ret == 0) {
+			auto len = strlen(reinterpret_cast<char *>(buf));
+			if (len < MBEDTLS_KEY_BUFFER_SIZE) {
+				cb(BytesView(buf, len));
 				return true;
 			}
-			break;
 		}
 
 		return false;
@@ -381,25 +358,15 @@ static BackendCtx s_mbedTLSCtx = {
 
 		auto key = reinterpret_cast<const mbedtls_pk_context *>(&ctx);
 
-		switch (fmt) {
-		case KeyFormat::PKCS1:
-			if (!passPhrase.empty()) {
-				log::error("Crypto", "Password-encoding is not supported for PKCS1");
-			}
-			ret = mbedtls_pk_write_key_der(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
-			if (ret > 0) {
-				cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
-				return true;
-			}
-			break;
-		case KeyFormat::PKCS8:
-			log::warn("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1");
-			ret = mbedtls_pk_write_key_der(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
-			if (ret > 0) {
-				cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
-				return true;
-			}
-			break;
+		if (fmt == KeyFormat::PKCS8) { log::error("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1"); }
+
+		if (!passPhrase.empty()) {
+			log::error("Crypto", "Password-encoding is not supported for PKCS1");
+		}
+		ret = mbedtls_pk_write_key_der(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
+		if (ret > 0) {
+			cb(BytesView(buf + MBEDTLS_KEY_BUFFER_SIZE - ret, ret));
+			return true;
 		}
 
 		return false;
@@ -558,44 +525,32 @@ static BackendCtx s_mbedTLSCtx = {
 		mbedtls_pk_free(reinterpret_cast<mbedtls_pk_context *>(&ctx));
 	},
 	.pubImport = [] (KeyContext &ctx, BytesView data) {
-		auto key = reinterpret_cast<mbedtls_pk_context *>(&ctx);
-
-		if (isPemKey(data)) {
-			if (data.data()[data.size() - 1] != 0) {
-				if (data.data()[data.size()] == 0) {
-					auto err = mbedtls_pk_parse_public_key(key, data.data(), data.size() + 1);
-					if (err != 0) {
-						mbedtls_pk_free(key);
-						return false;
-					}
-				} else {
-					uint8_t buf[data.size() + 1];
-					memcpy(buf, data.data(), data.size());
-					buf[data.size()] = 0;
-
-					auto err = mbedtls_pk_parse_public_key(key, buf, data.size() + 1);
-					if (err != 0) {
-						mbedtls_pk_free(key);
-						return false;
-					}
-				}
-			} else {
-				auto err = mbedtls_pk_parse_public_key(key, data.data(), data.size());
-				if (err != 0) {
-					mbedtls_pk_free(key);
-					return false;
-				}
-			}
-		} else {
-			auto err = mbedtls_pk_parse_public_key(key, data.data(), data.size());
+		auto loadKey = [&] (BytesView input) {
+			auto key = reinterpret_cast<mbedtls_pk_context *>(&ctx);
+			auto err = mbedtls_pk_parse_public_key(key, input.data(), input.size());
 			if (err != 0) {
-				mbedtls_pk_free(key);
+				mbedtls_pk_free( key );
 				return false;
 			}
-		}
 
-		ctx.type = getMbedTLSKeyType(mbedtls_pk_get_type(key));
-		return true;
+			ctx.type = getMbedTLSKeyType(mbedtls_pk_get_type(key));
+			return true;
+		};
+
+		if (!isPemKey(data) || data.data()[data.size() - 1] == 0) {
+			return loadKey(data);
+		} else {
+			if (data.data()[data.size()] == 0) {
+				return loadKey(BytesView(data.data(), data.size() + 1));
+			} else {
+				uint8_t buf[data.size() + 1];
+				memcpy(buf, data.data(), data.size());
+				buf[data.size()] = 0;
+
+				return loadKey(BytesView(buf, data.size() + 1));
+			}
+		}
+		return false;
 	},
 	.pubImportOpenSSH = [] (KeyContext &ctx, StringView r) {
 		uint8_t out[MBEDTLS_KEY_BUFFER_SIZE];

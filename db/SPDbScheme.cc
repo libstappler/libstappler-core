@@ -199,6 +199,7 @@ bool Scheme::init() {
 	if (_init) {
 		return true;
 	}
+	memory::pool::push(fields.get_allocator());
 	// init non-linked object fields as StrongReferences
 	for (auto &fit : fields) {
 		const_cast<Field::Slot *>(fit.second.getSlot())->owner = this;
@@ -263,6 +264,7 @@ bool Scheme::init() {
 			}
 		}
 	}
+	memory::pool::pop();
 	_init = true;
 	return true;
 }
@@ -1430,7 +1432,7 @@ void Scheme::addParent(const Scheme *s, const Field *f) {
 
 Vector<uint64_t> Scheme::getLinkageForView(const Value &obj, const ViewScheme &s) const {
 	Vector<uint64_t> ids; ids.reserve(1);
-	if (s.autoLink) {
+	if (s.autoLink && s.autoLink->getSlot()) {
 		if (auto id = obj.getInteger(s.autoLink->getName())) {
 			ids.push_back(id);
 		}

@@ -387,17 +387,17 @@ void SvgReader::onStyle(Tag &tag, StringReader &value) {
 
 void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringReader &value) {
 	if (tag.name.equals("svg")) {
-		if (name.equals("height")) {
+		if (string::caseCompare_c(name, StringView("height")) == 0) {
 			auto val = svg_readCoordValue(value, 0.0f);
 			if (!isnan(val)) {
 				_height = val;
 			}
-		} else if (name.equals("width")) {
+		} else if (string::caseCompare_c(name, StringView("width")) == 0) {
 			auto val = svg_readCoordValue(value, 0.0f);
 			if (!isnan(val)) {
 				_width = val;
 			}
-		} else if (name.equals("viewbox")) {
+		} else if (string::caseCompare_c(name, StringView("viewbox")) == 0) {
 			_viewBox = svg_readViewBox(value);
 		}
 	} else if (tag.name.equals("path")) {
@@ -410,7 +410,7 @@ void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringRe
 			|| name.equals("stroke-opacity") || name.equals("stroke-width") || name.equals("stroke-linecap")
 			|| name.equals("stroke-linejoin") || name.equals("stroke-miterlimit") || name.equals("opacity")) {
 		onStyleParameter(tag, name, value);
-	} else if (name.equals("transform")) {
+	} else if (name.equals("transform") && tag.shape != SvgTag::Use) {
 		tag.getPath().applyTransform(svg_parseTransform(value));
 	} else if (name.equals("style")) {
 		onStyle(tag, value);
@@ -483,7 +483,7 @@ void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringRe
 				tag.mat.multiply(svg_parseTransform(value));
 			} else if (name.equals("id")) {
 				tag.id = value;
-			} else if (name.equals("xlink:href")) {
+			} else if (name.equals("xlink:href") || name.equals("href")) {
 				tag.ref = value;
 			}
 			break;

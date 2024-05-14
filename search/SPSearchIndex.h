@@ -131,7 +131,7 @@ public:
 	StringView resolveToken(const Node &, const ResultToken &) const;
 	Slice convertToken(const Node &, const ResultToken &) const;
 
-	void print() const;
+	void print(const Callback<void(StringView)> &out) const;
 
 protected:
 	StringView makeStringView(const Token &) const;

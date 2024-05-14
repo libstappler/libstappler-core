@@ -198,10 +198,15 @@ CustomLog::~CustomLog() {
 }
 
 CustomLog::CustomLog(CustomLog && other) : fn(other.fn) {
+	manager = CustomLogManager::get();
 	other.fn = nullptr;
 }
 
 CustomLog& CustomLog::operator=(CustomLog && other) {
+	manager = CustomLogManager::get();
+	if (fn && fn != other.fn) {
+		static_cast<CustomLogManager *>(manager.get())->remove(fn);
+	}
 	fn = other.fn;
 	other.fn = nullptr;
 	return *this;
@@ -209,6 +214,10 @@ CustomLog& CustomLog::operator=(CustomLog && other) {
 
 void setLogFilterMask(std::bitset<6> &&mask) {
 	s_logMask = move(mask);
+}
+
+std::bitset<6> getlogFilterMask() {
+	return s_logMask;
 }
 
 void format(LogType type, const StringView &tag, const char *fmt, ...) {

@@ -209,6 +209,7 @@ public:
 	Vec2 getNormalized() const;
 
 	constexpr bool fuzzyEquals(const Vec2& b, float var = NumericLimits<float>::epsilon()) const {
+
 		return (x - var <= b.x && b.x <= x + var) && (y - var <= b.y && b.y <= y + var);
 	}
 

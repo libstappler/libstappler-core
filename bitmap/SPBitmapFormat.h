@@ -64,7 +64,7 @@ struct ImageInfo {
 	uint32_t height = 0;
 	uint32_t stride = 0;
 
-	const BitmapFormat *format;
+	const BitmapFormat *format = nullptr;
 };
 
 using StrideFn = Callback<uint32_t(PixelFormat, uint32_t)>;

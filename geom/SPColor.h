@@ -102,6 +102,9 @@ struct Color3B {
 		return (*this == other);
 	}
 
+	template <typename Interface>
+	auto name() const -> typename Interface::StringType;
+
 	uint8_t r;
 	uint8_t g;
 	uint8_t b;

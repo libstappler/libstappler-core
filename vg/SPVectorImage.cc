@@ -503,7 +503,7 @@ bool VectorImage::init(StringView data) {
 		t.scale(1, -1, 1);
 		t.translate(0, -reader._height, 0);
 
-		_data->setViewBoxTransform(t);
+		_data->setViewBoxTransform(t * _data->getViewBoxTransform());
 
 		return true;
 	} else {
@@ -528,7 +528,7 @@ bool VectorImage::init(BytesView data) {
 		t.scale(1, -1, 1);
 		t.translate(0, -reader._height, 0);
 
-		_data->setViewBoxTransform(t);
+		_data->setViewBoxTransform(t * _data->getViewBoxTransform());
 
 		return true;
 	} else {

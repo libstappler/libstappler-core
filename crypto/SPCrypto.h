@@ -116,9 +116,9 @@ struct KeyContext {
 };
 
 struct BlockKey256 {
-	std::array<uint8_t, BlockKeySize256> data;
 	uint16_t version = 0; // keygen version
 	BlockCipher cipher = BlockCipher::AES_CBC;
+	std::array<uint8_t, BlockKeySize256> data = { 0 };
 
 	bool operator==(const BlockKey256 &) const = default;
 	bool operator!=(const BlockKey256 &) const = default;
@@ -247,7 +247,8 @@ bool decryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void
 
 BlockKey256 makeBlockKey(Backend, BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
 BlockKey256 makeBlockKey(BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
-BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
+BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, uint32_t version = 2);
+BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher, uint32_t version = 2);
 
 // get keygen version from encrypted block
 BlockInfo getBlockInfo(BytesView);

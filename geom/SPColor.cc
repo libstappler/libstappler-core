@@ -623,7 +623,7 @@ static bool readColorDigits(const StringView &origStr, float *b, int num, bool i
 		} else if (!isRgb && (i != 3)) {
 			if (i == 0 && b[i] > 359.0f) {
 				b[i] = 359.0f; // for HSL: H value max is 359
-			} else if (b[i] > 100.0f) {
+			} else if (i != 0 && b[i] > 100.0f) {
 				b[i] = 100.0f; // for HSL: S and L max is 100%
 			}
 		} else if (i == 3 && b[i] > 1.0f) {
@@ -641,6 +641,7 @@ static bool readColorDigits(const StringView &origStr, float *b, int num, bool i
 		}
 
 		if (str.is('%')) {
+			++ str;
 			if (b[i] > 100.0f) {
 				b[i] = 100.0f; // for percent values - max is 100
 			}
@@ -792,32 +793,32 @@ static bool readNamedColor(const StringView &origStr, Color3B &color) {
 bool readColor(const StringView &str, Color4B &color4) {
 	Color3B color;
 	uint8_t opacity = 0;
-	if (str == "rgba") {
+	if (str.starts_with("rgba")) {
 		if (readRgbaColor(StringView(str.data() + 4, str.size() - 4), color, opacity)) {
 			color4 = Color4B(color, opacity);
 			return true;
 		}
-	} else if (str == "hsla") {
+	} else if (str.starts_with("hsla")) {
 		if (readHslaColor(StringView(str.data() + 4, str.size() - 4), color, opacity)) {
 			color4 = Color4B(color, opacity);
 			return true;
 		}
-	} else if (str == "rgb") {
+	} else if (str.starts_with("rgb")) {
 		if (readRgbColor(StringView(str.data() + 3, str.size() - 3), color)) {
 			color4 = Color4B(color);
 			return true;
 		}
-	} else if (str == "hsl") {
+	} else if (str.starts_with("hsl")) {
 		if (readHslColor(StringView(str.data() + 3, str.size() - 3), color)) {
 			color4 = Color4B(color);
 			return true;
 		}
-	} else if (str.is('#') && (str.size() == 3 || str.size() == 6)) {
+	} else if (str.is('#') && (str.size() == 4 || str.size() == 7)) {
 		if (readHashColor(str, color)) {
 			color4 = Color4B(color);
 			return true;
 		}
-	} else if (str.is('#') && (str.size() == 4 || str.size() == 8)) {
+	} else if (str.is('#') && (str.size() == 5 || str.size() == 9)) {
 		if (readHashColor(str, color4)) {
 			return true;
 		}
@@ -1152,6 +1153,26 @@ auto Color::name<memory::PoolInterface>() const -> memory::PoolInterface::String
 	if (ret.empty()) {
 		ret = string::toString<memory::StandartInterface>(
 				"rgb(", uint32_t(_value >> 16 & 0xFF), ", ", uint32_t(_value >> 8 & 0xFF), ", ", uint32_t(_value & 0xFF), ")");
+	}
+	return ret.str<memory::PoolInterface>();
+}
+
+template <>
+auto Color3B::name<memory::StandartInterface>() const -> memory::StandartInterface::StringType {
+	auto ret = table::getName(*this);
+	if (ret.empty()) {
+		ret = string::toString<memory::StandartInterface>(
+				"rgb(", uint32_t(r >> 16 & 0xFF), ", ", uint32_t(g >> 8 & 0xFF), ", ", uint32_t(b & 0xFF), ")");
+	}
+	return ret.str<memory::StandartInterface>();
+}
+
+template <>
+auto Color3B::name<memory::PoolInterface>() const -> memory::PoolInterface::StringType {
+	auto ret = table::getName(*this);
+	if (ret.empty()) {
+		ret = string::toString<memory::StandartInterface>(
+				"rgb(", uint32_t(r >> 16 & 0xFF), ", ", uint32_t(g >> 8 & 0xFF), ", ", uint32_t(b & 0xFF), ")");
 	}
 	return ret.str<memory::PoolInterface>();
 }

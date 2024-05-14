@@ -51,25 +51,8 @@ public:
 			uint8_t v3 : 2;
 			uint8_t v4 : 2;
 
-			void set(uint8_t idx, Value value) {
-				switch (idx) {
-				case 0: v1 = toInt(value); break;
-				case 1: v2 = toInt(value); break;
-				case 2: v3 = toInt(value); break;
-				case 3: v4 = toInt(value); break;
-				default: break;
-				}
-			}
-			Value get(uint8_t idx) const {
-				switch (idx) {
-				case 0: return Value(v1); break;
-				case 1: return Value(v2); break;
-				case 2: return Value(v3); break;
-				case 3: return Value(v4); break;
-				default: break;
-				}
-				return Value::Match;
-			}
+			void set(uint8_t idx, Value value);
+			Value get(uint8_t idx) const;
 		};
 
 		struct Size {
@@ -138,7 +121,10 @@ public:
 
 	memory::string info() const;
 
+	Storage storage() const;
+
 protected:
+	uint32_t _distance = 0;
 	Storage _storage;
 };
 

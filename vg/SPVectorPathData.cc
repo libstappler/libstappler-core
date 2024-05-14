@@ -36,22 +36,27 @@ namespace STAPPLER_VERSIONIZED stappler::vg {
 // Path itself uses single-word float for performance
 class SVGPathReader {
 public:
+	static bool readFileContent(PathWriter *p, StringView content) {
+		StringView r(content);
+		r.skipUntilString("<path ");
+		if (!r.is("<path ")) {
+			return false;
+		}
+
+		r.skipString("<path ");
+		StringView pathContent = r.readUntil<StringView::Chars<'>'>>();
+		pathContent.skipUntilString("d=\"");
+		if (pathContent.is("d=\"")) {
+			pathContent.skipString("d=\"");
+			return readPath(p, pathContent.readUntil<StringView::Chars<'"'>>());
+		}
+		return false;
+	}
+
 	static bool readFile(PathWriter *p, const StringView &str) {
 		if (!str.empty()) {
 			auto content = filesystem::readTextFile<memory::StandartInterface>(str);
-			StringView r(content);
-			r.skipUntilString("<path ");
-			if (!r.is("<path ")) {
-				return false;
-			}
-
-			r.skipString("<path ");
-			StringView pathContent = r.readUntil<StringView::Chars<'>'>>();
-			pathContent.skipUntilString("d=\"");
-			if (r.is("d=\"")) {
-				r.skipString("d=\"");
-				return readPath(p, pathContent.readUntil<StringView::Chars<'"'>>());
-			}
+			return readFileContent(p, content);
 		}
 		return false;
 	}
@@ -734,6 +739,16 @@ bool PathWriter::readFromPathString(StringView str) {
 	points.clear();
 
 	if (!SVGPathReader::readPath(this, str)) {
+		return false;
+	}
+	return true;
+}
+
+bool PathWriter::readFromFileContent(StringView str) {
+	commands.clear();
+	points.clear();
+
+	if (!SVGPathReader::readFileContent(this, str)) {
 		return false;
 	}
 	return true;

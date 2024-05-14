@@ -965,10 +965,11 @@ protected:
 	node_ptr find_impl(const K & x) const {
 		const_node_ptr current = root();
 	    while(current) {
-	        if (compareLtTransparent(x, extract(current))) {
+			auto &key = extract(current);
+	        if (compareLtTransparent(x, key)) {
 	        	current = static_cast<const_node_ptr> (current->left);
 	        } else {
-	        	if (!compareLtTransparent(extract(current), x)) { // equality check
+	        	if (!compareLtTransparent(key, x)) { // equality check
 	        		return const_cast<node_ptr>(current);
 	        	}
 	        	current = static_cast<const_node_ptr> (current->right);

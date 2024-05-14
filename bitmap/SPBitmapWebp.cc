@@ -219,8 +219,8 @@ struct WebpStruct {
 	WebpStruct(const StringView &filename, bool lossless) : WebpStruct(lossless) {
 	    fp = filesystem::native::fopen_fn(filename, "wb");
 	    if (!fp) {
-	        log::format(log::Error, "Bitmap", "fail to open file '%s' to write png data", filename.data());
-		    valid = false;
+			log::format(log::Error, "Bitmap", "fail to open file '%s' to write png data", filename.data());
+			valid = false;
 			return;
 	    }
 	}
@@ -302,11 +302,8 @@ static bool saveWebpLossless(StringView filename, const uint8_t *data, BitmapWri
 }
 
 static bool writeWebpLossless(const uint8_t *data, BitmapWriter &state, bool invert) {
-	if (!WebpStruct::isWebpSupported(state.color)) {
-		return false;
-	}
-	if (invert) {
-		log::error("Bitmap", "Inverted output is not supported for webp");
+	if (!WebpStruct::isWebpSupported(state.color) || invert) {
+		if (invert) { log::error("Bitmap", "Inverted output is not supported for webp"); }
 		return false;
 	}
 
@@ -315,11 +312,8 @@ static bool writeWebpLossless(const uint8_t *data, BitmapWriter &state, bool inv
 }
 
 static bool saveWebpLossy(StringView filename, const uint8_t *data, BitmapWriter &state, bool invert) {
-	if (!WebpStruct::isWebpSupported(state.color)) {
-		return false;
-	}
-	if (invert) {
-		log::error("Bitmap", "Inverted output is not supported for webp");
+	if (!WebpStruct::isWebpSupported(state.color) || invert) {
+		if (invert) { log::error("Bitmap", "Inverted output is not supported for webp"); }
 		return false;
 	}
 
@@ -328,11 +322,8 @@ static bool saveWebpLossy(StringView filename, const uint8_t *data, BitmapWriter
 }
 
 static bool writeWebpLossy(const uint8_t *data, BitmapWriter &state, bool invert) {
-	if (!WebpStruct::isWebpSupported(state.color)) {
-		return false;
-	}
-	if (invert) {
-		log::error("Bitmap", "Inverted output is not supported for webp");
+	if (!WebpStruct::isWebpSupported(state.color) || invert) {
+		if (invert) { log::error("Bitmap", "Inverted output is not supported for webp"); }
 		return false;
 	}
 

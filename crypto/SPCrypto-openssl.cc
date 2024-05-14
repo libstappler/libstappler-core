@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -83,7 +83,7 @@ typedef enum bnrand_flag_e {
     NORMAL, TESTING, PRIVATE
 } BNRAND_FLAG;
 
-static int hook_ossl_bnrand(BIGNUM *rnd, int bits, int top, int bottom, unsigned int strength, const Gost3411_512::Buf &rndData) {
+static int hook_ossl_bnrand(BIGNUM *rnd, int bits, int top, int bottom, unsigned int strength, BytesView rndData) {
 	unsigned char *buf = NULL;
 	int ret = 0, bit, bytes, mask;
 
@@ -140,7 +140,7 @@ toosmall:
 }
 
 /* random number r:  0 <= r < range */
-static int hook_ossl_bnrand_range(BIGNUM *r, const BIGNUM *range, unsigned int strength, const Gost3411_512::Buf &rndData) {
+static int hook_ossl_bnrand_range(BIGNUM *r, const BIGNUM *range, unsigned int strength, BytesView rndData) {
 	int n;
 	int count = 100;
 
@@ -184,8 +184,7 @@ static int hook_ossl_bnrand_range(BIGNUM *r, const BIGNUM *range, unsigned int s
 			}
 
 			if (!--count) {
-				ERR_raise(ERR_LIB_BN, BN_R_TOO_MANY_ITERATIONS);
-				return 0;
+				break;
 			}
 
 		} while (BN_cmp(r, range) >= 0);
@@ -209,7 +208,7 @@ static int hook_ossl_bnrand_range(BIGNUM *r, const BIGNUM *range, unsigned int s
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
-static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC_KEY *eckey) {
+static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC_KEY *eckey, int nbytes) {
 	ECDSA_SIG *newsig = NULL, *ret = NULL;
 	BIGNUM *md = NULL;
 	BIGNUM *order = NULL;
@@ -288,6 +287,7 @@ static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC
 				GOSTerr(GOST_F_GOST_EC_SIGN, GOST_R_RNG_ERROR);
 				goto err;
 			}
+
 			if (!gost_ec_point_mul(group, C, k, NULL, NULL, ctx)) {
 				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_EC_LIB);
 				goto err;
@@ -358,7 +358,7 @@ static int s_ossl_GostR3410_2012_256_psign_resign(EVP_PKEY_CTX *ctx, unsigned ch
 		s_ossl_GostR3410_2012_256_psign(ctx, nullptr, &order, tbs, tbs_len);
 
 	    EVP_PKEY *pkey = EVP_PKEY_CTX_get0_pkey(ctx);
-		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, tbs_len, (EC_KEY *)EVP_PKEY_get0(pkey));
+		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, tbs_len, (EC_KEY *)EVP_PKEY_get0(pkey), 32);
 		if (!unpacked_sig) {
 			return 0;
 		}
@@ -374,7 +374,7 @@ static int s_ossl_GostR3410_2012_512_psign_resign(EVP_PKEY_CTX *ctx, unsigned ch
 		s_ossl_GostR3410_2012_512_psign(ctx, nullptr, &order, tbs, tbs_len);
 
 	    EVP_PKEY *pkey = EVP_PKEY_CTX_get0_pkey(ctx);
-		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, tbs_len, (EC_KEY *)EVP_PKEY_get0(pkey));
+		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, tbs_len, (EC_KEY *)EVP_PKEY_get0(pkey), 64);
 		if (!unpacked_sig) {
 			return 0;
 		}
@@ -411,6 +411,7 @@ static int ossl_gost_pkey_meths(ENGINE *e, EVP_PKEY_METHOD **pmeth, const int **
 // For interoperability with GnuTLS
 static constexpr int OPENSSL_PK_ENCRYPT_PADDING = RSA_PKCS1_PADDING;
 
+SP_COVERAGE_TRIVIAL
 static void logOpenSSLErrors() {
     BIO *bio = BIO_new(BIO_s_mem());
     ERR_print_errors(bio);
@@ -753,13 +754,9 @@ static BackendCtx s_openSSLCtx = {
 
 		if (type == KeyType::RSA) {
 			kctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-			if (!kctx) {
-				return finalize(false);
-			}
+			if (!kctx) { return finalize(false); }
 
-			if (!EVP_PKEY_keygen_init(kctx)) {
-				return finalize(false);
-			}
+			if (!EVP_PKEY_keygen_init(kctx)) { return finalize(false); }
 
 			switch (bits) {
 			case KeyBits::_1024: if (!EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, 1024)) { return finalize(false); } break;
@@ -768,33 +765,37 @@ static BackendCtx s_openSSLCtx = {
 			}
 		} else if (type == KeyType::GOST3410_2012_256) {
 			kctx = EVP_PKEY_CTX_new_id(NID_id_GostR3410_2012_256, NULL);
-			if (!kctx) {
-				return finalize(false);
-			}
+			if (!kctx) { return finalize(false); }
 
 			EVP_PKEY_paramgen_init(kctx);
 
 			EVP_PKEY_CTX_ctrl(kctx, NID_id_GostR3410_2012_256, EVP_PKEY_OP_PARAMGEN, EVP_PKEY_CTRL_GOST_PARAMSET,
 					NID_id_tc26_gost_3410_2012_256_paramSetA, NULL);
 
-			if (!EVP_PKEY_keygen_init(kctx)) {
-				return finalize(false);
-			}
+			if (!EVP_PKEY_keygen_init(kctx)) { return finalize(false); }
 
 		} else if (type == KeyType::GOST3410_2012_512) {
 			kctx = EVP_PKEY_CTX_new_id(NID_id_GostR3410_2012_512, NULL);
-			if (!kctx) {
-				return finalize(false);
-			}
+			if (!kctx) { return finalize(false); }
 
 			EVP_PKEY_paramgen_init(kctx);
 
 			EVP_PKEY_CTX_ctrl(kctx, NID_id_GostR3410_2012_512, EVP_PKEY_OP_PARAMGEN, EVP_PKEY_CTRL_GOST_PARAMSET,
 					NID_id_tc26_gost_3410_2012_512_paramSetA, NULL);
 
-			if (!EVP_PKEY_keygen_init(kctx)) {
-				return finalize(false);
-			}
+			if (!EVP_PKEY_keygen_init(kctx)) { return finalize(false); }
+		} else if (type == KeyType::ECDSA) {
+			kctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL);
+			if (!kctx) { return finalize(false); }
+
+			if (!EVP_PKEY_keygen_init(kctx)) { return finalize(false); }
+
+			if (1 != EVP_PKEY_CTX_set_ec_paramgen_curve_nid(kctx, NID_X9_62_prime256v1)) { return finalize(false); }
+		} else if (type == KeyType::EDDSA_ED448) {
+			kctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED448, NULL);
+			if (!kctx) { return finalize(false); }
+
+			if (!EVP_PKEY_keygen_init(kctx)) { return finalize(false); }
 		} else {
 			log::error("Crypto-openssl", "Unsupported key type for keygen");
 			return finalize(false);
@@ -1003,13 +1004,13 @@ static BackendCtx s_openSSLCtx = {
 		switch (algo) {
 		case SignAlgorithm::RSA_SHA256:
 		case SignAlgorithm::ECDSA_SHA256:
-			if (1 != EVP_DigestSignInit(mdctx, &pctx, EVP_sha256(), NULL, key)) {
+			if (1 != EVP_DigestSignInit(mdctx, &pctx, (ctx.type == KeyType::EDDSA_ED448) ? nullptr : EVP_sha256(), NULL, key)) {
 				return cleanup(false);
 			}
 			break;
 		case SignAlgorithm::RSA_SHA512:
 		case SignAlgorithm::ECDSA_SHA512:
-			if (1 != EVP_DigestSignInit(mdctx, &pctx, EVP_sha512(), NULL, key)) {
+			if (1 != EVP_DigestSignInit(mdctx, &pctx, (ctx.type == KeyType::EDDSA_ED448) ? nullptr : EVP_sha512(), NULL, key)) {
 				return cleanup(false);
 			}
 			break;
@@ -1032,19 +1033,35 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		}
+		if (algo == SignAlgorithm::GOST_256 || algo == SignAlgorithm::GOST_512) {
+			if (1 != EVP_DigestSignUpdate(mdctx, data.data(), data.size())) {
+				return cleanup(false);
+			}
 
-		/* Call update with the message */
-		if (1 != EVP_DigestSignUpdate(mdctx, data.data(), data.size())) {
-			return cleanup(false);
-		}
-
-		if (1 == EVP_DigestSignFinal(mdctx, NULL, &siglen)) {
-			sigdata = static_cast<unsigned char *>(OPENSSL_malloc(sizeof(unsigned char) * siglen));
-			if (sigdata) {
-				if (1 == EVP_DigestSignFinal(mdctx, sigdata, &siglen)) {
-					cb(BytesView(sigdata, siglen));
-					return cleanup(true);
+			if (1 == EVP_DigestSignFinal(mdctx, NULL, &siglen)) {
+				sigdata = static_cast<unsigned char *>(OPENSSL_zalloc(sizeof(unsigned char) * siglen));
+				if (sigdata) {
+					if (1 == EVP_DigestSignFinal(mdctx, sigdata, &siglen)) {
+						cb(BytesView(sigdata, siglen));
+						return cleanup(true);
+					} else {
+						return cleanup(false);
+					}
+				} else {
+					return cleanup(false);
 				}
+			} else {
+				return cleanup(false);
+			}
+		} else {
+			if (1 != EVP_DigestSign(mdctx, NULL, &siglen, data.data(), data.size())) {
+				return cleanup(false);
+			}
+
+			sigdata = static_cast<unsigned char *>(OPENSSL_malloc(sizeof(unsigned char) * siglen));
+			if (1 == EVP_DigestSign(mdctx, sigdata, &siglen, data.data(), data.size())) {
+				cb(BytesView(sigdata, siglen));
+				return cleanup(true);
 			}
 		}
 		return cleanup(false);
@@ -1068,13 +1085,13 @@ static BackendCtx s_openSSLCtx = {
 		switch (algo) {
 		case SignAlgorithm::RSA_SHA256:
 		case SignAlgorithm::ECDSA_SHA256:
-			if (!EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, key)) {
+			if (!EVP_DigestVerifyInit(mdctx, NULL, (ctx.type == KeyType::EDDSA_ED448) ? nullptr : EVP_sha256(), NULL, key)) {
 				return cleanup(false);
 			}
 			break;
 		case SignAlgorithm::RSA_SHA512:
 		case SignAlgorithm::ECDSA_SHA512:
-			if (!EVP_DigestVerifyInit(mdctx, NULL, EVP_sha512(), NULL, key)) {
+			if (!EVP_DigestVerifyInit(mdctx, NULL, (ctx.type == KeyType::EDDSA_ED448) ? nullptr : EVP_sha512(), NULL, key)) {
 				return cleanup(false);
 			}
 			break;
@@ -1429,13 +1446,13 @@ static BackendCtx s_openSSLCtx = {
 		switch (algo) {
 		case SignAlgorithm::RSA_SHA256:
 		case SignAlgorithm::ECDSA_SHA256:
-			if (!EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, key)) {
+			if (!EVP_DigestVerifyInit(mdctx, NULL, (ctx.type == KeyType::EDDSA_ED448) ? nullptr : EVP_sha256(), NULL, key)) {
 				return cleanup(false);
 			}
 			break;
 		case SignAlgorithm::RSA_SHA512:
 		case SignAlgorithm::ECDSA_SHA512:
-			if (!EVP_DigestVerifyInit(mdctx, NULL, EVP_sha512(), NULL, key)) {
+			if (!EVP_DigestVerifyInit(mdctx, NULL, (ctx.type == KeyType::EDDSA_ED448) ? nullptr : EVP_sha512(), NULL, key)) {
 				return cleanup(false);
 			}
 			break;
@@ -1459,12 +1476,7 @@ static BackendCtx s_openSSLCtx = {
 			break;
 		}
 
-		/* Initialize `key` with a public key */
-		if (!EVP_DigestVerifyUpdate(mdctx, data.data(), data.size())) {
-			return cleanup(false);
-		}
-
-		if (EVP_DigestVerifyFinal(mdctx, signature.data(), signature.size())) {
+		if (EVP_DigestVerify(mdctx, signature.data(), signature.size(), data.data(), data.size()) == 1) {
 			return cleanup(true);
 		}
 

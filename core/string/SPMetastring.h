@@ -38,8 +38,13 @@ struct metastring {
 
 	template <typename Interface>
 	auto to_string() -> typename Interface::StringType const { return { Chars ... }; }
+
 	std::string to_std_string() const { return {Chars ...}; }
+	std::u16string to_std_ustring() const { return {char16_t(Chars) ...}; }
+
 	memory::string to_memory_string() const { return {Chars ...}; }
+	memory::u16string to_memory_ustring() const { return {char16_t(Chars) ...}; }
+
 	constexpr std::array<char, sizeof... (Chars)> to_array() const { return {{Chars...}}; }
 
 	operator memory::string() const { return {Chars ...}; }

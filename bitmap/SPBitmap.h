@@ -228,7 +228,7 @@ template <typename Interface>
 void BitmapTemplate<Interface>::loadBitmap(BytesView d, uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
 	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
-	_data = d;
+	_data = d.bytes<Interface>();
 	_originalFormat = FileFormat::Custom;
 	_originalFormatName.clear();
 }

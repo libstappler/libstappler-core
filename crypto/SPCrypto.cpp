@@ -161,28 +161,28 @@ static bool isBackendValidForBlock(BackendCtx *b, BlockCipher c) {
 
 static BackendCtx *findBackendForBlock(BlockCipher c) {
 	// check default
-	auto b = BackendCtx::get(Backend::Default);
-	if (b && (b->flags & BackendFlags::SecureLibrary) != BackendFlags::None) {
-		if (isBackendValidForBlock(b, c)) {
-			return b;
+
+	auto check = [&] (BackendCtx *b, bool secure) -> BackendCtx * {
+		if (b && (b->flags & BackendFlags::SecureLibrary) == (secure ? BackendFlags::SecureLibrary : BackendFlags::None)) {
+			if (isBackendValidForBlock(b, c)) {
+				return b;
+			}
 		}
+		return nullptr;
+	};
+
+	auto b = check(BackendCtx::get(Backend::Default), true);
+	if (b) {
+		return b;
 	}
 
 	// check secure libs first
 	for (auto &it : BackendCtxRef::s_backends) {
-		if ((b->flags & BackendFlags::SecureLibrary) != BackendFlags::None) {
-			if (isBackendValidForBlock(it.second, c)) {
-				return it.second;
-			}
-		}
+		if (check(it.second, true)) { return it.second; }
 	}
 
 	for (auto &it : BackendCtxRef::s_backends) {
-		if ((b->flags & BackendFlags::SecureLibrary) == BackendFlags::None) {
-			if (isBackendValidForBlock(it.second, c)) {
-				return it.second;
-			}
-		}
+		if (check(it.second, false)) { return it.second; }
 	}
 	return nullptr;
 }
@@ -249,12 +249,24 @@ BlockKey256 makeBlockKey(Backend b, BytesView pkey, BytesView hash, BlockCipher 
 		ret.cipher = c;
 		return ret;
 	} else {
-		return BlockKey256 { string::Sha256().update(hash).update(pkey).final(), 0,  c };
+		return BlockKey256 { 0, c, string::Sha256().update(hash).update(pkey).final() };
 	}
 }
 
 BlockKey256 makeBlockKey(BytesView pkey, BytesView hash, BlockCipher b, uint32_t version) {
 	return makeBlockKey(Backend::Default, pkey, hash, b, version);
+}
+
+BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, uint32_t version) {
+	switch (pkey.getType()) {
+	case KeyType::GOST3410_2012_256:
+	case KeyType::GOST3410_2012_512:
+		return makeBlockKey(pkey, hash, BlockCipher::Gost3412_2015_CTR_ACPKM, version);
+		break;
+	default:
+		break;
+	}
+	return makeBlockKey(pkey, hash, BlockCipher::AES_CBC, version);
 }
 
 BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher b, uint32_t version) {

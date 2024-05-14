@@ -41,8 +41,6 @@ public:
 	};
 
 	enum Boundary_Op {
-		BOUNDARY_WRAP = 0,
-		BOUNDARY_REFLECT = 1,
 		BOUNDARY_CLAMP = 2
 	};
 
@@ -68,9 +66,6 @@ public:
 
 	~Resampler();
 
-	// Reinits resampler so it can handle another frame.
-	void restart();
-
 	// false on out of memory.
 	bool put_line(const Real* Psrc);
 
@@ -81,18 +76,12 @@ public:
 		return m_status;
 	}
 
-	// Returned contributor lists can be shared with another Resampler.
-	void get_clists(Contrib_List** ptr_clist_x, Contrib_List** ptr_clist_y);
-
 	Contrib_List* get_clist_x() const {
 		return m_Pclist_x;
 	}
 	Contrib_List* get_clist_y() const {
 		return m_Pclist_y;
 	}
-
-	// Filter accessors.
-	static int get_filter_num();
 
 private:
 	Resampler();
@@ -180,21 +169,6 @@ static inline int resampler_range_check(int v, int h) { (void)h; resampler_asser
 
 // Float to int cast with truncation.
 static inline int cast_to_int(Resampler::Real i) { return int(i); }
-
-// (x mod y) with special handling for negative x values.
-static inline int posmod(int x, int y) {
-	if (x >= 0) {
-		return (x % y);
-	} else {
-		int m = (-x) % y;
-
-		if (m != 0) {
-			m = y - m;
-		}
-
-		return (m);
-	}
-}
 
 // To add your own filter, insert the new function below and update the filter table.
 // There is no need to make the filter function particularly fast, because it's
@@ -484,25 +458,9 @@ int Resampler::reflect(const int j, const int src_x, const Boundary_Op boundary_
 	int n;
 
 	if (j < 0) {
-		if (boundary_op == BOUNDARY_REFLECT) {
-			n = -j;
-
-			if (n >= src_x)
-				n = src_x - 1;
-		} else if (boundary_op == BOUNDARY_WRAP)
-			n = posmod(j, src_x);
-		else
-			n = 0;
+		n = 0;
 	} else if (j >= src_x) {
-		if (boundary_op == BOUNDARY_REFLECT) {
-			n = (src_x - j) + (src_x - 1);
-
-			if (n < 0)
-				n = 0;
-		} else if (boundary_op == BOUNDARY_WRAP)
-			n = posmod(j, src_x);
-		else
-			n = src_x - 1;
+		n = src_x - 1;
 	} else
 		n = j;
 
@@ -986,29 +944,6 @@ Resampler::~Resampler() {
 	}
 }
 
-void Resampler::restart() {
-	if (STATUS_OKAY != m_status)
-		return;
-
-	m_cur_src_y = m_cur_dst_y = 0;
-
-	int i, j;
-	for (i = 0; i < m_resample_src_y; i++) {
-		m_Psrc_y_count[i] = 0;
-		m_Psrc_y_flag[i] = 0;
-	}
-
-	for (i = 0; i < m_resample_dst_y; i++) {
-		for (j = 0; j < m_Pclist_y[i].n; j++)
-			m_Psrc_y_count[resampler_range_check(m_Pclist_y[i].p[j].pixel, m_resample_src_y)]++;
-	}
-
-	for (i = 0; i < MAX_SCAN_BUF_SIZE; i++) {
-		m_Pscan_buf->scan_buf_y[i] = -1;
-		m_Pscan_buf->scan_buf_l[i] = NULL;
-	}
-}
-
 Resampler::Resampler(int src_x, int src_y, int dst_x, int dst_y, Boundary_Op boundary_op, Real sample_low,
 		Real sample_high, ResampleFilter Pfilter_name, Contrib_List* Pclist_x, Contrib_List* Pclist_y, Real filter_x_scale,
 		Real filter_y_scale, Real src_x_ofs, Real src_y_ofs) {
@@ -1167,18 +1102,6 @@ Resampler::Resampler(int src_x, int src_y, int dst_x, int dst_y, Boundary_Op bou
 			return;
 		}
 	}
-}
-
-void Resampler::get_clists(Contrib_List** ptr_clist_x, Contrib_List** ptr_clist_y) {
-	if (ptr_clist_x)
-		*ptr_clist_x = m_Pclist_x;
-
-	if (ptr_clist_y)
-		*ptr_clist_y = m_Pclist_y;
-}
-
-int Resampler::get_filter_num() {
-	return NUM_FILTERS;
 }
 
 class ResamplerData {

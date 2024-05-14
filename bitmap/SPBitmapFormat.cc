@@ -320,7 +320,7 @@ bool check(FileFormat fmt, const uint8_t * data, size_t dataLen) {
 	return getDefaultFormat(toInt(fmt)).is(data, dataLen);
 }
 
-bool check(const StringView &name, const uint8_t * data, size_t dataLen) {
+bool check(StringView name, const uint8_t * data, size_t dataLen) {
 	memory::vector<BitmapFormat::check_fn> fns;
 
 	auto lock = lockFormatList();

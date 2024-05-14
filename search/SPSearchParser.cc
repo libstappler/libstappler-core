@@ -178,8 +178,6 @@ Language detectLanguage(const StringView &word) {
 				return Language::Russian;
 			} else if (r.is<StringViewUtf8::MatchCharGroup<CharGroupId::GreekBasic>>()) {
 				return Language::Greek;
-			} else if (r.is<StringViewUtf8::MatchCharGroup<CharGroupId::Numbers>>()) {
-				return Language::Simple;
 			}
 		}
 		return Language::Unknown;
@@ -264,11 +262,17 @@ static ParserStatus parseUrlToken(StringView &r, const Callback<ParserStatus(Str
 	}
 
 	if (view.isEmail()) {
-		if (cb(view.url, ParserToken::Email) == ParserStatus::Stop) { return ParserStatus::Stop; }
+		if (cb(view.url, ParserToken::Email) == ParserStatus::Stop) {
+			return ParserStatus::Stop;
+		}
 	} else if (view.isPath()) {
-		if (cb(view.url, ParserToken::Path) == ParserStatus::Stop) { return ParserStatus::Stop; }
+		if (cb(view.url, ParserToken::Path) == ParserStatus::Stop) {
+			return ParserStatus::Stop;
+		}
 	} else {
-		if (cb(view.url, ParserToken::Url) == ParserStatus::Stop) { return ParserStatus::Stop; }
+		if (cb(view.url, ParserToken::Url) == ParserStatus::Stop) {
+			return ParserStatus::Stop;
+		}
 	}
 
 	return ParserStatus::Continue;
@@ -681,18 +685,8 @@ static bool parseToken(StringViewUtf8 &r, const Callback<ParserStatus(StringView
 			auto tmp2 = tmp;
 			tmp2.skipChars<StringViewUtf8::CharGroup<CharGroupId::WhiteSpace>>();
 			if (tmp2.is<StringViewUtf8::CharGroup<CharGroupId::Numbers>>()) {
-				switch (readCadasterString(tmp, num, cb)) {
-				case ParserStatus::Continue:
-					r = tmp;
-					break;
-				case ParserStatus::Stop:
-					return false;
-					break;
-				default:
-					if (cb(num, ParserToken::Integer) == ParserStatus::Stop) { return false; }
-					r = tmp;
-					break;
-				}
+				if (cb(num, ParserToken::Integer) == ParserStatus::Stop) { return false; }
+				r = tmp;
 			} else {
 				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer) == ParserStatus::Stop) { return false; }
 				r = tmp;
@@ -872,6 +866,7 @@ static void * staticPoolAlloc(void* userData, unsigned int size) {
 	return mem;
 }
 
+SP_COVERAGE_TRIVIAL
 static void staticPoolFree(void * userData, void * ptr) { }
 
 StemmerEnv *getStemmer(Language lang) {

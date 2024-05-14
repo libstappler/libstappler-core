@@ -28,6 +28,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
 constexpr size_t getMaxRecursionDepth() { return 16; }
+constexpr float getCloseControlDistance() { return std::numeric_limits<float>::epsilon() * 32; }
 
 // based on:
 // http://www.antigrain.com/research/adaptive_bezier/index.html
@@ -394,8 +395,16 @@ void LineDrawer::drawArc(float rx, float ry, float phi, bool largeArc, bool swee
 	drawArcBegin(*this, target->point.x, target->point.y, rx, ry, phi, largeArc, sweep, x1, y1);
 }
 void LineDrawer::drawClose(bool closed) {
+	if (count == 0) {
+		return;
+	}
+
 	if (fill) {
-		fill->pushVertex(fillCursor, target->point);
+		//std::cout << "End:  " << origin[0] << " " << target->point << " " << origin[0].distance(target->point) << " "
+		//		<< getCloseControlDistance() << " " << target->point.fuzzyEquals(origin[0], getCloseControlDistance()) << "\n";
+		if (!target->point.fuzzyEquals(origin[0], getCloseControlDistance())) {
+			fill->pushVertex(fillCursor, target->point);
+		}
 		fill->closeContour(fillCursor);
 		closed = true;
 	}
@@ -426,6 +435,7 @@ void LineDrawer::push(float x, float y) {
 
 	if (fill) {
 		if (count > 0) {
+			//std::cout << "Push: " << origin[0] << " " << target->point << "\n";
 			fill->pushVertex(fillCursor, target->point);
 		}
 	}

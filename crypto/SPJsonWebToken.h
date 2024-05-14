@@ -114,7 +114,7 @@ public:
 		Function<void(const crypto::HashCoderCallback &)> cb;
 
 		Fingerprint(crypto::HashFunction fn, BytesView v) : func(fn), fpb(v) { }
-		Fingerprint(crypto::HashFunction fn, Function<void(const Callback<void(const CoderSource &)>)> &&cb) : func(fn), cb(move(cb)) { }
+		Fingerprint(crypto::HashFunction fn, Function<void(const crypto::HashCoderCallback &)> &&cb) : func(fn), cb(move(cb)) { }
 	};
 
 	// parse from JsonWebToken source

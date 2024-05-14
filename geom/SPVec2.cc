@@ -233,7 +233,7 @@ Vec2 Vec2::getIntersectPoint(const Vec2& A, const Vec2& B, const Vec2& C, const 
 		return P;
 	}
 
-	return Vec2::ZERO;
+	return Vec2(nan(), nan());
 }
 
 #ifdef __LCC__

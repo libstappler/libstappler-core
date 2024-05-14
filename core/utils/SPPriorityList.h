@@ -77,7 +77,7 @@ public:
 	template <typename ... Args>
 	Value * emplace(void *, int32_t p, Args && ... args);
 
-	Value * find(void *);
+	Value * find(void *) const;
 
 	// callback returns true if Entry should be removed
 	void foreach(const Callback<bool(void *target, int32_t priority, Value &)> &);
@@ -135,7 +135,7 @@ auto PriorityList<Value>::emplace(void *ptr, int32_t p, Args && ... args) -> Val
 }
 
 template <typename Value>
-auto PriorityList<Value>::find(void *ptr) -> Value * {
+auto PriorityList<Value>::find(void *ptr) const -> Value * {
 	auto it = _hash.find(ptr);
 	if (it != _hash.end()) {
 		auto entry = (Entry *)*it;
@@ -286,12 +286,14 @@ void PriorityList<Value>::free(Entry *v) {
 template <typename Value>
 void PriorityList<Value>::foreach_list(Entry *v, const Callback<bool(void *target, int32_t priority, Value &)> &cb) {
 	while (v) {
-		auto next = v->next;
 		if (cb(v->target, v->priority, v->value)) {
+			auto next = v->next;
 			_hash.erase(v);
 			erase_entry(v);
+			v = next;
+		} else {
+			v = v->next;
 		}
-		v = next;
 	}
 }
 

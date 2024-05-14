@@ -461,6 +461,7 @@ static inline bool sp_time_exp_read_gmt(sp_time_exp_t &ds, StringView gmtstr) {
 		++ gmtstr;
 		auto off1 = gmtstr.readChars<StringView::CharGroup<CharGroupId::Numbers>>();
 		if (off1.size() == 2 && gmtstr.is(':')) {
+			++gmtstr;
 			auto off2 = gmtstr.readChars<StringView::CharGroup<CharGroupId::Numbers>>();
 			if (off2.size() == 2) {
 				ds.tm_gmtoff += sign * off1.readInteger().get() * 60 * 60;

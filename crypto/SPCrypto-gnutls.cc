@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -237,6 +237,7 @@ struct Pkcs1RsaPubKeyReader {
 		}
 	}
 
+	SP_COVERAGE_TRIVIAL
 	void onCustom(Decoder &, uint8_t, const BytesViewNetwork &val) {
 		state = Invalid;
 	}
@@ -820,7 +821,8 @@ static BackendCtx s_gnuTLSCtx = {
 
 		gnutls_datum_t output;
 
-		if (gnutls_pubkey_encrypt_data(key, 0, &dataToEncrypt, &output) == GNUTLS_E_SUCCESS) {
+		auto err = gnutls_pubkey_encrypt_data(key, 0, &dataToEncrypt, &output);
+		if (err == GNUTLS_E_SUCCESS) {
 			cb(BytesView(output.data, output.size));
 			gnutls_free(output.data);
 			return true;

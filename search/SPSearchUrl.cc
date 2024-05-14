@@ -296,6 +296,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 					cb(StringView(port.data() - 1, 1), UrlToken::Blank);
 					cb(port, UrlToken::Password);
 					++ tmpS;
+					s = tmpS;
 					state = UrlToken::Host;
 				} else {
 					tmp = tmp_s.readChars<UnreservedUni, SubDelim>();
