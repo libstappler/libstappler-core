@@ -473,11 +473,11 @@ bool ExecFunction::init(ModuleInstance *inst, StringView name) {
 	// search not prefixed version first
 	_name = name.str<Interface>();
 
-	auto fn = wasm_runtime_lookup_function(inst->getInstance(), _name.data(), NULL);
+	auto fn = wasm_runtime_lookup_function(inst->getInstance(), _name.data());
 	if (!fn) {
 		_name = toString(inst->getModule()->getName(), "#", name);
 		// search module-prefixed
-		fn = wasm_runtime_lookup_function(inst->getInstance(), _name.data(), NULL);
+		fn = wasm_runtime_lookup_function(inst->getInstance(), _name.data());
 	}
 
 	if (!fn) {
