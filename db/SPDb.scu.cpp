@@ -49,6 +49,7 @@ THE SOFTWARE.
 #include "SPDbTransaction.cc"
 #include "SPDbUser.cc"
 #include "SPDbWorker.cc"
+#include "SPDbSimpleServer.cc"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 

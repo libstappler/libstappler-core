@@ -35,7 +35,7 @@ struct Extent2;
 
 class Vec2 {
 public:
-	static constexpr size_t Dimansions = 2;
+	static constexpr size_t DIMENSIONS = 2;
 
 	static const Vec2 ZERO;
 	static const Vec2 ONE;

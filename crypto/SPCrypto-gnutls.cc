@@ -294,7 +294,7 @@ static BackendCtx s_gnuTLSCtx = {
 		size_t outSize = blockSize - sizeof(BlockCryptoHeader);
 		fillCryptoBlockHeader(output, key, d);
 
-		if constexpr (SafeBlockEncoding) {
+		if constexpr (SAFE_BLOCK_ENCODING) {
 			memcpy(output + sizeof(BlockCryptoHeader), d.data(), d.size());
 			memset(output + sizeof(BlockCryptoHeader) + d.size(), 0, blockSize - d.size());
 			err = gnutls_cipher_encrypt(aes, output + sizeof(BlockCryptoHeader), outSize);

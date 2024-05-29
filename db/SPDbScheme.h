@@ -81,10 +81,8 @@ public:
 	static bool initSchemes(const Map<StringView, const Scheme *> &);
 
 public:
-	Scheme(const StringView &name, bool delta = false);
-	Scheme(const StringView &name, Options);
-	Scheme(const StringView &name, std::initializer_list<Field> il, bool delta = false);
-	Scheme(const StringView &name, std::initializer_list<Field> il, Options);
+	Scheme(const StringView &name, Options = Options::None, uint32_t v = 0);
+	Scheme(const StringView &name, std::initializer_list<Field> il, Options = Options::None, uint32_t v = 0);
 
 	Scheme(const Scheme &) = delete;
 	Scheme& operator=(const Scheme &) = delete;
@@ -112,6 +110,8 @@ public:
 
 	void cloneFrom(Scheme *);
 
+	uint32_t getVersion() const { return _version; }
+	Options getFlags() const { return _flags; }
 	StringView getName() const;
 	bool hasAliases() const;
 
@@ -129,18 +129,18 @@ public:
 	const Vector<UniqueConstraint> &getUnique() const;
 	BytesView getCompressDict() const;
 
-	const Set<const Field *> &getFullTextFields() const { return fullTextFields; }
+	const Set<const Field *> &getFullTextFields() const { return _fullTextFields; }
 
 	const Field *getForeignLink(const FieldObject *f) const;
 	const Field *getForeignLink(const Field &f) const;
 	const Field *getForeignLink(const StringView &f) const;
 
-	void setConfig(InputConfig cfg) { config = cfg; }
-	const InputConfig &getConfig() const { return config; }
+	void setConfig(InputConfig cfg) { _config = cfg; }
+	const InputConfig &getConfig() const { return _config; }
 
-	size_t getMaxRequestSize() const { return config.maxRequestSize; }
-	size_t getMaxVarSize() const { return config.maxVarSize; }
-	size_t getMaxFileSize() const { return std::max(config.maxFileSize, config.maxVarSize); }
+	size_t getMaxRequestSize() const { return _config.maxRequestSize; }
+	size_t getMaxVarSize() const { return _config.maxVarSize; }
+	size_t getMaxFileSize() const { return std::max(_config.maxFileSize, _config.maxVarSize); }
 
 	bool isAtomicPatch(const Value &) const;
 
@@ -277,18 +277,19 @@ protected:// CRUD functions
 
 	void updateView(const Transaction &, const Value &, const ViewScheme *, const Vector<uint64_t> &) const;
 
-	Map<String, Field> fields;
-	String name;
+	Map<String, Field> _fields;
+	String _name;
 
-	Options flags = Options::None;
+	uint32_t _version = 0;
+	Options _flags = Options::None;
 
-	InputConfig config;
+	InputConfig _config;
 
-	Vector<ViewScheme *> views;
-	Vector<ParentScheme *> parents;
-	Set<const Field *> forceInclude;
-	Set<const Field *> fullTextFields;
-	Set<const Field *> autoFieldReq;
+	Vector<ViewScheme *> _views;
+	Vector<ParentScheme *> _parents;
+	Set<const Field *> _forceInclude;
+	Set<const Field *> _fullTextFields;
+	Set<const Field *> _autoFieldReq;
 
 	bool _init = false;
 	bool _hasFiles = false;
@@ -296,9 +297,9 @@ protected:// CRUD functions
 	bool _hasAccessControl = false;
 	bool _hasVirtuals = false;
 
-	AccessTable roles;
-	Field oidField;
-	Vector<UniqueConstraint> unique;
+	AccessTable _roles;
+	Field _oidField;
+	Vector<UniqueConstraint> _unique;
 	Bytes _compressDict;
 };
 

@@ -219,6 +219,7 @@ struct TableRec {
 	Map<String, ColRec> cols;
 	Map<String, IndexRec> indexes;
 	Map<String, TriggerRec> triggers;
+	uint32_t version = 0;
 	bool exists = false;
 	bool valid = false;
 	bool withOids = false;
@@ -429,6 +430,11 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 	for (auto &ex_it : existed) {
 		auto req_it = required.find(ex_it.first);
 		if (req_it != required.end()) {
+			if (ex_it.second.version > req_it->second.version) {
+				continue;
+			}
+
+			bool updated = false;
 			auto &req_t = req_it->second;
 			auto &ex_t = ex_it.second;
 			req_t.exists = true;
@@ -437,6 +443,7 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				auto req_idx_it = req_t.indexes.find(ex_idx_it.first);
 				if (req_idx_it == req_t.indexes.end()) {
 					// index is not required any more, drop it
+					updated = true;
 					outstream << "DROP INDEX IF EXISTS \"" << ex_idx_it.first << "\";\n";
 				} else {
 					req_t.indexes.erase(req_idx_it);
@@ -450,6 +457,7 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 
 				auto req_col_it = req_t.cols.find(ex_col_it.first);
 				if (req_col_it == req_t.cols.end()) {
+					updated = true;
 					outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \"" << ex_col_it.first << "\";\n";
 				} else {
 					auto &req_col = req_col_it->second;
@@ -458,8 +466,10 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 					auto req_type = req_col.type;
 
 					if (req_type != ex_col.type) {
+						updated = true;
 						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \"" << ex_col_it.first << "\";\n";
 					} else if (ex_col.type == ColRec::Type::Unknown && req_type == ColRec::Type::Unknown && ex_col.custom != req_col.custom) {
+						updated = true;
 						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \"" << ex_col_it.first << "\";\n";
 					} else {
 						req_t.cols.erase(req_col_it);
@@ -470,10 +480,16 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 			for (auto &ex_tgr_it : ex_t.triggers) {
 				auto req_tgr_it = req_t.triggers.find(ex_tgr_it.first);
 				if (req_tgr_it == req_t.triggers.end()) {
+					updated = true;
 					outstream << "DROP TRIGGER IF EXISTS \"" << ex_tgr_it.first << "\";\n";
 				} else {
 					req_t.triggers.erase(ex_tgr_it.first);
 				}
+			}
+
+			if (updated) {
+				outstream << "INSERT INTO __versions(name,version) VALUES('" << ex_it.first << "'," << ex_t.version << ")"
+						<< " ON CONFLICT(name) DO UPDATE SET version = EXCLUDED.version;\n";
 			}
 		}
 	}
@@ -521,6 +537,9 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				}
 			}
 		}
+
+		outstream << "INSERT INTO __versions(name,version) VALUES('" << it.first << "'," << it.second.version << ")"
+				<< " ON CONFLICT(name) DO UPDATE SET version = EXCLUDED.version;\n";
 	}
 
 	// indexes
@@ -950,12 +969,23 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 		}
 	});
 
+	h.performSimpleSelect("SELECT name, version FROM __versions;",
+			[&] (db::sql::Result &versions) {
+		for (auto it : versions) {
+			auto tIt = ret.find(it.toString(0));
+			if (tIt != ret.end()) {
+				tIt->second.version = it.toInteger(1);
+			}
+		}
+	});
+
 	return ret;
 }
 
 TableRec::TableRec() { }
 TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, const db::Scheme *scheme) {
 	withOids = true;
+	version = scheme->getVersion();
 	if (scheme->isDetouched()) {
 		detached = true;
 	}

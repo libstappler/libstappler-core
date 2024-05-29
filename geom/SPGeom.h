@@ -31,7 +31,7 @@ namespace {
 
 template <typename T>
 struct _StructFieldCount {
-	static constexpr size_t Count = T::Dimansions;
+	static constexpr size_t Count = T::DIMENSIONS;
 };
 
 template <>

@@ -34,9 +34,9 @@ namespace STAPPLER_VERSIONIZED stappler::crypto {
 // ценой производетльности. Если выключено - шифротексты могут различаться
 // (при этом сохраняется интероперабельность)
 #if DEBUG
-constexpr bool SafeBlockEncoding = true;
+constexpr bool SAFE_BLOCK_ENCODING = true;
 #else
-constexpr bool SafeBlockEncoding = false;
+constexpr bool SAFE_BLOCK_ENCODING = false;
 #endif
 
 constexpr size_t BlockKeySize256 = 32; // 256-bit

@@ -23,8 +23,68 @@ THE SOFTWARE.
 
 #include "SPDbAdapter.h"
 #include "SPDbScheme.h"
+#include "SPDbFieldExtensions.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
+
+void ApplicationInterface::defineUserScheme(Scheme &scheme) {
+	scheme.define({
+		db::Field::Text("name", db::Transform::Alias, db::Flags::Required),
+		db::Field::Bytes("pubkey", db::Transform::PublicKey, db::Flags::Indexed),
+		db::Field::Password("password", db::PasswordSalt(config::DEFAULT_PASSWORD_SALT), db::Flags::Required | db::Flags::Protected),
+		db::Field::Boolean("isAdmin", Value(false)),
+		db::Field::Extra("data", Vector<db::Field>({
+			db::Field::Text("email", db::Transform::Email),
+			db::Field::Text("public"),
+			db::Field::Text("desc"),
+		})),
+		db::Field::Text("email", db::Transform::Email, db::Flags::Unique),
+	});
+}
+
+void ApplicationInterface::defineFileScheme(Scheme &scheme) {
+	scheme.define({
+		db::Field::Text("location", db::Transform::Url),
+		db::Field::Text("type", db::Flags::ReadOnly),
+		db::Field::Integer("size", db::Flags::ReadOnly),
+		db::Field::Integer("mtime", db::Flags::AutoMTime | db::Flags::ReadOnly),
+		db::Field::Extra("image", Vector<db::Field>{
+			db::Field::Integer("width"),
+			db::Field::Integer("height"),
+		})
+	});
+}
+
+void ApplicationInterface::defineErrorScheme(Scheme &scheme) {
+	scheme.define({
+		db::Field::Boolean("hidden", Value(false)),
+		db::Field::Boolean("delivered", Value(false)),
+		db::Field::Text("name"),
+		db::Field::Text("documentRoot"),
+		db::Field::Text("url"),
+		db::Field::Text("request"),
+		db::Field::Text("ip"),
+		db::Field::Data("headers"),
+		db::Field::Data("data"),
+		db::Field::Integer("time"),
+		db::Field::Custom(new db::FieldTextArray("tags", db::Flags::Indexed,
+				db::DefaultFn([&] (const Value &data) -> Value {
+			Vector<String> tags;
+			for (auto &it : data.getArray("data")) {
+				auto text = it.getString("source");
+				if (!text.empty()) {
+					emplace_ordered(tags, text);
+				}
+			}
+
+			Value ret;
+			for (auto &it : tags) {
+				ret.addString(it);
+			}
+			return ret;
+		})))
+	});
+}
 
 ApplicationInterface::~ApplicationInterface() { }
 

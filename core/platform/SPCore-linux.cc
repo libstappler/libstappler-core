@@ -223,9 +223,12 @@ struct i18n {
 
 		_handle = Dso("libicuuc.so");
 		if (_handle) {
-
+			icu.load(_handle, verSuffix);
+			if (!icu) {
+				icu.clear();
+				_handle.close();
+			}
 		}
-		_handle.close();
 	}
 
 	~i18n() { }
@@ -534,6 +537,8 @@ size_t makeRandomBytes(uint8_t * buf, size_t count) {
 		if (ret >= 0) {
 			generated += ret;
 		}
+	} else {
+		generated += ret;
 	}
 	return generated;
 }

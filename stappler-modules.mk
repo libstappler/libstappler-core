@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+# Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
 STAPPLER_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 STAPPLER_VERSION_NUMBER := 1
-STAPPLER_VERSION_BUILD := 2
+STAPPLER_VERSION_BUILD := 3
 
 STAPPLER_CRYPTO_DEFAULT ?= openssl
 

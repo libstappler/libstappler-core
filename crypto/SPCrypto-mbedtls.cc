@@ -126,7 +126,7 @@ static BackendCtx s_mbedTLSCtx = {
 			return success;
 		};
 
-		if constexpr (SafeBlockEncoding) {
+		if constexpr (SAFE_BLOCK_ENCODING) {
 			uint8_t tmp[blockSize];
 			memset(tmp, 0, blockSize);
 			memcpy(tmp, d.data(), d.size());

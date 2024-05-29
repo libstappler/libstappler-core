@@ -72,13 +72,14 @@ struct TableRec {
 
 	TableRec();
 	TableRec(const Driver *d, const BackendInterface::Config &cfg, const db::Scheme *scheme,
-			const Vector<Pair<StringView, int64_t>> &customs);
+			const Vector<Pair<StringView, int64_t>> &customs, uint32_t v);
 
 	Map<String, ColRec> cols;
 	Map<String, ConstraintRec> constraints;
 	Map<String, String> indexes;
 	Vector<String> pkey;
 	Set<String> triggers;
+	uint32_t version = 0;
 	bool objects = true;
 
 	bool exists = false;
@@ -95,6 +96,12 @@ constexpr static const char * DATABASE_DEFAULTS = R"Sql(
 CREATE TABLE IF NOT EXISTS __objects (
 	__oid bigserial NOT NULL,
 	CONSTRAINT __objects_pkey PRIMARY KEY (__oid)
+) WITH ( OIDS=FALSE );
+
+CREATE TABLE IF NOT EXISTS __versions (
+	name text NOT NULL,
+	version int NOT NULL,
+	CONSTRAINT __versions_pkey PRIMARY KEY (name)
 ) WITH ( OIDS=FALSE );
 
 CREATE TABLE IF NOT EXISTS __removed (
@@ -312,6 +319,12 @@ void TableRec::writeCompareResult(StringStream &stream,
 	for (auto &ex_it : existed) {
 		auto req_it = required.find(ex_it.first);
 		if (req_it != required.end()) {
+			if (ex_it.second.version > req_it->second.version) {
+				continue;
+			}
+
+			bool updated = false;
+
 			auto &req_t = req_it->second;
 			auto &ex_t = ex_it.second;
 			req_t.exists = true;
@@ -320,6 +333,7 @@ void TableRec::writeCompareResult(StringStream &stream,
 				auto req_idx_it = req_t.indexes.find(ex_idx_it.first);
 				if (req_idx_it == req_t.indexes.end()) {
 					// index is not required any more, drop it
+					updated = true;
 					stream << "DROP INDEX IF EXISTS \"" << ex_idx_it.first << "\";\n";
 				} else {
 					req_t.indexes.erase(req_idx_it);
@@ -330,6 +344,7 @@ void TableRec::writeCompareResult(StringStream &stream,
 				auto req_cst_it = req_t.constraints.find(ex_cst_it.first);
 				if (req_cst_it == req_t.constraints.end()) {
 					// constraint is not required any more, drop it
+					updated = true;
 					stream << "ALTER TABLE " << ex_it.first << " DROP CONSTRAINT IF EXISTS \"" << ex_cst_it.first << "\";\n";
 				} else {
 					req_t.constraints.erase(req_cst_it);
@@ -339,6 +354,7 @@ void TableRec::writeCompareResult(StringStream &stream,
 			for (auto &ex_col_it : ex_t.cols) {
 				auto req_col_it = req_t.cols.find(ex_col_it.first);
 				if (req_col_it == req_t.cols.end()) {
+					updated = true;
 					stream << "ALTER TABLE " << ex_it.first << " DROP COLUMN IF EXISTS \"" << ex_col_it.first << "\";\n";
 				} else {
 					auto &req_col = req_col_it->second;
@@ -347,15 +363,19 @@ void TableRec::writeCompareResult(StringStream &stream,
 					auto req_type = req_col.type;
 
 					if (req_type != ex_col.type) {
+						updated = true;
 						stream << "ALTER TABLE " << ex_it.first << " DROP COLUMN IF EXISTS \"" << ex_col_it.first << "\";\n";
 					} else if (ex_col.type == ColRec::Type::Unknown && req_type == ColRec::Type::Unknown
 							&& ((req_col.oid && ex_col.oid != req_col.oid) || (!req_col.oid && ex_col.custom != req_col.custom))) {
+						updated = true;
 						stream << "ALTER TABLE " << ex_it.first << " DROP COLUMN IF EXISTS \"" << ex_col_it.first << "\";\n";
 					} else {
 						if (ex_col.notNull != req_col.notNull) {
 							if (ex_col.notNull) {
+								updated = true;
 								stream << "ALTER TABLE " << ex_it.first << " ALTER COLUMN \"" << ex_col_it.first << "\" DROP NOT NULL;\n";
 							} else {
+								updated = true;
 								stream << "ALTER TABLE " << ex_it.first << " ALTER COLUMN \"" << ex_col_it.first << "\" SET NOT NULL;\n";
 							}
 						}
@@ -367,11 +387,17 @@ void TableRec::writeCompareResult(StringStream &stream,
 			for (auto &ex_tgr_it : ex_t.triggers) {
 				auto req_tgr_it = req_t.triggers.find(ex_tgr_it);
 				if (req_tgr_it == req_t.triggers.end()) {
+					updated = true;
 					stream << "DROP TRIGGER IF EXISTS \"" << ex_tgr_it << "\" ON \"" << ex_it.first << "\";\n";
 					stream << "DROP FUNCTION IF EXISTS \"" << ex_tgr_it << "_func\"();\n";
 				} else {
 					req_t.triggers.erase(ex_tgr_it);
 				}
+			}
+
+			if (updated) {
+				stream << "INSERT INTO __versions(name,version) VALUES('" << ex_it.first << "'," << ex_t.version << ")"
+						<< " ON CONFLICT(name) DO UPDATE SET version = EXCLUDED.version;\n";
 			}
 		}
 	}
@@ -458,6 +484,9 @@ void TableRec::writeCompareResult(StringStream &stream,
 				}
 			}
 		}
+
+		stream << "INSERT INTO __versions(name,version) VALUES('" << it.first << "'," << it.second.version << ")"
+				<< " ON CONFLICT(name) DO UPDATE SET version = EXCLUDED.version;\n";
 	}
 
 	// write constraints
@@ -538,7 +567,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 	Map<StringView, TableRec> tables;
 	for (auto &it : s) {
 		auto scheme = it.second;
-		tables.emplace(scheme->getName(), TableRec(driver, cfg, scheme, customs));
+		tables.emplace(scheme->getName(), TableRec(driver, cfg, scheme, customs, scheme->getVersion()));
 
 		// check for extra tables
 		for (auto &fit : scheme->getFields()) {
@@ -720,7 +749,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 	});
 
 	h.performSimpleSelect("SELECT table_name, constraint_name, constraint_type FROM information_schema.table_constraints "
-			"WHERE table_schema='public' AND constraint_schema='public';"_weak,
+			"WHERE table_schema='public' AND constraint_schema='public';",
 			[&] (db::sql::Result &constraints) {
 		for (auto it : constraints) {
 			auto tname = it.at(0).str<Interface>();
@@ -739,7 +768,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 		constraints.clear();
 	});
 
-	h.performSimpleSelect(String::make_weak(INDEX_QUERY),
+	h.performSimpleSelect(INDEX_QUERY,
 			[&] (db::sql::Result &indexes) {
 		for (auto it : indexes) {
 			auto tname = it.at(0).str<Interface>();
@@ -758,7 +787,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 	});
 
 	h.performSimpleSelect("SELECT event_object_table, trigger_name FROM information_schema.triggers "
-			"WHERE trigger_schema='public';"_weak,
+			"WHERE trigger_schema='public';",
 			[&] (db::sql::Result &triggers) {
 		for (auto it : triggers) {
 			auto tname = it.at(0).str<Interface>();
@@ -772,12 +801,23 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 		triggers.clear();
 	});
 
+	h.performSimpleSelect("SELECT name, version FROM __versions;",
+			[&] (db::sql::Result &versions) {
+		for (auto it : versions) {
+			auto tIt = ret.find(it.toString(0));
+			if (tIt != ret.end()) {
+				tIt->second.version = it.toInteger(1);
+			}
+		}
+	});
+
 	return ret;
 }
 
 TableRec::TableRec() : objects(false) { }
 TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, const db::Scheme *scheme,
-		const Vector<Pair<StringView, int64_t>> &customs) {
+		const Vector<Pair<StringView, int64_t>> &customs, uint32_t v)
+: version(v) {
 	StringStream hashStreamAfter; hashStreamAfter << getDefaultFunctionVersion();
 	StringStream hashStreamBefore; hashStreamBefore << getDefaultFunctionVersion();
 

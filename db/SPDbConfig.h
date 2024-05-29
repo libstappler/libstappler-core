@@ -73,6 +73,8 @@ constexpr auto BROADCAST_CHANNEL_NAME = StringView("serenity_broadcast");
 
 constexpr uint16_t RESOURCE_RESOLVE_MAX_DEPTH = 4;
 
+constexpr auto DEFAULT_PASSWORD_SALT = "SP_USER_PASSWORD_KEY";
+
 }
 
 #endif

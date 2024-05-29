@@ -30,6 +30,10 @@ namespace STAPPLER_VERSIONIZED stappler::db {
 
 class ApplicationInterface {
 public:
+	static void defineUserScheme(Scheme &);
+	static void defineFileScheme(Scheme &);
+	static void defineErrorScheme(Scheme &);
+
 	virtual ~ApplicationInterface();
 
 	template <typename ... Args>

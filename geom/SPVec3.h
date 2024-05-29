@@ -37,7 +37,7 @@ struct Extent3;
 
 class Vec3 {
 public:
-	static constexpr size_t Dimansions = 2;
+	static constexpr size_t DIMENSIONS = 3;
 
 	static const Vec3 ZERO;
 	static const Vec3 ONE;

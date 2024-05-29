@@ -35,7 +35,7 @@ class Mat4;
 
 class alignas(16) Vec4 {
 public:
-	static constexpr size_t Dimansions = 2;
+	static constexpr size_t DIMENSIONS = 4;
 
 	static const Vec4 ZERO;
 	static const Vec4 ONE;
