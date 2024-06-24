@@ -623,13 +623,15 @@ inline size_t dtoa_milo(double value, Char* buffer) {
 			return 0;
 		}
 	} else {
+		size_t ret = 0;
 		if (value < 0) {
+			++ ret;
 			*buffer++ = '-';
 			value = -value;
 		}
 		int length, K;
 		Grisu2(value, buffer, &length, &K);
-		return Prettify(buffer, length, K);
+		return ret + Prettify(buffer, length, K);
 	}
 }
 
@@ -650,7 +652,7 @@ inline size_t dtoa_milo_len(double value) {
 		}
 		int length, K;
 		Grisu2_len(value, &length, &K);
-		return Prettify_len(length, K);
+		return ret + Prettify_len(length, K);
 	}
 }
 

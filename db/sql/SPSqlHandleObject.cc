@@ -325,7 +325,7 @@ Value SqlHandle::create(Worker &worker, const Vector<InputField> &inputFields, V
 			}
 
 			val.returning().field(SqlQuery::Field("__oid").as("id")).finalize();
-			selectQuery(query, [&, this] (Result &res) {
+			selectQuery(query, [&] (Result &res) {
 				size_t i = 0;
 				for (auto it : res) {
 					ret.getValue(i).setInteger(it.toInteger(0), "__oid");

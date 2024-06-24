@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,11 @@
 #ifndef CORE_CORE_SPPLATFORMUNISTD_H_
 #define CORE_CORE_SPPLATFORMUNISTD_H_
 
+#include "SPPlatformDetection.h"
+
+#if WIN32
+
+// Suppress windows warnings for cross-compilation with clang
 #if XWIN
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonportable-include-path"
@@ -33,12 +38,6 @@
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wunused-local-typedef"
 #endif
-
-#if WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#define UNICODE
-#define _UNICODE
 
 #ifndef _MSC_VER
 #warning Not MSC compiler
@@ -54,11 +53,12 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <Windows.h>
+#include <strsafe.h>
+#include <esent.h>
+
+#include <windows.h>
 #include <windowsx.h>
 #include <wincrypt.h>
-
-using pid_t = DWORD;
 
 #ifdef interface
 #undef interface
@@ -67,6 +67,8 @@ using pid_t = DWORD;
 #ifdef DELETE
 #undef DELETE
 #endif
+
+using pid_t = DWORD;
 
 #else
 #include <unistd.h>

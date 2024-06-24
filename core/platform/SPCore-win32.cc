@@ -178,6 +178,24 @@ auto totitle<memory::StandartInterface>(WideStringView data) -> memory::Standart
 	return mapString<memory::StandartInterface>(data, LCMAP_TITLECASE);
 }
 
+int compare_u(StringView l, StringView r) {
+	return compare_u(string::toUtf16<memory::StandartInterface>(l), string::toUtf16<memory::StandartInterface>(r));
+}
+
+int compare_u(WideStringView l, WideStringView r) {
+	return CompareStringEx(LOCALE_NAME_SYSTEM_DEFAULT, NORM_LINGUISTIC_CASING,
+			(wchar_t *)l.data(), l.size(), (wchar_t *)r.data(), r.size(), NULL, NULL, 0);
+}
+
+int caseCompare_u(StringView l, StringView r) {
+	return caseCompare_u(string::toUtf16<memory::StandartInterface>(l), string::toUtf16<memory::StandartInterface>(r));
+}
+
+int caseCompare_u(WideStringView l, WideStringView r) {
+	return CompareStringEx(LOCALE_NAME_SYSTEM_DEFAULT, NORM_LINGUISTIC_CASING | NORM_IGNORECASE | LINGUISTIC_IGNORECASE,
+			(wchar_t *)l.data(), l.size(), (wchar_t *)r.data(), r.size(), NULL, NULL, 0);
+}
+
 size_t makeRandomBytes(uint8_t *buf, size_t len) {
 	RandomSequence seq;
 	if (seq.generate(buf, len)) {

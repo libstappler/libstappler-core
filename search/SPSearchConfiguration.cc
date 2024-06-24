@@ -466,7 +466,7 @@ String Configuration::makeHeadline(const HeadlineConfig &cfg, const StringView &
 
 	parsePhrase(origin, [&, this] (StringView word, ParserToken tok) {
 		auto status = ParserStatus::Continue;
-		if (tok == ParserToken::Blank || !stemWord(word, tok, [&, this] (StringView word, StringView stem, ParserToken tok) {
+		if (tok == ParserToken::Blank || !stemWord(word, tok, [&] (StringView word, StringView stem, ParserToken tok) {
 			auto it = std::lower_bound(stemList.begin(), stemList.end(), stem);
 			if (it != stemList.end() && *it == stem) {
 				if (!isOpen) {

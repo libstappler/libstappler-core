@@ -238,9 +238,6 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 
 	do {
 		sqlite3 *db = nullptr;
-#if WIN32
-		dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
-#endif
 		if (!dbname.is('/') && !dbname.is(':')) {
 			if (_application) {
 				dbname = StringView(filepath::merge<Interface>(_application->getDocumentRoot(), dbname)).pdup();
@@ -249,6 +246,9 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 			}
 			stappler::filesystem::mkdir(stappler::filepath::root(dbname));
 		}
+#if WIN32
+		dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
+#endif
 		if (sqlite3_open_v2(dbname.data(), &db, flags, nullptr) == SQLITE_OK) {
 			sqlite3_db_config(db, SQLITE_DBCONFIG_DQS_DDL, 0, nullptr);
 			sqlite3_db_config(db, SQLITE_DBCONFIG_DQS_DML, 0, nullptr);

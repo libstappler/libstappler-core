@@ -125,7 +125,9 @@ struct TextLayoutData : public Interface::AllocBaseType {
 	}
 
 	RangeLineIterator end() const {
-		return RangeLineIterator{&*ranges.end(), &*lines.end()};
+		// Pass-the-ed pointer acquisition
+		// Ugly trick, but all others is forbidden in msvc debug mode
+		return RangeLineIterator{&ranges.at(ranges.size()  -1) + 1, &lines.at(lines.size()  -1) + 1};
 	}
 
 	void clear() {
