@@ -549,7 +549,7 @@ wasm_val_t ExecFunction::call1(ExecEnv *env, SpanView<wasm_val_t> args) const {
 	}
 
 	wasm_val_t ret;
-	ret.kind = WASM_ANYREF;
+	ret.kind = WASM_EXTERNREF;
 	ret.of.foreign = 0;
 
 	if (_nResults != 1) {
