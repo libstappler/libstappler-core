@@ -30,8 +30,8 @@ ifdef LINUX
 MODULE_STAPPLER_BITMAP_LIBS += -l:libz.a -lpthread
 endif
 
-ifdef LINUX
-MODULE_STAPPLER_BITMAP_LIBS += -lz
+ifdef MACOS
+MODULE_STAPPLER_BITMAP_GENERAL_LDFLAGS += -lz
 endif
 
 ifdef WIN32

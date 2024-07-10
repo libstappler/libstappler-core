@@ -50,6 +50,7 @@ THE SOFTWARE.
 #include "platform/SPCore-linux.cc"
 #include "platform/SPCore-android.cc"
 #include "platform/SPCore-win32.cc"
+#include "platform/SPCore-darwin.cc"
 
 #ifdef MODULE_STAPPLER_DATA
 #include "SPData.cc"

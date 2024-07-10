@@ -213,7 +213,6 @@ static uint32_t stappler_wasm_data_process_foreach_dict(wasm_exec_env_t exec_env
 
 	auto iterHandle = inst->addHandle(&iterContainer);
 
-	uint32_t idx = 0;
 	uint32_t args[4];
 	auto it = dict.begin();
 	while (it != dict.end()) {
@@ -256,8 +255,6 @@ static uint32_t stappler_wasm_data_process_foreach_dict(wasm_exec_env_t exec_env
 			}
 			break;
 		}
-
-		++ idx;
 	}
 
 	inst->removeObject(&iterContainer);

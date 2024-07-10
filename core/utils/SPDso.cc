@@ -23,7 +23,7 @@
 #include "SPDso.h"
 #include "SPMemory.h"
 
-#if LINUX || ANDROID
+#if LINUX || ANDROID || MACOS
 
 #include <dlfcn.h>
 

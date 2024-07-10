@@ -33,6 +33,10 @@ ifdef LINUX
 MODULE_STAPPLER_CORE_LIBS += -ldl
 endif
 
+ifdef MACOS
+MODULE_STAPPLER_CORE_GENERAL_LDFLAGS += -framework CoreFoundation
+endif
+
 # module name resolution
 MODULE_stappler_core := MODULE_STAPPLER_CORE
 

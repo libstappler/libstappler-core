@@ -72,10 +72,10 @@ using pid_t = DWORD;
 
 #else
 #include <unistd.h>
+#include <sys/time.h>
 
 #if LINUX
 #include <sys/mman.h>
-#include <sys/time.h>
 #endif
 
 #endif

@@ -187,6 +187,13 @@ inline void streamWrite(const FunctionalStream &stream, char c) {
 	}
 }
 
+template<typename FunctionalStream, typename = std::enable_if_t<
+		!std::is_same<size_t, uint64_t>::value && !std::is_same<size_t, uint32_t>::value
+		&& !std::is_same<size_t, int64_t>::value && !std::is_same<size_t, int32_t>::value>>
+inline void streamWrite(const FunctionalStream &stream, size_t i) {
+	streamWrite(stream, uint64_t(i));
+}
+
 }
 
 #define SP_DEFINE_STREAM_OVERLOADS(Type, Char) \
@@ -205,6 +212,10 @@ inline void streamWrite(const FunctionalStream &stream, char c) {
 	inline auto operator<<(const Type &stream, char32_t val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
 	inline auto operator<<(const Type &stream, char16_t val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
 	inline auto operator<<(const Type &stream, char val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
+	template<typename = std::enable_if_t< \
+		!std::is_same<size_t, uint64_t>::value && !std::is_same<size_t, uint32_t>::value \
+		&& !std::is_same<size_t, int64_t>::value && !std::is_same<size_t, int32_t>::value>> \
+	inline auto operator<<(const Type &stream, size_t val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
 
 inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, const StringViewBase<char> &val) -> const Callback<void(StringViewBase<char>)> & {
 	detail::streamWrite(cb, val);

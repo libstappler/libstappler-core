@@ -36,7 +36,7 @@ static StemmerEnv *Configuration_makeLocalConfig(StemmerEnv *orig) {
 	auto p = memory::pool::acquire();
 
 	char buf[24] = { 0 };
-	sprintf(buf, "%#018" PRIxPTR, (uintptr_t)orig);
+	snprintf(buf, 24, "%#018" PRIxPTR, (uintptr_t)orig);
 
 	StemmerEnv *ret = nullptr;
 	memory::pool::userdata_get((void **)&ret, buf, p);
