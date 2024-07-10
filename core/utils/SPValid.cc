@@ -546,7 +546,7 @@ static void generatePassword_buf(size_t len, const uint8_t *bytes, const Callbac
 
 template <>
 auto generatePassword<memory::PoolInterface>(size_t len) -> memory::PoolInterface::StringType {
-	if (len < 6) {
+	if (len < MIN_GENPASSWORD_LENGTH) {
 		return memory::PoolInterface::StringType();
 	}
 
@@ -560,7 +560,7 @@ auto generatePassword<memory::PoolInterface>(size_t len) -> memory::PoolInterfac
 
 template <>
 auto generatePassword<memory::StandartInterface>(size_t len) -> memory::StandartInterface::StringType {
-	if (len < 6) {
+	if (len < MIN_GENPASSWORD_LENGTH) {
 		return memory::StandartInterface::StringType();
 	}
 

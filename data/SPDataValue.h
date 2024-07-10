@@ -123,11 +123,6 @@ public:
 	explicit ValueTemplate(uint32_t v) : _type(Type::INTEGER) { intVal = int64_t(v); }
 	explicit ValueTemplate(uint64_t v) : _type(Type::INTEGER) { intVal = int64_t(v); }
 
-	template<typename = std::enable_if_t<
-			!std::is_same<size_t, uint64_t>::value && !std::is_same<size_t, uint32_t>::value
-			&& !std::is_same<size_t, int64_t>::value && !std::is_same<size_t, int32_t>::value>>
-	explicit ValueTemplate(size_t v) : _type(Type::INTEGER) { intVal = int64_t(v); }
-
 	explicit ValueTemplate(Time v) : _type(Type::INTEGER) { intVal = int64_t(v.toMicros()); }
 	explicit ValueTemplate(TimeInterval v) : _type(Type::INTEGER) { intVal = int64_t(v.toMicros()); }
 	explicit ValueTemplate(float v) : _type(Type::DOUBLE) { doubleVal = v; }

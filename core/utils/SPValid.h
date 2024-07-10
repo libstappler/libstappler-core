@@ -56,6 +56,8 @@ auto makePassword(const StringView &str, const StringView &key = StringView()) -
 
 bool validatePassord(const StringView &str, const BytesView &passwd, const StringView &key = StringView());
 
+static constexpr size_t MIN_GENPASSWORD_LENGTH = 6;
+
 // Minimal length is 6
 template <typename Interface>
 auto generatePassword(size_t len) -> typename Interface::StringType;
