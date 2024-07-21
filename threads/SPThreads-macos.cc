@@ -26,29 +26,42 @@ THE SOFTWARE.
 
 #if (MACOS)
 
+#include <objc/runtime.h>
+#include <objc/message.h>
+
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
-struct ThreadCallbacks {
-	void (*init) (void *);
-	void (*dispose) (void *);
-	bool (*worker) (void *);
-};
+struct ThreadCallbacks;
+
+using AutoreleasePool_new_type = id(*)(Class, SEL);
+using AutoreleasePool_drain_type = void(*)(id, SEL);
+
+static void ThreadCallbacks_init(const ThreadCallbacks &, void *tm);
+static bool ThreadCallbacks_worker(const ThreadCallbacks &, void *tm);
+static void ThreadCallbacks_dispose(const ThreadCallbacks &, void *tm);
+
+template <typename Callback>
+static void ThreadCallbacks_performInAutorelease(Callback &&cb) {
+	id pool = ((AutoreleasePool_new_type)&objc_msgSend)(objc_getClass("NSAutoreleasePool"), sel_getUid("new"));
+	cb();
+	((AutoreleasePool_drain_type)&objc_msgSend)(pool, sel_getUid("drain"));
+}
 
 void _workerThread(const ThreadCallbacks &cb, void *tm) {
-	@autoreleasepool {
-		cb.init(tm);
-	}
+	ThreadCallbacks_performInAutorelease([&] {
+		ThreadCallbacks_init(cb, tm);
+	});
 
 	bool ret = true;
 	while (ret) {
-		@autoreleasepool {
-			ret = cb.worker(tm);
-		}
+		ThreadCallbacks_performInAutorelease([&] {
+			ret = ThreadCallbacks_worker(cb, tm);
+		});
 	}
 
-	@autoreleasepool {
-		cb.dispose(tm);
-	}
+	ThreadCallbacks_performInAutorelease([&] {
+		ThreadCallbacks_dispose(cb, tm);
+	});
 }
 
 }

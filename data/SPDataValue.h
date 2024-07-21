@@ -123,6 +123,10 @@ public:
 	explicit ValueTemplate(uint32_t v) : _type(Type::INTEGER) { intVal = int64_t(v); }
 	explicit ValueTemplate(uint64_t v) : _type(Type::INTEGER) { intVal = int64_t(v); }
 
+#if SP_HAVE_DEDICATED_SIZE_T
+	explicit ValueTemplate(size_t v) : _type(Type::INTEGER) { intVal = int64_t(v); }
+#endif
+
 	explicit ValueTemplate(Time v) : _type(Type::INTEGER) { intVal = int64_t(v.toMicros()); }
 	explicit ValueTemplate(TimeInterval v) : _type(Type::INTEGER) { intVal = int64_t(v.toMicros()); }
 	explicit ValueTemplate(float v) : _type(Type::DOUBLE) { doubleVal = v; }

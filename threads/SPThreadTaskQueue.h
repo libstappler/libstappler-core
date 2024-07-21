@@ -35,22 +35,6 @@ public:
 	using Ref = RefBase<memory::StandartInterface>;
 	using TaskMap = std::map<uint32_t, std::vector<Rc<Task>>, std::less<void>>;
 
-	enum class Flags {
-		None = 0,
-
-		// allow to submit task for specific thread via `perform(Map<uint32_t, Vector<Rc<Task>>> &&)`
-		// it requires additional space for internal local queues and less optimal thread scheduling
-		// with `condition_variable_any` instead of `condition_variable`
-		LocalQueue = 1,
-
-		// allow queue to be externally cancelled with `performAll` and `waitForAll`
-		// it requires extra condition to track count of tasks executing
-		Cancelable = 2,
-
-		// allow to wait for event on queue's main thread via 'wait'
-		Waitable = 4,
-	};
-
 	struct WorkerContext;
 
 	static const TaskQueue *getOwner();
@@ -65,20 +49,18 @@ public:
 	void perform(Rc<Task> &&task, bool first = false);
 	void perform(std::function<void()> &&, Ref * = nullptr, bool first = false);
 
-	bool perform(TaskMap &&tasks);
-
 	void update(uint32_t *count = nullptr);
 
 	void onMainThread(Rc<Task> &&task);
 	void onMainThread(std::function<void()> &&func, Ref *target);
 
-	bool spawnWorkers(Flags);
+	bool spawnWorkers();
 
 	// maxOf<uint32_t> - set id to next available
-	bool spawnWorkers(Flags, uint32_t threadId, uint16_t threadCount, StringView name = StringView());
+	bool spawnWorkers(uint32_t threadId, uint16_t threadCount, StringView name = StringView());
 	bool cancelWorkers();
 
-	void performAll(Flags flags);
+	void performAll();
 	bool waitForAll(TimeInterval = TimeInterval::seconds(1));
 
 	bool wait(uint32_t *count = nullptr);
@@ -91,35 +73,18 @@ public:
 
 	std::vector<std::thread::id> getThreadIds() const;
 
-	size_t getOutputCounter() const { return _outputCounter.load(); }
+	size_t getOutputCounter() const;
 
 	uint16_t getThreadCount() const;
 
 protected:
 	friend class Worker;
 
-	Rc<Task> popTask(uint32_t idx);
 	void onMainThreadWorker(Rc<Task> &&task);
 
 	WorkerContext *_context = nullptr;
-
-	std::mutex _inputMutexQueue;
-	std::mutex _inputMutexFree;
-	memory::PriorityQueue<Rc<Task>> _inputQueue;
-
-	std::mutex _outputMutex;
-	std::vector<Rc<Task>> _outputQueue;
-	std::vector<Pair<std::function<void()>, Rc<Ref>>> _outputCallbacks;
-
-	std::atomic<size_t> _outputCounter = 0;
-	std::atomic<size_t> _tasksCounter = 0;
-
 	StringView _name = StringView("TaskQueue");
-
-	std::function<void()> _wakeup;
 };
-
-SP_DEFINE_ENUM_AS_MASK(TaskQueue::Flags)
 
 }
 

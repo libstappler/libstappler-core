@@ -189,7 +189,7 @@ inline void streamWrite(const FunctionalStream &stream, char c) {
 
 }
 
-#define SP_DEFINE_STREAM_OVERLOADS(Type, Char) \
+#define SP_DEFINE_STREAM_OVERLOADS_GENERAL(Type, Char) \
 	inline auto operator<<(const Type &stream, const Char *val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
 	template <size_t N> inline auto operator<<(const Type &stream, const Char val[N]) -> const Type & { detail::streamWrite(stream, val); return stream; } \
 	inline auto operator<<(const Type &stream, double val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
@@ -205,6 +205,13 @@ inline void streamWrite(const FunctionalStream &stream, char c) {
 	inline auto operator<<(const Type &stream, char32_t val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
 	inline auto operator<<(const Type &stream, char16_t val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
 	inline auto operator<<(const Type &stream, char val) -> const Type & { detail::streamWrite(stream, val); return stream; } \
+
+#if SP_HAVE_DEDICATED_SIZE_T
+#define SP_DEFINE_STREAM_OVERLOADS(Type, Char) SP_DEFINE_STREAM_OVERLOADS_GENERAL(Type, Char) \
+	inline auto operator<<(const Type &stream, size_t val) -> const Type & { detail::streamWrite(stream, int64_t(val)); return stream; }
+#else
+#define SP_DEFINE_STREAM_OVERLOADS(Type, Char) SP_DEFINE_STREAM_OVERLOADS_GENERAL(Type, Char)
+#endif
 
 inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, const StringViewBase<char> &val) -> const Callback<void(StringViewBase<char>)> & {
 	detail::streamWrite(cb, val);

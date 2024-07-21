@@ -116,6 +116,10 @@ using LPCWSTR = const wchar_t *;
 #endif
 #endif
 
+/* SP_HAVE_THREE_WAY_COMPARISON
+ * - Defined as 1 if platform have <=> and defaulted comparison operators
+ */
+
 #if __LCC__ && __LCC__ <= 127
 #define SP_HAVE_THREE_WAY_COMPARISON 0
 #elif __cpp_impl_three_way_comparison >= 201711
@@ -124,6 +128,16 @@ using LPCWSTR = const wchar_t *;
 #define SP_HAVE_THREE_WAY_COMPARISON 0
 #endif
 
+/* SP_HAVE_DEDICATED_SIZE_T
+ * - Defined as 1 if platform's size_t defined as dedicated integral type
+ * (not uint/int)
+ */
+
+#if MACOS
+#define SP_HAVE_DEDICATED_SIZE_T 1
+#else
+#define SP_HAVE_DEDICATED_SIZE_T 0
+#endif
 
 // Enable default <=> operator if we can
 #if SP_HAVE_THREE_WAY_COMPARISON
