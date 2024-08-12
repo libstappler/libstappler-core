@@ -42,9 +42,10 @@ enum class LineJoin {
 
 enum class DrawStyle {
 	None = 0,
-	Fill = 1,
-	Stroke = 2,
-	FillAndStroke = 3,
+	Fill = 1 << 0,
+	Stroke = 1 << 1,
+	FillAndStroke = Fill | Stroke,
+	PseudoSdf = 1 << 2
 };
 
 SP_DEFINE_ENUM_AS_MASK(DrawStyle)
@@ -55,8 +56,8 @@ struct LineDrawer {
 	// `e` defines relative error in terms of maximum allowed distance between the point,
 	// where line should be in perfect implementation, and the segment in output
 	// For perfect VG quality, it should be around 0.75 of screen pixel
-	LineDrawer(float e, Rc<Tesselator> &&fill, Rc<Tesselator> &&stroke,
-			float lineWidth = 1.0f, LineJoin lineJoin = LineJoin::Miter, LineCup lineCup = LineCup::Butt);
+	LineDrawer(float e, Rc<Tesselator> &&tessFill, Rc<Tesselator> &&tessStroke, Rc<Tesselator> &&tessSdf,
+			float lineWidth = 1.0f, LineJoin = LineJoin::Miter, LineCup = LineCup::Butt);
 
 	void drawBegin(float x, float y);
 	void drawLine(float x, float y);
@@ -90,6 +91,9 @@ struct LineDrawer {
 
 	Rc<Tesselator> stroke;
 	Tesselator::Cursor strokeCursor;
+
+	Rc<Tesselator> sdf;
+	Tesselator::Cursor sdfCursor;
 
 	float _miterLimit = 4.0f;
 };

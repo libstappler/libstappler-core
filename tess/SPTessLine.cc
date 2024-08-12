@@ -44,6 +44,13 @@ struct EllipseData {
 	float r_sq;
 	float cos_phi;
 	float sin_phi;
+
+	Vec2 rotatePoint(float startAngle, float sweepAngle) const {
+		const float sx_ = rx * cosf(startAngle + sweepAngle), sy_ = ry * sinf(startAngle + sweepAngle);
+		return Vec2(
+				cx - (sx_ * cos_phi - sy_ * sin_phi),
+				cy + (sx_ * sin_phi + sy_ * cos_phi));
+	}
 };
 
 static inline float draw_approx_err_sq(float e) {
@@ -241,30 +248,28 @@ static void drawArcRecursive(LineDrawer &drawer, const EllipseData &e, float sta
 
 	const float n_sweep = sweepAngle / 2.0f;
 
-	const float sx_ = e.rx * cosf(startAngle + n_sweep), sy_ = e.ry * sinf(startAngle + n_sweep);
-	const float sx = e.cx - (sx_ * e.cos_phi - sy_ * e.sin_phi);
-	const float sy = e.cy + (sx_ * e.sin_phi + sy_ * e.cos_phi);
+	const Vec2 s = e.rotatePoint(startAngle, n_sweep);
 
-	const float d = draw_dist_sq(x01_mid, y01_mid, sx, sy);
+	const float d = draw_dist_sq(x01_mid, y01_mid, s.x, s.y);
 
 	if (d < drawer.distanceError) {
 		if (drawer.angularError < std::numeric_limits<float>::epsilon()) {
-			drawer.push(sx, sy);
+			drawer.push(s.x, s.y);
 			return;
 		} else {
-			const float y0_x0 = y0 / x0;
-			const float y1_x1 = y1 / x1;
-			const float da = fabs(atanf( e.r_sq * (y1_x1 - y0_x0) / (e.r_sq * e.r_sq * y0_x0 * y1_x1) ));
-			if (da < drawer.angularError) {
-				drawer.push(sx, sy);
+			// Optimize with SIMD?
+			auto a1 = Vec2(x1 - x0, y1 - y0).getAngle(s - Vec2(x0, y0));
+			auto a2 = Vec2(s - Vec2(x1, y1)).getAngle(Vec2(x0 - x1, y0 - y1));
+			if (std::abs(a1 + a2) < drawer.angularError) {
+				drawer.push(s.x, s.y);
 				return;
 			}
 		}
 	}
 
-	drawArcRecursive(drawer, e, startAngle, n_sweep, x0, y0, sx, sy, depth + 1);
-	drawer.push(sx, sy);
-	drawArcRecursive(drawer, e, startAngle + n_sweep, n_sweep, sx, sy, x1, y1, depth + 1);
+	drawArcRecursive(drawer, e, startAngle, n_sweep, x0, y0, s.x, s.y, depth + 1);
+	drawer.push(s.x, s.y);
+	drawArcRecursive(drawer, e, startAngle + n_sweep, n_sweep, s.x, s.y, x1, y1, depth + 1);
 }
 
 static void drawArcBegin(LineDrawer &drawer, float x0, float y0, float rx, float ry, float phi,
@@ -312,19 +317,17 @@ static void drawArcBegin(LineDrawer &drawer, float x0, float y0, float rx, float
 
 			uint32_t npts = uint32_t(pts);
 			for (uint32_t i = 0; i < uint32_t(pts); ++ i) {
-				const float sx_ = d.rx * cosf(startAngle + segmentAngle), sy_ = d.ry * sinf(startAngle + segmentAngle);
-				const float sx = d.cx - (sx_ * d.cos_phi - sy_ * d.sin_phi);
-				const float sy = d.cy + (sx_ * d.sin_phi + sy_ * d.cos_phi);
+				const Vec2 s = d.rotatePoint(startAngle, segmentAngle);
 
-				drawArcRecursive(drawer, d, startAngle, segmentAngle, x0, y0, sx, sy, 0);
+				drawArcRecursive(drawer, d, startAngle, segmentAngle, x0, y0, s.x, s.y, 0);
 				startAngle += segmentAngle;
 
 				if (npts - 1 == i) {
 					drawer.push(x1, y1);
 					x0 = x1; y0 = y1;
 				} else {
-					drawer.push(sx, sy);
-					x0 = sx; y0 = sy;
+					drawer.push(s.x, s.y);
+					x0 = s.x; y0 = s.y;
 				}
 			}
 
@@ -337,14 +340,17 @@ static void drawArcBegin(LineDrawer &drawer, float x0, float y0, float rx, float
 	}
 }
 
-LineDrawer::LineDrawer(float e, Rc<Tesselator> &&fill, Rc<Tesselator> &&stroke,
-		float w, LineJoin lineJoin, LineCup lineCup)
-: lineJoin(lineJoin), lineCup(lineCup), strokeWidth(w / 2.0f), fill(move(fill)), stroke(move(stroke)) {
+LineDrawer::LineDrawer(float e, Rc<Tesselator> &&tessFill, Rc<Tesselator> &&tessStroke, Rc<Tesselator> &&tessSdf,
+		float w, LineJoin lj, LineCup lc)
+: lineJoin(lj), lineCup(lc), strokeWidth(w / 2.0f), fill(move(tessFill)), stroke(move(tessStroke)), sdf(move(tessSdf)) {
 	if (fill) {
 		style |= DrawStyle::Fill;
 	}
 	if (stroke) {
 		style |= DrawStyle::Stroke;
+	}
+	if (sdf) {
+		style |= DrawStyle::PseudoSdf;
 	}
 
 	if ((style & DrawStyle::Stroke) != DrawStyle::None) {
@@ -378,6 +384,10 @@ void LineDrawer::drawBegin(float x, float y) {
 		strokeCursor = stroke->beginContour();
 	}
 
+	if (sdf) {
+		sdfCursor = sdf->beginContour();
+	}
+
 	push(x, y);
 }
 void LineDrawer::drawLine(float x, float y) {
@@ -399,9 +409,14 @@ void LineDrawer::drawClose(bool closed) {
 		return;
 	}
 
+	if (sdf) {
+		if (!target->point.fuzzyEquals(origin[0], getCloseControlDistance())) {
+			sdf->pushVertex(sdfCursor, target->point);
+		}
+		sdf->closeContour(sdfCursor);
+	}
+
 	if (fill) {
-		//std::cout << "End:  " << origin[0] << " " << target->point << " " << origin[0].distance(target->point) << " "
-		//		<< getCloseControlDistance() << " " << target->point.fuzzyEquals(origin[0], getCloseControlDistance()) << "\n";
 		if (!target->point.fuzzyEquals(origin[0], getCloseControlDistance())) {
 			fill->pushVertex(fillCursor, target->point);
 		}
@@ -439,6 +454,14 @@ void LineDrawer::push(float x, float y) {
 			fill->pushVertex(fillCursor, target->point);
 		}
 	}
+
+	if (sdf) {
+		if (count > 0) {
+			//std::cout << "Push: " << origin[0] << " " << target->point << "\n";
+			sdf->pushVertex(sdfCursor, target->point);
+		}
+	}
+
 	if (stroke) {
 		if (count > 1) {
 			pushStroke(target->prev->point, target->point, Vec2(x, y));

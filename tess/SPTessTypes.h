@@ -83,6 +83,7 @@ struct EdgeDictNode {
 struct Vertex {
 	HalfEdge *_edge = nullptr;  /* a half-edge with this origin */
 	Vec2 _origin;
+	Vec2 _norm;
 	uint32_t _uniqueIdx = maxOf<uint32_t>(); /* to allow identify unique vertices */
 	QueueHandle _queueHandle = maxOf<QueueHandle>(); /* to allow deletion from priority queue */
 	uint32_t _exportIdx = maxOf<uint32_t>();
@@ -100,8 +101,12 @@ struct FaceEdge : memory::AllocPool {
 	Vertex *_vertex = nullptr;
 	Vec2 _origin;
 	Vec2 _displaced;
+	Vec2 _rperp; // secondary boundary vertex for DF
+	Vec2 _norm; // edge negative (pointing into object) normal direction
 	float _value = 0.0f;
 	float _direction = 0.0f;
+	float _angle = 0.0f;
+	uint16_t _nextra = 0;
 	bool _splitVertex = false;
 	bool _degenerate = false;
 

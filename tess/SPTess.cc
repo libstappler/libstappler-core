@@ -41,7 +41,9 @@ struct Tesselator::Data : ObjectAllocator {
 	float _mathTolerance = std::numeric_limits<float>::epsilon() * 4.0f;
 
 	Winding _winding = Winding::NonZero;
-	float _antialiasValue = 0.0f;
+	float _boundaryOffset = 0.0f;
+	float _boundaryInset = 0.0f;
+	float _contentScale = 1.0f;
 	uint32_t _nvertexes = 0;
 	uint8_t _markValue = 0;
 
@@ -112,11 +114,28 @@ bool Tesselator::init(memory::pool_t *pool) {
 }
 
 void Tesselator::setAntialiasValue(float value) {
-	_data->_antialiasValue = value;
+	_data->_boundaryInset = _data->_boundaryOffset = value;
 }
 
-float Tesselator::getAntialiasValue() const {
-	return _data->_antialiasValue;
+void Tesselator::setBoundariesTransform(float inset, float offset) {
+	_data->_boundaryInset = inset;
+	_data->_boundaryOffset = offset;
+}
+
+float Tesselator::getBoundaryInset() const {
+	return _data->_boundaryInset;
+}
+
+float Tesselator::getBoundaryOffset() const {
+	return _data->_boundaryOffset;
+}
+
+void Tesselator::setContentScale(float value) {
+	_data->_contentScale = value;
+}
+
+float Tesselator::getContentScale() const {
+	return _data->_contentScale;
 }
 
 void Tesselator::setRelocateRule(RelocateRule rule) {
@@ -312,13 +331,14 @@ bool Tesselator::prepare(TessResult &res) {
 	_data->_result = &res;
 	_data->_vertexOffset = res.nvertexes;
 
-	if (_data->_relocateRule == RelocateRule::Monotonize && _data->_antialiasValue > 0.0f) {
+	if ((_data->_relocateRule == RelocateRule::Monotonize)
+			&& (_data->_boundaryOffset > 0.0f || _data->_boundaryInset > 0.0f)) {
 		_data->_dryRun = true;
 	}
 
 	_data->computeInterior();
 
-	if (_data->_antialiasValue > 0.0f) {
+	if (_data->_boundaryOffset > 0.0f || _data->_boundaryInset > 0.0f) {
 		auto nBoundarySegments = _data->computeBoundary();
 
 		if constexpr (TessVerbose != VerboseFlag::None) {
@@ -376,8 +396,17 @@ bool Tesselator::prepare(TessResult &res) {
 			return false;
 		}
 
-		res.nvertexes += _data->_exportVertexes.size() + nBoundarySegments;
+
+		// allocate additional space for boundaries (vertexes and triangles)
+		res.nvertexes += _data->_exportVertexes.size() + nBoundarySegments + 1;
 		res.nfaces += _data->_faceEdges.size() + nBoundarySegments * 2;
+
+		if (_data->_relocateRule == RelocateRule::DistanceField) {
+			for (auto &it : _data->_boundaries) {
+				res.nvertexes += it->_nextra;
+				res.nfaces += it->_nextra;
+			}
+		}
 		return true;
 	} else {
 		if (!_data->tessellateInterior()) {
@@ -414,87 +443,93 @@ bool Tesselator::write(TessResult &res) {
 		res.pushTriangle(res.target, triangle);
 	};
 
-	if (_data->_antialiasValue > 0.0f) {
+	if (_data->_boundaryOffset > 0.0f || _data->_boundaryInset > 0.0f) {
 		uint32_t tl, tr, bl, br, origin;
 
 		uint32_t nexports = _data->_exportVertexes.size();
+
+		auto exportExtraVertex = [&, this] (FaceEdge *e) {
+			auto originVertex = nexports;
+			auto nextVertex = nexports;
+			res.pushVertex(res.target, nexports + _data->_vertexOffset, e->_displaced, e->_value,
+					(e->_vertex->_origin - e->_displaced).getNormalized());
+			++ nexports;
+
+			if (e->_nextra > 0) {
+				auto incr = e->_angle / e->_nextra;
+				float angle = -incr;
+				for (uint16_t i = 0; i < e->_nextra; ++ i) {
+					Vec2 point = e->_displaced;
+					point.rotate(e->_origin, angle);
+
+					res.pushVertex(res.target, nexports + _data->_vertexOffset, point, e->_value,
+							(e->_vertex->_origin - point).getNormalized());
+					nextVertex = nexports;
+
+					triangle[0] = _data->_vertexOffset + e->_vertex->_exportIdx;
+					triangle[1] = _data->_vertexOffset + nextVertex;
+					triangle[2] = _data->_vertexOffset + originVertex;
+
+					res.pushTriangle(res.target, triangle);
+
+					originVertex = nexports;
+
+					++ nexports;
+					angle -= incr;
+				}
+			}
+		};
 
 		for (auto &it : _data->_boundaries) {
 			if (it->_degenerate) {
 				continue;
 			}
 
-			origin = nexports;
 			auto e = it;
 
+			bool shouldDisplace = true;
 			if (_data->_relocateRule == RelocateRule::Monotonize) {
 				// boundaries already relocated
-				e = e->_next;
+				shouldDisplace = false;
+			}
 
-				res.pushVertex(res.target, nexports + _data->_vertexOffset, e->_displaced, e->_value);
-				++ nexports;
-
-				do {
-					// e and e->next should be ready
-					tl = nexports - 1;
-					tr = nexports;
-					bl = e->_vertex->_exportIdx;
-
-					e = e->_next;
-
-					br = e->_vertex->_exportIdx;
-
-					res.pushVertex(res.target, nexports + _data->_vertexOffset, e->_displaced, 0.0f);
-
-					exportQuad(tl, tr, bl, br);
-					++ nexports;
-				} while (e != it);
-
-				// export first edge
-				tl = tr;
-				tr = origin;
-				bl = br;
-				br = e->_next->_vertex->_exportIdx;
-				exportQuad(tl, tr, bl, br);
-			} else {
-				_data->displaceBoundary(e);
-
-				e = e->_next;
-
-				res.pushVertex(res.target, nexports + _data->_vertexOffset, e->_displaced, e->_value);
-				++ nexports;
-
+			if (shouldDisplace) {
 				do {
 					_data->displaceBoundary(e);
-
-					// e and e->next should be ready
-					tl = nexports - 1;
-					tr = nexports;
-					bl = e->_vertex->_exportIdx;
-
 					e = e->_next;
-
-					br = e->_vertex->_exportIdx;
-
-					res.pushVertex(res.target, nexports + _data->_vertexOffset, e->_displaced, 0.0f);
-
-					exportQuad(tl, tr, bl, br);
-					++ nexports;
 				} while (e != it);
-
-				// export first edge
-				tl = tr;
-				tr = origin;
-				bl = br;
-				br = e->_next->_vertex->_exportIdx;
-				exportQuad(tl, tr, bl, br);
 			}
+
+			origin = nexports;
+			e = e->_next;
+
+			exportExtraVertex(e);
+
+			do {
+				// e and e->next should be ready
+				tl = nexports - 1;
+				tr = nexports;
+				bl = e->_vertex->_exportIdx;
+				br = e->_next->_vertex->_exportIdx;
+
+				e = e->_next;
+
+				exportExtraVertex(e);
+				exportQuad(tl, tr, bl, br);
+			} while (e != it);
+
+			// export first edge
+			tl = nexports - 1;
+			tr = origin;
+			bl = e->_vertex->_exportIdx;
+			br = e->_next->_vertex->_exportIdx;
+			exportQuad(tl, tr, bl, br);
 		}
 	}
 
 	for (auto &it : _data->_exportVertexes) {
 		if (it) {
-			res.pushVertex(res.target, it->_exportIdx + _data->_vertexOffset, it->_origin, 1.0f);
+			res.pushVertex(res.target, it->_exportIdx + _data->_vertexOffset, it->_origin, 1.0f, it->_norm);
 		}
 	}
 
@@ -789,7 +824,9 @@ void Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vert
 			std::cout << "\t\tConnect: \n\t\t\t" << *source << "\n\t\t\t" << *target << "\n";
 		}
 		auto eNew = connectEdges(source->getLeftLoopPrev(), target);
-		_edgesOfInterests.emplace_back(eNew);
+		if (eNew) {
+			_edgesOfInterests.emplace_back(eNew);
+		}
 		return eNew;
 	};
 
@@ -2254,34 +2291,71 @@ void Tesselator::Data::displaceBoundary(FaceEdge *edge) {
 	Vec4 result;
 	getVertexNormal(&v0.x, &v1.x, &v2.x, &result.x);
 
-	if (std::isnan(result.y) || result.y > 4.0f) {
-		edge->_next->_value = 1.0f - 4.0f / result.y;
-		result.y = 4.0f;
-	}
+	float offsetValue = _boundaryOffset;
+	float insetValue = _boundaryInset;
 
-	float offsetValue = _antialiasValue;
 	bool shouldRelocate = false;
 	switch (_relocateRule) {
-	case RelocateRule::Never: offsetValue += _antialiasValue * 0.5f; break;
+	case RelocateRule::Never:
+		// do not inset, increase offset
+		offsetValue += _boundaryInset * 0.5f;
+		insetValue = 0.0f;
+		break;
 	case RelocateRule::Always:
 	case RelocateRule::Monotonize:
+	case RelocateRule::DistanceField:
 		shouldRelocate = true; break;
 	case RelocateRule::Auto:
 		if (edge->_next->_splitVertex) {
 			shouldRelocate = true;
 		} else {
-			offsetValue += _antialiasValue * 0.5f;
+			// do not inset, increase offset
+			offsetValue += _boundaryInset * 0.5f;
+			insetValue = 0.0f;
 		}
 		break;
 	}
 
-	const float mod = copysign(result.y * offsetValue, result.x);
+	edge->_next->_norm = edge->_next->_vertex->_norm = -Vec2(result.z, result.w);
 
-	edge->_next->_displaced = Vec2(v1.x + result.z * mod, v1.y + result.w * mod);
+	if (result.x < -0.0f && _relocateRule == RelocateRule::DistanceField) {
+		auto a0 = v0 - v1;
+		auto a2 = v2 - v1;
+
+		auto cross = Vec2::cross(a0, a2);
+		auto dot = Vec2::dot(a0, a2);
+		auto angle = M_PI - atan2f(cross, dot);
+		auto length = offsetValue * angle * _contentScale;
+
+		uint16_t minVertexes = static_cast<uint16_t>(std::floor(angle / M_PI_4));
+		uint16_t vertexes = static_cast<uint16_t>(std::floor(length / 4.0f));
+
+		auto perp = Vec2(v1 - v0).getPerp();
+		perp.normalize();
+		edge->_next->_displaced = v1 + perp * offsetValue;
+
+		auto rperp = Vec2(v1 - v2).getRPerp();
+		rperp.normalize();
+		edge->_next->_rperp = v1 + rperp * offsetValue;
+
+		edge->_next->_nextra = std::max(minVertexes, vertexes);
+		edge->_next->_value = 0.0f;
+		edge->_next->_angle = angle;
+	} else {
+		if (std::isnan(result.y) || result.y > 3.0f) {
+			edge->_next->_value = 1.0f - 3.0f / result.y;
+			result.y = 3.0f;
+		}
+
+		const float offsetMod = copysign(result.y * offsetValue, result.x);
+
+		edge->_next->_displaced = Vec2(v1.x + result.z * offsetMod, v1.y + result.w * offsetMod);
+	}
 
 	if (shouldRelocate) {
+		const float insetMod = copysign(result.y * insetValue, result.x);
 		if (edge->_next->_vertex) {
-			edge->_next->_vertex->relocate(Vec2(v1.x - result.z * mod, v1.y - result.w * mod));
+			edge->_next->_vertex->relocate(Vec2(v1.x - result.z * insetMod, v1.y - result.w * insetMod));
 			SPASSERT(!std::isnan(edge->_next->_vertex->_origin.x) && !std::isnan(edge->_next->_vertex->_origin.y),
 					"Tess: displaced vertex is NaN");
 		}

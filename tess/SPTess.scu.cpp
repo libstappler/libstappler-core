@@ -29,7 +29,8 @@ THE SOFTWARE.
 #ifdef __GNUC__
 #ifndef __clang__
 #ifndef __LCC__
-#define SP_TESS_OPTIMIZE _Pragma( "GCC optimize (\"O3\")" )
+//#define SP_TESS_OPTIMIZE _Pragma( "GCC optimize (\"O3\")" )
+#define SP_TESS_OPTIMIZE
 #else
 #define SP_TESS_OPTIMIZE
 #endif

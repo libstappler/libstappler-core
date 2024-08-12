@@ -50,7 +50,7 @@ struct TessResult {
 	uint32_t nfaces = 0;
 
 	void *target = nullptr;
-	void (*pushVertex) (void *, uint32_t, const Vec2 &pt, float vertexValue);
+	void (*pushVertex) (void *, uint32_t, const Vec2 &pt, float vertexValue, const Vec2 &norm);
 	void (*pushTriangle) (void *, uint32_t[3]);
 };
 
@@ -79,7 +79,18 @@ public:
 	// When antialiasing is enabled (value > 0.0f), original vertexes will be displaced
 	// (or even split into multiple vertexes) for visually accurate output
 	void setAntialiasValue(float);
-	float getAntialiasValue() const;
+
+	// Same as above, but controls inset and offset separately
+	// For RelocateRule::None and Auto inset can not always be added, it will be summed with offset
+	void setBoundariesTransform(float inset, float offset);
+
+	float getBoundaryInset() const;
+	float getBoundaryOffset() const;
+
+	// Content scale used only in DistanceField mode, to generate extra vertexes on boundary
+	void setContentScale(float);
+
+	float getContentScale() const;
 
 	// Rule, how to relocate origin vertex for antialiasing purposes
 	// Antialiasing algorithm can relocate vertexes to reduce visual extension effect,
@@ -92,6 +103,7 @@ public:
 		Auto, // relocate only self-intersects and merged vertexes, default
 		Always, // relocate all vertexes
 		Monotonize, // force to remonotonize after relocation (expensive, but best quality)
+		DistanceField, // create distance field instead of antialiasing
 	};
 
 	void setRelocateRule(RelocateRule);
