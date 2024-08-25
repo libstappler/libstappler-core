@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
-void store(pool_t *, void *ptr, const StringView &key, memory::function<void()> && = nullptr);
+SP_PUBLIC void store(pool_t *, void *ptr, const StringView &key, memory::function<void()> && = nullptr);
 
 template <typename T = void>
 inline T *get(pool_t *pool, const StringView &key) {

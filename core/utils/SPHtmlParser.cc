@@ -40,7 +40,8 @@ using HtmlIdentifier8 = chars::Compose<char,
 >;
 
 
-template <> StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is) {
+template <>
+SP_PUBLIC StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is) {
 	StringViewUtf8 s = is;
 	s.skipUntil<HtmlIdentifier16, StringViewUtf8::MatchChars<'>', '?'>>();
 	if (s.is("!--")) {
@@ -60,13 +61,15 @@ template <> StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is) {
 	return name;
 }
 
-template <> StringViewUtf8 Tag_readAttrName<StringViewUtf8>(StringViewUtf8 &s) {
+template <>
+SP_PUBLIC StringViewUtf8 Tag_readAttrName<StringViewUtf8>(StringViewUtf8 &s) {
 	s.skipUntil<HtmlIdentifier16>();
 	StringViewUtf8 name(s.readChars<HtmlIdentifier16>());
 	return name;
 }
 
-template <> StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s) {
+template <>
+SP_PUBLIC StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s) {
 	s.skipChars<StringViewUtf8::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier16>();
@@ -102,7 +105,8 @@ template <> StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s) 
 }
 
 
-template <> StringView Tag_readName<StringView>(StringView &is) {
+template <>
+SP_PUBLIC StringView Tag_readName<StringView>(StringView &is) {
 	StringView s = is;
 	s.skipUntil<HtmlIdentifier8, StringView::MatchChars<'>', '?'>>();
 	if (s.is("!--")) {
@@ -122,13 +126,15 @@ template <> StringView Tag_readName<StringView>(StringView &is) {
 	return name;
 }
 
-template <> StringView Tag_readAttrName<StringView>(StringView &s) {
+template <>
+SP_PUBLIC StringView Tag_readAttrName<StringView>(StringView &s) {
 	s.skipUntil<HtmlIdentifier8>();
 	StringView name(s.readChars<HtmlIdentifier8>());
 	return name;
 }
 
-template <> StringView Tag_readAttrValue<StringView>(StringView &s) {
+template <>
+SP_PUBLIC StringView Tag_readAttrValue<StringView>(StringView &s) {
 	s.skipChars<StringView::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier8>();
@@ -164,7 +170,8 @@ template <> StringView Tag_readAttrValue<StringView>(StringView &s) {
 }
 
 
-template <> WideStringView Tag_readName<WideStringView>(WideStringView &is) {
+template <>
+SP_PUBLIC WideStringView Tag_readName<WideStringView>(WideStringView &is) {
 	WideStringView s = is;
 	s.skipUntil<HtmlIdentifier16, WideStringView::MatchChars<u'>', u'?'>>();
 	if (s.is(u"!--")) {
@@ -184,13 +191,15 @@ template <> WideStringView Tag_readName<WideStringView>(WideStringView &is) {
 	return name;
 }
 
-template <> WideStringView Tag_readAttrName<WideStringView>(WideStringView &s) {
+template <>
+SP_PUBLIC WideStringView Tag_readAttrName<WideStringView>(WideStringView &s) {
 	s.skipUntil<HtmlIdentifier16>();
 	WideStringView name(s.readChars<HtmlIdentifier16>());
 	return name;
 }
 
-template <> WideStringView Tag_readAttrValue<WideStringView>(WideStringView &s) {
+template <>
+SP_PUBLIC WideStringView Tag_readAttrValue<WideStringView>(WideStringView &s) {
 	s.skipChars<WideStringView::WhiteSpace>();
 	if (!s.is('=')) {
 		s.skipUntil<HtmlIdentifier16>();

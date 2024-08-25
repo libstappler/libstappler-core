@@ -100,43 +100,43 @@ static uint8_t smart_lookup_table[256] = {
 	   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
 };
 
-bool CharGroup<char, GroupId::PunctuationBasic>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::PunctuationBasic>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::PunctuationBasic);
 }
 
-bool CharGroup<char, GroupId::Numbers>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::Numbers>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::Numbers);
 }
 
-bool CharGroup<char, GroupId::Latin>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::Latin>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & (toInt(SmartType::LatinLowercase) | toInt(SmartType::LatinUppercase));
 }
 
-bool CharGroup<char, GroupId::WhiteSpace>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::WhiteSpace>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::WhiteSpace);
 }
 
-bool CharGroup<char, GroupId::LatinLowercase>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::LatinLowercase>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::LatinLowercase);
 }
 
-bool CharGroup<char, GroupId::LatinUppercase>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::LatinUppercase>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::LatinUppercase);
 }
 
-bool CharGroup<char, GroupId::Alphanumeric>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::Alphanumeric>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & (toInt(SmartType::LatinLowercase) | toInt(SmartType::LatinUppercase) | toInt(SmartType::Numbers));
 }
 
-bool CharGroup<char, GroupId::Hexadecimial>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::Hexadecimial>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::Hexadecimial);
 }
 
-bool CharGroup<char, GroupId::Base64>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::Base64>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::Base64);
 }
 
-bool CharGroup<char, GroupId::TextPunctuation>::match(char c) {
+SP_PUBLIC bool CharGroup<char, GroupId::TextPunctuation>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::TextPunctuation);
 }
 

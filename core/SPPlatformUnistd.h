@@ -23,7 +23,7 @@
 #ifndef CORE_CORE_SPPLATFORMUNISTD_H_
 #define CORE_CORE_SPPLATFORMUNISTD_H_
 
-#include "SPPlatformDetection.h"
+#include "SPPlatformInit.h"
 
 #if WIN32
 

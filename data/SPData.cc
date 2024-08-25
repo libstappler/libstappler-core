@@ -30,7 +30,7 @@ THE SOFTWARE.
 #endif
 
 #define LZ4_HC_STATIC_LINKING_ONLY 1
-#include "lz4/lib/lz4hc.h"
+#include "thirdparty/lz4/lib/lz4hc.h"
 
 #ifdef MODULE_STAPPLER_BROTLI_LIB
 #include "brotli/encode.h"

@@ -24,18 +24,16 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_SPCORE_H_
 #define STAPPLER_CORE_SPCORE_H_
 
-/* Stappler Common library
+/* Stappler Core header: common includes and functions
  *
  * this file should be included before any other files to enable
  * precompiled-header compilation optimization
  * (if no other specific precompiled header needed)
- *
- * Some header-only STL features (like std::numeric_limits) will be
- * used in both cases
  */
 
-#include "SPPlatformDetection.h"
+#include "SPPlatformInit.h"
 
+// From C++ standard library:
 #include <type_traits>
 #include <iterator>
 #include <limits>
@@ -44,15 +42,6 @@ THE SOFTWARE.
 #include <algorithm>
 #include <tuple>
 #include <cmath>
-#include <float.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <limits.h>
-#include <stddef.h>
 
 #include <tuple>
 #include <string>
@@ -82,74 +71,17 @@ THE SOFTWARE.
 #include <bitset>
 #include <forward_list>
 
+// From C standard library:
+#include <stdint.h> // uint32_t, int32_t, etc
+#include <string.h> // memset, memcpy, memmove
+#include <stdarg.h> // va_arg
+#include <assert.h> // assert macro
+
 #if SP_HAVE_THREE_WAY_COMPARISON
 #include <compare>
 #endif
 
-#if XWIN
-#pragma clang diagnostic pop
-#endif
-
-// suppress common macro leak
-#if WIN32
-#undef interface
-#endif
-
-// IDE-specific standart library mods
-#if __CDT_PARSER__
-#define SPUNUSED __attribute__((unused))
-#define SPINLINE
-
-// Eclipse fails to detect iterator_traits for pointer in new libstdc++
-// so, define it manually
-#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_NAMESPACE_STD
-#else
-namespace std {
-#endif
-
-template <typename PointerValue>
-struct iterator_traits<const PointerValue *> {
-	using value_type = PointerValue;
-	using difference_type = ptrdiff_t;
-	using pointer = const PointerValue *;
-	using reference = const PointerValue &;
-};
-
-template <typename PointerValue>
-struct iterator_traits<PointerValue *> {
-	using value_type = PointerValue;
-	using difference_type = ptrdiff_t;
-	using pointer = PointerValue *;
-	using reference = PointerValue &;
-};
-
-#ifdef _LIBCPP_END_NAMESPACE_STD
-_LIBCPP_END_NAMESPACE_STD
-#else
-}
-#endif
-
-#else // __CDT_PARSER__
-#define SPUNUSED [[maybe_unused]]
-#define SPINLINE __attribute__((always_inline))
-#endif // __CDT_PARSER__
-
-// GCC-specific formatting attribute
-#if defined(__GNUC__) && (__GNUC__ >= 4)
-#define SPPRINTF(formatPos, argPos) __attribute__((__format__(printf, formatPos, argPos)))
-#define SP_COVERAGE_TRIVIAL __attribute__ ((no_profile_instrument_function))
-#elif defined(__has_attribute)
-#if __has_attribute(format)
-#define SPPRINTF(formatPos, argPos) __attribute__((__format__(printf, formatPos, argPos)))
-#endif // __has_attribute(format)
-#define SP_COVERAGE_TRIVIAL
-#else
-#define SPPRINTF(formatPos, argPos)
-#define SP_COVERAGE_TRIVIAL
-#endif
-
-#define SP_EXTERN_C			extern "C"
+#include "SPPlatformCleanup.h"
 
 /*
  *   User Defined literals
@@ -222,18 +154,13 @@ constexpr char operator"" _c8 (unsigned long long int val) { return (char)val; }
  *   - minOf<T>() / maxOf<T>() - shortcuts for minimal/maximal values
  *   - toInt<T>(EnumVal) - extract integer from strong-typed enum
  *
- *   - T GetErrorValue<T>() - get default value, that can be easily
- *       interpreted as error (NaN for floats, maxOf<T> for integers)
- *
- *   - bool IsErrorValue(T val) - check for error value
- *
  *   - T reinterpretValue(V) - relaxed version of reinterpret_cast,
  *       often used to convert signed to unsigned
  *
  *   - T StringToNumber(const char *ptr, char ** tail) - read specified
  *       numeric type from string in `strtod` style
  *
- *   - progress(A, B, p) - progress between A and B, defined by float
+ *   - progress(A, B, p) - linear interpolation between A and B, defined by float
  *       between 0.0f and 1.0f
  *
  *   - SP_DEFINE_ENUM_AS_MASK(Type) - defines strongly-typed enum class
@@ -546,9 +473,9 @@ struct Result {
 	public: \
 		static constexpr bool Name = sizeof(CallTest_ ## Name<T>(0)) == sizeof(success);
 
-const char * getStapplerVersionString();
-uint32_t getStapplerVersionNumber();
-uint32_t getStapplerVersionBuild();
+SP_PUBLIC const char * getStapplerVersionString();
+SP_PUBLIC uint32_t getStapplerVersionNumber();
+SP_PUBLIC uint32_t getStapplerVersionBuild();
 
 }
 

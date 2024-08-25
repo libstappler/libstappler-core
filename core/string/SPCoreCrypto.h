@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-struct CoderSource {
+struct SP_PUBLIC CoderSource {
 	CoderSource(const uint8_t *d, size_t len);
 	CoderSource(const char *d, size_t len);
 	CoderSource(const char *d);
@@ -88,7 +88,7 @@ constexpr auto SP_SECURE_KEY = "Nev3rseenany0nesoequalinth1sscale";
 
 /* SHA-1 160-bit context
  * designed for chain use: Sha1().update(input).final() */
-struct Sha1 {
+struct SP_PUBLIC Sha1 {
 	struct _Ctx {
 		uint32_t digest[5];
 		uint32_t count_lo, count_hi;
@@ -125,7 +125,7 @@ struct Sha1 {
 
 /* SHA-2 512-bit context
  * designed for chain use: Sha512().update(input).final() */
-struct Sha512 {
+struct SP_PUBLIC Sha512 {
 	struct _Ctx {
 		uint64_t length;
 		uint64_t state[8];
@@ -162,7 +162,7 @@ struct Sha512 {
 
 /* SHA-2 256-bit context
  * designed for chain use: Sha256().update(input).final() */
-struct Sha256 {
+struct SP_PUBLIC Sha256 {
 	struct _Ctx {
 		uint64_t length;
 		uint32_t state[8];
@@ -212,7 +212,7 @@ struct Gost3411_Ctx {
     unsigned int digest_size;
 };
 
-struct Gost3411_512 {
+struct SP_PUBLIC Gost3411_512 {
 	using _Ctx = Gost3411_Ctx;
 
 	constexpr static uint32_t Length = 64;
@@ -242,7 +242,7 @@ struct Gost3411_512 {
 	_Ctx ctx;
 };
 
-struct Gost3411_256 {
+struct SP_PUBLIC Gost3411_256 {
 	using _Ctx = Gost3411_Ctx;
 
 	constexpr static uint32_t Length = 32;

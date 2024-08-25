@@ -280,9 +280,9 @@ inline uint8_t utf16Encode(std::basic_ostream<char16_t> &out, char32_t ch) {
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
-char32_t tolower(char32_t c);
-char32_t toupper(char32_t c);
-char32_t totitle(char32_t c);
+SP_PUBLIC char32_t tolower(char32_t c);
+SP_PUBLIC char32_t toupper(char32_t c);
+SP_PUBLIC char32_t totitle(char32_t c);
 
 }
 
@@ -299,23 +299,23 @@ inline char32_t totitle(char32_t c) { return platform::totitle(c); }
 // data will be written at the end of buffer, no trailing zero (do not try to use strlen on it!)
 // designed to be used with StringView: StringView(buf + bufSize - ret, ret)
 
-size_t _itoa(int64_t number, char* buffer, size_t bufSize);
-size_t _itoa(uint64_t number, char* buffer, size_t bufSize);
+SP_PUBLIC size_t _itoa(int64_t number, char* buffer, size_t bufSize);
+SP_PUBLIC size_t _itoa(uint64_t number, char* buffer, size_t bufSize);
 
-size_t _itoa(int64_t number, char16_t* buffer, size_t bufSize);
-size_t _itoa(uint64_t number, char16_t* buffer, size_t bufSize);
+SP_PUBLIC size_t _itoa(int64_t number, char16_t* buffer, size_t bufSize);
+SP_PUBLIC size_t _itoa(uint64_t number, char16_t* buffer, size_t bufSize);
 
-size_t _itoa_len(int64_t number);
-size_t _itoa_len(uint64_t number);
+SP_PUBLIC size_t _itoa_len(int64_t number);
+SP_PUBLIC size_t _itoa_len(uint64_t number);
 
 // fast dtoa implementation
 // data will be written from beginning, no trailing zero (do not try to use strlen on it!)
 // designed to be used with StringView: StringView(buf, ret)
 
-size_t _dtoa(double number, char* buffer, size_t bufSize);
-size_t _dtoa(double number, char16_t* buffer, size_t bufSize);
+SP_PUBLIC size_t _dtoa(double number, char* buffer, size_t bufSize);
+SP_PUBLIC size_t _dtoa(double number, char16_t* buffer, size_t bufSize);
 
-size_t _dtoa_len(double number);
+SP_PUBLIC size_t _dtoa_len(double number);
 
 // read number from string and offset pointers
 

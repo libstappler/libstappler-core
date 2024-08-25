@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SPBitmapJpeg.cc"
 #include "SPBitmapPng.cc"
 #include "SPBitmapWebp.cc"
+#include "SPBitmapShared.cc"
 
 namespace STAPPLER_VERSIONIZED stappler::bitmap {
 

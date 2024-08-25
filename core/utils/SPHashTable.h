@@ -29,13 +29,13 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-class NamedRef : public RefBase<memory::StandartInterface> {
+class SP_PUBLIC NamedRef : public RefBase<memory::StandartInterface> {
 public:
 	virtual ~NamedRef() { }
 	virtual StringView getName() const = 0;
 };
 
-struct NamedMem : memory::AllocPool {
+struct SP_PUBLIC NamedMem : memory::AllocPool {
 	virtual ~NamedMem() { }
 
 	StringView key;

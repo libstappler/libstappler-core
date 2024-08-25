@@ -876,6 +876,7 @@ static uint8_t * writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwor
 #pragma diag_suppress 1444
 #endif
 
+#include "SPCrypto-gost.cc"
 #include "SPCrypto-openssl.cc"
 #include "SPCrypto-mbedtls.cc"
 #include "SPCrypto-gnutls.cc"

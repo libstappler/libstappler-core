@@ -34,7 +34,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
-struct PoolInterface : public memory::AllocPool {
+struct SP_PUBLIC PoolInterface : public memory::AllocPool {
 	using AllocBaseType = memory::AllocPool;
 	using StringType = memory::string;
 	using WideStringType = memory::u16string;
@@ -59,7 +59,7 @@ struct PoolInterface : public memory::AllocPool {
 	static constexpr bool usesMemoryPool() { return true; }
 };
 
-struct StandartInterface : public memory::AllocBase {
+struct SP_PUBLIC StandartInterface : public memory::AllocBase {
 	using AllocBaseType = memory::AllocBase;
 	using StringType = std::string;
 	using WideStringType = std::u16string;

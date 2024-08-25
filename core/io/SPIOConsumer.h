@@ -69,7 +69,7 @@ struct ConsumerTraits {
 	static void FlushFn(void *ptr) { traits_type::FlushFn(ptr); }
 };
 
-struct Consumer {
+struct SP_PUBLIC Consumer {
 	template <typename T, typename Traits = ConsumerTraits<typename std::decay<T>::type>> Consumer(T &t);
 
 	size_t write(const uint8_t *buf, size_t nbytes) const;

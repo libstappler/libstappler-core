@@ -353,6 +353,7 @@ protected:
 };
 
 TaskQueue::TaskQueue(StringView name, std::function<void()> &&wakeup) {
+	memory::pool::initialize();
 	_context = new WorkerContext(this, move(wakeup));
 
 	if (!name.empty()) {
@@ -365,6 +366,7 @@ TaskQueue::~TaskQueue() {
 		cancelWorkers();
 		update();
 	}
+	memory::pool::terminate();
 }
 
 void TaskQueue::finalize() {

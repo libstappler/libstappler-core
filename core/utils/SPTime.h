@@ -30,9 +30,9 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-class Time;
+class SP_PUBLIC Time;
 
-struct sp_time_exp_t {
+struct SP_PUBLIC sp_time_exp_t {
 	enum tm_gmt_e {
 		gmt_unset,
 		gmt_local,
@@ -86,7 +86,7 @@ struct sp_time_exp_t {
 	size_t encodeIso8601(char *, size_t precision) const;
 };
 
-class TimeStorage {
+class SP_PUBLIC TimeStorage {
 public:
 	uint64_t toMicroseconds() const;
 	uint64_t toMilliseconds() const;
@@ -127,7 +127,7 @@ protected:
 	uint64_t _value = 0;
 };
 
-class TimeInterval : public TimeStorage {
+class SP_PUBLIC TimeInterval : public TimeStorage {
 public:
 	static TimeInterval between(const Time &, const Time &);
 
@@ -180,7 +180,7 @@ protected:
     using TimeStorage::TimeStorage;
 };
 
-class Time : public TimeStorage {
+class SP_PUBLIC Time : public TimeStorage {
 public:
 	static Time now();
 

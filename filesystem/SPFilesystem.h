@@ -45,7 +45,7 @@ struct Stat {
 	bool isDir = false;
 };
 
-class File {
+class SP_PUBLIC File {
 public:
 	enum class Flags {
 		None,
@@ -108,39 +108,39 @@ protected:
 };
 
 // Check if file at path exists
-bool exists(StringView path);
+SP_PUBLIC bool exists(StringView path);
 
-bool stat(StringView path, Stat &);
+SP_PUBLIC bool stat(StringView path, Stat &);
 
 // create dir at path (just mkdir, not mkdir -p)
-bool mkdir(StringView path);
+SP_PUBLIC bool mkdir(StringView path);
 
 // mkdir -p (
-bool mkdir_recursive(StringView path, bool appWide = true);
+SP_PUBLIC bool mkdir_recursive(StringView path, bool appWide = true);
 
 // touch (set mtime to now) file
-bool touch(StringView path);
+SP_PUBLIC bool touch(StringView path);
 
 // move file from source to dest (tries to rename file, then copy-remove, rename will be successful only if both path is on single physical drive)
-bool move(StringView source, StringView dest);
+SP_PUBLIC bool move(StringView source, StringView dest);
 
 // copy file or directory to dest; use ftw_b for dirs, no directory tree check
-bool copy(StringView source, StringView dest, bool stopOnError = true);
+SP_PUBLIC bool copy(StringView source, StringView dest, bool stopOnError = true);
 
 // remove file or directory
 // if not recursive, only single file or empty dir will be removed
 // if withDirs == false, only file s in directory tree will be removed
-bool remove(StringView path, bool recursive = false, bool withDirs = false);
+SP_PUBLIC bool remove(StringView path, bool recursive = false, bool withDirs = false);
 
 // file-tree-walk, walk across directory tree at path, callback will be called for each file or directory
 // path in callback is absolute
 // depth = -1 - unlimited
 // dirFirst == true - directory will be shown before files inside them, useful for listings and copy
 // dirFirst == false - directory will be shown after files, useful for remove
-void ftw(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth = -1, bool dirFirst = false);
+SP_PUBLIC void ftw(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth = -1, bool dirFirst = false);
 
 // same as ftw, but iteration can be stopped by returning false from callback
-bool ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth = -1, bool dirFirst = false);
+SP_PUBLIC bool ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth = -1, bool dirFirst = false);
 
 // returns application writable path (or path inside writable dir, if path is set
 // if relative == false - do not merge paths, if provided path is absolute
@@ -150,10 +150,10 @@ bool ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &
 // On android, writable path is on same drive or device, that used for application file
 // This library use writable path to store fonts, icons caches and assets
 template <typename Interface>
-auto writablePath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC auto writablePath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
 
 template <typename Interface>
-auto writablePathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC auto writablePathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
 
 // returns application documents path (or path inside documents dir, if path is set
 // if relative == false - do not merge paths, if provided path is absolute
@@ -162,17 +162,17 @@ auto writablePathReadOnly(StringView path = StringView(), bool relative = false)
 // or content, that will be hard to recreate
 // This library stores StoreKit and purchases data in documents dir
 template <typename Interface>
-auto documentsPath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC auto documentsPath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
 
 template <typename Interface>
-auto documentsPathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC auto documentsPathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
 
 // returns application current work dir from getcwd (or path inside current dir, if path is set
 // if relative == false - do not merge paths, if provided path is absolute
 //
 // Current work dir is technical concept. Use it only if there is good reason for it
 template <typename Interface>
-auto currentDir(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC auto currentDir(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
 
 // returns application caches dir (or path inside caches dir, if path is set
 // if relative == false - do not merge paths, if provided path is absolute
@@ -181,27 +181,27 @@ auto currentDir(StringView path = StringView(), bool relative = false) -> typena
 // and that can be removed/erased, when application is active or in background
 // On android, caches will be placed on SD card, if it's available
 template <typename Interface>
-auto cachesPath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC auto cachesPath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
 
 template <typename Interface>
-auto cachesPathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC auto cachesPathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
 
 // write data into file on path
-bool write(StringView path, const uint8_t *data, size_t len);
+SP_PUBLIC bool write(StringView path, const uint8_t *data, size_t len);
 
 template <typename BytesView>
 inline bool write(StringView path, const BytesView &view) {
 	return write(path, reinterpret_cast<const uint8_t *>(view.data()), size_t(view.size()));
 }
 
-File openForReading(StringView path);
+SP_PUBLIC File openForReading(StringView path);
 
 // read file to string (if it was a binary file, string will be invalid)
 template <typename Interface>
-auto readTextFile(StringView path) -> typename Interface::StringType;
+SP_PUBLIC auto readTextFile(StringView path) -> typename Interface::StringType;
 
-bool readIntoBuffer(uint8_t *buf, StringView path, size_t off = 0, size_t size = maxOf<size_t>());
-bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, StringView path, size_t off, size_t size);
+SP_PUBLIC bool readIntoBuffer(uint8_t *buf, StringView path, size_t off = 0, size_t size = maxOf<size_t>());
+SP_PUBLIC bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, StringView path, size_t off, size_t size);
 
 template <size_t Buffer = 1_KiB>
 bool readWithConsumer(const io::Consumer &stream, StringView path,
@@ -231,7 +231,7 @@ auto readIntoMemory(StringView ipath, size_t off = 0, size_t size = maxOf<size_t
 	return typename Interface::BytesType();
 }
 
-StringView detectMimeType(StringView path);
+SP_PUBLIC StringView detectMimeType(StringView path);
 
 }
 
@@ -239,36 +239,36 @@ StringView detectMimeType(StringView path);
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 #if ANDROID
-void Android_initializeFilesystem(void *assetManager, StringView filesDir, StringView cachesDir, StringView apkPath);
-void Android_terminateFilesystem();
-StringView Android_getApkPath();
+SP_PUBLIC void Android_initializeFilesystem(void *assetManager, StringView filesDir, StringView cachesDir, StringView apkPath);
+SP_PUBLIC void Android_terminateFilesystem();
+SP_PUBLIC StringView Android_getApkPath();
 #endif
 
 template <typename Interface>
-auto _getApplicationPath() -> typename Interface::StringType;
+SP_PUBLIC auto _getApplicationPath() -> typename Interface::StringType;
 
 template <typename Interface>
-auto _getWritablePath(bool readOnly) -> typename Interface::StringType;
+SP_PUBLIC auto _getWritablePath(bool readOnly) -> typename Interface::StringType;
 
 template <typename Interface>
-auto _getDocumentsPath(bool readOnly) -> typename Interface::StringType;
+SP_PUBLIC auto _getDocumentsPath(bool readOnly) -> typename Interface::StringType;
 
 template <typename Interface>
-auto _getCachesPath(bool readOnly) -> typename Interface::StringType;
+SP_PUBLIC auto _getCachesPath(bool readOnly) -> typename Interface::StringType;
 
-bool _exists(StringView path, bool assetsRoot = true);
-bool _stat(StringView path, Stat &, bool assetsRoot = true);
+SP_PUBLIC bool _exists(StringView path, bool assetsRoot = true);
+SP_PUBLIC bool _stat(StringView path, Stat &, bool assetsRoot = true);
 
-File _openForReading(StringView);
-size_t _read(void *, uint8_t *buf, size_t nbytes);
-size_t _seek(void *, int64_t offset, io::Seek s);
-size_t _tell(void *);
-bool _eof(void *);
-void _close(void *);
+SP_PUBLIC File _openForReading(StringView);
+SP_PUBLIC size_t _read(void *, uint8_t *buf, size_t nbytes);
+SP_PUBLIC size_t _seek(void *, int64_t offset, io::Seek s);
+SP_PUBLIC size_t _tell(void *);
+SP_PUBLIC bool _eof(void *);
+SP_PUBLIC void _close(void *);
 
-void _ftw(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
+SP_PUBLIC void _ftw(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
 
-bool _ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
+SP_PUBLIC bool _ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
 
 }
 
@@ -280,34 +280,34 @@ namespace STAPPLER_VERSIONIZED stappler::filesystem::native {
 
 // C:\dirname\filename -> /c/dirname/filename
 template <typename Interface>
-auto nativeToPosix(StringView path) -> typename Interface::StringType;
+SP_PUBLIC auto nativeToPosix(StringView path) -> typename Interface::StringType;
 
 // /c/dirname/filename -> C:\dirname\filename
 // be sure that path is absolute
 template <typename Interface>
-auto posixToNative(StringView path) -> typename Interface::StringType;
+SP_PUBLIC auto posixToNative(StringView path) -> typename Interface::StringType;
 
 template <typename Interface>
-auto getcwd_fn() -> typename Interface::StringType;
+SP_PUBLIC auto getcwd_fn() -> typename Interface::StringType;
 
-bool remove_fn(StringView path);
-bool unlink_fn(StringView path);
-bool mkdir_fn(StringView path);
+SP_PUBLIC bool remove_fn(StringView path);
+SP_PUBLIC bool unlink_fn(StringView path);
+SP_PUBLIC bool mkdir_fn(StringView path);
 
-bool access_fn(StringView path, Access mode);
+SP_PUBLIC bool access_fn(StringView path, Access mode);
 
-bool stat_fn(StringView path, Stat &);
+SP_PUBLIC bool stat_fn(StringView path, Stat &);
 
-bool touch_fn(StringView path);
+SP_PUBLIC bool touch_fn(StringView path);
 
-void ftw_fn(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth, bool dirFirst);
-bool ftw_b_fn(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth, bool dirFirst);
+SP_PUBLIC void ftw_fn(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth, bool dirFirst);
+SP_PUBLIC bool ftw_b_fn(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth, bool dirFirst);
 
-bool rename_fn(StringView source, StringView dest);
+SP_PUBLIC bool rename_fn(StringView source, StringView dest);
 
-FILE *fopen_fn(StringView, StringView mode);
+SP_PUBLIC FILE *fopen_fn(StringView, StringView mode);
 
-bool write_fn(StringView, const unsigned char *data, size_t len);
+SP_PUBLIC bool write_fn(StringView, const unsigned char *data, size_t len);
 
 }
 

@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
-struct AllocBase {
+struct SP_PUBLIC AllocBase {
 	void * operator new (size_t size) noexcept { return ::operator new(size); }
 	void * operator new (size_t size, const std::nothrow_t& tag) noexcept { return ::operator new(size); }
 	void * operator new (size_t size, void* ptr) noexcept { return ::operator new(size, ptr); }
@@ -37,7 +37,7 @@ struct AllocBase {
 
 // Root class for pool allocated objects
 // Use with care
-struct AllocPool {
+struct SP_PUBLIC AllocPool {
 	void *operator new(size_t size) noexcept {
 		return pool::alloc(pool::acquire(), size);
 	}

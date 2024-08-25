@@ -29,7 +29,7 @@ namespace STAPPLER_VERSIONIZED stappler {
 
 using SubscriptionId = ValueWrapper<uint64_t, class SubscriptionIdClassFlag>;
 
-struct SubscriptionFlags : public ValueWrapper<uint64_t, class SubscriptionFlagsClassFlag> {
+struct SP_PUBLIC SubscriptionFlags : public ValueWrapper<uint64_t, class SubscriptionFlagsClassFlag> {
 	using Super = ValueWrapper<uint64_t, class SubscriptionFlagsClassFlag>;
 
 	inline constexpr explicit SubscriptionFlags(const Type &val) : Super(val) { }

@@ -33,12 +33,12 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::io {
 
-size_t read(const Producer &from, const Callback<void(const Buffer &)> &);
-size_t read(const Producer &from, const Buffer &, const Callback<void(const Buffer &)> &);
-size_t read(const Producer &from, const Consumer &to);
-size_t read(const Producer &from, const Consumer &to, const Callback<void(const Buffer &)> &);
-size_t read(const Producer &from, const Consumer &to, const Buffer &);
-size_t read(const Producer &from, const Consumer &to, const Buffer &, const Callback<void(const Buffer &)> &);
+SP_PUBLIC size_t read(const Producer &from, const Callback<void(const Buffer &)> &);
+SP_PUBLIC size_t read(const Producer &from, const Buffer &, const Callback<void(const Buffer &)> &);
+SP_PUBLIC size_t read(const Producer &from, const Consumer &to);
+SP_PUBLIC size_t read(const Producer &from, const Consumer &to, const Callback<void(const Buffer &)> &);
+SP_PUBLIC size_t read(const Producer &from, const Consumer &to, const Buffer &);
+SP_PUBLIC size_t read(const Producer &from, const Consumer &to, const Buffer &, const Callback<void(const Buffer &)> &);
 
 template <typename T>
 inline size_t tread(const Producer &from, const T &f) {

@@ -74,7 +74,7 @@ struct mem_sso_test<data::ValueTemplate<Interface>> {
 namespace STAPPLER_VERSIONIZED stappler::data {
 
 template <typename Interface>
-class ValueTemplate : public Interface::AllocBaseType {
+class SP_PUBLIC ValueTemplate : public Interface::AllocBaseType {
 public:
 	using Self = ValueTemplate<Interface>;
 	using InterfaceType = Interface;
@@ -547,7 +547,7 @@ bool ValueTemplate<Interface>::operator== (const Self& v) const {
 		case Type::BOOLEAN: return v.boolVal == this->boolVal; break;
 		case Type::CHARSTRING: return *v.strVal == *this->strVal; break;
 		case Type::BYTESTRING: return *v.bytesVal == *this->bytesVal; break;
-		case Type::DOUBLE: return fabs(v.doubleVal - this->doubleVal) <= DBL_EPSILON; break;
+		case Type::DOUBLE: return fabs(v.doubleVal - this->doubleVal) <= std::numeric_limits<double>::epsilon(); break;
 		case Type::ARRAY: return compare(*(this->arrayVal), *(v.arrayVal)); break;
 		case Type::DICTIONARY: return compare(*(this->dictVal), *(v.dictVal)); break;
 		case Type::EMPTY:

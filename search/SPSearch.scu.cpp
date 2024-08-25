@@ -56,7 +56,7 @@ static StemmerEnv *Configuration_makeLocalConfig(StemmerEnv *orig) {
 		env->stopwords = orig->stopwords;
 		env->mod = orig->mod;
 		memory::pool::userdata_set(env, buf, nullptr, p);
-		return env;
+		return (StemmerEnv *)env;
 	}
 	return nullptr;
 }

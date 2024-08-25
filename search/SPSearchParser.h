@@ -24,6 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_SEARCH_SPSEARCHPARSER_H_
 #define STAPPLER_SEARCH_SPSEARCHPARSER_H_
 
+#include "SPSearchEnum.h"
 #include "SPStringView.h"
 #include "SPMemory.h"
 
@@ -67,32 +68,7 @@ enum class UrlToken {
 	Blank,
 };
 
-enum class Language {
-	Unknown = 0,
-	Arabic,
-	Danish,
-	Dutch,
-	English,
-	Finnish,
-	French,
-	German,
-	Greek,
-	Hungarian,
-	Indonesian,
-	Irish,
-	Italian,
-	Lithuanian,
-	Nepali,
-	Norwegian,
-	Portuguese,
-	Romanian,
-	Russian,
-	Spanish,
-	Swedish,
-	Tamil,
-	Turkish,
-	Simple
-};
+using Language = ::SnowballLanguage;
 
 enum class ParserStatus {
 	Continue = 0, // just continue parsing

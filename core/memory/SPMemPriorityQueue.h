@@ -30,9 +30,9 @@
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
-void PriorityQueue_lock_noOp(void *);
-void PriorityQueue_lock_std_mutex(void *);
-void PriorityQueue_unlock_std_mutex(void *);
+SP_PUBLIC void PriorityQueue_lock_noOp(void *);
+SP_PUBLIC void PriorityQueue_lock_std_mutex(void *);
+SP_PUBLIC void PriorityQueue_unlock_std_mutex(void *);
 
 // Real-time task priority queue
 // It's designed for relatively low pending tasks (below PreallocatedNodes),

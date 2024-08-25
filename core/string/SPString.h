@@ -30,15 +30,15 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::string {
 
 inline size_t getUtf16Length(char32_t c) { return unicode::utf16EncodeLength(c); }
-size_t getUtf16Length(const StringView &str);
-size_t getUtf16HtmlLength(const StringView &str);
+SP_PUBLIC size_t getUtf16Length(const StringView &str);
+SP_PUBLIC size_t getUtf16HtmlLength(const StringView &str);
 
 inline size_t getUtf8Length(char32_t c) { return unicode::utf8EncodeLength(c); }
 inline size_t getUtf8Length(char16_t c) { return unicode::utf8EncodeLength(c); }
-size_t getUtf8HtmlLength(const StringView &str);
-size_t getUtf8Length(const WideStringView &str);
+SP_PUBLIC size_t getUtf8HtmlLength(const StringView &str);
+SP_PUBLIC size_t getUtf8Length(const WideStringView &str);
 
-char charToKoi8r(char16_t c);
+SP_PUBLIC char charToKoi8r(char16_t c);
 
 template <typename StringType>
 struct InterfaceForString;
@@ -84,7 +84,7 @@ struct InterfaceForString<const typename memory::PoolInterface::WideStringType> 
 	using Type = memory::PoolInterface;
 };
 
-bool isValidUtf8(StringView);
+SP_PUBLIC bool isValidUtf8(StringView);
 
 template <typename Interface>
 auto toupper(const StringView & str) -> typename Interface::StringType;
@@ -210,72 +210,71 @@ inline int64_t stdlibHashSigned(const StringType &key) { return reinterpretValue
 
 namespace STAPPLER_VERSIONIZED stappler::base16 {
 
-const char *charToHex(const char &c, bool upper = false);
-uint8_t hexToChar(const char &c);
-uint8_t hexToChar(const char &c, const char &d);
+SP_PUBLIC const char *charToHex(const char &c, bool upper = false);
+SP_PUBLIC uint8_t hexToChar(const char &c);
+SP_PUBLIC uint8_t hexToChar(const char &c, const char &d);
 
-size_t encodeSize(size_t);
-size_t decodeSize(size_t);
-
-template <typename Interface>
-auto encode(const CoderSource &source) -> typename Interface::StringType;
-
-void encode(std::basic_ostream<char> &stream, const CoderSource &source);
-void encode(const Callback<void(char)> &cb, const CoderSource &source);
-size_t encode(char *, size_t bsize, const CoderSource &source);
+SP_PUBLIC size_t encodeSize(size_t);
+SP_PUBLIC size_t decodeSize(size_t);
 
 template <typename Interface>
-auto decode(const CoderSource &source) -> typename Interface::BytesType;
+SP_PUBLIC auto encode(const CoderSource &source) -> typename Interface::StringType;
 
-void decode(std::basic_ostream<char> &stream, const CoderSource &source);
-void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
-size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
+SP_PUBLIC void encode(std::basic_ostream<char> &stream, const CoderSource &source);
+SP_PUBLIC void encode(const Callback<void(char)> &cb, const CoderSource &source);
+SP_PUBLIC size_t encode(char *, size_t bsize, const CoderSource &source);
+
+template <typename Interface>
+SP_PUBLIC auto decode(const CoderSource &source) -> typename Interface::BytesType;
+
+SP_PUBLIC void decode(std::basic_ostream<char> &stream, const CoderSource &source);
+SP_PUBLIC void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
+SP_PUBLIC size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 
 }
 
 
 namespace STAPPLER_VERSIONIZED stappler::base64 {
 
-size_t encodeSize(size_t);
-size_t decodeSize(size_t);
+SP_PUBLIC size_t encodeSize(size_t);
+SP_PUBLIC size_t decodeSize(size_t);
 
 template <typename Interface>
-auto encode(const CoderSource &source) -> typename Interface::StringType;
+SP_PUBLIC auto encode(const CoderSource &source) -> typename Interface::StringType;
 
-void encode(std::basic_ostream<char> &stream, const CoderSource &source);
-void encode(const Callback<void(char)> &cb, const CoderSource &source);
-size_t encode(char *, size_t bsize, const CoderSource &source);
-
+SP_PUBLIC void encode(std::basic_ostream<char> &stream, const CoderSource &source);
+SP_PUBLIC void encode(const Callback<void(char)> &cb, const CoderSource &source);
+SP_PUBLIC size_t encode(char *, size_t bsize, const CoderSource &source);
 
 template <typename Interface>
-auto decode(const CoderSource &source) -> typename Interface::BytesType;
+SP_PUBLIC auto decode(const CoderSource &source) -> typename Interface::BytesType;
 
-void decode(std::basic_ostream<char> &stream, const CoderSource &source);
-void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
-size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
+SP_PUBLIC void decode(std::basic_ostream<char> &stream, const CoderSource &source);
+SP_PUBLIC void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
+SP_PUBLIC size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 
 }
 
 
 namespace STAPPLER_VERSIONIZED stappler::base64url {
 
-size_t encodeSize(size_t);
-size_t decodeSize(size_t);
+SP_PUBLIC size_t encodeSize(size_t);
+SP_PUBLIC size_t decodeSize(size_t);
 
 template <typename Interface>
 auto encode(const CoderSource &source) -> typename Interface::StringType;
 
-void encode(std::basic_ostream<char> &stream, const CoderSource &source);
-void encode(const Callback<void(char)> &cb, const CoderSource &source);
-size_t encode(char *, size_t bsize, const CoderSource &source);
+SP_PUBLIC void encode(std::basic_ostream<char> &stream, const CoderSource &source);
+SP_PUBLIC void encode(const Callback<void(char)> &cb, const CoderSource &source);
+SP_PUBLIC size_t encode(char *, size_t bsize, const CoderSource &source);
 
 
 template <typename Interface>
 auto decode(const CoderSource &source) -> typename Interface::BytesType;
 
-void decode(std::basic_ostream<char> &stream, const CoderSource &source);
-void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
-size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
+SP_PUBLIC void decode(std::basic_ostream<char> &stream, const CoderSource &source);
+SP_PUBLIC void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);
+SP_PUBLIC size_t decode(uint8_t *, size_t bsize, const CoderSource &source);
 
 }
 
@@ -626,11 +625,11 @@ bool StringTraits<Interface>::isUrlencodeChar(char c) {
 
 namespace STAPPLER_VERSIONIZED stappler::base64 {
 
-auto __encode_pool(const CoderSource &source) -> typename memory::PoolInterface::StringType;
-auto __encode_std(const CoderSource &source) -> typename memory::StandartInterface::StringType;
+SP_PUBLIC auto __encode_pool(const CoderSource &source) -> typename memory::PoolInterface::StringType;
+SP_PUBLIC auto __encode_std(const CoderSource &source) -> typename memory::StandartInterface::StringType;
 
-auto __decode_pool(const CoderSource &source) -> typename memory::PoolInterface::BytesType;
-auto __decode_std(const CoderSource &source) -> typename memory::StandartInterface::BytesType;
+SP_PUBLIC auto __decode_pool(const CoderSource &source) -> typename memory::PoolInterface::BytesType;
+SP_PUBLIC auto __decode_std(const CoderSource &source) -> typename memory::StandartInterface::BytesType;
 
 template <>
 inline auto decode<memory::PoolInterface>(const CoderSource &source) -> typename memory::PoolInterface::BytesType {
@@ -649,8 +648,8 @@ namespace STAPPLER_VERSIONIZED stappler::base64url {
 inline size_t encodeSize(size_t l) { return base64::encodeSize(l); }
 inline size_t decodeSize(size_t l) { return base64::decodeSize(l); }
 
-auto __encode_pool(const CoderSource &source) -> typename memory::PoolInterface::StringType;
-auto __encode_std(const CoderSource &source) -> typename memory::StandartInterface::StringType;
+SP_PUBLIC auto __encode_pool(const CoderSource &source) -> typename memory::PoolInterface::StringType;
+SP_PUBLIC auto __encode_std(const CoderSource &source) -> typename memory::StandartInterface::StringType;
 
 template <typename Interface>
 inline auto decode(const CoderSource &source) -> typename Interface::BytesType {

@@ -96,7 +96,7 @@ struct ProducerTraits {
 	static size_t TellFn(void *ptr) { return traits_type::TellFn(ptr); }
 };
 
-struct Producer {
+struct SP_PUBLIC Producer {
 	template <typename T, typename Traits = ProducerTraits<typename std::decay<T>::type>> Producer(T &t);
 
 	size_t read(uint8_t *buf, size_t nbytes) const;

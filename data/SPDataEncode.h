@@ -34,7 +34,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::data {
 
-struct EncodeFormat {
+struct SP_PUBLIC EncodeFormat {
 	static int EncodeStreamIndex;
 
 	enum Format {

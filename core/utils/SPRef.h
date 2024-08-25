@@ -33,7 +33,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-struct AtomicCounter {
+struct SP_PUBLIC AtomicCounter {
 	AtomicCounter() { _count.store(1); }
 
 	void increment() { ++ _count; }
@@ -77,15 +77,16 @@ protected:
 
 namespace memleak {
 
-uint64_t getNextRefId();
-uint64_t retainBacktrace(const RefBase<memory::StandartInterface> *);
-void releaseBacktrace(const RefBase<memory::StandartInterface> *, uint64_t);
-void foreachBacktrace(const RefBase<memory::StandartInterface> *,
+SP_PUBLIC uint64_t getNextRefId();
+
+SP_PUBLIC uint64_t retainBacktrace(const RefBase<memory::StandartInterface> *);
+SP_PUBLIC void releaseBacktrace(const RefBase<memory::StandartInterface> *, uint64_t);
+SP_PUBLIC void foreachBacktrace(const RefBase<memory::StandartInterface> *,
 		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &);
 
-uint64_t retainBacktrace(const RefBase<memory::PoolInterface> *);
-void releaseBacktrace(const RefBase<memory::PoolInterface> *, uint64_t);
-void foreachBacktrace(const RefBase<memory::PoolInterface> *,
+SP_PUBLIC uint64_t retainBacktrace(const RefBase<memory::PoolInterface> *);
+SP_PUBLIC void releaseBacktrace(const RefBase<memory::PoolInterface> *, uint64_t);
+SP_PUBLIC void foreachBacktrace(const RefBase<memory::PoolInterface> *,
 		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &);
 }
 

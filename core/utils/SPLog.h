@@ -40,7 +40,7 @@ enum LogType {
 	Default = Debug,
 };
 
-struct CustomLog {
+struct SP_PUBLIC CustomLog {
 	union VA {
 		StringView text;
 		struct {
@@ -73,11 +73,11 @@ struct CustomLog {
 
 // log is suppressed if bit is set
 // only default logger is affected
-void setLogFilterMask(std::bitset<6> &&);
-std::bitset<6> getlogFilterMask();
+SP_PUBLIC void setLogFilterMask(std::bitset<6> &&);
+SP_PUBLIC std::bitset<6> getlogFilterMask();
 
-void format(LogType, const StringView &tag, const char *, ...) SPPRINTF(3, 4);
-void text(LogType, const StringView &tag, const StringView &);
+SP_PUBLIC void format(LogType, const StringView &tag, const char *, ...) SPPRINTF(3, 4);
+SP_PUBLIC void text(LogType, const StringView &tag, const StringView &);
 
 template <typename ... Args>
 void verbose(const StringView &tag, Args && ... args) {

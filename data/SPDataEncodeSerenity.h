@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::data::serenity {
 
-bool shouldEncodePercent(char c);
+SP_PUBLIC bool shouldEncodePercent(char c);
 
 template <typename StringType>
 inline void encodeString(const Callback<void(StringView)> &stream, const StringType &str) {

@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::io {
 
-struct Buffer {
+struct SP_PUBLIC Buffer {
 	template <typename T, typename Traits = BufferTraits<T>> Buffer(T &t);
 
 	uint8_t * prepare(size_t & size) const;

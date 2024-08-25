@@ -22,6 +22,7 @@
 
 #include "SPFilesystem.h"
 #include "SPString.h"
+#include "SPSharedModule.h"
 
 #if MODULE_STAPPLER_BITMAP
 #include "SPBitmap.h"
@@ -837,12 +838,30 @@ StringView detectMimeType(StringView path) {
 	}
 
 #if MODULE_STAPPLER_BITMAP
+	Pair<bitmap::FileFormat, StringView> (*bitmap_detectFormat) (StringView);
+	StringView (*bitmap_getMimeType1) (bitmap::FileFormat);
+	StringView (*bitmap_getMimeType2) (StringView);
+
+#if STAPPLER_SHARED
+	bitmap_detectFormat = (decltype(bitmap_detectFormat))SharedModule::acquireSymbol("bitmap", "detectFormat(StringView)");
+	bitmap_getMimeType1 = (decltype(bitmap_getMimeType1))SharedModule::acquireSymbol("bitmap", "getMimeType(FileFormat)");
+	bitmap_getMimeType2 = (decltype(bitmap_getMimeType2))SharedModule::acquireSymbol("bitmap", "getMimeType(StringView)");
+	if (!bitmap_detectFormat || !bitmap_getMimeType1 || !bitmap_getMimeType2) {
+		log::error("filesystem", "Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
+		return StringView();
+	}
+#else
+	bitmap_detectFormat = &bitmap::detectFormat;
+	bitmap_getMimeType1 = &bitmap::getMimeType;
+	bitmap_getMimeType2 = &bitmap::getMimeType;
+#endif
+
 	// try image format
-	auto fmt = bitmap::detectFormat(StringView(path));
+	auto fmt = bitmap_detectFormat(StringView(path));
 	if (fmt.first != bitmap::FileFormat::Custom) {
-		return bitmap::getMimeType(fmt.first);
+		return bitmap_getMimeType1(fmt.first);
 	} else {
-		return bitmap::getMimeType(fmt.second);
+		return bitmap_getMimeType2(fmt.second);
 	}
 #endif
 	return StringView();

@@ -36,7 +36,7 @@ enum class DsoFlags : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(DsoFlags)
 
-class Dso {
+class SP_PUBLIC Dso {
 public:
 	~Dso();
 

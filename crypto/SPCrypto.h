@@ -115,7 +115,7 @@ struct KeyContext {
 	void *backendCtx = nullptr;
 };
 
-struct BlockKey256 {
+struct SP_PUBLIC BlockKey256 {
 	uint16_t version = 0; // keygen version
 	BlockCipher cipher = BlockCipher::AES_CBC;
 	std::array<uint8_t, BlockKeySize256> data = { 0 };
@@ -137,7 +137,7 @@ struct BlockInfo {
 	BlockCipher cipher = BlockCipher::AES_CBC;
 };
 
-class PrivateKey {
+class SP_PUBLIC PrivateKey {
 public:
 	PrivateKey(Backend = Backend::Default);
 	PrivateKey(Backend, BytesView, const CoderSource & passwd = CoderSource());
@@ -186,7 +186,7 @@ protected:
 	KeyContext _key;
 };
 
-class PublicKey {
+class SP_PUBLIC PublicKey {
 public:
 	PublicKey(Backend = Backend::Default);
 	PublicKey(Backend, BytesView);
@@ -235,35 +235,35 @@ inline constexpr size_t getBlockSize(BlockCipher c) {
 	return 16;
 }
 
-void listBackends(const Callback<void(Backend, StringView, BackendFlags)> &);
+SP_PUBLIC void listBackends(const Callback<void(Backend, StringView, BackendFlags)> &);
 
-bool isPemKey(BytesView data);
+SP_PUBLIC bool isPemKey(BytesView data);
 
-bool encryptBlock(const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
-bool encryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
+SP_PUBLIC bool encryptBlock(const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
+SP_PUBLIC bool encryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
 
-bool decryptBlock(const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
-bool decryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
+SP_PUBLIC bool decryptBlock(const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
+SP_PUBLIC bool decryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
 
-BlockKey256 makeBlockKey(Backend, BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
-BlockKey256 makeBlockKey(BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
-BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, uint32_t version = 2);
-BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher, uint32_t version = 2);
+SP_PUBLIC BlockKey256 makeBlockKey(Backend, BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
+SP_PUBLIC BlockKey256 makeBlockKey(BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
+SP_PUBLIC BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, uint32_t version = 2);
+SP_PUBLIC BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher, uint32_t version = 2);
 
 // get keygen version from encrypted block
-BlockInfo getBlockInfo(BytesView);
+SP_PUBLIC BlockInfo getBlockInfo(BytesView);
 
 using HashCoderCallback = const Callback<bool(const CoderSource &)>;
 
-Sha256::Buf hash256(Backend, const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
-Sha256::Buf hash256(const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
-Sha256::Buf hash256(Backend, const CoderSource &, HashFunction func = HashFunction::SHA_2);
-Sha256::Buf hash256(const CoderSource &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha256::Buf hash256(Backend, const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha256::Buf hash256(const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha256::Buf hash256(Backend, const CoderSource &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha256::Buf hash256(const CoderSource &, HashFunction func = HashFunction::SHA_2);
 
-Sha512::Buf hash512(Backend, const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
-Sha512::Buf hash512(const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
-Sha512::Buf hash512(Backend, const CoderSource &, HashFunction func = HashFunction::SHA_2);
-Sha512::Buf hash512(const CoderSource &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha512::Buf hash512(Backend, const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha512::Buf hash512(const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha512::Buf hash512(Backend, const CoderSource &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha512::Buf hash512(const CoderSource &, HashFunction func = HashFunction::SHA_2);
 
 }
 

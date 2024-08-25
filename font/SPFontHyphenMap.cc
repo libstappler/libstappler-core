@@ -21,7 +21,7 @@
  **/
 
 #include "SPFontHyphenMap.h"
-#include "hyphen/hyphen.h"
+#include "thirdparty/hyphen/hyphen.h"
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 

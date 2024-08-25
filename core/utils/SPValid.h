@@ -30,23 +30,23 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::valid {
 
 /** Identifier starts with [a-zA-Z_] and can contain [a-zA-Z0-9_\-.@] */
-bool validateIdentifier(StringView str);
+SP_PUBLIC bool validateIdentifier(StringView str);
 
 /** Text can contain all characters above 0x1F and \t, \r, \n, \b, \f */
-bool validateText(StringView str);
+SP_PUBLIC bool validateText(StringView str);
 
-bool validateEmailWithoutNormalization(StringView str);
-bool validateEmail(memory::PoolInterface::StringType &str);
-bool validateEmail(memory::StandartInterface::StringType &str);
+SP_PUBLIC bool validateEmailWithoutNormalization(StringView str);
+SP_PUBLIC bool validateEmail(memory::PoolInterface::StringType &str);
+SP_PUBLIC bool validateEmail(memory::StandartInterface::StringType &str);
 
-bool validateUrl(memory::PoolInterface::StringType &str);
-bool validateUrl(memory::StandartInterface::StringType &str);
+SP_PUBLIC bool validateUrl(memory::PoolInterface::StringType &str);
+SP_PUBLIC bool validateUrl(memory::StandartInterface::StringType &str);
 
-bool validateNumber(const StringView &str);
-bool validateHexadecimial(const StringView &str);
-bool validateBase64(const StringView &str);
+SP_PUBLIC bool validateNumber(const StringView &str);
+SP_PUBLIC bool validateHexadecimial(const StringView &str);
+SP_PUBLIC bool validateBase64(const StringView &str);
 
-void makeRandomBytes(uint8_t *, size_t);
+SP_PUBLIC void makeRandomBytes(uint8_t *, size_t);
 
 template <typename Interface>
 auto makeRandomBytes(size_t) -> typename Interface::BytesType;
@@ -54,7 +54,7 @@ auto makeRandomBytes(size_t) -> typename Interface::BytesType;
 template <typename Interface>
 auto makePassword(const StringView &str, const StringView &key = StringView()) -> typename Interface::BytesType;
 
-bool validatePassord(const StringView &str, const BytesView &passwd, const StringView &key = StringView());
+SP_PUBLIC bool validatePassord(const StringView &str, const BytesView &passwd, const StringView &key = StringView());
 
 static constexpr size_t MIN_GENPASSWORD_LENGTH = 6;
 
@@ -62,9 +62,9 @@ static constexpr size_t MIN_GENPASSWORD_LENGTH = 6;
 template <typename Interface>
 auto generatePassword(size_t len) -> typename Interface::StringType;
 
-uint32_t readIp(StringView r);
-uint32_t readIp(StringView r, bool &err);
-Pair<uint32_t, uint32_t> readIpRange(StringView r);
+SP_PUBLIC uint32_t readIp(StringView r);
+SP_PUBLIC uint32_t readIp(StringView r, bool &err);
+SP_PUBLIC Pair<uint32_t, uint32_t> readIpRange(StringView r);
 
 }
 

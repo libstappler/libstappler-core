@@ -277,7 +277,7 @@ auto UrlencodeParser<Interface>::flushString(StringView &r, ValueTemplate<Interf
 }
 
 template <>
-auto readUrlencoded<memory::PoolInterface>(StringView r, size_t maxVarSize) -> ValueTemplate<memory::PoolInterface> {
+auto SP_PUBLIC readUrlencoded<memory::PoolInterface>(StringView r, size_t maxVarSize) -> ValueTemplate<memory::PoolInterface> {
 	ValueTemplate<memory::PoolInterface> ret;
 	UrlencodeParser<memory::PoolInterface> parser(ret, r.size(), maxVarSize);
 	parser.read((const uint8_t *)r.data(), r.size());
@@ -285,7 +285,7 @@ auto readUrlencoded<memory::PoolInterface>(StringView r, size_t maxVarSize) -> V
 }
 
 template <>
-auto readUrlencoded<memory::StandartInterface>(StringView r, size_t maxVarSize) -> ValueTemplate<memory::StandartInterface> {
+auto SP_PUBLIC readUrlencoded<memory::StandartInterface>(StringView r, size_t maxVarSize) -> ValueTemplate<memory::StandartInterface> {
 	ValueTemplate<memory::StandartInterface> ret;
 	UrlencodeParser<memory::StandartInterface> parser(ret, r.size(), maxVarSize);
 	parser.read((const uint8_t *)r.data(), r.size());

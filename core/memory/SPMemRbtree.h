@@ -38,7 +38,7 @@ enum NodeColor : uintptr_t {
 template <typename Value>
 using Storage = memory::Storage<Value>;
 
-struct NodeBase : public AllocPool {
+struct SP_PUBLIC NodeBase : public AllocPool {
 	struct Flag {
 		uintptr_t color : 1;
 		uintptr_t prealloc : 1;

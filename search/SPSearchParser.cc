@@ -24,38 +24,12 @@ THE SOFTWARE.
 #include "SPHtmlParser.h"
 #include "SPUrl.h"
 #include "SPSearchConfiguration.h"
+#include "thirdparty/snowball/SPSnowballStemmer.h"
 #include "SPSnowballStopwords.cc"
 
 namespace STAPPLER_VERSIONIZED stappler::search {
 
-struct StemmerEnv {
-	using symbol = unsigned char;
-
-	void *(*memalloc)( void *userData, unsigned int size );
-	void (*memfree)( void *userData, void *ptr );
-	void* userData;	// User data passed to the allocator functions.
-
-	int (*stem)(StemmerEnv *);
-
-	symbol * p;
-	int c; int l; int lb; int bra; int ket;
-	symbol * * S;
-	int * I;
-	unsigned char * B;
-
-	const StringView *stopwords;
-	struct stemmer_modules *mod;
-};
-
-struct stemmer_modules {
-	Language name;
-	StemmerEnv * (*create)(StemmerEnv *);
-	void (*close)(StemmerEnv *);
-	int (*stem)(StemmerEnv *);
-};
-
-SP_EXTERN_C struct stemmer_modules * sb_stemmer_get(Language lang);
-SP_EXTERN_C const unsigned char * sb_stemmer_stem(StemmerEnv * z, const unsigned char * word, int size);
+struct StemmerEnv : ::SN_env { };
 
 static const StringView *getLanguageStopwords(Language lang) {
 	switch (lang) {
@@ -896,14 +870,14 @@ StemmerEnv *getStemmer(Language lang) {
 		env->stopwords = getLanguageStopwords(lang);
 		env->mod = mod;
 		memory::pool::userdata_set(data, key.data(), nullptr, pool);
-		return env;
+		return (StemmerEnv *)env;
 	}
 	return nullptr;
 }
 
 bool isStopword(const StringView &word, StemmerEnv *env) {
 	if (env) {
-		return isStopword(word, env->stopwords);
+		return isStopword(word, (const StringView *)env->stopwords);
 	}
 	return false;
 }

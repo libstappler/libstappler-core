@@ -28,13 +28,13 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
-struct MemAddr {
+struct SP_LOCAL MemAddr {
 	uint32_t size = 0;
 	MemAddr *next = nullptr;
 	void *address = nullptr;
 };
 
-struct AllocManager {
+struct SP_LOCAL AllocManager {
 	using AllocFn = void *(*) (void *, size_t);
 	void *pool = nullptr;
 	MemAddr *buffered = nullptr;
@@ -64,7 +64,7 @@ struct AllocManager {
 struct Pool;
 struct HashTable;
 
-struct MemNode {
+struct SP_LOCAL MemNode {
 	MemNode *next; // next memnode
 	MemNode **ref; // reference to self
 	uint32_t index; // size
@@ -78,7 +78,7 @@ struct MemNode {
 	size_t free_space() const;
 };
 
-struct Cleanup {
+struct SP_LOCAL Cleanup {
 	using Callback = Status (*)(void *data);
 
 	Cleanup *next;
@@ -88,7 +88,7 @@ struct Cleanup {
 	static void run(Cleanup **cref);
 };
 
-struct Allocator {
+struct SP_LOCAL Allocator {
 	using AllocMutex = std::recursive_mutex;
 
 #if MODULE_STAPPLER_APR
@@ -128,7 +128,7 @@ struct Allocator {
 	AllocManager::AllocFn allocationTracker = nullptr;
 };
 
-struct Pool {
+struct SP_LOCAL Pool {
 	Pool *parent = nullptr;
 	Pool *child = nullptr;
 	Pool *sibling = nullptr;
@@ -189,7 +189,7 @@ struct Pool {
 
 using HashFunc = uint32_t (*)(const char *key, size_t *klen);
 
-struct HashEntry {
+struct SP_LOCAL HashEntry {
 	HashEntry *next;
 	uint32_t hash;
 	const void *key;
@@ -197,7 +197,7 @@ struct HashEntry {
 	const void *val;
 };
 
-struct HashIndex {
+struct SP_LOCAL HashIndex {
 	HashTable *ht;
 	HashEntry *_self, *_next;
 	uint32_t index;
@@ -207,7 +207,7 @@ struct HashIndex {
 	void self(const void **key, size_t *klen, void **val);
 };
 
-struct HashTable {
+struct SP_LOCAL HashTable {
 	using merge_fn = void *(*)(Pool *p, const void *key, size_t klen, const void *h1_val, const void *h2_val, const void *data);
 	using foreach_fn = bool (*)(void *rec, const void *key, size_t klen, const void *value);
 
@@ -240,14 +240,14 @@ struct HashTable {
 	bool foreach(foreach_fn, void *rec) const;
 };
 
-void initialize();
-void terminate();
+SP_LOCAL void initialize();
+SP_LOCAL void terminate();
 
 // creates managed pool (managed by root, if parent in mullptr)
-Pool *create(Pool *);
+SP_LOCAL Pool *create(Pool *);
 
-void destroy(Pool *);
-void clear(Pool *);
+SP_LOCAL void destroy(Pool *);
+SP_LOCAL void clear(Pool *);
 
 constexpr size_t SIZEOF_MEMNODE ( SPALIGN_DEFAULT(sizeof(MemNode)) );
 constexpr size_t SIZEOF_POOL ( SPALIGN_DEFAULT(sizeof(Pool)) );

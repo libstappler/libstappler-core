@@ -39,15 +39,11 @@ THE SOFTWARE.
 #include <openssl/ssl.h>
 #include <openssl/engine.h>
 
+#ifndef STAPPLER_SHARED
 extern "C" {
-
 #include <gost-engine.h>
-#include <e_gost_err.h>
-
-int pack_sign_cp(ECDSA_SIG *s, int order, unsigned char *sig, size_t *siglen);
-int gost_ec_point_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n,
-                      const EC_POINT *q, const BIGNUM *m, BN_CTX *ctx);
 }
+#endif // STAPPLER_SHARED
 
 #define EVP_PKEY_CTRL_GOST_PARAMSET (EVP_PKEY_ALG_CTRL+1)
 
@@ -224,7 +220,7 @@ static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC
 	OPENSSL_assert(dgst != NULL && eckey != NULL);
 
 	if (!(ctx = BN_CTX_secure_new())) {
-		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+		SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
 		return NULL;
 	}
 
@@ -233,28 +229,28 @@ static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC
 	md = BN_lebin2bn(dgst, dlen, NULL);
 	newsig = ECDSA_SIG_new();
 	if (!newsig || !md) {
-		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+		SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
 		goto err;
 	}
 	group = EC_KEY_get0_group(eckey);
 	if (!group) {
-		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+		SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
 		goto err;
 	}
 	order = BN_CTX_get(ctx);
 	if (!order || !EC_GROUP_get_order(group, order, ctx)) {
-		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+		SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
 		goto err;
 	}
 	priv_key = EC_KEY_get0_private_key(eckey);
 
 	if (!priv_key) {
-		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+		SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
 		goto err;
 	}
 	e = BN_CTX_get(ctx);
 	if (!e || !BN_mod(e, md, order, ctx)) {
-		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+		SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
 		goto err;
 	}
 #ifdef DEBUG_SIGN
@@ -270,7 +266,7 @@ static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC
 	k = BN_CTX_get(ctx);
 	C = EC_POINT_new(group);
 	if (!k || !C) {
-		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+		SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
 		goto err;
 	}
 
@@ -284,12 +280,12 @@ static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC
 			auto randSeed = Gost3411_512::hmac(privBytes, BytesView(dgst, dlen));
 
 			if (!hook_ossl_bnrand_range(k, order, 0, randSeed)) {
-				GOSTerr(GOST_F_GOST_EC_SIGN, GOST_R_RNG_ERROR);
+				SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, SP_GOST_R_RNG_ERROR);
 				goto err;
 			}
 
 			if (!gost_ec_point_mul(group, C, k, NULL, NULL, ctx)) {
-				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_EC_LIB);
+				SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_EC_LIB);
 				goto err;
 			}
 			if (!X)
@@ -297,16 +293,16 @@ static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC
 			if (!r)
 				r = BN_CTX_get(ctx);
 			if (!X || !r) {
-				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+				SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
 				goto err;
 			}
 			if (!EC_POINT_get_affine_coordinates(group, C, X, NULL, ctx)) {
-				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_EC_LIB);
+				SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_EC_LIB);
 				goto err;
 			}
 
 			if (!BN_nnmod(r, X, order, ctx)) {
-				GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+				SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
 				goto err;
 			}
 		} while (BN_is_zero(r));
@@ -318,12 +314,12 @@ static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC
 		if (!s)
 			s = BN_CTX_get(ctx);
 		if (!tmp || !tmp2 || !s) {
-			GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+			SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
 			goto err;
 		}
 
 		if (!BN_mod_mul(tmp, priv_key, r, order, ctx) || !BN_mod_mul(tmp2, k, e, order, ctx) || !BN_mod_add(s, tmp, tmp2, order, ctx)) {
-			GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
+			SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_INTERNAL_ERROR);
 			goto err;
 		}
 	} while (BN_is_zero(s));
@@ -331,7 +327,7 @@ static ECDSA_SIG *hook_ossl_gost_ec_sign(const unsigned char *dgst, int dlen, EC
 	new_s = BN_dup(s);
 	new_r = BN_dup(r);
 	if (!new_s || !new_r) {
-		GOSTerr(GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
+		SPGOSTerr(SP_GOST_F_GOST_EC_SIGN, ERR_R_MALLOC_FAILURE);
 		goto err;
 	}
 	ECDSA_SIG_set0(newsig, new_r, new_s);
@@ -456,17 +452,22 @@ static const EVP_CIPHER *getOpenSSLCipher(BlockCipher b) {
 	return EVP_aes_256_cbc();
 }
 
-static void OpenSSL_initGost() {
+static bool s_opensslHasGost = false;
+
+static bool OpenSSL_initSPGost() {
 	static bool init = false;
 	if (init) {
-		return;
+		return s_opensslHasGost;
 	}
 
 	init = true;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+#ifndef STAPPLER_SHARED
 	ENGINE_load_gost();
+#endif
 
 	auto e = ENGINE_get_pkey_meth_engine(NID_id_GostR3410_2012_256);
 	if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_256)) {
@@ -493,22 +494,28 @@ static void OpenSSL_initGost() {
 		s_ossl_GostR3410_2012_meths[1] = s_ossl_GostR3410_2012_512_resign;
 		EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_512_resign);
 	}
-	if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_256)) {
-		EVP_PKEY_asn1_add0(meth);
+
+	if (s_ossl_GostR3410_2012_meths[0] && s_ossl_GostR3410_2012_meths[1]) {
+		if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_256)) {
+			EVP_PKEY_asn1_add0(meth);
+		}
+		if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_512)) {
+			EVP_PKEY_asn1_add0(meth);
+		}
+
+		s_ossl_Engine = ENGINE_new();
+		ENGINE_set_id(s_ossl_Engine, ossl_engine_gost_id);
+		ENGINE_set_name(s_ossl_Engine, ossl_engine_gost_name);
+		ENGINE_set_pkey_meths(s_ossl_Engine, ossl_gost_pkey_meths);
+
+		ENGINE_register_pkey_meths(s_ossl_Engine);
+
+	    ENGINE_register_all_complete();
+	    SP_ERR_load_GOST_strings();
+	    return true;
 	}
-	if (auto meth = ENGINE_get_pkey_asn1_meth(e, NID_id_GostR3410_2012_512)) {
-		EVP_PKEY_asn1_add0(meth);
-	}
-
-	s_ossl_Engine = ENGINE_new();
-	ENGINE_set_id(s_ossl_Engine, ossl_engine_gost_id);
-	ENGINE_set_name(s_ossl_Engine, ossl_engine_gost_name);
-	ENGINE_set_pkey_meths(s_ossl_Engine, ossl_gost_pkey_meths);
-
-	ENGINE_register_pkey_meths(s_ossl_Engine);
-
-    ENGINE_register_all_complete();
 #pragma GCC diagnostic pop
+	return false;
 }
 
 static BackendCtx s_openSSLCtx = {
@@ -517,11 +524,20 @@ static BackendCtx s_openSSLCtx = {
 	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsPKCS8 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary
 			| BackendFlags::SupportsGost3410_2012 | BackendFlags::SupportsGost3412_2015,
 	.initialize = [] () {
-		OpenSSL_initGost();
+		auto gostLoaded = OpenSSL_initSPGost();
 		OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, NULL);
-		log::verbose("Crypto", "OpenSSL+gost backend loaded");
+		if (gostLoaded) {
+			s_opensslHasGost = true;
+			log::verbose("Crypto", "OpenSSL+gost backend loaded");
+		} else {
+			log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+		}
 	},
-	.finalize = [] () { },
+	.finalize = [] () {
+		if (s_opensslHasGost) {
+			SP_ERR_unload_GOST_strings();
+		}
+	},
 	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) -> bool {
 		auto cipherBlockSize = getBlockSize(key.cipher);
 		auto cipher = getOpenSSLCipher(key.cipher);

@@ -69,24 +69,24 @@ struct ImageInfo {
 
 using StrideFn = Callback<uint32_t(PixelFormat, uint32_t)>;
 
-bool getImageSize(StringView file, uint32_t &width, uint32_t &height);
-bool getImageSize(const io::Producer &file, uint32_t &width, uint32_t &height);
+SP_PUBLIC bool getImageSize(StringView file, uint32_t &width, uint32_t &height);
+SP_PUBLIC bool getImageSize(const io::Producer &file, uint32_t &width, uint32_t &height);
 
-bool getImageInfo(BytesView, ImageInfo &);
+SP_PUBLIC bool getImageInfo(BytesView, ImageInfo &);
 
-bool isImage(StringView file, bool readable = true);
-bool isImage(const io::Producer &file, bool readable = true);
-bool isImage(const uint8_t * data, size_t dataLen, bool readable = true);
+SP_PUBLIC bool isImage(StringView file, bool readable = true);
+SP_PUBLIC bool isImage(const io::Producer &file, bool readable = true);
+SP_PUBLIC bool isImage(const uint8_t * data, size_t dataLen, bool readable = true);
 
-Pair<FileFormat, StringView> detectFormat(StringView file);
-Pair<FileFormat, StringView> detectFormat(const io::Producer &file);
-Pair<FileFormat, StringView> detectFormat(const uint8_t * data, size_t dataLen);
+SP_PUBLIC Pair<FileFormat, StringView> detectFormat(StringView file);
+SP_PUBLIC Pair<FileFormat, StringView> detectFormat(const io::Producer &file);
+SP_PUBLIC Pair<FileFormat, StringView> detectFormat(const uint8_t * data, size_t dataLen);
 
-StringView getMimeType(FileFormat);
-StringView getMimeType(StringView);
+SP_PUBLIC StringView getMimeType(FileFormat);
+SP_PUBLIC StringView getMimeType(StringView);
 
-bool check(FileFormat, const uint8_t * data, size_t dataLen);
-bool check(StringView, const uint8_t * data, size_t dataLen);
+SP_PUBLIC bool check(FileFormat, const uint8_t * data, size_t dataLen);
+SP_PUBLIC bool check(StringView, const uint8_t * data, size_t dataLen);
 
 inline uint8_t getBytesPerPixel(PixelFormat c) {
 	switch (c) {
@@ -101,7 +101,7 @@ inline uint8_t getBytesPerPixel(PixelFormat c) {
 }
 
 template<PixelFormat Source, PixelFormat Target>
-void convertLine(const uint8_t *in, uint8_t *out, uint32_t ins, uint32_t outs);
+SP_PUBLIC void convertLine(const uint8_t *in, uint8_t *out, uint32_t ins, uint32_t outs);
 
 template<PixelFormat Source, PixelFormat Target>
 bool convertData(BytesView dataVec, BytesView out, uint32_t inStride, uint32_t outStride) {
@@ -128,7 +128,7 @@ struct BitmapWriter : ImageInfo {
 	void (*clear) (void *);
 };
 
-class BitmapFormat {
+class SP_PUBLIC BitmapFormat {
 public:
 	enum Flags {
 		None = 0,

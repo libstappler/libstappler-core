@@ -28,7 +28,7 @@
 namespace STAPPLER_VERSIONIZED stappler::crypto {
 
 template <typename T>
-struct Asn1DecoderTraits {
+struct SP_PUBLIC Asn1DecoderTraits {
 	using success = char;
 	using failure = long;
 
@@ -47,7 +47,7 @@ struct Asn1DecoderTraits {
 };
 
 template <typename Interface, typename ReaderType, typename Traits = Asn1DecoderTraits<ReaderType>>
-struct Asn1Decoder {
+struct SP_PUBLIC Asn1Decoder {
 	using Bytes = typename Interface::BytesType;
 	using StringStream = typename Interface::StringStreamType;
 

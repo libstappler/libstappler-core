@@ -24,13 +24,19 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLINTERFACE_H_
 #define STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLINTERFACE_H_
 
-#include "SPMemPoolStruct.h"
+#include "SPMemPoolConfig.h"
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base {
 
-using pool_t = custom::Pool;
+// Hide pool implementation details from users
+// Note that OpaquePool and OpaqueAllocator are never defined
+class OpaquePool;
+class OpaqueAllocator;
+
+using pool_t = OpaquePool;
+using allocator_t = OpaqueAllocator;
+
 using status_t = custom::Status;
-using allocator_t = custom::Allocator;
 
 using cleanup_fn = status_t(*)(void *);
 
@@ -39,40 +45,40 @@ using PoolFlags = mempool::custom::PoolFlags;
 // use when you need to create pool from application root pool
 constexpr pool_t *app_root_pool = nullptr;
 
-size_t get_mapped_regions_count();
-void *sp_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
-int sp_munmap(void *addr, size_t length);
+SP_PUBLIC size_t get_mapped_regions_count();
+SP_PUBLIC void *sp_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+SP_PUBLIC int sp_munmap(void *addr, size_t length);
 
 }
 
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
-pool_t *acquire();
-Pair<uint32_t, const void *> info();
+SP_PUBLIC pool_t *acquire();
+SP_PUBLIC Pair<uint32_t, const void *> info();
 
-void push(pool_t *);
-void push(pool_t *, uint32_t, const void * = nullptr);
-void pop();
+SP_PUBLIC void push(pool_t *);
+SP_PUBLIC void push(pool_t *, uint32_t, const void * = nullptr);
+SP_PUBLIC void pop();
 
-void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const void *));
+SP_PUBLIC void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const void *));
 
 }
 
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::allocator {
 
-allocator_t *create(bool custom = false);
-allocator_t *create(void *mutex);
+SP_PUBLIC allocator_t *create(bool custom = false);
+SP_PUBLIC allocator_t *create(void *mutex);
 
 // always custom
-allocator_t *createWithMmap(uint32_t initialPages = 0);
+SP_PUBLIC allocator_t *createWithMmap(uint32_t initialPages = 0);
 
-void owner_set(allocator_t *alloc, pool_t *pool);
-pool_t * owner_get(allocator_t *alloc);
-void max_free_set(allocator_t *alloc, size_t size);
+SP_PUBLIC void owner_set(allocator_t *alloc, pool_t *pool);
+SP_PUBLIC pool_t * owner_get(allocator_t *alloc);
+SP_PUBLIC void max_free_set(allocator_t *alloc, size_t size);
 
-void destroy(allocator_t *);
+SP_PUBLIC void destroy(allocator_t *);
 
 }
 
@@ -81,65 +87,65 @@ namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
 using PoolFlags = custom::PoolFlags;
 
-void initialize();
-void terminate();
+SP_PUBLIC void initialize();
+SP_PUBLIC void terminate();
 
 // creates unmanaged pool
-pool_t *create(PoolFlags = PoolFlags::Default);
-pool_t *create(allocator_t *, PoolFlags = PoolFlags::Default);
+SP_PUBLIC pool_t *create(PoolFlags = PoolFlags::Default);
+SP_PUBLIC pool_t *create(allocator_t *, PoolFlags = PoolFlags::Default);
 
 // creates managed pool (managed by root, if parent in mullptr)
-pool_t *create(pool_t *);
+SP_PUBLIC pool_t *create(pool_t *);
 
 // creates unmanaged pool
-pool_t *createTagged(const char *, PoolFlags = PoolFlags::Default);
+SP_PUBLIC pool_t *createTagged(const char *, PoolFlags = PoolFlags::Default);
 
 // creates managed pool (managed by root, if parent in mullptr)
-pool_t *createTagged(pool_t *, const char *);
+SP_PUBLIC pool_t *createTagged(pool_t *, const char *);
 
-void destroy(pool_t *);
-void clear(pool_t *);
+SP_PUBLIC void destroy(pool_t *);
+SP_PUBLIC void clear(pool_t *);
 
-void *alloc(pool_t *, size_t &);
-void *palloc(pool_t *, size_t);
-void *calloc(pool_t *, size_t count, size_t eltsize);
-void free(pool_t *, void *ptr, size_t size);
+SP_PUBLIC void *alloc(pool_t *, size_t &);
+SP_PUBLIC void *palloc(pool_t *, size_t);
+SP_PUBLIC void *calloc(pool_t *, size_t count, size_t eltsize);
+SP_PUBLIC void free(pool_t *, void *ptr, size_t size);
 
-void cleanup_kill(pool_t *, void *, cleanup_fn);
-void cleanup_register(pool_t *, void *, cleanup_fn);
-void cleanup_register(pool_t *p, memory::function<void()> &&cb);
-void pre_cleanup_register(pool_t *, void *, cleanup_fn);
-void pre_cleanup_register(pool_t *p, memory::function<void()> &&cb);
+SP_PUBLIC void cleanup_kill(pool_t *, void *, cleanup_fn);
+SP_PUBLIC void cleanup_register(pool_t *, void *, cleanup_fn);
+SP_PUBLIC void cleanup_register(pool_t *p, memory::function<void()> &&cb);
+SP_PUBLIC void pre_cleanup_register(pool_t *, void *, cleanup_fn);
+SP_PUBLIC void pre_cleanup_register(pool_t *p, memory::function<void()> &&cb);
 
-void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const void *));
+SP_PUBLIC void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const void *));
 
-status_t userdata_set(const void *data, const char *key, cleanup_fn, pool_t *);
-status_t userdata_setn(const void *data, const char *key, cleanup_fn, pool_t *);
-status_t userdata_get(void **data, const char *key, pool_t *);
-status_t userdata_get(void **data, const char *key, size_t, pool_t *);
+SP_PUBLIC status_t userdata_set(const void *data, const char *key, cleanup_fn, pool_t *);
+SP_PUBLIC status_t userdata_setn(const void *data, const char *key, cleanup_fn, pool_t *);
+SP_PUBLIC status_t userdata_get(void **data, const char *key, pool_t *);
+SP_PUBLIC status_t userdata_get(void **data, const char *key, size_t, pool_t *);
 
-allocator_t *get_allocator(pool_t *);
+SP_PUBLIC allocator_t *get_allocator(pool_t *);
 
-void *pmemdup(pool_t *a, const void *m, size_t n);
-char *pstrdup(pool_t *a, const char *s);
+SP_PUBLIC void *pmemdup(pool_t *a, const void *m, size_t n);
+SP_PUBLIC char *pstrdup(pool_t *a, const char *s);
 
-bool isThreadSafeForAllocations(pool_t *pool);
-bool isThreadSafeAsParent(pool_t *pool);
+SP_PUBLIC bool isThreadSafeForAllocations(pool_t *pool);
+SP_PUBLIC bool isThreadSafeAsParent(pool_t *pool);
 
-const char *get_tag(pool_t *);
+SP_PUBLIC const char *get_tag(pool_t *);
 
 // debug counters
-size_t get_allocated_bytes(pool_t *);
-size_t get_return_bytes(pool_t *);
-size_t get_active_count();
+SP_PUBLIC size_t get_allocated_bytes(pool_t *);
+SP_PUBLIC size_t get_return_bytes(pool_t *);
+SP_PUBLIC size_t get_active_count();
 
 // start recording additional pool info on creation
-bool debug_begin(pool_t *pool = nullptr);
+SP_PUBLIC bool debug_begin(pool_t *pool = nullptr);
 
 // stop recording and return info
-std::map<pool_t *, const char **, std::less<void>> debug_end();
+SP_PUBLIC std::map<pool_t *, const char **, std::less<void>> debug_end();
 
-void debug_foreach(void *, void(*)(void *, pool_t *));
+SP_PUBLIC void debug_foreach(void *, void(*)(void *, pool_t *));
 
 }
 

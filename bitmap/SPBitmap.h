@@ -52,7 +52,7 @@ enum class ResampleFilter {
 };
 
 template <typename Interface>
-class BitmapTemplate : public Interface::AllocBaseType {
+class SP_PUBLIC BitmapTemplate : public Interface::AllocBaseType {
 public:
 	BitmapTemplate();
 

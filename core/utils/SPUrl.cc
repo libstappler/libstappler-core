@@ -24,6 +24,7 @@ THE SOFTWARE.
 #include "SPUrl.h"
 #include "SPString.h"
 #include "SPStringView.h"
+#include "SPSharedModule.h"
 #include "SPUrlTld.hpp"
 
 namespace STAPPLER_VERSIONIZED stappler {
@@ -603,7 +604,17 @@ auto UrlView::parseArgs<memory::PoolInterface>(StringView str, size_t maxVarSize
 	if (r.front() == '?' || r.front() == '&' || r.front() == ';') {
 		++ r;
 	}
-	return data::readUrlencoded<memory::PoolInterface>(str);
+
+#if STAPPLER_SHARED
+	auto fn = (decltype(&data::readUrlencoded<memory::PoolInterface>))
+			SharedModule::acquireSymbol("data", "readUrlencoded<PoolInterface>(StringView,size_t)");
+	if (!fn) {
+		log::error("UrlView", "Module MODULE_STAPPLER_DATA declared, but not available in runtime");
+	}
+	return fn(str, maxVarSize);
+#else
+	return data::readUrlencoded<memory::PoolInterface>(str, maxVarSize);
+#endif
 }
 
 template <>
@@ -615,7 +626,16 @@ auto UrlView::parseArgs<memory::StandartInterface>(StringView str, size_t maxVar
 	if (r.front() == '?' || r.front() == '&' || r.front() == ';') {
 		++ r;
 	}
+#if STAPPLER_SHARED
+	auto fn = (decltype(&data::readUrlencoded<memory::StandartInterface>))
+			SharedModule::acquireSymbol("data", "readUrlencoded<StandartInterface>(StringView,size_t)");
+	if (!fn) {
+		log::error("UrlView", "Module MODULE_STAPPLER_DATA declared, but not available in runtime");
+	}
+	return fn(str, maxVarSize);
+#else
 	return data::readUrlencoded<memory::StandartInterface>(str);
+#endif
 }
 
 #endif

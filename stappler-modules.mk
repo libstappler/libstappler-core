@@ -26,22 +26,23 @@ STAPPLER_VERSION_BUILD := 4
 
 STAPPLER_CRYPTO_DEFAULT ?= openssl
 
-include $(STAPPLER_MODULE_DIR)/core/core.mk
-include $(STAPPLER_MODULE_DIR)/bitmap/bitmap.mk
-include $(STAPPLER_MODULE_DIR)/data/data.mk
-include $(STAPPLER_MODULE_DIR)/db/db.mk
-include $(STAPPLER_MODULE_DIR)/filesystem/filesystem.mk
-include $(STAPPLER_MODULE_DIR)/threads/threads.mk
-include $(STAPPLER_MODULE_DIR)/idn/idn.mk
-include $(STAPPLER_MODULE_DIR)/crypto/crypto.mk
-include $(STAPPLER_MODULE_DIR)/network/network.mk
-include $(STAPPLER_MODULE_DIR)/search/search.mk
-include $(STAPPLER_MODULE_DIR)/sql/sql.mk
-include $(STAPPLER_MODULE_DIR)/threads/threads.mk
-include $(STAPPLER_MODULE_DIR)/geom/geom.mk
-include $(STAPPLER_MODULE_DIR)/font/font.mk
-include $(STAPPLER_MODULE_DIR)/tess/tess.mk
-include $(STAPPLER_MODULE_DIR)/vg/vg.mk
-include $(STAPPLER_MODULE_DIR)/zip/zip.mk
-include $(STAPPLER_MODULE_DIR)/wasm/wasm.mk
-include $(STAPPLER_MODULE_DIR)/backtrace.mk
+TOOLKIT_MODULE_LIST += \
+	$(STAPPLER_MODULE_DIR)/core/core.mk \
+	$(STAPPLER_MODULE_DIR)/bitmap/bitmap.mk \
+	$(STAPPLER_MODULE_DIR)/data/data.mk \
+	$(STAPPLER_MODULE_DIR)/db/db.mk \
+	$(STAPPLER_MODULE_DIR)/filesystem/filesystem.mk \
+	$(STAPPLER_MODULE_DIR)/threads/threads.mk \
+	$(STAPPLER_MODULE_DIR)/idn/idn.mk \
+	$(STAPPLER_MODULE_DIR)/crypto/crypto.mk \
+	$(STAPPLER_MODULE_DIR)/network/network.mk \
+	$(STAPPLER_MODULE_DIR)/search/search.mk \
+	$(STAPPLER_MODULE_DIR)/sql/sql.mk \
+	$(STAPPLER_MODULE_DIR)/threads/threads.mk \
+	$(STAPPLER_MODULE_DIR)/geom/geom.mk \
+	$(STAPPLER_MODULE_DIR)/font/font.mk \
+	$(STAPPLER_MODULE_DIR)/tess/tess.mk \
+	$(STAPPLER_MODULE_DIR)/vg/vg.mk \
+	$(STAPPLER_MODULE_DIR)/zip/zip.mk \
+	$(STAPPLER_MODULE_DIR)/wasm/wasm.mk \
+	$(STAPPLER_MODULE_DIR)/backtrace.mk

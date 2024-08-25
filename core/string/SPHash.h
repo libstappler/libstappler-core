@@ -35,7 +35,7 @@ namespace STAPPLER_VERSIONIZED stappler::hash {
 
 #define SP_HASH_INLINE [[gnu::always_inline]]
 
-class xxh32 {
+class SP_PUBLIC xxh32 {
 public:
 	static constexpr uint32_t hash (const char *input, uint32_t len, uint32_t seed) {
 		return finalize((len >= 16
@@ -97,7 +97,7 @@ private:
 	}
 };
 
-class xxh64 {
+class SP_PUBLIC xxh64 {
 public:
 	static constexpr uint64_t hash (const char *p, uint64_t len, uint64_t seed) {
 		return finalize ((len >= 32

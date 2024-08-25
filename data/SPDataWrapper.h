@@ -29,7 +29,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::data {
 
 template <typename Interface>
-class WrapperTemplate : public Interface::AllocBaseType {
+class SP_PUBLIC WrapperTemplate : public Interface::AllocBaseType {
 public:
 	using Value = typename data::ValueTemplate<Interface>;
 	using Array = typename Value::ArrayType;

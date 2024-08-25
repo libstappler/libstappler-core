@@ -32,7 +32,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-struct UrlView {
+struct SP_PUBLIC UrlView {
 	enum class UrlToken {
 		Scheme,
 		User,

@@ -37,7 +37,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename Interface>
-struct JsonWebToken {
+struct SP_PUBLIC JsonWebToken {
 	using String = typename Interface::StringType;
 	using Bytes = typename Interface::BytesType;
 	using Value = data::ValueTemplate<Interface>;
@@ -92,7 +92,7 @@ struct JsonWebToken {
 };
 
 template <typename Interface>
-class AesToken : public data::WrapperTemplate<Interface> {
+class SP_PUBLIC AesToken : public data::WrapperTemplate<Interface> {
 public:
 	using String = typename Interface::StringType;
 	using Bytes = typename Interface::BytesType;

@@ -31,7 +31,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
-struct uuid : AllocPool {
+struct SP_PUBLIC uuid : AllocPool {
 	static constexpr size_t FormattedLength = 36;
 
 	using uuid_t = std::array<uint8_t, 16>;

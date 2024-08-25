@@ -458,7 +458,7 @@ void initialize() {
 		s_global_pool = Pool::create(s_global_allocator);
 		s_global_pool->allocmngr.name = "Global";
 #ifndef MODULE_STAPPLER_APR
-		stappler::memory::pool::push(s_global_pool);
+		stappler::memory::pool::push((memory::pool_t *)s_global_pool);
 #endif
 	}
 }

@@ -101,13 +101,13 @@ struct ParserTraits {
 };
 
 template <typename StringReader>
-auto Tag_readName(StringReader &is) -> StringReader;
+SP_PUBLIC auto Tag_readName(StringReader &is) -> StringReader;
 
 template <typename StringReader>
-auto Tag_readAttrName(StringReader &s) -> StringReader;
+SP_PUBLIC auto Tag_readAttrName(StringReader &s) -> StringReader;
 
 template <typename StringReader>
-auto Tag_readAttrValue(StringReader &s) -> StringReader;
+SP_PUBLIC auto Tag_readAttrValue(StringReader &s) -> StringReader;
 
 template <typename __StringReader>
 struct Tag {

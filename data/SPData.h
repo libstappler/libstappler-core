@@ -155,7 +155,7 @@ constexpr StringView MIME_CBOR("application/cbor");
 
 // decode x-www-urlencoded into data
 template <typename Interface>
-auto readUrlencoded(StringView, size_t maxVarSize = maxOf<size_t>()) -> data::ValueTemplate<Interface>;
+auto SP_PUBLIC readUrlencoded(StringView, size_t maxVarSize = maxOf<size_t>()) -> data::ValueTemplate<Interface>;
 
 }
 

@@ -67,9 +67,8 @@ enum class CharGroupId : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(CharGroupId)
 
-bool inCharGroup(CharGroupId mask, char16_t);
-bool inCharGroupMask(CharGroupId mask, char16_t);
-// WideString getCharGroup(CharGroupId mask);
+SP_PUBLIC bool inCharGroup(CharGroupId mask, char16_t);
+SP_PUBLIC bool inCharGroupMask(CharGroupId mask, char16_t);
 
 }
 

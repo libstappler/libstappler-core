@@ -46,23 +46,15 @@ THE SOFTWARE.
 #include "SPRef.cc"
 #include "SPTime.cc"
 #include "SPDso.cc"
+#include "SPSharedModule.cc"
 
 #include "platform/SPCore-linux.cc"
 #include "platform/SPCore-android.cc"
 #include "platform/SPCore-win32.cc"
 #include "platform/SPCore-darwin.cc"
 
-#ifdef MODULE_STAPPLER_DATA
-#include "SPData.cc"
-#include "SPDataUrlencoded.cc"
-#endif
-
 #include "SPUrl.cc"
 #include "SPValid.cc"
-
-#ifdef MODULE_STAPPLER_SQL
-#include "SPSql.cc"
-#endif
 
 namespace STAPPLER_VERSIONIZED stappler {
 
