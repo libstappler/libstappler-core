@@ -33,7 +33,7 @@ struct QueryStorageHandle;
 
 using Result = db::Result;
 
-class SqlHandle : public db::BackendInterface {
+class SP_PUBLIC SqlHandle : public db::BackendInterface {
 public:
 	using Scheme = db::Scheme;
 	using Worker = db::Worker;

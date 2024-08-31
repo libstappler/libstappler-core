@@ -1342,7 +1342,7 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				_autoFieldReq.emplace(f);
 			} else {
 				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty, Value({
-					stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
+					stappler::pair("view", Value(toString(s->getName(), ".", it))),
 					stappler::pair("field", Value(toString(getName(), ".", it)))
 				}));
 			}
@@ -1363,7 +1363,7 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				_forceInclude.emplace(f);
 			} else {
 				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty, Value({
-					stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
+					stappler::pair("view", Value(toString(s->getName(), ".", it))),
 					stappler::pair("field", Value(toString(getName(), ".", it)))
 				}));
 			}
@@ -1374,7 +1374,7 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				_autoFieldReq.emplace(f);
 			} else {
 				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty, Value({
-					stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
+					stappler::pair("view", Value(toString(s->getName(), ".", it))),
 					stappler::pair("field", Value(toString(getName(), ".", it)))
 				}));
 			}

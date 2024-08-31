@@ -102,14 +102,14 @@ struct SP_PUBLIC EncodeFormat {
 	Encryption encryption;
 };
 
-uint8_t *getLZ4EncodeState();
-size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t destSize, EncodeFormat::Compression c);
-void writeCompressionMark(uint8_t *data, size_t sourceSize, EncodeFormat::Compression c, uint8_t padding = 0);
+SP_PUBLIC uint8_t *getLZ4EncodeState();
+SP_PUBLIC size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t destSize, EncodeFormat::Compression c);
+SP_PUBLIC void writeCompressionMark(uint8_t *data, size_t sourceSize, EncodeFormat::Compression c, uint8_t padding = 0);
 
 template <typename Interface>
-auto compress(const uint8_t *, size_t, EncodeFormat::Compression, bool conditional) -> typename Interface::BytesType;
+SP_PUBLIC auto compress(const uint8_t *, size_t, EncodeFormat::Compression, bool conditional) -> typename Interface::BytesType;
 
-size_t getCompressBounds(size_t, EncodeFormat::Compression);
+SP_PUBLIC size_t getCompressBounds(size_t, EncodeFormat::Compression);
 
 template <typename Interface>
 struct EncodeTraits {

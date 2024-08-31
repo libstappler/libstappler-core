@@ -33,7 +33,7 @@ class Mat4;
 struct Size2;
 struct Extent2;
 
-class Vec2 {
+class SP_PUBLIC Vec2 {
 public:
 	static constexpr size_t DIMENSIONS = 2;
 

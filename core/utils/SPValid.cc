@@ -29,12 +29,6 @@ THE SOFTWARE.
 #include "SPIdn.h"
 #else
 
-namespace STAPPLER_VERSIONIZED stappler::platform {
-
-size_t makeRandomBytes(uint8_t * buf, size_t count);
-
-}
-
 namespace STAPPLER_VERSIONIZED stappler::idn {
 
 using HostUnicodeChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
@@ -80,13 +74,6 @@ auto toUnicode(StringView source, bool validate = false) -> typename Interface::
 }
 
 #endif
-
-
-namespace STAPPLER_VERSIONIZED stappler {
-
-static bool validateHost(StringView &r);
-
-}
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
@@ -249,7 +236,7 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 			}
 		}
 	} else {
-		if (!validateHost(r)) {
+		if (!UrlView::validateHost(r)) {
 			return false;
 		}
 
@@ -259,37 +246,35 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 		}
 
 		if (target) { target->append(host); }
-
-		/*while (!tmp.empty()) {
-			auto t = tmp.readUntil<StringView::Chars<'.'>>();
-			if (tmp.is('.')) {
-				if (t.empty()) {
-					return false;
-				}
-				++ tmp;
-			}
-		}*/
-
 	}
 
 	return true;
 }
 
-template <typename Interface>
-static bool _validateEmail(typename Interface::StringType &istr) {
+static StringView _trimValidatingEmail(StringView istr) {
 	StringView str(istr);
 	str.trimChars<StringView::WhiteSpace>();
 	if (str.empty()) {
-		return false;
+		return StringView();
 	}
 
 	if (str.back() == ')') {
 		auto pos = str.rfind('(');
-		if (pos != Interface::StringType::npos) {
+		if (pos != maxOf<size_t>()) {
 			str = str.sub(0, pos);
 		} else {
-			return false;
+			return StringView();
 		}
+	}
+
+	return str;
+}
+
+template <typename Interface>
+static bool _validateEmail(typename Interface::StringType &istr) {
+	auto str = _trimValidatingEmail(istr);
+	if (str.empty()) {
+		return false;
 	}
 
 	typename Interface::StringType ret; ret.reserve(str.size());
@@ -300,7 +285,12 @@ static bool _validateEmail(typename Interface::StringType &istr) {
 	return false;
 }
 
-bool validateEmailWithoutNormalization(StringView str) {
+bool validateEmailWithoutNormalization(StringView istr) {
+	auto str = _trimValidatingEmail(istr);
+	if (str.empty()) {
+		return false;
+	}
+
 	return _validateEmailData<memory::PoolInterface>(str, nullptr);
 }
 

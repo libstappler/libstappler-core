@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-struct FieldIntArray : db::FieldCustom {
+struct SP_PUBLIC FieldIntArray : db::FieldCustom {
 	static auto constexpr FIELD_NAME = StringView("INT[]");
 	static bool registerForPostgres(CustomFieldInfo &);
 	static bool registerForSqlite(CustomFieldInfo &);
@@ -43,7 +43,7 @@ struct FieldIntArray : db::FieldCustom {
 	virtual bool isSimpleLayout() const override;
 };
 
-struct FieldBigIntArray : db::FieldCustom {
+struct SP_PUBLIC FieldBigIntArray : db::FieldCustom {
 	static auto constexpr FIELD_NAME = StringView("BIGINT[]");
 	static bool registerForPostgres(CustomFieldInfo &);
 	static bool registerForSqlite(CustomFieldInfo &);
@@ -57,7 +57,7 @@ struct FieldBigIntArray : db::FieldCustom {
 	virtual bool isSimpleLayout() const override;
 };
 
-struct FieldPoint : db::FieldCustom {
+struct SP_PUBLIC FieldPoint : db::FieldCustom {
 	static auto constexpr FIELD_NAME = StringView("POINT");
 	static bool registerForPostgres(CustomFieldInfo &);
 	static bool registerForSqlite(CustomFieldInfo &);
@@ -71,7 +71,7 @@ struct FieldPoint : db::FieldCustom {
 	virtual bool isSimpleLayout() const override;
 };
 
-struct FieldTextArray : db::FieldCustom {
+struct SP_PUBLIC FieldTextArray : db::FieldCustom {
 	static auto constexpr FIELD_NAME = StringView("TEXT[]");
 	static bool registerForPostgres(CustomFieldInfo &);
 	static bool registerForSqlite(CustomFieldInfo &);

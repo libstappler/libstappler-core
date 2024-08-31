@@ -39,7 +39,7 @@ constexpr size_t UnicodePlanes = 16;
 }
 
 
-struct CharVector final {
+struct SP_PUBLIC CharVector final {
 	void addChar(char32_t);
 	void addString(const StringView &);
 	void addString(const WideStringView &);
@@ -61,7 +61,7 @@ enum CharAnchor : uint32_t {
 	BottomRight
 };
 
-struct Metrics final {
+struct SP_PUBLIC Metrics final {
 	uint16_t size = 0; // font size in pixels
 	uint16_t height = 0; // default font line height
 	int16_t ascender = 0; // The distance from the baseline to the highest coordinate used to place an outline point
@@ -70,7 +70,7 @@ struct Metrics final {
 	int16_t underlineThickness = 0;
 };
 
-struct CharId {
+struct SP_PUBLIC CharId final {
 	static constexpr uint32_t CharMask = 0x0000FFFFU;
 	static constexpr uint32_t AnchorMask = 0x00030000U;
 	static constexpr uint32_t SourceMask = 0xFFFC0000U;
@@ -98,14 +98,14 @@ struct CharId {
 	}
 };
 
-struct CharShape final {
+struct SP_PUBLIC CharShape final {
 	char16_t charID = 0;
 	uint16_t xAdvance = 0;
 
 	operator char16_t() const { return charID; }
 };
 
-struct CharTexture final {
+struct SP_PUBLIC CharTexture final {
 	char32_t charID = 0;
 
 	int16_t x = 0;
@@ -122,13 +122,13 @@ struct CharTexture final {
 	uint8_t *bitmap;
 };
 
-struct FontAtlasValue {
+struct SP_PUBLIC FontAtlasValue {
 	geom::Vec2 pos;
 	geom::Vec2 tex;
 };
 
 template <typename Value>
-struct FontCharStorage {
+struct SP_PUBLIC FontCharStorage {
 	using CellType = std::array<Value, 256>;
 
 	FontCharStorage() {

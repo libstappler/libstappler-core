@@ -35,8 +35,8 @@ struct BackendCtx {
 	StringView title;
 	BackendFlags flags;
 
-	void (*initialize) () = nullptr;
-	void (*finalize) () = nullptr;
+	void (*initialize) (BackendCtx &) = nullptr;
+	void (*finalize) (BackendCtx &) = nullptr;
 
 	bool (*encryptBlock) (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) = nullptr;
 	bool (*decryptBlock) (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) = nullptr;
@@ -116,14 +116,14 @@ BackendCtxRef::BackendCtxRef(BackendCtx *ctx) {
 	s_backends.emplace(ctx->name, ctx);
 	backend = ctx;
 	if (backend->initialize) {
-		backend->initialize();
+		backend->initialize(*backend);
 	}
 }
 
 BackendCtxRef::~BackendCtxRef() {
 	s_backends.erase(backend->name);
 	if (backend->finalize) {
-		backend->finalize();
+		backend->finalize(*backend);
 	}
 }
 

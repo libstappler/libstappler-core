@@ -35,74 +35,6 @@ using GenDelim = chars::Chars<char, ':', '/', '?', '#', '[', ']', '@'>;
 
 using UnreservedUni = chars::Compose<char, Unreserved, chars::UniChar>;
 
-static bool validateScheme(const StringView &r) {
-	auto cpy = r;
-	if (cpy.is<StringView::Compose<StringView::CharGroup<CharGroupId::Alphanumeric>, StringView::Chars<'.'>>>()) {
-		cpy ++;
-		cpy.skipChars<Scheme>();
-		if (cpy.empty()) {
-			return true;
-		}
-	}
-	return false;
-}
-
-static bool validateHost(StringView &r) {
-	if (r.empty()) {
-		return false;
-	}
-	auto cpy = r;
-	if (cpy.is('[')) {
-		// check ipv6
-		++ cpy;
-		cpy.skipChars<Ipv6>();
-		if (cpy.is(']')) {
-			cpy ++;
-			if (cpy.empty()) {
-				return true;
-			}
-		}
-	} else {
-		cpy.skipChars<Unreserved, SubDelim, chars::UniChar>();
-		if (cpy.empty()) {
-			auto c = r.sub(r.size() - 1, 1);
-			while (c.is(',') || c.is('.') || c.is(';')) {
-				r = r.sub(0, r.size() - 1);
-				c = r.sub(r.size() - 1, 1);
-			}
-			if (c.is<StringView::Compose<StringView::CharGroup<CharGroupId::Alphanumeric>, chars::UniChar>>()) {
-				StringView h(r);
-				h.readUntil<chars::UniChar>();
-				if (!h.empty()) {
-					auto h = r;
-					auto domain = h.backwardReadUntil<StringView::Chars<'.'>>();
-					if (h.back() == '.' && !domain.empty()) {
-						auto tmp = domain;
-						tmp.skipChars<StringView::CharGroup<CharGroupId::Alphanumeric>>();
-						if (!tmp.empty()) {
-							if (UrlView::isValidIdnTld(domain)) {
-								return true;
-							}
-						}
-					}
-				} else {
-					return true;
-				}
-			}
-		}
-	}
-	return false;
-}
-
-static bool validateUserOrPassword(const StringView &r) {
-	auto cpy = r;
-	cpy.skipChars<Unreserved, SubDelim, chars::UniChar>();
-	if (cpy.empty()) {
-		return true;
-	}
-	return false;
-}
-
 bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb) {
 	UrlToken state = UrlToken::Scheme;
 
@@ -127,7 +59,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 			}
 
 			if (s.is("://")) {
-				if (!validateScheme(tmp)) {
+				if (!UrlView::validateScheme(tmp)) {
 					return false;
 				}
 
@@ -147,7 +79,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 				auto port = tmpS.readChars<StringView::CharGroup<CharGroupId::Numbers>>();
 				if (!port.empty() && !tmpS.is<UnreservedUni>() && !tmpS.is('@')) {
 					// host + port
-					if (!validateHost(tmp)) {
+					if (!UrlView::validateHost(tmp)) {
 						return true;
 					}
 
@@ -171,7 +103,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 					auto arg = tmpS.readChars<UnreservedUni, SubDelim>();
 					if (tmpS.is('@')) {
 						// username + password
-						if (!validateUserOrPassword(tmp) || !validateUserOrPassword(arg)) {
+						if (!UrlView::validateUserOrPassword(tmp) || !UrlView::validateUserOrPassword(arg)) {
 							return false;
 						}
 
@@ -184,7 +116,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 						s = tmpS;
 					} else {
 						// scheme without authority segment
-						if (!validateScheme(tmp)) {
+						if (!UrlView::validateScheme(tmp)) {
 							return false;
 						}
 						cb(tmp, UrlToken::Scheme);
@@ -195,7 +127,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 				}
 			}
 		} else if (s.is('@')) {
-			if (tmp.empty() || !validateUserOrPassword(tmp)) {
+			if (tmp.empty() || !UrlView::validateUserOrPassword(tmp)) {
 				return false;
 			}
 			cb(tmp, UrlToken::User);
@@ -205,7 +137,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 		} else if (s.is('/')) {
 			// host + path
 			if (!tmp.empty()) {
-				if (!validateHost(tmp)) {
+				if (!UrlView::validateHost(tmp)) {
 					return false;
 				}
 				cb(tmp, UrlToken::Host);
@@ -216,7 +148,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 			if (tmp.empty()) {
 				return false;
 			}
-			if (!validateHost(tmp)) {
+			if (!UrlView::validateHost(tmp)) {
 				return false;
 			}
 			cb(tmp, UrlToken::Host);
@@ -226,7 +158,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 			if (tmp.empty()) {
 				return false;
 			}
-			if (!validateHost(tmp)) {
+			if (!UrlView::validateHost(tmp)) {
 				return false;
 			}
 			cb(tmp, UrlToken::Host);
@@ -234,7 +166,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 		} else {
 			// assume host-only
 			if (!tmp.empty()) {
-				if (!validateHost(tmp)) {
+				if (!UrlView::validateHost(tmp)) {
 					return false;
 				}
 				cb(tmp, UrlToken::Host);
@@ -250,7 +182,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 
 		if (tmp_s.is('@')) {
 			// user only part
-			if (!validateUserOrPassword(tmp)) {
+			if (!UrlView::validateUserOrPassword(tmp)) {
 				return false;
 			}
 			cb(tmp, UrlToken::User);
@@ -267,7 +199,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 			auto port = tmpS.readChars<StringView::CharGroup<CharGroupId::Numbers>>();
 			if (!port.empty() && !tmpS.is('@')) {
 				// host + port
-				if (!validateHost(tmp)) {
+				if (!UrlView::validateHost(tmp)) {
 					return true;
 				}
 
@@ -287,7 +219,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 				}
 			} else {
 				// user + password
-				if (!validateUserOrPassword(tmp)) {
+				if (!UrlView::validateUserOrPassword(tmp)) {
 					return false;
 				}
 				cb(tmp, UrlToken::User);
@@ -304,7 +236,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 						return false;
 					}
 					++ tmp_s;
-					if (!validateUserOrPassword(tmp)) {
+					if (!UrlView::validateUserOrPassword(tmp)) {
 						return false;
 					}
 					cb(StringView(tmp.data() - 1, 1), UrlToken::Blank);
@@ -316,7 +248,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 			}
 		} else {
 			// host
-			if (!validateHost(tmp)) {
+			if (!UrlView::validateHost(tmp)) {
 				return false;
 			}
 
@@ -351,7 +283,7 @@ bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb)
 		} else {
 			tmp = s.readChars<UnreservedUni, SubDelim, StringView::Chars<'[', ']'>>();
 		}
-		if (!validateHost(tmp)) {
+		if (!UrlView::validateHost(tmp)) {
 			return false;
 		}
 		cb(tmp, UrlToken::Host);

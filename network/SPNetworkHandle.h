@@ -29,7 +29,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::network {
 
 template <typename Interface>
-class Handle : private HandleData<Interface> {
+class SP_PUBLIC Handle : private HandleData<Interface> {
 public:
 	using Method = network::Method;
 
@@ -108,7 +108,7 @@ protected:
 };
 
 template <typename Interface>
-class MultiHandle : public Interface::AllocBaseType {
+class SP_PUBLIC MultiHandle : public Interface::AllocBaseType {
 public:
 	// handle should be preserved until operation ends
 	// multihandle do not stores handles by itself

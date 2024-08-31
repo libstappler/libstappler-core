@@ -60,10 +60,26 @@ static int Gif_InputFunc(GifFileType *file, GifByteType *bytes, int count) {
 	return 0;
 }
 
+static int bitmap_DGifCloseFile(GifFileType * GifFile, int *error) {
+#if GIFLIB_MAJOR >= 5
+	return DGifCloseFile(GifFile, error);
+#else
+	return DGifCloseFile(GifFile);
+#endif
+}
+
+static GifFileType *bitmap_DGifOpen(void *userPtr, InputFunc readFunc, int *error) {
+#if GIFLIB_MAJOR >= 5
+	return DGifOpen(userPtr, readFunc, error);
+#else
+	return DGifOpen(userPtr, readFunc);
+#endif
+}
+
 struct GifReadStruct {
 	~GifReadStruct() {
 		if (!file) {
-			DGifCloseFile(file, &error);
+			bitmap_DGifCloseFile(file, &error);
 			file = nullptr;
 		}
 	}
@@ -72,7 +88,7 @@ struct GifReadStruct {
 
 	bool init(const uint8_t *inputData, size_t size) {
 		reader._data = BytesViewTemplate<Endian::Network>(inputData, size);
-		file = DGifOpen((void *)&reader, &Gif_InputFunc, &error);
+		file = bitmap_DGifOpen((void *)&reader, &Gif_InputFunc, &error);
 
 		if (!file || error != 0) {
 			log::error("GIF", "fail to open file");
@@ -111,6 +127,7 @@ struct GifReadStruct {
 			}
 		}
 
+#if GIFLIB_MAJOR >= 5
 		if (file->ExtensionBlockCount > 0) {
 			for (size_t i = 0; i < size_t(file->ExtensionBlockCount); ++ i) {
 				GraphicsControlBlock GCB;
@@ -130,6 +147,7 @@ struct GifReadStruct {
 				}
 			}
 		}
+#endif
 
 		outputData.width = file->SavedImages->ImageDesc.Width;
 		outputData.height = file->SavedImages->ImageDesc.Height;

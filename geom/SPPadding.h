@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
-struct Padding {
+struct SP_PUBLIC Padding {
 	float top = 0.0f;
 	float right = 0.0f;
 	float bottom = 0.0f;

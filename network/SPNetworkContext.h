@@ -47,7 +47,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::network {
 
 template <typename Interface>
-struct Context {
+struct SP_PUBLIC Context {
 	Rc<RefBase<Interface>> userdata;
 	CURL *curl = nullptr;
 	CURLSH *share = nullptr;
@@ -68,13 +68,13 @@ struct Context {
 };
 
 template <typename Interface>
-bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx, const Callback<bool(CURL *)> &onBeforePerform);
+SP_PUBLIC bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx, const Callback<bool(CURL *)> &onBeforePerform);
 
 template <typename Interface>
-bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callback<bool(CURL *)> &onAfterPerform);
+SP_PUBLIC bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callback<bool(CURL *)> &onAfterPerform);
 
 template <typename Interface>
-bool perform(HandleData<Interface> &iface,
+SP_PUBLIC bool perform(HandleData<Interface> &iface,
 		const Callback<bool(CURL *)> &onBeforePerform, const Callback<bool(CURL *)> &onAfterPerform);
 
 }

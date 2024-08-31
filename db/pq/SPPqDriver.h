@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
 struct DriverSym;
 
-class Driver : public sql::Driver {
+class SP_PUBLIC Driver : public sql::Driver {
 public:
 	enum class Status {
 		Empty = 0,
@@ -122,7 +122,7 @@ protected:
 	const void *_external = nullptr;
 };
 
-class ResultCursor : public db::ResultCursor {
+class SP_PUBLIC ResultCursor final : public db::ResultCursor {
 public:
 	inline static constexpr bool pgsql_is_success(Driver::Status x) {
 		return (x == Driver::Status::Empty) || (x == Driver::Status::CommandOk) || (x == Driver::Status::TuplesOk) || (x == Driver::Status::SingleTuple);

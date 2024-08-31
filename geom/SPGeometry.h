@@ -31,7 +31,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
-struct Metric {
+struct SP_PUBLIC Metric {
 	enum Units : uint8_t {
 		Percent,
 		Px,
@@ -80,7 +80,7 @@ struct Metric {
 	inline bool operator != (const Metric &other) const = default;
 };
 
-struct Size2 {
+struct SP_PUBLIC Size2 {
 	static const Size2 ZERO;
 
 	float width = 0.0f;
@@ -127,7 +127,7 @@ struct Size2 {
 };
 
 
-struct Size3 {
+struct SP_PUBLIC Size3 {
 	static const Size3 ZERO;
 
 	float width = 0.0f;
@@ -192,7 +192,7 @@ struct Size3 {
 };
 
 
-struct Extent2 {
+struct SP_PUBLIC Extent2 {
 	static const Extent2 ZERO;
 
 	uint32_t width = 0;
@@ -216,7 +216,7 @@ struct Extent2 {
 };
 
 
-struct Extent3 {
+struct SP_PUBLIC Extent3 {
 	static const Extent3 ZERO;
 
 	uint32_t width = 0;
@@ -284,7 +284,7 @@ struct Extent3 {
 };
 
 
-struct Rect {
+struct SP_PUBLIC Rect {
 	static const Rect ZERO;
 
 	Vec2 origin;
@@ -325,14 +325,14 @@ struct Rect {
 	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Rect)
 };
 
-struct UVec2 {
+struct SP_PUBLIC UVec2 {
 	uint32_t x;
 	uint32_t y;
 
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec2)
 };
 
-struct UVec3 {
+struct SP_PUBLIC UVec3 {
 	uint32_t x;
 	uint32_t y;
 	uint32_t z;
@@ -340,7 +340,7 @@ struct UVec3 {
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec3)
 };
 
-struct UVec4 {
+struct SP_PUBLIC UVec4 {
 	uint32_t x;
 	uint32_t y;
 	uint32_t z;
@@ -349,7 +349,7 @@ struct UVec4 {
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec4)
 };
 
-struct URect {
+struct SP_PUBLIC URect {
 	uint32_t x = 0;
 	uint32_t y = 0;
 	uint32_t width = 0;
@@ -386,7 +386,7 @@ constexpr Rect Rect::ZERO = Rect(0.0f, 0.0f, 0.0f, 0.0f);
 
 #endif
 
-Rect TransformRect(const Rect& rect, const Mat4& transform);
+SP_PUBLIC Rect TransformRect(const Rect& rect, const Mat4& transform);
 
 inline std::ostream & operator<<(std::ostream & stream, const Rect & obj) {
 	stream << "Rect(x:" << obj.origin.x << " y:" << obj.origin.y

@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::search {
 
-class Configuration : public memory::AllocPool {
+class SP_PUBLIC Configuration : public memory::AllocPool {
 public:
 	using StemmerCallback = Function<bool(StringView, const Callback<void(StringView)> &)>;
 	using StemWordCallback = Callback<void(StringView, StringView, ParserToken)>;

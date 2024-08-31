@@ -37,7 +37,7 @@ struct PathXRef {
 	Mat4 mat;
 };
 
-class VectorPath : public RefBase<Interface> {
+class SP_PUBLIC VectorPath : public RefBase<Interface> {
 public:
 	using DrawStyle = geom::DrawStyle;
 	using Winding = geom::Winding;

@@ -29,10 +29,18 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::idn {
 
 template <typename Interface>
-auto toAscii(StringView, bool validate = true) -> typename Interface::StringType;
+SP_PUBLIC auto toAscii(StringView, bool validate = true) -> typename Interface::StringType;
 
 template <typename Interface>
-auto toUnicode(StringView, bool validate = false) -> typename Interface::StringType;
+SP_PUBLIC auto toUnicode(StringView, bool validate = false) -> typename Interface::StringType;
+
+template <typename Interface>
+SP_PUBLIC auto encodePunycode(StringView) -> typename Interface::StringType;
+
+template <typename Interface>
+SP_PUBLIC auto decodePunycode(StringView) -> typename Interface::StringType;
+
+SP_PUBLIC bool isKnownTld(StringView);
 
 }
 

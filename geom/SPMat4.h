@@ -31,6 +31,8 @@ This file was modified for stappler project
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
+class alignas(16) Mat4;
+
 /**
  * Defines a 4 x 4 floating point matrix representing a 3D transformation.
  *
@@ -62,7 +64,7 @@ namespace STAPPLER_VERSIONIZED stappler::geom {
  *
  * @see Transform
  */
-class alignas(16) Mat4 {
+class SP_PUBLIC Mat4 {
 public:
 	static void createLookAt(const Vec3 &eyePosition, const Vec3 &targetPosition, const Vec3 &up, Mat4 *dst);
 

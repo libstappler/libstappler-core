@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-class Scheme : public AllocBase {
+class SP_PUBLIC Scheme : public AllocBase {
 public:
 	enum Options {
 		None = 0,

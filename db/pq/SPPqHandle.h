@@ -36,7 +36,7 @@ enum class TransactionLevel {
 	Serialized,
 };
 
-class Handle final : public db::sql::SqlHandle {
+class SP_PUBLIC Handle final : public db::sql::SqlHandle {
 public:
 	Handle(const Driver *, Driver::Handle);
 
@@ -89,7 +89,7 @@ protected:
 	TransactionLevel level = TransactionLevel::ReadCommited;
 };
 
-class PgQueryInterface : public db::QueryInterface {
+class SP_PUBLIC PgQueryInterface : public db::QueryInterface {
 public:
 	using Binder = db::Binder;
 

@@ -252,7 +252,7 @@ static BackendCtx s_gnuTLSCtx = {
 	.title = StringView("GnuTLS"),
 	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsPKCS8 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary
 		| BackendFlags::SupportsGost3410_2012 | BackendFlags::SupportsGost3412_2015,
-	.initialize = [] () {
+	.initialize = [] (BackendCtx &) {
 		log::verbose("Crypto", "GnuTLS backend loaded: ", gnutls_check_version("3.0.0"));
 		/*gnutls_global_set_log_level(9);
 		gnutls_global_set_log_function([] (int l, const char *data) {
@@ -260,7 +260,7 @@ static BackendCtx s_gnuTLSCtx = {
 		})*/;
 		gnutls_global_init();
 	},
-	.finalize = [] () {
+	.finalize = [] (BackendCtx &) {
 		gnutls_global_deinit();
 	},
 	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) -> bool {

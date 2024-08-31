@@ -36,6 +36,10 @@ static SharedSymbol s_bitmapSharedSymbols[] = {
 		(void *)static_cast<StringView (*) (FileFormat)>(getMimeType)},
 	SharedSymbol{"getMimeType(StringView)",
 		(void *)static_cast<StringView (*) (StringView)>(getMimeType)},
+	SharedSymbol{"getImageSize(io::Producer const&,uint32_t&,uint32_t&)",
+		(void *)static_cast<bool (*) (io::Producer const&,uint32_t&,uint32_t&)>(getImageSize)},
+	SharedSymbol{"getImageSize(StringView,uint32_t&,uint32_t&)",
+		(void *)static_cast<bool (*) (StringView,uint32_t&,uint32_t&)>(getImageSize)},
 };
 
 static SharedModule s_bitmapSharedModule("bitmap", s_bitmapSharedSymbols, sizeof(s_bitmapSharedSymbols) / sizeof(SharedSymbol));

@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-class Object : public stappler::data::WrapperTemplate<Interface> {
+class SP_PUBLIC Object : public stappler::data::WrapperTemplate<Interface> {
 public:
 	Object(Value &&, const Scheme &);
 

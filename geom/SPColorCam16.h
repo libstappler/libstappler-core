@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::geom {
 // Использовать float или double для расчётов Cam16
 using Cam16Float = float;
 
-struct ViewingConditions {
+struct SP_PUBLIC ViewingConditions {
 	static const ViewingConditions DEFAULT;
 
 	using Float = Cam16Float;
@@ -124,7 +124,7 @@ constexpr ViewingConditions ViewingConditions::DEFAULT = {
 
 #endif
 
-struct Cam16 {
+struct SP_PUBLIC Cam16 {
 	using Float = ViewingConditions::Float;
 
 	static constexpr Float linearized(const int rgb_component) {

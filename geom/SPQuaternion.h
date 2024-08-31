@@ -73,7 +73,7 @@ class Mat4;
  * For the point p = (1.0, 1.0, 1.0), the following figures show the trajectories of p
  * using lerp, slerp, and squad.
  */
-class Quaternion {
+class SP_PUBLIC Quaternion {
 public:
 	static void multiply(const Quaternion& q1, const Quaternion& q2, Quaternion* dst);
 	static void lerp(const Quaternion& q1, const Quaternion& q2, float t, Quaternion* dst);

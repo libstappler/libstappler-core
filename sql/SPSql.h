@@ -74,8 +74,8 @@ enum class Operator {
 	Or,
 };
 
-Pair<StringView, bool> encodeComparation(Comparation);
-Pair<Comparation, bool> decodeComparation(StringView);
+SP_PUBLIC Pair<StringView, bool> encodeComparation(Comparation);
+SP_PUBLIC Pair<Comparation, bool> decodeComparation(StringView);
 
 template <typename T>
 struct PatternComparator {
@@ -85,7 +85,7 @@ struct PatternComparator {
 };
 
 template <typename Interface>
-struct SimpleBinder : public Interface::AllocBaseType {
+struct SP_PUBLIC SimpleBinder : public Interface::AllocBaseType {
 	void writeBind(std::ostream &stream, const data::ValueTemplate<Interface> &val) {
 		stream << data::toString(val);
 	}
@@ -124,7 +124,7 @@ struct SimpleBinder : public Interface::AllocBaseType {
 };
 
 template <typename Binder, typename Interface>
-class Query : public Interface::AllocBaseType {
+class SP_PUBLIC Query : public Interface::AllocBaseType {
 public:
 	using Stream = typename Interface::StringStreamType;
 	using String = typename Interface::StringType;

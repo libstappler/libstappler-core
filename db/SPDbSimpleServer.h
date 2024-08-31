@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-struct SimpleServerData : AllocBase {
+struct SP_PUBLIC SimpleServerData : AllocBase {
 	pool_t *staticPool = nullptr;
 	pool_t *contextPool = nullptr;
 	pool_t *updatePool = nullptr;
@@ -46,7 +46,7 @@ struct SimpleServerData : AllocBase {
 	mutable Vector<Function<void(const Transaction &)>> *asyncTasks = nullptr;
 };
 
-class SimpleServer : public RefBase<memory::StandartInterface>, public ApplicationInterface {
+class SP_PUBLIC SimpleServer : public RefBase<memory::StandartInterface>, public ApplicationInterface {
 public:
 	virtual ~SimpleServer();
 	SimpleServer();

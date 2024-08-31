@@ -470,29 +470,31 @@ static bool OpenSSL_initSPGost() {
 #endif
 
 	auto e = ENGINE_get_pkey_meth_engine(NID_id_GostR3410_2012_256);
-	if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_256)) {
-		s_ossl_GostR3410_2012_256_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_256, 0);
-		EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_256_resign, meth);
+	if (e) {
+		if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_256)) {
+			s_ossl_GostR3410_2012_256_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_256, 0);
+			EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_256_resign, meth);
 
-		EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_256_resign,
-				&s_ossl_GostR3410_2012_256_psign_init, &s_ossl_GostR3410_2012_256_psign);
-		EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_256_resign, s_ossl_GostR3410_2012_256_psign_init,
-				&s_ossl_GostR3410_2012_256_psign_resign);
+			EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_256_resign,
+					&s_ossl_GostR3410_2012_256_psign_init, &s_ossl_GostR3410_2012_256_psign);
+			EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_256_resign, s_ossl_GostR3410_2012_256_psign_init,
+					&s_ossl_GostR3410_2012_256_psign_resign);
 
-		s_ossl_GostR3410_2012_meths[0] = s_ossl_GostR3410_2012_256_resign;
-		EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_256_resign);
-	}
-	if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_512)) {
-		s_ossl_GostR3410_2012_512_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_512, 0);
-		EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_512_resign, meth);
+			s_ossl_GostR3410_2012_meths[0] = s_ossl_GostR3410_2012_256_resign;
+			EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_256_resign);
+		}
+		if (auto meth = ENGINE_get_pkey_meth(e, NID_id_GostR3410_2012_512)) {
+			s_ossl_GostR3410_2012_512_resign = EVP_PKEY_meth_new(NID_id_GostR3410_2012_512, 0);
+			EVP_PKEY_meth_copy(s_ossl_GostR3410_2012_512_resign, meth);
 
-		EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_512_resign,
-				&s_ossl_GostR3410_2012_512_psign_init, &s_ossl_GostR3410_2012_512_psign);
-		EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_512_resign, s_ossl_GostR3410_2012_512_psign_init,
-				&s_ossl_GostR3410_2012_512_psign_resign);
+			EVP_PKEY_meth_get_sign(s_ossl_GostR3410_2012_512_resign,
+					&s_ossl_GostR3410_2012_512_psign_init, &s_ossl_GostR3410_2012_512_psign);
+			EVP_PKEY_meth_set_sign(s_ossl_GostR3410_2012_512_resign, s_ossl_GostR3410_2012_512_psign_init,
+					&s_ossl_GostR3410_2012_512_psign_resign);
 
-		s_ossl_GostR3410_2012_meths[1] = s_ossl_GostR3410_2012_512_resign;
-		EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_512_resign);
+			s_ossl_GostR3410_2012_meths[1] = s_ossl_GostR3410_2012_512_resign;
+			EVP_PKEY_meth_add0(s_ossl_GostR3410_2012_512_resign);
+		}
 	}
 
 	if (s_ossl_GostR3410_2012_meths[0] && s_ossl_GostR3410_2012_meths[1]) {
@@ -523,17 +525,18 @@ static BackendCtx s_openSSLCtx = {
 	.title = StringView("OpenSSL"),
 	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsPKCS8 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary
 			| BackendFlags::SupportsGost3410_2012 | BackendFlags::SupportsGost3412_2015,
-	.initialize = [] () {
+	.initialize = [] (BackendCtx &ctx) {
 		auto gostLoaded = OpenSSL_initSPGost();
 		OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, NULL);
 		if (gostLoaded) {
 			s_opensslHasGost = true;
 			log::verbose("Crypto", "OpenSSL+gost backend loaded");
 		} else {
+			ctx.flags &= ~(BackendFlags::SupportsGost3410_2012 | BackendFlags::SupportsGost3412_2015);
 			log::warn("Crypto", "OpenSSL backend loaded without GOST support");
 		}
 	},
-	.finalize = [] () {
+	.finalize = [] (BackendCtx &ctx) {
 		if (s_opensslHasGost) {
 			SP_ERR_unload_GOST_strings();
 		}
@@ -678,7 +681,10 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		case HashFunction::GOST_3411:
-			if (auto md = EVP_get_digestbyname("md_gost12_256")) {
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				success = false;
+			} else if (auto md = EVP_get_digestbyname("md_gost12_256")) {
 				if (EVP_DigestInit(mdctx, md) == 0) {
 					success = false;
 				}
@@ -717,7 +723,10 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		case HashFunction::GOST_3411:
-			if (auto md = EVP_get_digestbyname("md_gost12_512")) {
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				success = false;
+			} else if (auto md = EVP_get_digestbyname("md_gost12_512")) {
 				if (EVP_DigestInit(mdctx, md) == 0) {
 					success = false;
 				}
@@ -780,6 +789,11 @@ static BackendCtx s_openSSLCtx = {
 			case KeyBits::_4096: if (!EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, 4096)) { return finalize(false); } break;
 			}
 		} else if (type == KeyType::GOST3410_2012_256) {
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return false;
+			}
+
 			kctx = EVP_PKEY_CTX_new_id(NID_id_GostR3410_2012_256, NULL);
 			if (!kctx) { return finalize(false); }
 
@@ -791,6 +805,11 @@ static BackendCtx s_openSSLCtx = {
 			if (!EVP_PKEY_keygen_init(kctx)) { return finalize(false); }
 
 		} else if (type == KeyType::GOST3410_2012_512) {
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return false;
+			}
+
 			kctx = EVP_PKEY_CTX_new_id(NID_id_GostR3410_2012_512, NULL);
 			if (!kctx) { return finalize(false); }
 
@@ -890,6 +909,10 @@ static BackendCtx s_openSSLCtx = {
 			return value;
 		};
 
+		if (!key) {
+			return finalize(false);
+		}
+
 		bp = BIO_new(BIO_s_mem());
 		if (!bp) {
 			return finalize(false);
@@ -941,6 +964,10 @@ static BackendCtx s_openSSLCtx = {
 			return value;
 		};
 
+		if (!key) {
+			return finalize(false);
+		}
+
 		bp = BIO_new(BIO_s_mem());
 		if (!bp) {
 			return finalize(false);
@@ -980,6 +1007,10 @@ static BackendCtx s_openSSLCtx = {
 		return finalize(false);
 	},
 	.privExportPublic = [] (KeyContext &target, const KeyContext &privKey) {
+		if (!privKey.keyCtx) {
+			return false;
+		}
+
 		auto bp = BIO_new(BIO_s_mem());
 		if (!bp) {
 			return false;
@@ -1031,6 +1062,11 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		case SignAlgorithm::GOST_256:
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return cleanup(false);
+			}
+
 			if (auto md = EVP_get_digestbyname("md_gost12_256")) {
 				if (1 != EVP_DigestSignInit(mdctx, &pctx, md, NULL, key)) {
 					return cleanup(false);
@@ -1040,6 +1076,11 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		case SignAlgorithm::GOST_512:
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return cleanup(false);
+			}
+
 			if (auto md = EVP_get_digestbyname("md_gost12_512")) {
 				if (1 != EVP_DigestSignInit(mdctx, &pctx, md, NULL, key)) {
 					return cleanup(false);
@@ -1112,6 +1153,11 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		case SignAlgorithm::GOST_256:
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return cleanup(false);
+			}
+
 			if (auto md = EVP_get_digestbyname("md_gost12_256")) {
 				if (1 != EVP_DigestVerifyInit(mdctx, NULL, md, NULL, key)) {
 					return cleanup(false);
@@ -1121,6 +1167,11 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		case SignAlgorithm::GOST_512:
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return cleanup(false);
+			}
+
 			if (auto md = EVP_get_digestbyname("md_gost12_512")) {
 				if (1 != EVP_DigestVerifyInit(mdctx, NULL, md, NULL, key)) {
 					return cleanup(false);
@@ -1261,11 +1312,21 @@ static BackendCtx s_openSSLCtx = {
 		case KeyType::GOST3410_2012_256:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return false;
+			}
+
 			EVP_PKEY_set1_engine(key, s_ossl_Engine);
 			success = s_openSSLCtx.privSign(ctx, cb, data, SignAlgorithm::GOST_256);
 			EVP_PKEY_set1_engine(key, nullptr);
 			break;
 		case KeyType::GOST3410_2012_512:
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return false;
+			}
+
 			EVP_PKEY_set1_engine(key, s_ossl_Engine);
 			success = s_openSSLCtx.privSign(ctx, cb, data, SignAlgorithm::GOST_512);
 			EVP_PKEY_set1_engine(key, nullptr);
@@ -1390,6 +1451,10 @@ static BackendCtx s_openSSLCtx = {
 			return value;
 		};
 
+		if (!key) {
+			return finalize(false);
+		}
+
 		bp = BIO_new(BIO_s_mem());
 		if (!bp) {
 			return finalize(false);
@@ -1422,6 +1487,9 @@ static BackendCtx s_openSSLCtx = {
 			return value;
 		};
 
+		if (!key) {
+			return finalize(false);
+		}
 
 		bp = BIO_new(BIO_s_mem());
 		if (!bp) {
@@ -1473,6 +1541,11 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		case SignAlgorithm::GOST_256:
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return cleanup(false);
+			}
+
 			if (auto md = EVP_get_digestbyname("md_gost12_256")) {
 				if (1 != EVP_DigestVerifyInit(mdctx, NULL, md, NULL, key)) {
 					return cleanup(false);
@@ -1482,6 +1555,11 @@ static BackendCtx s_openSSLCtx = {
 			}
 			break;
 		case SignAlgorithm::GOST_512:
+			if (!s_opensslHasGost) {
+				log::warn("Crypto", "OpenSSL backend loaded without GOST support");
+				return cleanup(false);
+			}
+
 			if (auto md = EVP_get_digestbyname("md_gost12_512")) {
 				if (1 != EVP_DigestVerifyInit(mdctx, NULL, md, NULL, key)) {
 					return cleanup(false);

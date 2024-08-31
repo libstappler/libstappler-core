@@ -474,8 +474,12 @@ struct Result {
 		static constexpr bool Name = sizeof(CallTest_ ## Name<T>(0)) == sizeof(success);
 
 SP_PUBLIC const char * getStapplerVersionString();
-SP_PUBLIC uint32_t getStapplerVersionNumber();
-SP_PUBLIC uint32_t getStapplerVersionBuild();
+
+// API version number
+SP_PUBLIC uint32_t getStapplerVersionApi();
+
+// Build revision version number
+SP_PUBLIC uint32_t getStapplerVersionRev();
 
 }
 

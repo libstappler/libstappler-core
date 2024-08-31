@@ -29,8 +29,9 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 struct DriverHandle;
+struct DriverSym;
 
-class Driver : public sql::Driver {
+class SP_PUBLIC Driver : public sql::Driver {
 public:
 	static Driver *open(pool_t *, ApplicationInterface *, StringView path = StringView());
 
@@ -61,13 +62,16 @@ public:
 
 	uint64_t insertWord(Handle, StringView) const;
 
+	const DriverSym *getHandle() const { return _handle; }
+
 protected:
-	Driver(pool_t *, ApplicationInterface *, StringView);
+	Driver(pool_t *, ApplicationInterface *, StringView, DriverSym *);
 
 	bool _init = false;
+	DriverSym *_handle = nullptr;
 };
 
-class ResultCursor : public db::ResultCursor {
+class SP_PUBLIC ResultCursor final : public db::ResultCursor {
 public:
 	static bool statusIsSuccess(int x);
 

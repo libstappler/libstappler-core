@@ -96,7 +96,7 @@ enum class VerticalAlign : EnumSize {
 };
 
 // slnt axis or special value for Italic
-struct FontStyle : ValueWrapper<int16_t, class FontStyleFlag> {
+struct SP_PUBLIC FontStyle : ValueWrapper<int16_t, class FontStyleFlag> {
 	static const FontStyle Normal;
 	static const FontStyle Italic;
 	static const FontStyle Oblique;
@@ -108,7 +108,7 @@ struct FontStyle : ValueWrapper<int16_t, class FontStyleFlag> {
 	using ValueWrapper::ValueWrapper;
 };
 
-struct FontWeight : ValueWrapper<uint16_t, class FontWeightFlag> {
+struct SP_PUBLIC FontWeight : ValueWrapper<uint16_t, class FontWeightFlag> {
 	static const FontWeight Thin;
 	static const FontWeight ExtraLight;
 	static const FontWeight Light;
@@ -124,7 +124,7 @@ struct FontWeight : ValueWrapper<uint16_t, class FontWeightFlag> {
 	using ValueWrapper::ValueWrapper;
 };
 
-struct FontStretch : ValueWrapper<uint16_t, class FontStretchFlag> {
+struct SP_PUBLIC FontStretch : ValueWrapper<uint16_t, class FontStretchFlag> {
 	static const FontStretch UltraCondensed;
 	static const FontStretch ExtraCondensed;
 	static const FontStretch Condensed;
@@ -138,7 +138,7 @@ struct FontStretch : ValueWrapper<uint16_t, class FontStretchFlag> {
 	using ValueWrapper::ValueWrapper;
 };
 
-struct FontGrade : ValueWrapper<int16_t, class FontGradeFlag> {
+struct SP_PUBLIC FontGrade : ValueWrapper<int16_t, class FontGradeFlag> {
 	static const FontGrade Thin;
 	static const FontGrade Reduced;
 	static const FontGrade Normal;
@@ -167,7 +167,7 @@ enum class ListStyleType : EnumSize {
 	UpperRoman
 };
 
-struct FontSize {
+struct SP_PUBLIC FontSize {
 	static const FontSize XXSmall;
 	static const FontSize XSmall;
 	static const FontSize Small;
@@ -208,7 +208,7 @@ struct FontSize {
 	uint16_t value = 0;
 };
 
-struct TextParameters {
+struct SP_PUBLIC TextParameters {
 	TextTransform textTransform = TextTransform::None;
 	TextDecoration textDecoration = TextDecoration::None;
 	WhiteSpace whiteSpace = WhiteSpace::Normal;
@@ -221,7 +221,7 @@ struct TextParameters {
 	inline bool operator != (const TextParameters &other) const = default;
 };
 
-struct FontLayoutParameters {
+struct SP_PUBLIC FontLayoutParameters {
 	FontStyle fontStyle = FontStyle::Normal;
 	FontWeight fontWeight = FontWeight::Normal;
 	FontStretch fontStretch = FontStretch::Normal;
@@ -231,7 +231,7 @@ struct FontLayoutParameters {
 	inline bool operator != (const FontLayoutParameters &other) const = default;
 };
 
-struct FontSpecializationVector : FontLayoutParameters {
+struct SP_PUBLIC FontSpecializationVector : FontLayoutParameters {
 	FontSize fontSize = FontSize(14);
 	float density = 1.0f;
 
@@ -242,7 +242,7 @@ struct FontSpecializationVector : FontLayoutParameters {
 	inline bool operator != (const FontSpecializationVector &other) const = default;
 };
 
-struct FontParameters : FontSpecializationVector {
+struct SP_PUBLIC FontParameters : FontSpecializationVector {
 	static FontParameters create(StringView, memory::pool_t * = nullptr);
 
 	template <typename Interface>
@@ -265,7 +265,7 @@ struct FontParameters : FontSpecializationVector {
 	inline bool operator != (const FontParameters &other) const = default;
 };
 
-struct FontVariations {
+struct SP_PUBLIC FontVariations {
 	template <typename T>
 	struct Variations {
 		T min;

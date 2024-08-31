@@ -52,7 +52,7 @@ SP_DEFINE_ENUM_AS_MASK(DrawStyle)
 
 // Helper class, that transform lines in SVG notation (bezier2/3, arcs) into series of segments,
 // then output this segments to contour in tesselator
-struct LineDrawer {
+struct SP_PUBLIC LineDrawer {
 	// `e` defines relative error in terms of maximum allowed distance between the point,
 	// where line should be in perfect implementation, and the segment in output
 	// For perfect VG quality, it should be around 0.75 of screen pixel

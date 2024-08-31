@@ -23,8 +23,7 @@ THE SOFTWARE.
 
 #include "SPSqliteHandle.h"
 #include "SPSqliteDriver.h"
-#include "SPSqliteDriverHandle.h"
-#include "sqlite3.h"
+#include "SPSqliteDriverHandle.cc"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
@@ -308,7 +307,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	auto queryString = query.getQuery().weak();
 
 	sqlite3_stmt *stmt = nullptr;
-	auto err = sqlite3_prepare_v3((sqlite3 *)conn.get(), queryString.data(), queryString.size(), 0, &stmt, nullptr);
+	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), queryString.data(), queryString.size(), 0, &stmt, nullptr);
 	if (err != SQLITE_OK) {
 		auto info = driver->getInfo(conn, err);
 		info.setString(query.getQuery().str(), "query");
@@ -328,17 +327,17 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	for (auto &it : queryInterface->params) {
 		switch (it.type) {
 		case Type::Text:
-			sqlite3_bind_text(stmt, it.idx, (const char *)it.data.data(), it.data.size() - 1, SQLITE_STATIC);
+			driver->getHandle()->_bind_text(stmt, it.idx, (const char *)it.data.data(), it.data.size() - 1, SQLITE_STATIC);
 			break;
 		case Type::Bytes:
-			sqlite3_bind_blob(stmt, it.idx, it.data.data(), it.data.size(), SQLITE_STATIC);
+			driver->getHandle()->_bind_blob(stmt, it.idx, it.data.data(), it.data.size(), SQLITE_STATIC);
 			break;
 		default:
 			break;
 		}
 	}
 
-	err = sqlite3_step(stmt);
+	err = driver->getHandle()->step(stmt);
 	if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
 		auto info = driver->getInfo(conn, err);
 		info.setString(query.getQuery().str(), "query");
@@ -350,7 +349,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 		}
 		driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
-		sqlite3_finalize(stmt);
+		driver->getHandle()->finalize(stmt);
 		cancelTransaction();
 		return false;
 	}
@@ -379,7 +378,7 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 		}
 
 		sqlite3_stmt *stmt = nullptr;
-		auto err = sqlite3_prepare_v3((sqlite3 *)conn.get(), nextQuery.data(), nextQuery.size(), 0, &stmt, &outPtr);
+		auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), nextQuery.data(), nextQuery.size(), 0, &stmt, &outPtr);
 		if (err != SQLITE_OK) {
 			auto len = outPtr - nextQuery.data();
 			StringView performedQuery(nextQuery.data(), len);
@@ -397,7 +396,7 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 			return false;
 		}
 
-		err = sqlite3_step(stmt);
+		err = driver->getHandle()->step(stmt);
 
 		if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
 			auto info = driver->getInfo(conn, err);
@@ -410,13 +409,13 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 			}
 			driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
 			driver->getApplicationInterface()->error("Database", "Fail to perform query");
-			sqlite3_finalize(stmt);
+			driver->getHandle()->finalize(stmt);
 			cancelTransaction();
 			return false;
 		}
 
 		success = ResultCursor::statusIsSuccess(err);
-		sqlite3_finalize(stmt);
+		driver->getHandle()->finalize(stmt);
 	}
 	return success;
 }
@@ -428,7 +427,7 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 	}
 
 	sqlite3_stmt *stmt = nullptr;
-	auto err = sqlite3_prepare_v3((sqlite3 *)conn.get(), query.data(), query.size(), 0, &stmt, nullptr);
+	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), query.data(), query.size(), 0, &stmt, nullptr);
 	if (err != SQLITE_OK) {
 		auto info = driver->getInfo(conn, err);
 		info.setString(query, "query");
@@ -444,7 +443,7 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 		return false;
 	}
 
-	err = sqlite3_step(stmt);
+	err = driver->getHandle()->step(stmt);
 
 	ResultCursor cursor(driver, conn, Driver::Result(stmt), err);
 	db::sql::Result ret(&cursor);

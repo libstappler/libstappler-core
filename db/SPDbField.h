@@ -215,7 +215,7 @@ enum class ImagePolicy {
 // max size for files
 using MaxFileSize = stappler::ValueWrapper<size_t, class MaxFileSizeTag>;
 
-struct MaxImageSize {
+struct SP_PUBLIC MaxImageSize {
 	size_t width = 128;
 	size_t height = 128;
 	ImagePolicy policy = ImagePolicy::Resize;
@@ -225,7 +225,7 @@ struct MaxImageSize {
 	: width(w), height(h), policy(p) { }
 };
 
-struct MinImageSize {
+struct SP_PUBLIC MinImageSize {
 	size_t width = 0;
 	size_t height = 0;
 	ImagePolicy policy = ImagePolicy::Reject;
@@ -235,7 +235,7 @@ struct MinImageSize {
 	: width(w), height(h), policy(p) { }
 };
 
-struct Thumbnail {
+struct SP_PUBLIC Thumbnail {
 	size_t width;
 	size_t height;
 	String name;
@@ -287,7 +287,7 @@ using VirtualReadFn = Function<Value(const Scheme &objScheme, const Value &)>;
 
 using VirtualWriteFn = Function<bool(const Scheme &objScheme, const Value &, Value &)>;
 
-struct AutoFieldScheme : AllocBase {
+struct SP_PUBLIC AutoFieldScheme : AllocBase {
 	using ReqVec = Vector<String>;
 
 	const Scheme &scheme;
@@ -300,19 +300,19 @@ struct AutoFieldScheme : AllocBase {
 	AutoFieldScheme(const Scheme &, ReqVec &&, ReqVec &&);
 };
 
-struct AutoFieldDef {
+struct SP_PUBLIC AutoFieldDef {
 	Vector<AutoFieldScheme> schemes;
 	DefaultFn defaultFn;
 	Vector<String> requireFields; // fields to acquire from field's scheme object when defaultFn is called
 };
 
 // definition for scheme's unique constraints
-struct UniqueConstraintDef {
+struct SP_PUBLIC UniqueConstraintDef {
 	StringView name;
 	Vector<StringView> fields;
 };
 
-struct CustomFieldInfo {
+struct SP_PUBLIC CustomFieldInfo {
 	bool isIndexable = false;
 	String typeName;
 
@@ -335,7 +335,7 @@ struct CustomFieldInfo {
 
 struct FieldCustom;
 
-class Field : public AllocBase {
+class SP_PUBLIC Field : public AllocBase {
 public:
 	template <typename ... Args> static Field Data(String && name, Args && ... args);
 	template <typename ... Args> static Field Integer(String && name, Args && ... args);
@@ -465,7 +465,7 @@ protected:
 };
 
 
-struct FieldText : Field::Slot {
+struct SP_PUBLIC FieldText : Field::Slot {
 	virtual ~FieldText() { }
 
 	template <typename ... Args>
@@ -479,7 +479,7 @@ struct FieldText : Field::Slot {
 	size_t minLength = config::FIELD_TEXT_DEFAULT_MIN_SIZE, maxLength = config::FIELD_TEXT_DEFAULT_MAX_SIZE;
 };
 
-struct FieldPassword : Field::Slot {
+struct SP_PUBLIC FieldPassword : Field::Slot {
 	virtual ~FieldPassword() { }
 
 	template <typename ... Args>
@@ -495,7 +495,7 @@ struct FieldPassword : Field::Slot {
 	StringView salt = config::FIELD_PASSWORD_DEFAULT_SALT;
 };
 
-struct FieldExtra : Field::Slot {
+struct SP_PUBLIC FieldExtra : Field::Slot {
 	virtual ~FieldExtra() { }
 
 	template <typename ... Args>
@@ -512,7 +512,7 @@ struct FieldExtra : Field::Slot {
 	Map<String, Field> fields;
 };
 
-struct FieldFile : Field::Slot {
+struct SP_PUBLIC FieldFile : Field::Slot {
 	virtual ~FieldFile() { }
 
 	template <typename ... Args>
@@ -526,7 +526,7 @@ struct FieldFile : Field::Slot {
 	Vector<String> allowedTypes;
 };
 
-struct FieldImage : Field::Slot {
+struct SP_PUBLIC FieldImage : Field::Slot {
 	virtual ~FieldImage() { }
 
 	template <typename ... Args>
@@ -544,7 +544,7 @@ struct FieldImage : Field::Slot {
 	bool primary = true;
 };
 
-struct FieldObject : Field::Slot {
+struct SP_PUBLIC FieldObject : Field::Slot {
 	virtual ~FieldObject() { }
 
 	template <typename ... Args>
@@ -569,7 +569,7 @@ struct FieldObject : Field::Slot {
 	StringView link;
 };
 
-struct FieldArray : Field::Slot {
+struct SP_PUBLIC FieldArray : Field::Slot {
 	virtual ~FieldArray() { }
 
 	template <typename ... Args>
@@ -583,7 +583,7 @@ struct FieldArray : Field::Slot {
 	Field tfield;
 };
 
-struct FieldView : Field::Slot {
+struct SP_PUBLIC FieldView : Field::Slot {
 	enum DeltaOptions {
 		Delta
 	};
@@ -604,7 +604,7 @@ struct FieldView : Field::Slot {
 	bool delta = false;
 };
 
-struct FieldFullTextView : Field::Slot {
+struct SP_PUBLIC FieldFullTextView : Field::Slot {
 	virtual ~FieldFullTextView() { }
 
 	template <typename ... Args>
@@ -624,7 +624,7 @@ struct FieldFullTextView : Field::Slot {
 	const search::Configuration *searchConfiguration = nullptr;
 };
 
-struct FieldCustom : Field::Slot {
+struct SP_PUBLIC FieldCustom : Field::Slot {
 	virtual ~FieldCustom() { }
 
 	template <typename ... Args>
@@ -635,7 +635,7 @@ struct FieldCustom : Field::Slot {
 	virtual StringView getDriverTypeName() const = 0;
 };
 
-struct FieldVirtual : Field::Slot {
+struct SP_PUBLIC FieldVirtual : Field::Slot {
 	virtual ~FieldVirtual() { }
 
 	template <typename ... Args>

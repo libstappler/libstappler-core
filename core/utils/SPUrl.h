@@ -56,7 +56,9 @@ struct SP_PUBLIC UrlView {
 
 	StringView url;
 
-	static bool isValidIdnTld(StringView);
+	static bool validateScheme(const StringView &r);
+	static bool validateHost(StringView &r);
+	static bool validateUserOrPassword(const StringView &r);
 
 	static bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlView::UrlToken)> &cb);
 

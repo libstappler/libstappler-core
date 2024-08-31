@@ -35,6 +35,11 @@ struct SharedSymbol {
 struct SP_PUBLIC SharedModule {
 	static void *acquireSymbol(const char *module, const char *symbol);
 
+	template <typename T = void *>
+	static auto acquireTypedSymbol(const char *module, const char *symbol) -> T {
+		return reinterpret_cast<T>(acquireSymbol(module, symbol));
+	}
+
 	SharedModule(const char *, SharedSymbol *, size_t count);
 	~SharedModule();
 

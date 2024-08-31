@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-class Auth : public AllocBase {
+class SP_PUBLIC Auth : public AllocBase {
 public:
 	using NameFieldCallback = Function<stappler::Pair<const Field *, String>(const Scheme &, const StringView &)>;
 

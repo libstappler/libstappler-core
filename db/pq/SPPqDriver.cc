@@ -192,11 +192,11 @@ struct DriverHandle {
 	pool_t *pool;
 };
 
-struct PgDriverLibStorage {
+struct DriverLibStorage {
 	std::mutex s_driverMutex;
 	std::map<std::string, DriverSym, std::less<void>> s_driverLibs;
 
-	static PgDriverLibStorage *getInstance();
+	static DriverLibStorage *getInstance();
 
 	DriverSym *openLib(StringView lib) {
 		std::unique_lock<std::mutex> lock(s_driverMutex);
@@ -230,12 +230,12 @@ struct PgDriverLibStorage {
 	}
 };
 
-static PgDriverLibStorage *s_libStorage;
+static DriverLibStorage *s_libStorage;
 SPUNUSED static String pg_numeric_to_string(BytesViewNetwork r);
 
-PgDriverLibStorage *PgDriverLibStorage::getInstance() {
+DriverLibStorage *DriverLibStorage::getInstance() {
 	if (!s_libStorage) {
-		s_libStorage = new PgDriverLibStorage;
+		s_libStorage = new DriverLibStorage;
 	}
 	return s_libStorage;
 }
@@ -651,39 +651,39 @@ Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, c
 
 Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView path, const void *external)
 : sql::Driver(pool, app), _external(external) {
-	StringView name;
-	if (path.empty() || path == "pgsql") {
-#if WIN32
-		name = StringView("libpq.dll");
-#else
-		name = StringView("libpq.so");
-#endif
-	}
-
-	if (auto l = PgDriverLibStorage::getInstance()->openLib(name)) {
-		_handle = l;
-
-		pool::cleanup_register(pool::acquire(), [this] {
-			PgDriverLibStorage::getInstance()->closeLib(_handle);
-			_handle = nullptr;
-		});
+	DriverSym *l = nullptr;
+	if (!path.empty() && path != "pgsql") {
+		l = DriverLibStorage::getInstance()->openLib(path);
 	} else {
-#if WIN32
-		name = StringView("libpq.5.dll");
-#else
-		name = StringView("libpq.so.5");
-#endif
-		if (auto l = PgDriverLibStorage::getInstance()->openLib(name)) {
-			_handle = l;
+		StringView name = path;
+		if (path.empty() || path == "pgsql") {
+	#if WIN32
+			name = StringView("libpq.dll");
+	#else
+			name = StringView("libpq.so");
+	#endif
+		}
 
-			pool::cleanup_register(pool::acquire(), [this] {
-				PgDriverLibStorage::getInstance()->closeLib(_handle);
-				_handle = nullptr;
-			});
+		l = DriverLibStorage::getInstance()->openLib(name);
+
+		if (!l) {
+#if WIN32
+			name = StringView("libpq.5.dll");
+#else
+			name = StringView("libpq.so.5");
+#endif
+			l = DriverLibStorage::getInstance()->openLib(name);
 		}
 	}
 
-	if (_handle) {
+	if (l) {
+		_handle = l;
+
+		pool::cleanup_register(pool, [this] {
+			DriverLibStorage::getInstance()->closeLib(_handle);
+			_handle = nullptr;
+		});
+
 		auto it = _customFields.emplace(FieldIntArray::FIELD_NAME);
 		if (!FieldIntArray::registerForPostgres(it.first->second)) {
 			_customFields.erase(it.first);

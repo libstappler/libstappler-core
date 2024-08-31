@@ -49,10 +49,10 @@ SP_PUBLIC bool validateBase64(const StringView &str);
 SP_PUBLIC void makeRandomBytes(uint8_t *, size_t);
 
 template <typename Interface>
-auto makeRandomBytes(size_t) -> typename Interface::BytesType;
+SP_PUBLIC auto makeRandomBytes(size_t) -> typename Interface::BytesType;
 
 template <typename Interface>
-auto makePassword(const StringView &str, const StringView &key = StringView()) -> typename Interface::BytesType;
+SP_PUBLIC auto makePassword(const StringView &str, const StringView &key = StringView()) -> typename Interface::BytesType;
 
 SP_PUBLIC bool validatePassord(const StringView &str, const BytesView &passwd, const StringView &key = StringView());
 
@@ -60,7 +60,7 @@ static constexpr size_t MIN_GENPASSWORD_LENGTH = 6;
 
 // Minimal length is 6
 template <typename Interface>
-auto generatePassword(size_t len) -> typename Interface::StringType;
+SP_PUBLIC auto generatePassword(size_t len) -> typename Interface::StringType;
 
 SP_PUBLIC uint32_t readIp(StringView r);
 SP_PUBLIC uint32_t readIp(StringView r, bool &err);

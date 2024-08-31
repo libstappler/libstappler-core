@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 class Driver;
 
-class SqlQuery : public stappler::sql::Query<db::Binder, Interface> {
+class SP_PUBLIC SqlQuery : public stappler::sql::Query<db::Binder, Interface> {
 public:
 	struct Context : FieldResolver {
 		Context(SqlQuery &, const Scheme &scheme, const Worker &w, const db::Query &q);

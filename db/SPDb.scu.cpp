@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include "SPSqlHandleObject.cc"
 #include "SPSqlHandleProp.cc"
 #include "SPSqlQuery.cc"
+#include "SPSqliteDriverHandle.cc"
 #include "SPSqliteModuleTextSearch.cc"
 #include "SPSqliteModuleUnwrap.cc"
 #include "SPSqliteDriver.cc"

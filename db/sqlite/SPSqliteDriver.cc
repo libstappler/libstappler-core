@@ -22,9 +22,9 @@
  **/
 
 #include "SPSqliteDriver.h"
-#include "SPSqliteDriverHandle.h"
 #include "SPSqliteHandle.h"
 #include "SPDbFieldExtensions.h"
+#include "sqlite3.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
@@ -84,16 +84,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS "__words_idx_id" ON "__words" ("id");
 )Sql");
 
 Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path) {
-	if (sqlite3_initialize() == SQLITE_OK) {
-		return new Driver(pool, app, path);
+	DriverSym *l = nullptr;
+	if (!path.empty() && path != "pgsql") {
+		l = DriverLibStorage::getInstance()->openLib(path);
 	} else {
-		std::cout << "[sqlite::Driver] sqlite3_initialize failed\n";
+		StringView name = path;
+		if (path.empty() || path == "pgsql") {
+	#if WIN32
+			name = StringView("libpq.dll");
+	#else
+			name = StringView("libpq.so");
+	#endif
+		}
+
+		l = DriverLibStorage::getInstance()->openLib(name);
+
+		if (!l) {
+#if WIN32
+			name = StringView("libpq.5.dll");
+#else
+			name = StringView("libpq.so.5");
+#endif
+			l = DriverLibStorage::getInstance()->openLib(name);
+		}
 	}
+
+	if (l) {
+		if (l->_initialize() == SQLITE_OK) {
+			return new Driver(pool, app, path, l);
+		} else {
+			std::cout << "[sqlite::Driver] sqlite3_initialize failed\n";
+			DriverLibStorage::getInstance()->closeLib(l);
+		}
+	}
+
 	return nullptr;
 }
 
 Driver::~Driver() {
-	sqlite3_shutdown();
+	_handle->_shutdown();
 }
 
 bool Driver::init(Handle handle, const Vector<StringView> &) {
@@ -130,61 +159,39 @@ BackendInterface *Driver::acquireInterface(Handle handle, pool_t *pool) const {
 	return ret;
 }
 
-static StringView Driver_exec(pool_t *p, sqlite3 *db, StringView query) {
-	sqlite3_stmt *stmt = nullptr;
-	auto err = sqlite3_prepare_v3(db, query.data(), query.size(), 0, &stmt, nullptr);
-	if (err != SQLITE_OK) {
-		log::error("sqlite::Driver", err, ": ", sqlite3_errstr(int(err)), ": ", sqlite3_errmsg(db), ":\n", query);
-		return StringView();
-	}
-
-	err = sqlite3_step(stmt);
-	if (err != SQLITE_ROW) {
-		if (err < 100) {
-			log::error("sqlite::Driver", err, ": ", sqlite3_errstr(int(err)), ": ", sqlite3_errmsg(db), ":\n", query);
-		}
-		sqlite3_finalize(stmt);
-		return StringView();
-	}
-
-	if (p) {
-		StringView result((const char *)sqlite3_column_text(stmt, 0), size_t(sqlite3_column_bytes(stmt, 0)));
-		result = result.pdup(p);
-		sqlite3_finalize(stmt);
-		return result;
-	}
-
-	sqlite3_finalize(stmt);
-	return StringView();
-}
-
 static void sp_sqlite_next_oid_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
+	auto sym = DriverSym::getCurrent();
+
 	sqlite3_int64 ret = 0;
-	DriverHandle *data = (DriverHandle *)sqlite3_user_data(ctx);
+	DriverHandle *data = (DriverHandle *)sym->_user_data(ctx);
 	std::unique_lock lock(data->mutex);
-	auto err = sqlite3_step(data->oidQuery);
+	auto err = sym->step(data->oidQuery);
 	if (err == SQLITE_ROW) {
-		ret = sqlite3_column_int64(data->oidQuery, 0);
+		ret = sym->_column_int64(data->oidQuery, 0);
 	}
 	if (!ret) {
 		ret = Time::now().toMicros();
 	}
-	sqlite3_reset(data->oidQuery);
-	sqlite3_result_int64(ctx, ret);
+	sym->reset(data->oidQuery);
+	sym->_result_int64(ctx, ret);
 }
 
 static void sp_sqlite_now_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
-	sqlite3_result_int64(ctx, Time::now().toMicros());
+	auto sym = DriverSym::getCurrent();
+
+	sym->_result_int64(ctx, Time::now().toMicros());
 }
 
 static void sp_sqlite_user_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
-	DriverHandle *data = (DriverHandle *)sqlite3_user_data(ctx);
-	sqlite3_result_int64(ctx, data->userId);
+	auto sym = DriverSym::getCurrent();
+
+	DriverHandle *data = (DriverHandle *)sym->_user_data(ctx);
+	sym->_result_int64(ctx, data->userId);
 }
 
 Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const {
 	auto p = pool::create(pool::acquire());
-	Driver::Handle rec;
+	Driver::Handle rec = Driver::Handle(nullptr);
 	pool::push(p);
 
 	int flags = 0;
@@ -249,25 +256,25 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 #if WIN32
 		dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
 #endif
-		if (sqlite3_open_v2(dbname.data(), &db, flags, nullptr) == SQLITE_OK) {
-			sqlite3_db_config(db, SQLITE_DBCONFIG_DQS_DDL, 0, nullptr);
-			sqlite3_db_config(db, SQLITE_DBCONFIG_DQS_DML, 0, nullptr);
-			sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_FKEY, 1, nullptr);
+		if (_handle->open(dbname.data(), &db, flags, nullptr) == SQLITE_OK) {
+			_handle->_db_config(db, SQLITE_DBCONFIG_DQS_DDL, 0, nullptr);
+			_handle->_db_config(db, SQLITE_DBCONFIG_DQS_DML, 0, nullptr);
+			_handle->_db_config(db, SQLITE_DBCONFIG_ENABLE_FKEY, 1, nullptr);
 
 			if (!journal.empty()) {
 				auto m = stappler::string::toupper<Interface>(journal);
-				auto mode = stappler::string::toupper<Interface>(Driver_exec(p, db, "PRAGMA journal_mode;"));
+				auto mode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, "PRAGMA journal_mode;"));
 				if (mode.empty()) {
-					sqlite3_close(db);
+					_handle->close(db);
 					break;
 				}
 
 				if (mode != m) {
 					auto query = toString("PRAGMA journal_mode = ", m);
-					auto cmode = stappler::string::toupper<Interface>(Driver_exec(p, db, query));
+					auto cmode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, query));
 					if (mode.empty() || cmode != m) {
 						std::cout << "[sqlite::Driver] fail to enable journal_mode '" << m << "'\n";
-						sqlite3_close(db);
+						_handle->close(db);
 						break;
 					}
 				}
@@ -286,7 +293,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 				}
 
 				sqlite3_stmt *stmt = nullptr;
-				auto err = sqlite3_prepare_v3(db, nextQuery.data(), nextQuery.size(), 0, &stmt, &outPtr);
+				auto err = _handle->prepare(db, nextQuery.data(), nextQuery.size(), 0, &stmt, &outPtr);
 				if (err != SQLITE_OK) {
 					auto len = outPtr - nextQuery.data();
 					StringView performedQuery(nextQuery.data(), len);
@@ -298,7 +305,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 					break;
 				}
 
-				err = sqlite3_step(stmt);
+				err = _handle->step(stmt);
 
 				if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
 					auto info = getInfo(Connection(db), err);
@@ -306,18 +313,19 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 #if DEBUG
 					log::debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
-					sqlite3_finalize(stmt);
+					_handle->finalize(stmt);
 					break;
 				}
 
 				success = ResultCursor::statusIsSuccess(err);
-				sqlite3_finalize(stmt);
+				_handle->finalize(stmt);
 			}
 
 			auto mem = pool::palloc(p, sizeof(DriverHandle));
 			auto h = new (mem) DriverHandle;
 			h->pool = p;
 			h->driver = this;
+			h->sym = _handle;;
 			h->conn = db;
 			h->name = dbname.pdup(p);
 			h->ctime = Time::now();
@@ -326,21 +334,21 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 			do {
 				StringView getStmt("SELECT \"__oid\" FROM \"__objects\" WHERE \"control\" = 0;");
 				sqlite3_stmt *gstmt = nullptr;
-				auto err = sqlite3_prepare_v3(db, getStmt.data(), getStmt.size(), 0, &gstmt, nullptr);
-				err = sqlite3_step(gstmt);
+				auto err = _handle->prepare(db, getStmt.data(), getStmt.size(), 0, &gstmt, nullptr);
+				err = _handle->step(gstmt);
 				if (err == SQLITE_DONE) {
 					StringView createStmt("INSERT OR IGNORE INTO \"__objects\" (\"__oid\") VALUES (0);");
 					sqlite3_stmt *cstmt = nullptr;
-					err = sqlite3_prepare_v3(db, createStmt.data(), createStmt.size(), 0, &cstmt, nullptr);
-					err = sqlite3_step(cstmt);
-					sqlite3_finalize(cstmt);
+					err = _handle->prepare(db, createStmt.data(), createStmt.size(), 0, &cstmt, nullptr);
+					err = _handle->step(cstmt);
+					_handle->finalize(cstmt);
 				}
-				sqlite3_finalize(gstmt);
+				_handle->finalize(gstmt);
 
 				StringView oidStmt("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
 
 				sqlite3_stmt *stmt = nullptr;
-				err = sqlite3_prepare_v3(db, oidStmt.data(), oidStmt.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+				err = _handle->prepare(db, oidStmt.data(), oidStmt.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
 				if (err == SQLITE_OK) {
 					h->oidQuery = stmt;
 				}
@@ -350,38 +358,38 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 				StringView str("INSERT INTO \"__words\"(\"id\",\"word\") VALUES(?1, ?2) ON CONFLICT(id) DO UPDATE SET word=word RETURNING \"id\", \"word\";");
 
 				sqlite3_stmt *stmt = nullptr;
-				auto err = sqlite3_prepare_v3(db, str.data(), str.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+				auto err = _handle->prepare(db, str.data(), str.size(), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
 				if (err == SQLITE_OK) {
 					h->wordsQuery = stmt;
 				}
 			} while (0);
 
-			sqlite3_create_function_v2(db, "sp_sqlite_next_oid", 0, SQLITE_UTF8, (void *)h,
+			_handle->_create_function_v2(db, "sp_sqlite_next_oid", 0, SQLITE_UTF8, (void *)h,
 					sp_sqlite_next_oid_xFunc, nullptr, nullptr, nullptr);
-			sqlite3_create_function_v2(db, "sp_sqlite_now", 0, SQLITE_UTF8, (void *)h,
+			_handle->_create_function_v2(db, "sp_sqlite_now", 0, SQLITE_UTF8, (void *)h,
 					sp_sqlite_now_xFunc, nullptr, nullptr, nullptr);
-			sqlite3_create_function_v2(db, "sp_sqlite_user", 0, SQLITE_UTF8, (void *)h,
+			_handle->_create_function_v2(db, "sp_sqlite_user", 0, SQLITE_UTF8, (void *)h,
 					sp_sqlite_user_xFunc, nullptr, nullptr, nullptr);
 
-			sqlite3_create_function_v2(db, "sp_ts_update", 6, SQLITE_UTF8, (void *)h,
+			_handle->_create_function_v2(db, "sp_ts_update", 6, SQLITE_UTF8, (void *)h,
 					sp_ts_update_xFunc, nullptr, nullptr, nullptr);
-			sqlite3_create_function_v2(db, "sp_ts_rank", 3, SQLITE_UTF8, (void *)h,
+			_handle->_create_function_v2(db, "sp_ts_rank", 3, SQLITE_UTF8, (void *)h,
 					sp_ts_rank_xFunc, nullptr, nullptr, nullptr);
-			sqlite3_create_function_v2(db, "sp_ts_query_valid", 2, SQLITE_UTF8, (void *)h,
+			_handle->_create_function_v2(db, "sp_ts_query_valid", 2, SQLITE_UTF8, (void *)h,
 					sp_ts_query_valid_xFunc, nullptr, nullptr, nullptr);
 
-			sqlite3_create_module(db, "sp_unwrap", &s_UnwrapModule, (void *)this);
+			_handle->_create_module(db, "sp_unwrap", &s_UnwrapModule, (void *)this);
 
 			h->mutex.unlock();
 
 			pool::pre_cleanup_register(p, [h] {
 				if (h->oidQuery) {
-					sqlite3_finalize(h->oidQuery);
+					h->sym->finalize(h->oidQuery);
 				}
 				if (h->wordsQuery) {
-					sqlite3_finalize(h->wordsQuery);
+					h->sym->finalize(h->wordsQuery);
 				}
-				sqlite3_close(h->conn);
+				h->sym->close(h->conn);
 			});
 
 			rec = Handle(h);
@@ -432,8 +440,8 @@ StringView Driver::getDbName(Handle h) const {
 Value Driver::getInfo(Connection conn, int err) const {
 	return Value({
 		stappler::pair("error", Value(err)),
-		stappler::pair("status", Value(sqlite3_errstr(int(err)))),
-		stappler::pair("desc", Value(sqlite3_errmsg((sqlite3 *)conn.get()))),
+		stappler::pair("status", Value(_handle->_errstr(int(err)))),
+		stappler::pair("desc", Value(_handle->_errmsg((sqlite3 *)conn.get()))),
 	});
 }
 
@@ -450,30 +458,36 @@ uint64_t Driver::insertWord(Handle h, StringView word) const {
 	std::unique_lock lock(data->mutex);
 	bool success = false;
 	while (!success) {
-		sqlite3_bind_int64(data->wordsQuery, 1, hash);
-		sqlite3_bind_text(data->wordsQuery, 2, word.data(), int(word.size()), nullptr);
+		_handle->_bind_int64(data->wordsQuery, 1, hash);
+		_handle->_bind_text(data->wordsQuery, 2, word.data(), int(word.size()), nullptr);
 
-		auto err = sqlite3_step(data->wordsQuery);
+		auto err = _handle->step(data->wordsQuery);
 		if (err == SQLITE_ROW) {
-			auto w = StringView((const char *)sqlite3_column_text(data->wordsQuery, 1), sqlite3_column_bytes(data->wordsQuery, 1));
+			auto w = StringView((const char *)_handle->_column_text(data->wordsQuery, 1), _handle->_column_bytes(data->wordsQuery, 1));
 			if (w == word) {
 				success = true;
-				sqlite3_reset(data->wordsQuery);
+				_handle->reset(data->wordsQuery);
 				break;
 			} else {
 				log::debug("sqlite::Driver", "Hash collision: ", w, " ", word, " ", hash);
 			}
 		}
-		sqlite3_reset(data->wordsQuery);
+		_handle->reset(data->wordsQuery);
 		++ hash;
 	}
 
 	return hash;
 }
 
-Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView mem)
+Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView mem, DriverSym *sym)
 : sql::Driver(pool, app) {
+	_handle = sym;
 	_driverPath = mem.pdup();
+
+	pool::cleanup_register(pool, [this] {
+		DriverLibStorage::getInstance()->closeLib(_handle);
+		_handle = nullptr;
+	});
 
 	auto it = _customFields.emplace(FieldIntArray::FIELD_NAME);
 	if (!FieldIntArray::registerForSqlite(it.first->second)) {
@@ -512,7 +526,7 @@ bool ResultCursor::isBinaryFormat(size_t field) const {
 }
 
 BackendInterface::StorageType ResultCursor::getType(size_t field) const {
-	auto t = sqlite3_column_type((sqlite3_stmt *)result.get(), field);
+	auto t = driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), field);
 	switch (t) {
 	case SQLITE_INTEGER: return BackendInterface::StorageType::Int8; break;
 	case SQLITE_FLOAT: return BackendInterface::StorageType::Float8; break;
@@ -525,24 +539,24 @@ BackendInterface::StorageType ResultCursor::getType(size_t field) const {
 }
 
 bool ResultCursor::isNull(size_t field) const {
-	return sqlite3_column_type((sqlite3_stmt *)result.get(), field) == SQLITE_NULL;
+	return driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), field) == SQLITE_NULL;
 }
 
 StringView ResultCursor::toString(size_t field) const {
-	switch (sqlite3_column_type((sqlite3_stmt *)result.get(), field)) {
+	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), field)) {
 	case SQLITE_INTEGER:
-		return StringView(toString(sqlite3_column_int64((sqlite3_stmt *)result.get(), field))).pdup();
+		return StringView(toString(driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), field))).pdup();
 		break;
 	case SQLITE_FLOAT:
-		return StringView(toString(sqlite3_column_double((sqlite3_stmt *)result.get(), field))).pdup();
+		return StringView(toString(driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), field))).pdup();
 		break;
 	case SQLITE_TEXT:
-		return StringView((const char *)sqlite3_column_text((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field));
+		return StringView((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field));
 		break;
 	case SQLITE_BLOB:
-		return StringView((const char *)sqlite3_column_blob((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field));
+		return StringView((const char *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field));
 		break;
 	case SQLITE_NULL:
 		return StringView("(null)");
@@ -553,24 +567,24 @@ StringView ResultCursor::toString(size_t field) const {
 }
 
 BytesView ResultCursor::toBytes(size_t field) const {
-	switch (sqlite3_column_type((sqlite3_stmt *)result.get(), field)) {
+	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), field)) {
 	case SQLITE_INTEGER: {
-		int64_t value = sqlite3_column_int64((sqlite3_stmt *)result.get(), field);
+		int64_t value = driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), field);
 		return BytesView((const uint8_t *)&value, sizeof(int64_t)).pdup();
 		break;
 	}
 	case SQLITE_FLOAT: {
-		double value = sqlite3_column_double((sqlite3_stmt *)result.get(), field);
+		double value = driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), field);
 		return BytesView((const uint8_t *)&value, sizeof(int64_t)).pdup();
 		break;
 	}
 	case SQLITE_TEXT:
-		return BytesView((const uint8_t *)sqlite3_column_text((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field));
+		return BytesView((const uint8_t *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field));
 		break;
 	case SQLITE_BLOB:
-		return BytesView((const uint8_t *)sqlite3_column_blob((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field));
+		return BytesView((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field));
 		break;
 	case SQLITE_NULL:
 		return BytesView();
@@ -581,20 +595,20 @@ BytesView ResultCursor::toBytes(size_t field) const {
 }
 
 int64_t ResultCursor::toInteger(size_t field) const {
-	switch (sqlite3_column_type((sqlite3_stmt *)result.get(), field)) {
+	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), field)) {
 	case SQLITE_INTEGER:
-		return sqlite3_column_int64((sqlite3_stmt *)result.get(), field);
+		return driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), field);
 		break;
 	case SQLITE_FLOAT:
-		return int64_t(sqlite3_column_double((sqlite3_stmt *)result.get(), field));
+		return int64_t(driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), field));
 		break;
 	case SQLITE_TEXT:
-		return StringView((const char *)sqlite3_column_text((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field)).readInteger(10).get(0);
+		return StringView((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field)).readInteger(10).get(0);
 		break;
 	case SQLITE_BLOB:
-		return int64_t(BytesView((const uint8_t *)sqlite3_column_blob((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field)).readUnsigned64());
+		return int64_t(BytesView((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field)).readUnsigned64());
 		break;
 	case SQLITE_NULL:
 		break;
@@ -604,20 +618,20 @@ int64_t ResultCursor::toInteger(size_t field) const {
 }
 
 double ResultCursor::toDouble(size_t field) const {
-	switch (sqlite3_column_type((sqlite3_stmt *)result.get(), field)) {
+	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), field)) {
 	case SQLITE_INTEGER:
-		return double(sqlite3_column_int64((sqlite3_stmt *)result.get(), field));
+		return double(driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), field));
 		break;
 	case SQLITE_FLOAT:
-		return sqlite3_column_double((sqlite3_stmt *)result.get(), field);
+		return driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), field);
 		break;
 	case SQLITE_TEXT:
-		return StringView((const char *)sqlite3_column_text((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field)).readDouble().get(0);
+		return StringView((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field)).readDouble().get(0);
 		break;
 	case SQLITE_BLOB:
-		return BytesView((const uint8_t *)sqlite3_column_blob((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field)).readFloat64();
+		return BytesView((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field)).readFloat64();
 		break;
 	case SQLITE_NULL:
 		break;
@@ -626,24 +640,24 @@ double ResultCursor::toDouble(size_t field) const {
 	return 0.0;
 }
 bool ResultCursor::toBool(size_t field) const {
-	switch (sqlite3_column_type((sqlite3_stmt *)result.get(), field)) {
+	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), field)) {
 	case SQLITE_INTEGER:
-		return sqlite3_column_int64((sqlite3_stmt *)result.get(), field) != 0;
+		return driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), field) != 0;
 		break;
 	case SQLITE_FLOAT:
-		return sqlite3_column_double((sqlite3_stmt *)result.get(), field) != 0.0;
+		return driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), field) != 0.0;
 		break;
 	case SQLITE_TEXT: {
-		StringView data((const char *)sqlite3_column_text((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field));
+		StringView data((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field));
 		if (data == "1" || data == "true" || data == "TRUE") {
 			return true;
 		}
 		break;
 	}
 	case SQLITE_BLOB: {
-		BytesView data((const uint8_t *)sqlite3_column_blob((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field));
+		BytesView data((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field));
 		if (data.empty()) {
 			return false;
 		} else {
@@ -658,20 +672,20 @@ bool ResultCursor::toBool(size_t field) const {
 	return false;
 }
 Value ResultCursor::toTypedData(size_t field) const {
-	switch (sqlite3_column_type((sqlite3_stmt *)result.get(), field)) {
+	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), field)) {
 	case SQLITE_INTEGER:
-		return Value(int64_t(sqlite3_column_int64((sqlite3_stmt *)result.get(), field)));
+		return Value(int64_t(driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), field)));
 		break;
 	case SQLITE_FLOAT:
-		return Value(sqlite3_column_double((sqlite3_stmt *)result.get(), field));
+		return Value(driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), field));
 		break;
 	case SQLITE_TEXT:
-		return Value(StringView((const char *)sqlite3_column_text((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field)));
+		return Value(StringView((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field)));
 		break;
 	case SQLITE_BLOB:
-		return Value(BytesView((const uint8_t *)sqlite3_column_blob((sqlite3_stmt *)result.get(), field),
-				sqlite3_column_bytes((sqlite3_stmt *)result.get(), field)));
+		return Value(BytesView((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), field),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), field)));
 		break;
 	case SQLITE_NULL:
 		break;
@@ -692,7 +706,7 @@ int64_t ResultCursor::toId() const {
 	return toInteger(0);
 }
 StringView ResultCursor::getFieldName(size_t field) const {
-	if (auto ptr = sqlite3_column_name((sqlite3_stmt *)result.get(), field)) {
+	if (auto ptr = driver->getHandle()->_column_name((sqlite3_stmt *)result.get(), field)) {
 		return StringView(ptr);
 	}
 	return StringView();
@@ -707,10 +721,10 @@ bool ResultCursor::isEnded() const {
 	return err == SQLITE_DONE;
 }
 size_t ResultCursor::getFieldsCount() const {
-	return sqlite3_column_count((sqlite3_stmt *)result.get());
+	return driver->getHandle()->_column_count((sqlite3_stmt *)result.get());
 }
 size_t ResultCursor::getAffectedRows() const {
-	return sqlite3_changes((sqlite3 *)conn.get());
+	return driver->getHandle()->_changes((sqlite3 *)conn.get());
 }
 size_t ResultCursor::getRowsHint() const {
 	return 0;
@@ -718,14 +732,14 @@ size_t ResultCursor::getRowsHint() const {
 Value ResultCursor::getInfo() const {
 	return Value({
 		stappler::pair("error", Value(err)),
-		stappler::pair("status", Value(sqlite3_errstr(int(err)))),
-		stappler::pair("desc", Value(sqlite3_errmsg((sqlite3 *)conn.get()))),
+		stappler::pair("status", Value(driver->getHandle()->_errstr(int(err)))),
+		stappler::pair("desc", Value(driver->getHandle()->_errmsg((sqlite3 *)conn.get()))),
 	});
 }
 
 bool ResultCursor::next() {
 	if (err == SQLITE_ROW) {
-		err = sqlite3_step((sqlite3_stmt *)result.get());
+		err = driver->getHandle()->step((sqlite3_stmt *)result.get());
 		return err == SQLITE_ROW;
 	}
 	return false;
@@ -733,15 +747,15 @@ bool ResultCursor::next() {
 
 void ResultCursor::reset() {
 	if (result.get()) {
-		sqlite3_reset((sqlite3_stmt *)result.get());
-		err = sqlite3_step((sqlite3_stmt *)result.get());
+		driver->getHandle()->reset((sqlite3_stmt *)result.get());
+		err = driver->getHandle()->step((sqlite3_stmt *)result.get());
 		result = Driver::Result(nullptr);
 	}
 }
 
 void ResultCursor::clear() {
 	if (result.get()) {
-		sqlite3_finalize((sqlite3_stmt *)result.get());
+		driver->getHandle()->finalize((sqlite3_stmt *)result.get());
 		result = Driver::Result(nullptr);
 	}
 }

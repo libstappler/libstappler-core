@@ -40,12 +40,14 @@ static sqlite3_module s_UnwrapModule = {
 	.iVersion = 4,
 	.xCreate = nullptr, // [] (sqlite3*, void *pAux, int argc, const char *const* argv, sqlite3_vtab **ppVTab, char**) -> int { },
 	.xConnect = [] (sqlite3 *db, void *pAux, int argc, const char * const* argv, sqlite3_vtab **ppVTab, char**) -> int {
+		auto driver = (Driver *)pAux;
+
 		sqlite3_vtab *pNew;
 		int rc;
 
-		rc = sqlite3_declare_vtab(db, "CREATE TABLE x(__unwrap_value, input HIDDEN)");
+		rc = driver->getHandle()->_declare_vtab(db, "CREATE TABLE x(__unwrap_value, input HIDDEN)");
 		if (rc == SQLITE_OK) {
-			pNew = *ppVTab = (sqlite3_vtab *)sqlite3_malloc(sizeof(*pNew));
+			pNew = *ppVTab = (sqlite3_vtab *)driver->getHandle()->_malloc(sizeof(*pNew));
 			if (pNew == 0) {
 				return SQLITE_NOMEM;
 			}
@@ -95,13 +97,15 @@ static sqlite3_module s_UnwrapModule = {
 		return SQLITE_OK;
 	},
 	.xDisconnect = [] (sqlite3_vtab *pVTab) -> int {
-		sqlite3_free(pVTab);
+		auto sym = DriverSym::getCurrent();
+		sym->_free(pVTab);
 		return SQLITE_OK;
 	},
 	.xDestroy = nullptr, // [] (sqlite3_vtab *pVTab) -> int { },
 	.xOpen = [] (sqlite3_vtab *pVTab, sqlite3_vtab_cursor **ppCursor) -> int {
+		auto sym = DriverSym::getCurrent();
 		UnwrapCursor *pCur;
-		pCur = (UnwrapCursor *)sqlite3_malloc(sizeof(*pCur));
+		pCur = (UnwrapCursor *)sym->_malloc(sizeof(*pCur));
 		if (pCur == 0) {
 			return SQLITE_NOMEM;
 		}
@@ -110,14 +114,16 @@ static sqlite3_module s_UnwrapModule = {
 		return SQLITE_OK;
 	},
 	.xClose = [] (sqlite3_vtab_cursor *cur) -> int {
+		auto sym = DriverSym::getCurrent();
 		UnwrapCursor *p = (UnwrapCursor*)cur;
 		p->~UnwrapCursor();
-		sqlite3_free(cur);
+		sym->_free(cur);
 		return SQLITE_OK;
 	},
 	.xFilter = [] (sqlite3_vtab_cursor *cur, int idxNum, const char *idxStr, int argc, sqlite3_value **argv) -> int {
+		auto sym = DriverSym::getCurrent();
 		UnwrapCursor *p = (UnwrapCursor*)cur;
-		p->origValue = p->currentValue = BytesView((const uint8_t *)sqlite3_value_blob(argv[0]), sqlite3_value_bytes(argv[0]));
+		p->origValue = p->currentValue = BytesView((const uint8_t *)sym->_value_blob(argv[0]), sym->_value_bytes(argv[0]));
 		p->value = data::read<Interface>(p->origValue);
 		p->current = 0;
 		if (p->value.isArray() || p->value.empty()) {
@@ -139,27 +145,28 @@ static sqlite3_module s_UnwrapModule = {
 		return 0;
 	},
 	.xColumn = [] (sqlite3_vtab_cursor *cur, sqlite3_context *db, int col) -> int {
+		auto sym = DriverSym::getCurrent();
 		UnwrapCursor *p = (UnwrapCursor*)cur;
 
 		auto &val = p->value.getValue(p->current);
 		switch (val.getType()) {
 		case Value::Type::INTEGER:
-			sqlite3_result_int64(db, val.getInteger());
+			sym->_result_int64(db, val.getInteger());
 			break;
 		case Value::Type::DOUBLE:
-			sqlite3_result_double(db, val.getDouble());
+			sym->_result_double(db, val.getDouble());
 			break;
 		case Value::Type::BOOLEAN:
-			sqlite3_result_int(db, val.getBool() ? 1 : 0);
+			sym->_result_int(db, val.getBool() ? 1 : 0);
 			break;
 		case Value::Type::CHARSTRING:
-			sqlite3_result_text64(db, val.getString().data(), val.getString().size(), nullptr, SQLITE_UTF8);
+			sym->_result_text64(db, val.getString().data(), val.getString().size(), nullptr, SQLITE_UTF8);
 			break;
 		case Value::Type::BYTESTRING:
-			sqlite3_result_blob64(db, val.getBytes().data(), val.getBytes().size(), nullptr);
+			sym->_result_blob64(db, val.getBytes().data(), val.getBytes().size(), nullptr);
 			break;
 		default:
-		    sqlite3_result_null(db);
+			sym->_result_null(db);
 			break;
 		}
 		return SQLITE_OK;

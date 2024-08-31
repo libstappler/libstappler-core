@@ -32,7 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::vg {
 
 using Metric = geom::Metric;
 
-struct SvgTag : public html::Tag<StringView> {
+struct SP_PUBLIC SvgTag : public html::Tag<StringView> {
 	SvgTag(StringView &r) : Tag(r) {
 		rpath.setFillColor(Color4B::BLACK);
 		rpath.setStrokeColor(Color4B::BLACK);
@@ -67,7 +67,7 @@ struct SvgTag : public html::Tag<StringView> {
 	PathWriter &getWriter();
 };
 
-struct SvgReader {
+struct SP_PUBLIC SvgReader {
 	using Parser = html::Parser<SvgReader, StringView, SvgTag>;
 	using Tag = SvgTag;
 	using StringReader = Parser::StringReader;

@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-class ApplicationInterface {
+class SP_PUBLIC ApplicationInterface {
 public:
 	static void defineUserScheme(Scheme &);
 	static void defineFileScheme(Scheme &);
@@ -101,7 +101,7 @@ public:
 	virtual void reportDbUpdate(StringView, bool successful);
 };
 
-class Adapter final : public AllocBase {
+class SP_PUBLIC Adapter final : public AllocBase {
 public:
 	static Adapter FromContext(const ApplicationInterface *);
 

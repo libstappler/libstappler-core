@@ -129,7 +129,7 @@ static bool File_validateImageField(const ApplicationInterface *app, const Field
 	}
 
 	uint32_t width = 0, height = 0;
-	if (!bitmap::getImageSize(file, width, height) && width > 0 && height > 0) {
+	if (!bitmap::getImageSize(file, width, height) || width == 0 || height == 0) {
 		app->error("Storage", "Fail to detect file size with");
 		return false;
 	}

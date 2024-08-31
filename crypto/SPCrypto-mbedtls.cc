@@ -85,10 +85,10 @@ static BackendCtx s_mbedTLSCtx = {
 	.name = Backend::MbedTLS,
 	.title = StringView("MbedTLS"),
 	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary,
-	.initialize = [] () {
+	.initialize = [] (BackendCtx &) {
 		log::verbose("Crypto", "MbedTLS backend loaded");
 	},
-	.finalize = [] () { },
+	.finalize = [] (BackendCtx &) { },
 	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) -> bool {
 		auto cipherBlockSize = getBlockSize(key.cipher);
 

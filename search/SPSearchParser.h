@@ -110,31 +110,31 @@ enum class SearchOp : uint8_t {
 
 struct StemmerEnv;
 
-bool isStopword(const StringView &word, Language lang = Language::Unknown);
-bool isStopword(const StringView &word, StemmerEnv *);
-bool isStopword(const StringView &word, const StringView *);
+SP_PUBLIC bool isStopword(const StringView &word, Language lang = Language::Unknown);
+SP_PUBLIC bool isStopword(const StringView &word, StemmerEnv *);
+SP_PUBLIC bool isStopword(const StringView &word, const StringView *);
 
-StringView getLanguageName(Language);
-Language parseLanguage(const StringView &);
-Language detectLanguage(const StringView &);
+SP_PUBLIC StringView getLanguageName(Language);
+SP_PUBLIC Language parseLanguage(const StringView &);
+SP_PUBLIC Language detectLanguage(const StringView &);
 
-StringView getParserTokenName(ParserToken);
+SP_PUBLIC StringView getParserTokenName(ParserToken);
 
-bool isWordPart(ParserToken);
-bool isComplexWord(ParserToken);
+SP_PUBLIC bool isWordPart(ParserToken);
+SP_PUBLIC bool isComplexWord(ParserToken);
 
-void parseHtml(StringView, const Callback<void(StringView)> &);
+SP_PUBLIC void parseHtml(StringView, const Callback<void(StringView)> &);
 
-bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb);
-bool parsePhrase(StringView, const Callback<ParserStatus(StringView, ParserToken)> &);
+SP_PUBLIC bool parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlToken)> &cb);
+SP_PUBLIC bool parsePhrase(StringView, const Callback<ParserStatus(StringView, ParserToken)> &);
 
-StemmerEnv *getStemmer(Language lang);
+SP_PUBLIC StemmerEnv *getStemmer(Language lang);
 
-bool stemWord(StringView word, const Callback<void(StringView)> &, StemmerEnv *env);
-bool stemWord(StringView word, const Callback<void(StringView)> &, Language lang = Language::Unknown);
+SP_PUBLIC bool stemWord(StringView word, const Callback<void(StringView)> &, StemmerEnv *env);
+SP_PUBLIC bool stemWord(StringView word, const Callback<void(StringView)> &, Language lang = Language::Unknown);
 
 // lowercase, remove soft hyphens
-String normalizeWord(const StringView &str);
+SP_PUBLIC String normalizeWord(const StringView &str);
 
 }
 

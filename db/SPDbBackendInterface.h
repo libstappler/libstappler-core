@@ -42,7 +42,7 @@ enum class DeltaAction {
 /* Common storage/database interface, used for schemes and some other operations,
  * that requires persistent storage
  */
-class BackendInterface : public AllocBase {
+class SP_PUBLIC BackendInterface : public AllocBase {
 public:
 	enum class StorageType {
 		Unknown,
@@ -173,7 +173,7 @@ protected:
     TransactionStatus transactionStatus = TransactionStatus::None;
 };
 
-class Binder {
+class SP_PUBLIC Binder {
 public:
 	struct DataField {
 		const Field *field;
@@ -252,7 +252,7 @@ protected:
 	QueryInterface *_iface = nullptr;
 };
 
-class QueryInterface {
+class SP_PUBLIC QueryInterface {
 public:
 	virtual ~QueryInterface() = default;
 
@@ -279,7 +279,7 @@ public:
 	virtual void clear() = 0;
 };
 
-class ResultCursor {
+class SP_PUBLIC ResultCursor {
 public:
 	virtual ~ResultCursor() = default;
 
@@ -315,7 +315,7 @@ public:
 	virtual void clear() = 0;
 };
 
-struct ResultRow {
+struct SP_PUBLIC ResultRow {
 	ResultRow(const db::ResultCursor *, size_t);
 	ResultRow(const ResultRow & other) noexcept;
 	ResultRow & operator=(const ResultRow &other) noexcept;
@@ -346,7 +346,7 @@ struct ResultRow {
 	size_t row = 0;
 };
 
-class Result {
+class SP_PUBLIC Result {
 public:
 	struct Iter {
 		Iter() noexcept {}

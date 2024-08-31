@@ -29,7 +29,7 @@ typedef struct _HyphenDict HyphenDict;
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
-class HyphenMap : public RefBase<memory::StandartInterface>, public InterfaceObject<memory::StandartInterface> {
+class SP_PUBLIC HyphenMap : public RefBase<memory::StandartInterface>, public InterfaceObject<memory::StandartInterface> {
 public:
 	virtual ~HyphenMap();
 	bool init();

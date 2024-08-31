@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SPValid.h"
 #include "SPCrypto.h"
 #include "SPFilesystem.h"
+#include "SPSharedModule.h"
 
 #if MODULE_STAPPLER_BITMAP
 #include "SPBitmap.h"
@@ -121,6 +122,50 @@ static bool Handle_setPrivateKeyAuth(HandleData<Interface> &iface, BytesView dat
 	return false;
 }
 
+#if MODULE_STAPPLER_BITMAP
+static Pair<bitmap::FileFormat, StringView> Handle_detectFormat(StringView path) {
+	Pair<bitmap::FileFormat, StringView> (*fn) (StringView) = nullptr;
+#if STAPPLER_SHARED
+	fn = SharedModule::acquireTypedSymbol<decltype(fn)>("bitmap", "detectFormat(StringView)");
+	if (!fn) {
+		log::error("network", "Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
+		return Pair<bitmap::FileFormat, StringView>(bitmap::FileFormat::Custom, StringView());
+	}
+#else
+	fn = static_cast<decltype(fn)>(&bitmap::detectFormat);
+#endif
+	return fn(path);
+}
+
+static StringView Handle_getMimeType(bitmap::FileFormat fmt) {
+	StringView (*fn) (bitmap::FileFormat) = nullptr;
+#if STAPPLER_SHARED
+	fn = SharedModule::acquireTypedSymbol<decltype(fn)>("bitmap", "getMimeType(FileFormat)");
+	if (!fn) {
+		log::error("network", "Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
+		return StringView();
+	}
+#else
+	fn = static_cast<decltype(fn)>(&bitmap::getMimeType);
+#endif
+	return fn(fmt);
+}
+
+static StringView Handle_getMimeType(StringView name) {
+	StringView (*fn) (StringView) = nullptr;
+#if STAPPLER_SHARED
+	fn = SharedModule::acquireTypedSymbol<decltype(fn)>("bitmap", "getMimeType(StringView)");
+	if (!fn) {
+		log::error("network", "Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
+		return StringView();
+	}
+#else
+	fn = static_cast<decltype(fn)>(&bitmap::getMimeType);
+#endif
+	return fn(name);
+}
+#endif
+
 template <typename Interface>
 static void Handle_setSendFile(HandleData<Interface> &iface, StringView str, StringView type) {
 	iface.send.data = str.str<Interface>();
@@ -137,12 +182,12 @@ static void Handle_setSendFile(HandleData<Interface> &iface, StringView str, Str
 #endif
 #if MODULE_STAPPLER_BITMAP
 		// try image format
-		auto fmt = bitmap::detectFormat(StringView(str));
+		auto fmt = Handle_detectFormat(StringView(str));
 		if (fmt.first != bitmap::FileFormat::Custom) {
-			iface.addHeader("Content-Type", bitmap::getMimeType(fmt.first));
+			iface.addHeader("Content-Type", Handle_getMimeType(fmt.first));
 			return;
 		} else {
-			auto str = bitmap::getMimeType(fmt.second);
+			auto str = Handle_getMimeType(fmt.second);
 			if (!str.empty()) {
 				iface.addHeader("Content-Type", str);
 				return;

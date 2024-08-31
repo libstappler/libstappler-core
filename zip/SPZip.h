@@ -33,7 +33,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename Interface>
-class ZipArchive : public Interface::AllocBaseType {
+class SP_PUBLIC ZipArchive : public Interface::AllocBaseType {
 public:
 	using Bytes = typename Interface::BytesType;
 	using Buffer = BufferTemplate<Interface>;

@@ -45,7 +45,7 @@ enum class Winding {
 	AbsGeqTwo
 };
 
-struct TessResult {
+struct SP_PUBLIC TessResult {
 	uint32_t nvertexes = 0;
 	uint32_t nfaces = 0;
 
@@ -54,7 +54,7 @@ struct TessResult {
 	void (*pushTriangle) (void *, uint32_t[3]);
 };
 
-class Tesselator : public RefBase<memory::StandartInterface> {
+class SP_PUBLIC Tesselator : public RefBase<memory::StandartInterface> {
 public:
 	struct Cursor {
 		HalfEdge *edge = nullptr;

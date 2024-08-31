@@ -262,7 +262,7 @@ SP_PUBLIC size_t encodeSize(size_t);
 SP_PUBLIC size_t decodeSize(size_t);
 
 template <typename Interface>
-auto encode(const CoderSource &source) -> typename Interface::StringType;
+SP_PUBLIC auto encode(const CoderSource &source) -> typename Interface::StringType;
 
 SP_PUBLIC void encode(std::basic_ostream<char> &stream, const CoderSource &source);
 SP_PUBLIC void encode(const Callback<void(char)> &cb, const CoderSource &source);
@@ -270,7 +270,7 @@ SP_PUBLIC size_t encode(char *, size_t bsize, const CoderSource &source);
 
 
 template <typename Interface>
-auto decode(const CoderSource &source) -> typename Interface::BytesType;
+SP_PUBLIC auto decode(const CoderSource &source) -> typename Interface::BytesType;
 
 SP_PUBLIC void decode(std::basic_ostream<char> &stream, const CoderSource &source);
 SP_PUBLIC void decode(const Callback<void(uint8_t)> &cb, const CoderSource &source);

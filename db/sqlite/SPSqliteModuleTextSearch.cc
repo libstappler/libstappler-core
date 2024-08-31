@@ -21,23 +21,24 @@
  **/
 
 #include "SPSqliteDriver.h"
-#include "SPSqliteDriverHandle.h"
+#include "sqlite3.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::sqlite {
 
 static void sp_ts_update_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
-	DriverHandle *data = (DriverHandle *)sqlite3_user_data(ctx);
+	auto sym = DriverSym::getCurrent();
+	DriverHandle *data = (DriverHandle *)sym->_user_data(ctx);
 
-	auto id = sqlite3_value_int64(args[0]);
-	auto blob = BytesView((const uint8_t *)sqlite3_value_blob(args[1]), sqlite3_value_bytes(args[1]));
-	auto scheme = StringView((const char *)sqlite3_value_text(args[2]), sqlite3_value_bytes(args[2]));
-	auto field = StringView((const char *)sqlite3_value_text(args[3]), sqlite3_value_bytes(args[3]));
-	auto target = StringView((const char *)sqlite3_value_text(args[4]), sqlite3_value_bytes(args[4]));
-	auto action = sqlite3_value_int(args[5]);
+	auto id = sym->_value_int64(args[0]);
+	auto blob = BytesView((const uint8_t *)sym->_value_blob(args[1]), sym->_value_bytes(args[1]));
+	auto scheme = StringView((const char *)sym->_value_text(args[2]), sym->_value_bytes(args[2]));
+	auto field = StringView((const char *)sym->_value_text(args[3]), sym->_value_bytes(args[3]));
+	auto target = StringView((const char *)sym->_value_text(args[4]), sym->_value_bytes(args[4]));
+	auto action = sym->_value_int(args[5]);
 
 	if (action == 1 || action == 2) {
 		auto q = toString("DELETE FROM \"", target, "\" WHERE \"", scheme, "_id\"=", id);
-		Driver_exec(nullptr, data->conn, q);
+		Driver_exec(sym, nullptr, data->conn, q);
 	}
 
 	if (action == 2) {
@@ -77,51 +78,53 @@ static void sp_ts_update_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **
 
 	if (wordsWritten) {
 		StringView str(queryStream.weak());
-		Driver_exec(nullptr, data->conn, str);
+		Driver_exec(sym, nullptr, data->conn, str);
 	}
 }
 
 static void sp_ts_rank_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
-	DriverHandle *data = (DriverHandle *)sqlite3_user_data(ctx);
+	auto sym = DriverSym::getCurrent();
+	DriverHandle *data = (DriverHandle *)sym->_user_data(ctx);
 	auto storageData = data->driver->getCurrentQueryStorage();
 	if (!storageData) {
-		sqlite3_result_double(ctx, 0.0f);
+		sym->_result_double(ctx, 0.0f);
 		return;
 	}
 
-	auto blob = BytesView((const uint8_t *)sqlite3_value_blob(args[0]), sqlite3_value_bytes(args[0]));
-	auto query = StringView((const char *)sqlite3_value_text(args[1]), sqlite3_value_bytes(args[1]));
-	auto norm = sqlite3_value_int(args[2]);
+	auto blob = BytesView((const uint8_t *)sym->_value_blob(args[0]), sym->_value_bytes(args[0]));
+	auto query = StringView((const char *)sym->_value_text(args[1]), sym->_value_bytes(args[1]));
+	auto norm = sym->_value_int(args[2]);
 
 	auto it = storageData->find(query);
 	if (it == storageData->end()) {
-		sqlite3_result_double(ctx, 0.0f);
+		sym->_result_double(ctx, 0.0f);
 		return;
 	}
 
 	auto q = (TextQueryData *)it->second;
-	sqlite3_result_double(ctx, q->query->rankQuery(blob, search::Normalization(norm)));
+	sym->_result_double(ctx, q->query->rankQuery(blob, search::Normalization(norm)));
 }
 
 static void sp_ts_query_valid_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value **args) {
-	DriverHandle *data = (DriverHandle *)sqlite3_user_data(ctx);
+	auto sym = DriverSym::getCurrent();
+	DriverHandle *data = (DriverHandle *)sym->_user_data(ctx);
 	auto storageData = data->driver->getCurrentQueryStorage();
 	if (!storageData) {
-		sqlite3_result_int(ctx, 0);
+		sym->_result_int(ctx, 0);
 		return;
 	}
 
-	auto blob = BytesView((const uint8_t *)sqlite3_value_blob(args[0]), sqlite3_value_bytes(args[0]));
-	auto query = StringView((const char *)sqlite3_value_text(args[1]), sqlite3_value_bytes(args[1]));
+	auto blob = BytesView((const uint8_t *)sym->_value_blob(args[0]), sym->_value_bytes(args[0]));
+	auto query = StringView((const char *)sym->_value_text(args[1]), sym->_value_bytes(args[1]));
 
 	auto it = storageData->find(query);
 	if (it == storageData->end()) {
-		sqlite3_result_int(ctx, 0);
+		sym->_result_int(ctx, 0);
 		return;
 	}
 
 	auto q = (TextQueryData *)it->second;
-	sqlite3_result_int(ctx, q->query->isMatch(blob) ? 1 : 0);
+	sym->_result_int(ctx, q->query->isMatch(blob) ? 1 : 0);
 }
 
 }

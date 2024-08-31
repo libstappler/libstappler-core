@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::vg {
 
 class VectorImage;
 
-class VectorPathRef : public RefBase<Interface> {
+class SP_PUBLIC VectorPathRef : public RefBase<Interface> {
 public:
 	using String = Interface::StringType;
 
@@ -98,7 +98,7 @@ protected:
 	VectorImage *_image;
 };
 
-class VectorImageData : public RefBase<Interface> {
+class SP_PUBLIC VectorImageData : public RefBase<Interface> {
 public:
 	using String = Interface::StringType;
 
@@ -148,7 +148,7 @@ protected:
 	VectorImage *_image = nullptr;
 };
 
-class VectorImage : public RefBase<Interface> {
+class SP_PUBLIC VectorImage : public RefBase<Interface> {
 public:
 	using String = Interface::StringType;
 

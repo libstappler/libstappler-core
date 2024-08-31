@@ -71,8 +71,8 @@ enum class ColorMask : uint8_t {
 
 SP_DEFINE_ENUM_AS_MASK(ColorMask)
 
-bool readColor(const StringView &str, Color4B &color);
-bool readColor(const StringView &str, Color3B &color);
+SP_PUBLIC bool readColor(const StringView &str, Color4B &color);
+SP_PUBLIC bool readColor(const StringView &str, Color3B &color);
 
 /*
  * Based on cocos2d-x sources
@@ -82,7 +82,7 @@ bool readColor(const StringView &str, Color3B &color);
 /**
  * RGB color composed of bytes 3 bytes.
  */
-struct Color3B {
+struct SP_PUBLIC Color3B {
 	static Color3B getColorByName(StringView, const Color3B & = Color3B::BLACK);
 
 	constexpr Color3B() : r(0), g(0) , b(0) {}
@@ -118,7 +118,7 @@ struct Color3B {
 /**
  * RGBA color composed of 4 bytes.
  */
-struct Color4B {
+struct SP_PUBLIC Color4B {
 	static const Color4B WHITE;
 	static const Color4B BLACK;
 
@@ -147,10 +147,12 @@ struct Color4B {
 	static Color4B black(uint8_t);
 };
 
+struct alignas(16) Color4F;
+
 /**
  * RGBA color composed of 4 floats.
  */
-struct alignas(16) Color4F {
+struct SP_PUBLIC Color4F {
 	static const Color4F WHITE;
 	static const Color4F BLACK;
 	static const Color4F ZERO;
@@ -195,7 +197,7 @@ struct alignas(16) Color4F {
 	float a;
 };
 
-class Color {
+class SP_PUBLIC Color {
 public:
 	LAYOUT_COLOR_SPEC(Red); // 0
 	LAYOUT_COLOR_SPEC(Pink); // 1
@@ -346,10 +348,10 @@ private:
 	uint16_t _index = uint16_t(19 * 16 + 1);
 };
 
-std::ostream & operator<<(std::ostream & stream, const Color & obj);
-std::ostream & operator<<(std::ostream & stream, const Color3B & obj);
-std::ostream & operator<<(std::ostream & stream, const Color4B & obj);
-std::ostream & operator<<(std::ostream & stream, const Color4F & obj);
+SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const Color & obj);
+SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const Color3B & obj);
+SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const Color4B & obj);
+SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const Color4F & obj);
 
 inline Color4F Color4F::progress(const Color4F &a, const Color4F &b, float p) {
 	Color4F dst;

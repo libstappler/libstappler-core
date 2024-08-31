@@ -41,7 +41,7 @@ enum class UpdateFlags : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(UpdateFlags)
 
-struct Conflict {
+struct SP_PUBLIC Conflict {
 	enum Flags {
 		None,
 		DoNothing,
@@ -64,7 +64,7 @@ struct Conflict {
 
 SP_DEFINE_ENUM_AS_MASK(Conflict::Flags)
 
-class Worker : public AllocBase {
+class SP_PUBLIC Worker : public AllocBase {
 public:
 	using FieldCallback = stappler::Callback<void(const StringView &name, const Field *f)>;
 

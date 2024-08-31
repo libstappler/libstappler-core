@@ -44,7 +44,7 @@ struct SP_PUBLIC AtomicCounter {
 };
 
 template <typename Interface>
-class RefBase : public Interface::AllocBaseType {
+class SP_PUBLIC RefBase : public Interface::AllocBaseType {
 public:
 	using InterfaceType = Interface;
 

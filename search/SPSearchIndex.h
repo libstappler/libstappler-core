@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::search {
 
-class SearchIndex : public Ref {
+class SP_PUBLIC SearchIndex : public Ref {
 public:
 	using DefaultSep = StringView::Compose<
 			StringView::CharGroup<CharGroupId::WhiteSpace>,

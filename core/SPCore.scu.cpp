@@ -62,15 +62,15 @@ namespace STAPPLER_VERSIONIZED stappler {
 #define TOSTRING(x) STRINGIFY(x)
 
 const char * getStapplerVersionString() {
-	return TOSTRING(STAPPLER_VERSION_NUMBER) "/" TOSTRING(STAPPLER_VERSION_BUILD);
+	return TOSTRING(STAPPLER_VERSION_API) "/" TOSTRING(STAPPLER_VERSION_REV);
 }
 
-uint32_t getStapplerVersionNumber() {
-	return STAPPLER_VERSION_NUMBER;
+uint32_t getStapplerVersionApi() {
+	return STAPPLER_VERSION_API;
 }
 
-uint32_t getStapplerVersionBuild() {
-	return STAPPLER_VERSION_BUILD;
+uint32_t getStapplerVersionRev() {
+	return STAPPLER_VERSION_REV;
 }
 
 }

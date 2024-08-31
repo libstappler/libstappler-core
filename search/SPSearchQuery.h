@@ -38,7 +38,7 @@ enum class Normalization {
 
 SP_DEFINE_ENUM_AS_MASK(Normalization)
 
-struct RankingValues {
+struct SP_PUBLIC RankingValues {
 	float A = 1.0f;
 	float B = 0.4f;
 	float C = 0.2f;
@@ -64,7 +64,7 @@ struct RankingValues {
 	}
 };
 
-struct SearchVector {
+struct SP_PUBLIC SearchVector {
 	using MatchVector = Vector<Pair<size_t, SearchData::Rank>>;
 
 	size_t documentLength = 0;
@@ -73,7 +73,7 @@ struct SearchVector {
 	bool empty() const { return words.empty(); }
 };
 
-struct SearchQuery {
+struct SP_PUBLIC SearchQuery {
 	enum Block : uint8_t {
 		None,
 		Parentesis,

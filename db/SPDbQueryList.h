@@ -45,7 +45,7 @@ enum class TransactionStatus {
 	Rollback,
 };
 
-class QueryFieldResolver : public AllocBase {
+class SP_PUBLIC QueryFieldResolver : public AllocBase {
 public:
 	enum class Meta {
 		None = 0,
@@ -93,7 +93,7 @@ protected:
 
 SP_DEFINE_ENUM_AS_MASK(QueryFieldResolver::Meta);
 
-class QueryList : public AllocBase {
+class SP_PUBLIC QueryList : public AllocBase {
 public:
 	using FieldCallback = stappler::Callback<void(const StringView &name, const Field *f)>;
 

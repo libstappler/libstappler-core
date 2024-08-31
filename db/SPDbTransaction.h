@@ -50,7 +50,7 @@ enum class AccessRoleId {
 	Max = 16,
 };
 
-class Transaction : public AllocBase {
+class SP_PUBLIC Transaction : public AllocBase {
 public:
 	enum Op {
 		None = 0,
@@ -181,35 +181,7 @@ protected:
 	Data *_data = nullptr;
 };
 
-inline bool Transaction::perform(const Callback<bool()> &cb) const {
-	TransactionGuard g(*this);
-
-	if (isInTransaction()) {
-		if (!cb()) {
-			cancelTransaction();
-		} else {
-			return true;
-		}
-	} else {
-		if (beginTransaction()) {
-			if (!cb()) {
-				cancelTransaction();
-			}
-			return endTransaction();
-		}
-	}
-	return false;
-}
-
-inline bool Transaction::performAsSystem(const Callback<bool()> &cb) const {
-	auto tmpRole = getRole();
-	setRole(AccessRoleId::System);
-	auto ret = perform(cb);
-	setRole(tmpRole);
-	return ret;
-}
-
-struct AccessRole : public AllocBase {
+struct SP_PUBLIC AccessRole : public AllocBase {
 	using OnSelect = stappler::ValueWrapper<Function<bool(Worker &, const Query &)>, class OnSelectTag>;
 	using OnCount = stappler::ValueWrapper<Function<bool(Worker &, const Query &)>, class OnCountTag>;
 	using OnCreate = stappler::ValueWrapper<Function<bool(Worker &, Value &obj)>, class OnCreateTag>;
@@ -261,6 +233,34 @@ struct AccessRole : public AllocBase {
 	Function<bool(const Scheme &, Value &)> onReturn;
 	Function<bool(const Scheme &, const Field &, Value &)> onReturnField;
 };
+
+inline bool Transaction::perform(const Callback<bool()> &cb) const {
+	TransactionGuard g(*this);
+
+	if (isInTransaction()) {
+		if (!cb()) {
+			cancelTransaction();
+		} else {
+			return true;
+		}
+	} else {
+		if (beginTransaction()) {
+			if (!cb()) {
+				cancelTransaction();
+			}
+			return endTransaction();
+		}
+	}
+	return false;
+}
+
+inline bool Transaction::performAsSystem(const Callback<bool()> &cb) const {
+	auto tmpRole = getRole();
+	setRole(AccessRoleId::System);
+	auto ret = perform(cb);
+	setRole(tmpRole);
+	return ret;
+}
 
 template <typename T, typename ... Args>
 inline AccessRole &AccessRole::define(T &&v, Args && ... args) {

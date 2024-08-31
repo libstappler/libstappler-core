@@ -25,7 +25,20 @@ THE SOFTWARE.
 #include "SPString.h"
 #include "SPStringView.h"
 #include "SPSharedModule.h"
-#include "SPUrlTld.hpp"
+
+#if MODULE_STAPPLER_IDN
+#include "SPIdn.h"
+#else
+
+namespace STAPPLER_VERSIONIZED stappler::idn {
+
+bool isKnownTld(StringView) {
+	return true;
+}
+
+}
+
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -38,7 +51,7 @@ using GenDelim = chars::Chars<char, ':', '/', '?', '#', '[', ']', '@'>;
 
 using UnreservedUni = chars::Compose<char, Unreserved, chars::UniChar>;
 
-static bool validateScheme(const StringView &r) {
+bool UrlView::validateScheme(const StringView &r) {
 	auto cpy = r;
 	if (cpy.is<StringView::Compose<StringView::CharGroup<CharGroupId::Alphanumeric>, StringView::Chars<'.'>>>()) {
 		cpy ++;
@@ -50,7 +63,7 @@ static bool validateScheme(const StringView &r) {
 	return false;
 }
 
-static bool validateHost(StringView &r) {
+bool UrlView::validateHost(StringView &r) {
 	if (r.empty()) {
 		return false;
 	}
@@ -93,7 +106,7 @@ static bool validateHost(StringView &r) {
 						auto tmp = domain;
 						tmp.skipChars<StringView::CharGroup<CharGroupId::Alphanumeric>>();
 						if (!tmp.empty()) {
-							if (UrlView::isValidIdnTld(domain)) {
+							if (idn::isKnownTld(domain)) {
 								return true;
 							}
 						} else {
@@ -109,7 +122,7 @@ static bool validateHost(StringView &r) {
 	return false;
 }
 
-static bool validateUserOrPassword(const StringView &r) {
+bool UrlView::validateUserOrPassword(const StringView &r) {
 	auto cpy = r;
 	cpy.skipChars<Unreserved, SubDelim, chars::UniChar>();
 	if (cpy.empty()) {
@@ -480,17 +493,6 @@ auto UrlView::parsePath<memory::PoolInterface>(StringView str) -> memory::PoolIn
 	memory::PoolInterface::VectorType<StringView> ret;
 	_parsePath(str, ret);
 	return ret;
-}
-
-bool UrlView::isValidIdnTld(StringView str) {
-	auto p = s_IdnTld;
-	while (*p) {
-		if (str == *p) {
-			return true;
-		}
-		++ p;
-	}
-	return false;
 }
 
 UrlView::UrlView() { }

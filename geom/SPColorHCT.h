@@ -27,7 +27,9 @@
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
-struct alignas(16) ColorHCT {
+struct alignas(16) ColorHCT;
+
+struct SP_PUBLIC ColorHCT {
 	struct alignas(16) Values {
 		float hue;
 		float chroma;
@@ -84,7 +86,7 @@ struct alignas(16) ColorHCT {
 	Color4F color;
 };
 
-std::ostream & operator<<(std::ostream & stream, const ColorHCT & obj);
+SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const ColorHCT & obj);
 
 }
 

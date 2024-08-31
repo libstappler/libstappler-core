@@ -34,7 +34,7 @@ using namespace mem_pool;
 // Edit (Levenshtein) Distance calculation and alignment, used by search index and transforms
 // See: https://en.wikipedia.org/wiki/Levenshtein_distance
 
-class Distance : public memory::AllocPool {
+class SP_PUBLIC Distance : public memory::AllocPool {
 public:
 	enum class Value : uint8_t {
 		Match,

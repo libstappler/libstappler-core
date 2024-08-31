@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
-class Formatter : public InterfaceObject<memory::StandartInterface>{
+class SP_PUBLIC Formatter : public InterfaceObject<memory::StandartInterface>{
 public:
 	struct LinePosition {
 		uint16_t offset;

@@ -90,15 +90,15 @@ inline DataFormat detectDataFormat(const uint8_t *ptr, size_t size, uint8_t &pad
 	return DataFormat::Unknown;
 }
 
-size_t decompress(const uint8_t *srcData, size_t srcSize, uint8_t *dstData, size_t dstSize);
+SP_PUBLIC size_t decompress(const uint8_t *srcData, size_t srcSize, uint8_t *dstData, size_t dstSize);
 
-size_t getDecompressedSize(const uint8_t *, size_t);
-
-template <typename Interface>
-auto decompressLZ4(const uint8_t *, size_t, bool sh) -> ValueTemplate<Interface>;
+SP_PUBLIC size_t getDecompressedSize(const uint8_t *, size_t);
 
 template <typename Interface>
-auto decompressBrotli(const uint8_t *, size_t, bool sh) -> ValueTemplate<Interface>;
+SP_PUBLIC auto decompressLZ4(const uint8_t *, size_t, bool sh) -> ValueTemplate<Interface>;
+
+template <typename Interface>
+SP_PUBLIC auto decompressBrotli(const uint8_t *, size_t, bool sh) -> ValueTemplate<Interface>;
 
 template <typename Interface>
 auto decompress(const uint8_t *d, size_t size) -> typename Interface::BytesType {

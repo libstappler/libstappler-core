@@ -347,28 +347,28 @@ using WideStringView = StringViewBase<char16_t>;
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
 template <typename Interface>
-auto tolower(StringView) -> typename Interface::StringType;
+SP_PUBLIC auto tolower(StringView) -> typename Interface::StringType;
 
 template <typename Interface>
-auto toupper(StringView) -> typename Interface::StringType;
+SP_PUBLIC auto toupper(StringView) -> typename Interface::StringType;
 
 template <typename Interface>
-auto totitle(StringView) -> typename Interface::StringType;
+SP_PUBLIC auto totitle(StringView) -> typename Interface::StringType;
 
 template <typename Interface>
-auto tolower(WideStringView) -> typename Interface::WideStringType;
+SP_PUBLIC auto tolower(WideStringView) -> typename Interface::WideStringType;
 
 template <typename Interface>
-auto toupper(WideStringView) -> typename Interface::WideStringType;
+SP_PUBLIC auto toupper(WideStringView) -> typename Interface::WideStringType;
 
 template <typename Interface>
-auto totitle(WideStringView) -> typename Interface::WideStringType;
+SP_PUBLIC auto totitle(WideStringView) -> typename Interface::WideStringType;
 
-int compare_u(StringView l, StringView r);
-int compare_u(WideStringView l, WideStringView r);
+SP_PUBLIC int compare_u(StringView l, StringView r);
+SP_PUBLIC int compare_u(WideStringView l, WideStringView r);
 
-int caseCompare_u(StringView l, StringView r);
-int caseCompare_u(WideStringView l, WideStringView r);
+SP_PUBLIC int caseCompare_u(StringView l, StringView r);
+SP_PUBLIC int caseCompare_u(WideStringView l, WideStringView r);
 
 }
 

@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::db {
 
 class ApplicationInterface;
 
-class File : public Object {
+class SP_PUBLIC File : public Object {
 public:
 	static String getFilesystemPath(const ApplicationInterface *app, uint64_t oid);
 

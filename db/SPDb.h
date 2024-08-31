@@ -78,7 +78,7 @@ struct RequestData {
 	explicit operator bool() { return exists; }
 };
 
-struct InputConfig {
+struct SP_PUBLIC InputConfig {
 	enum class Require {
 		None = 0,
 		Data = 1,
@@ -102,7 +102,7 @@ struct InputConfig {
 
 SP_DEFINE_ENUM_AS_MASK(InputConfig::Require);
 
-struct InputFile : public AllocBase {
+struct SP_PUBLIC InputFile : public AllocBase {
 	String path;
 	String name;
 	String type;
@@ -136,7 +136,7 @@ struct InputFile : public AllocBase {
 	InputFile &operator=(InputFile &&) = default;
 };
 
-struct InputValue {
+struct SP_PUBLIC InputValue {
 	enum class Type {
 		None,
 		Value,
@@ -170,7 +170,7 @@ struct InputValue {
 	~InputValue();
 };
 
-struct InputField {
+struct SP_PUBLIC InputField {
 	const Field *field = nullptr;
 
 	bool operator==(const InputField &other) const { return field == other.field; }
@@ -178,7 +178,7 @@ struct InputField {
 	bool operator<(const InputField &other) const { return field < other.field; }
 };
 
-struct InputRow {
+struct SP_PUBLIC InputRow {
 	Vector<InputValue> values;
 
 	InputRow() = default;

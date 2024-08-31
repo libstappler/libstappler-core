@@ -28,5 +28,10 @@ MODULE_STAPPLER_DB_INCLUDES_DIRS := $(STAPPLER_MODULE_DIR)/db
 MODULE_STAPPLER_DB_INCLUDES_OBJS :=
 MODULE_STAPPLER_DB_DEPENDS_ON := stappler_search stappler_sql stappler_filesystem stappler_crypto
 
+MODULE_STAPPLER_DB_SHARED_CONSUME := \
+	stappler_sql
+
+MODULE_STAPPLER_DB_SHARED_DEPENDS_ON := stappler_bitmap
+
 # module name resolution
 MODULE_stappler_db := MODULE_STAPPLER_DB

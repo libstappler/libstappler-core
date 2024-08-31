@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-class User : public Object {
+class SP_PUBLIC User : public Object {
 public:
 	static User *create(const Transaction &, const StringView &name, const StringView &password);
 	static User *setup(const Transaction &, const StringView &name, const StringView &password);

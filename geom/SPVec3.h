@@ -35,7 +35,7 @@ class Quaternion;
 struct Size3;
 struct Extent3;
 
-class Vec3 {
+class SP_PUBLIC Vec3 {
 public:
 	static constexpr size_t DIMENSIONS = 3;
 

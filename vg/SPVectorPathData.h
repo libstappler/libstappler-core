@@ -33,7 +33,7 @@ namespace STAPPLER_VERSIONIZED stappler::vg {
 
 using namespace geom;
 
-union CommandData {
+union SP_PUBLIC CommandData {
 	struct {
 		float x;
 		float y;
@@ -58,7 +58,7 @@ enum class Command : uint8_t { // use hint to decode data from `_points` vector
 	ClosePath, // nothing
 };
 
-struct PathParams {
+struct SP_PUBLIC PathParams {
 	Mat4 transform;
 	Color4B fillColor = Color4B(255, 255, 255, 255);
 	Color4B strokeColor = Color4B(255, 255, 255, 255);
@@ -75,7 +75,7 @@ struct PathParams {
 struct PathWriter;
 
 template <typename Interface>
-struct PathData : Interface::AllocBaseType {
+struct SP_PUBLIC PathData : Interface::AllocBaseType {
 	template <typename Value>
 	using Vector = typename Interface::template VectorType<Value>;
 
@@ -101,7 +101,7 @@ struct PathData : Interface::AllocBaseType {
 	auto toString(bool newline = false) const -> typename OutInterface::StringType;
 };
 
-struct PathWriter {
+struct SP_PUBLIC PathWriter {
 	VectorAdapter<CommandData> points;
 	VectorAdapter<Command> commands;
 

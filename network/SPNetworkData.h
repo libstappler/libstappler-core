@@ -57,7 +57,7 @@ enum class AuthMethod {
 uint32_t getActiveHandles();
 
 template <typename Interface>
-struct AuthData {
+struct SP_PUBLIC AuthData {
 	using String = typename Interface::StringType;
 
 	std::variant<
@@ -71,7 +71,7 @@ struct AuthData {
 };
 
 template <typename Interface>
-struct SendData {
+struct SP_PUBLIC SendData {
 	template <typename T>
 	using Function = typename Interface::template FunctionType<T>;
 
@@ -105,7 +105,7 @@ struct SendData {
 };
 
 template <typename Interface>
-struct ProcessData {
+struct SP_PUBLIC ProcessData {
 	template <typename T>
 	using Function = typename Interface::template FunctionType<T>;
 
@@ -145,7 +145,7 @@ struct ProcessData {
 };
 
 template <typename Interface>
-struct ReceiveData {
+struct SP_PUBLIC ReceiveData {
 	template <typename T>
 	using Function = typename Interface::template FunctionType<T>;
 
@@ -178,7 +178,7 @@ struct ReceiveData {
 };
 
 template <typename Interface>
-struct HandleData : Interface::AllocBaseType {
+struct SP_PUBLIC HandleData : Interface::AllocBaseType {
 	template <typename T>
 	using Vector = typename Interface::template VectorType<T>;
 

@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 class Driver;
 
-struct QueryStorageHandle {
+struct SP_PUBLIC QueryStorageHandle {
 	const Driver *driver;
 	StringView name;
 	Map<StringView, const void *> *data;
@@ -50,7 +50,7 @@ struct QueryStorageHandle {
 	}
 };
 
-class Driver : public AllocBase {
+class SP_PUBLIC Driver : public AllocBase {
 public:
 	using Handle = stappler::ValueWrapper<void *, class HandleClass>;
 	using Result = stappler::ValueWrapper<void *, class ResultClass>;

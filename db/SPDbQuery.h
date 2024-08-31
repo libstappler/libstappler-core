@@ -42,7 +42,7 @@ enum class Resolve {
 
 SP_DEFINE_ENUM_AS_MASK(Resolve);
 
-class Query : public AllocBase {
+class SP_PUBLIC Query : public AllocBase {
 public:
 	struct Field : public AllocBase {
 		String name;

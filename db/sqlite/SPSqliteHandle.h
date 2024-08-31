@@ -37,7 +37,7 @@ enum class TransactionLevel {
 	Exclusive,
 };
 
-class SqliteQueryInterface : public db::QueryInterface {
+class SP_PUBLIC SqliteQueryInterface : public db::QueryInterface {
 public:
 	using Binder = db::Binder;
 
@@ -82,7 +82,7 @@ public:
 	Vector<BindingData> params;
 };
 
-class Handle : public db::sql::SqlHandle {
+class SP_PUBLIC Handle : public db::sql::SqlHandle {
 public:
 	Handle(const Driver *, Driver::Handle);
 

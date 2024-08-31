@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-class ContinueToken {
+class SP_PUBLIC ContinueToken {
 public:
 	enum Flags {
 		None = 0,

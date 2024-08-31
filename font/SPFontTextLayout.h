@@ -37,21 +37,21 @@ enum class CharSelectMode {
 	Best,
 };
 
-struct CharLayoutData final {
+struct SP_PUBLIC CharLayoutData final {
 	char16_t charID = 0;
 	int16_t pos = 0;
 	uint16_t advance = 0;
 	uint16_t face = 0;
 };
 
-struct LineLayoutData final {
+struct SP_PUBLIC LineLayoutData final {
 	uint32_t start = 0;
 	uint32_t count = 0;
 	uint16_t pos = 0;
 	uint16_t height = 0;
 };
 
-struct RangeLayoutData final {
+struct SP_PUBLIC RangeLayoutData final {
 	bool colorDirty = false;
 	bool opacityDirty = false;
 	TextDecoration decoration = TextDecoration::None;
@@ -67,7 +67,7 @@ struct RangeLayoutData final {
 	FontFaceSet *layout = nullptr;
 };
 
-struct RangeLineIterator {
+struct SP_PUBLIC RangeLineIterator {
 	const RangeLayoutData *range;
 	const LineLayoutData *line;
 
@@ -105,7 +105,7 @@ struct RangeLineIterator {
 };
 
 template <typename Interface>
-struct TextLayoutData : public Interface::AllocBaseType {
+struct SP_PUBLIC TextLayoutData : public Interface::AllocBaseType {
 	template <typename Value>
 	using Vector = typename Interface::template VectorType<Value>;
 
