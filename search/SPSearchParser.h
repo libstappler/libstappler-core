@@ -84,7 +84,7 @@ enum class SearchRank {
 	A,
 };
 
-struct SearchData {
+struct SP_PUBLIC SearchData {
 	using Language = search::Language;
 	using Rank = SearchRank;
 

@@ -34,16 +34,16 @@ bool AllocPool::isCustomPool(pool_t *p) {
 	}
 }
 
-void PriorityQueue_lock_noOp(void *) {
+SP_PUBLIC void PriorityQueue_lock_noOp(void *) {
 	// no-op, really!
 }
 
-void PriorityQueue_lock_std_mutex(void *ptr) {
+SP_PUBLIC void PriorityQueue_lock_std_mutex(void *ptr) {
 	std::mutex *mutex = (std::mutex *)ptr;
 	mutex->lock();
 }
 
-void PriorityQueue_unlock_std_mutex(void *ptr) {
+SP_PUBLIC void PriorityQueue_unlock_std_mutex(void *ptr) {
 	std::mutex *mutex = (std::mutex *)ptr;
 	mutex->unlock();
 }

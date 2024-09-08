@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::thread {
 
 class Worker;
 
-class TaskQueue : public RefBase<memory::StandartInterface> {
+class SP_PUBLIC TaskQueue : public RefBase<memory::StandartInterface> {
 public:
 	using Ref = RefBase<memory::StandartInterface>;
 	using TaskMap = std::map<uint32_t, std::vector<Rc<Task>>, std::less<void>>;

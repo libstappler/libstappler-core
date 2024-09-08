@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
-struct ThreadInfo {
+struct SP_PUBLIC ThreadInfo {
 	static constexpr uint32_t mainThreadId = maxOf<uint32_t>() - 1;
 
 	static ThreadInfo *getThreadLocal();
@@ -45,7 +45,7 @@ struct ThreadInfo {
 
 /* Interface for thread workers or handlers */
 template <typename Interface>
-class ThreadInterface : public RefBase<Interface> {
+class SP_PUBLIC ThreadInterface : public RefBase<Interface> {
 public:
 	virtual ~ThreadInterface() { }
 

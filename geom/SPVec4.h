@@ -32,9 +32,9 @@ This file was modified for stappler project
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
 class Mat4;
-class alignas(16) Vec4;
+class SP_PUBLIC Vec4;
 
-class SP_PUBLIC Vec4 {
+class alignas(16) Vec4 {
 public:
 	static constexpr size_t DIMENSIONS = 4;
 

@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-void getBacktrace(size_t offset, const Callback<void(StringView)> &);
+SP_PUBLIC void getBacktrace(size_t offset, const Callback<void(StringView)> &);
 
 }
 

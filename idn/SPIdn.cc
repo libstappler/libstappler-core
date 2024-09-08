@@ -100,7 +100,7 @@ struct idn_iface {
 		return typename Interface::StringType();
 	}
 #else
-	idn2_iface() {}
+	idn_iface() {}
 
 	template <typename Interface>
 	auto _idnToAscii(StringView source) -> typename Interface::StringType {

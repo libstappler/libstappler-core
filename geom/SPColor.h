@@ -147,12 +147,12 @@ struct SP_PUBLIC Color4B {
 	static Color4B black(uint8_t);
 };
 
-struct alignas(16) Color4F;
+struct SP_PUBLIC Color4F;
 
 /**
  * RGBA color composed of 4 floats.
  */
-struct SP_PUBLIC Color4F {
+struct alignas(16) Color4F {
 	static const Color4F WHITE;
 	static const Color4F BLACK;
 	static const Color4F ZERO;

@@ -63,7 +63,7 @@ struct SP_PUBLIC SubscriptionFlags : public ValueWrapper<uint64_t, class Subscri
  * since last call of `check`
  */
 template <typename _Interface>
-class SubscriptionTemplate : public RefBase<_Interface> {
+class SP_PUBLIC SubscriptionTemplate : public RefBase<_Interface> {
 public:
 	using Interface = _Interface;
 	using Id = SubscriptionId;
@@ -119,7 +119,7 @@ protected:
  *
  */
 template <class T>
-class Binding {
+class SP_PUBLIC Binding {
 public:
 	using Id = SubscriptionId;
 	using Flags = SubscriptionFlags;

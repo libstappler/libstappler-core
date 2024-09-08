@@ -78,7 +78,7 @@ constexpr inline char32_t utf8Decode32(const char *ptr, uint8_t &offset) {
 	return ret;
 }
 
-char32_t utf8HtmlDecode32(const char *ptr, uint8_t &offset);
+SP_PUBLIC char32_t utf8HtmlDecode32(const char *ptr, uint8_t &offset);
 
 constexpr inline char32_t utf8Decode32(const char *ptr) {
 	uint8_t offset;

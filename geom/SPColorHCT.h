@@ -27,9 +27,9 @@
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
-struct alignas(16) ColorHCT;
+struct SP_PUBLIC ColorHCT;
 
-struct SP_PUBLIC ColorHCT {
+struct alignas(16) ColorHCT {
 	struct alignas(16) Values {
 		float hue;
 		float chroma;

@@ -1508,8 +1508,9 @@ struct TldList {
 static TldList s_tldList;
 
 bool isKnownTld(StringView data) {
-	if (data.starts_with("XN--")) {
-		return s_tldList.has(data.sub("XN--"_len));
+	if (string::caseCompare_c(StringView("XN--"), data.sub(0, 4)) == 0) {
+		std::string d = data.str<memory::StandartInterface>();
+		return s_tldList.has(d);
 	} else {
 		auto tmp = data;
 		tmp.skipChars<StringView::Alphanumeric>();

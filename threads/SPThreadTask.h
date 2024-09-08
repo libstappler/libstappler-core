@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
-class Task : public RefBase<memory::StandartInterface> {
+class SP_PUBLIC Task : public RefBase<memory::StandartInterface> {
 public: /* typedefs */
 	using Ref = RefBase<memory::StandartInterface>;
 
