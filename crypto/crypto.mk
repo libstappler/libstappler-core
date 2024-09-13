@@ -99,5 +99,17 @@ MODULE_STAPPLER_CRYPTO_DEPENDS_ON := stappler_crypto_$(STAPPLER_CRYPTO_DEFAULT) 
 MODULE_STAPPLER_CRYPTO_SHARED_CONSUME := \
 	stappler_crypto_$(STAPPLER_CRYPTO_DEFAULT)
 
+# spec
+
+MODULE_STAPPLER_CRYPTO_SHARED_SPEC_SUMMARY := libstappler cryptographic functions
+
+define MODULE_STAPPLER_CRYPTO_SHARED_SPEC_DESCRIPTION
+Module libstappler-crypto provides interface for:
+- Private/public keys
+- Symmetric block cyphers
+- JWT with signatures and encrypted data
+- GOST cryptography
+endef
+
 # module name resolution
 MODULE_stappler_crypto := MODULE_STAPPLER_CRYPTO

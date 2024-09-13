@@ -42,5 +42,19 @@ ifdef WIN32
 MODULE_STAPPLER_FONT_LIBS += -lz
 endif
 
+# spec
+
+MODULE_STAPPLER_FONT_SHARED_SPEC_SUMMARY := libstappler font rendering prototypes
+
+define MODULE_STAPPLER_FONT_SHARED_SPEC_DESCRIPTION
+Module libstappler-font is an abstract interface for font rendering engine building.
+It provides:
+- Glyph info and rendering via FreeType
+- Font styling and match engine
+- Variadic font support
+- Prototypes for info and glyphs caching
+- Basic glyph layout interface
+endef
+
 # module name resolution
 MODULE_stappler_font := MODULE_STAPPLER_FONT

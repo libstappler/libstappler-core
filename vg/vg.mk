@@ -27,5 +27,15 @@ MODULE_STAPPLER_VG_INCLUDES_DIRS :=
 MODULE_STAPPLER_VG_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/vg
 MODULE_STAPPLER_VG_DEPENDS_ON := stappler_tess stappler_data stappler_filesystem stappler_bitmap
 
+#spec
+
+MODULE_STAPPLER_VG_SHARED_SPEC_SUMMARY := libstappler vector graphic primitives
+
+define MODULE_STAPPLER_VG_SHARED_SPEC_DESCRIPTION
+Module libstappler-vg implements vector graphic primitives:
+- Vector paths (SVG-like)
+- Vector image with COW optimization
+endef
+
 # module name resolution
 MODULE_stappler_vg := MODULE_STAPPLER_VG

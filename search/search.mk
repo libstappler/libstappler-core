@@ -28,5 +28,18 @@ MODULE_STAPPLER_SEARCH_INCLUDES_DIRS :=
 MODULE_STAPPLER_SEARCH_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/search
 MODULE_STAPPLER_SEARCH_DEPENDS_ON := stappler_data
 
+#spec
+
+MODULE_STAPPLER_SEARCH_SHARED_SPEC_SUMMARY := libstappler full-text search primitives
+
+define MODULE_STAPPLER_SEARCH_SHARED_SPEC_DESCRIPTION
+Module libstappler-search contains primitives to build full-text search engines:
+- Edit sitance
+- Normalizer
+- Stemmer
+- Query parser
+- Query matcher
+endef
+
 # module name resolution
 MODULE_stappler_search := MODULE_STAPPLER_SEARCH

@@ -40,5 +40,18 @@ ifdef WIN32
 MODULE_STAPPLER_BITMAP_LIBS += -lz -loldnames
 endif
 
+# spec
+
+MODULE_STAPPLER_BITMAP_SHARED_SPEC_SUMMARY := libstappler bitmap functions
+
+define MODULE_STAPPLER_BITMAP_SHARED_SPEC_DESCRIPTION
+Module libstappler-bitmap provides function for bitmap manipulation
+- Load from png/jpeg/gif/webp
+- Save to png/jpeg/webp
+- Change pixel format
+- Upscale, downscale
+- Direct reading from FS to buffer
+endef
+
 # module name resolution
 MODULE_stappler_bitmap := MODULE_STAPPLER_BITMAP

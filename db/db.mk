@@ -33,5 +33,18 @@ MODULE_STAPPLER_DB_SHARED_CONSUME := \
 
 MODULE_STAPPLER_DB_SHARED_DEPENDS_ON := stappler_bitmap
 
+#spec
+
+MODULE_STAPPLER_DB_SHARED_SPEC_SUMMARY := libstappler database interface
+
+define MODULE_STAPPLER_DB_SHARED_SPEC_DESCRIPTION
+Module libstappler-db is an interface for database storage (SQlite or PostgreSQL)
+Implements complex strongly-typed versionized database schemes:
+- Automatic and virtual fields supports
+- Views
+- Access control by user role
+- Per-field compression
+endef
+
 # module name resolution
 MODULE_stappler_db := MODULE_STAPPLER_DB

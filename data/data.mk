@@ -31,6 +31,19 @@ MODULE_STAPPLER_DATA_SHARED_DEPENDS_ON := stappler_filesystem
 MODULE_STAPPLER_DATA_SHARED_CONSUME := \
 	stappler_brotli_lib
 
+# spec
+
+MODULE_STAPPLER_DATA_SHARED_SPEC_SUMMARY := libstappler JSON/CBOR support
+
+define MODULE_STAPPLER_DATA_SHARED_SPEC_DESCRIPTION
+Module libstappler-data adds:
+- weakly-typed container data::Valye
+- encoding/decoding for JSON and CBOR
+- command line arguments processing
+- URL arguments processing
+- compression/decompression with brotli or lz4
+endef
+
 # module name resolution
 MODULE_stappler_data := MODULE_STAPPLER_DATA
 

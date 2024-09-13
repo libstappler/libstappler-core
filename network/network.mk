@@ -36,5 +36,13 @@ ifdef WIN32
 MODULE_STAPPLER_NETWORK_GENERAL_LDFLAGS += -lnormaliz -loldnames -lbcrypt
 endif
 
+#spec
+
+MODULE_STAPPLER_NETWORK_SHARED_SPEC_SUMMARY := libstappler network interface
+
+define MODULE_STAPPLER_NETWORK_SHARED_SPEC_DESCRIPTION
+Module libstappler-network is an interface for network queries, based on cURL
+endef
+
 # module name resolution
 MODULE_stappler_network := MODULE_STAPPLER_NETWORK

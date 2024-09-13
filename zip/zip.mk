@@ -28,6 +28,7 @@ MODULE_STAPPLER_ZIP_SRCS_OBJS :=
 MODULE_STAPPLER_ZIP_INCLUDES_DIRS :=
 MODULE_STAPPLER_ZIP_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/zip
 MODULE_STAPPLER_ZIP_DEPENDS_ON := stappler_crypto
+MODULE_STAPPLER_ZIP_SHARED_PKGCONFIG := libzip
 
 ifdef LINUX
 MODULE_STAPPLER_ZIP_LIBS += -l:libzip-$(STAPPLER_CRYPTO_DEFAULT).a -l:libz.a
@@ -45,6 +46,14 @@ endif
 ifdef WIN32
 MODULE_STAPPLER_ZIP_LIBS += -l:libzip.a -lz -lbcrypt
 endif
+
+#spec
+
+MODULE_STAPPLER_ZIP_SHARED_SPEC_SUMMARY := libstappler ZIP archive interface
+
+define MODULE_STAPPLER_ZIP_SHARED_SPEC_DESCRIPTION
+Module libstappler-zip implements interface to access files within ZIP archive
+endef
 
 # module name resolution
 MODULE_stappler_zip := MODULE_STAPPLER_ZIP

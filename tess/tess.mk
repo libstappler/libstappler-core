@@ -27,5 +27,18 @@ MODULE_STAPPLER_TESS_INCLUDES_DIRS :=
 MODULE_STAPPLER_TESS_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/tess
 MODULE_STAPPLER_TESS_DEPENDS_ON := stappler_geom
 
+#spec
+
+MODULE_STAPPLER_TESS_SHARED_SPEC_SUMMARY := libstappler 2D tesselator
+
+define MODULE_STAPPLER_TESS_SHARED_SPEC_DESCRIPTION
+Module libstappler-tess implements 2D tesselator and supplementary functions
+- Arc and bezier line subdivision
+- General purpose tesselation (like GLUTess)
+- Stroke generation
+- Distance field generation
+- Vertex-based antialiasing
+endef
+
 # module name resolution
 MODULE_stappler_tess := MODULE_STAPPLER_TESS

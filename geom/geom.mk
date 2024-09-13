@@ -27,5 +27,20 @@ MODULE_STAPPLER_GEOM_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/geom $(STAPPLER_MOD
 MODULE_STAPPLER_GEOM_DEPENDS_ON := stappler_core
 MODULE_STAPPLER_GEOM_SHADERS_INCLUDE := $(STAPPLER_MODULE_DIR)/geom/glsl
 
+# spec
+
+MODULE_STAPPLER_GEOM_SHARED_SPEC_SUMMARY := libstappler 2D/3D geometry types
+
+define MODULE_STAPPLER_GEOM_SHARED_SPEC_DESCRIPTION
+Module libstappler-geom provides types for 2D and 2D rendering, like
+- Points (Vec2, Vec3, Vec4)
+- Matrices (Mat4)
+- Quaterinons
+- Float and integral sizes
+- Float and integral colors
+- HCT color engine
+- GLSL-compatible interface
+endef
+
 # module name resolution
 MODULE_stappler_geom := MODULE_STAPPLER_GEOM

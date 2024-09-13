@@ -46,6 +46,21 @@ ifdef MACOS
 MODULE_STAPPLER_CORE_GENERAL_LDFLAGS += -framework CoreFoundation
 endif
 
+# spec
+
+MODULE_STAPPLER_CORE_SHARED_SPEC_SUMMARY := libstappler basic functions
+
+define MODULE_STAPPLER_CORE_SHARED_SPEC_DESCRIPTION
+Module libstappler-core provides basic libstappler framework functions:
+- Memory manegement (memory pools or standart allocations)
+- String manupulation
+- Filesystem functions
+- Threading functions
+- Url/Email validators
+- SAX HTML parser
+- Time utilities
+endef
+
 # module name resolution
 MODULE_stappler_core := MODULE_STAPPLER_CORE
 
