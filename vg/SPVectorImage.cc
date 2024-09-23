@@ -445,6 +445,21 @@ void VectorImageData::resetDrawOrder() {
 	}
 }
 
+void VectorImageData::draw(const Callback<void(VectorPath &, StringView id, StringView cache, const Mat4 &)> &cb) const {
+	if (!_order.empty()) {
+		for (auto &it : _order) {
+			auto pathIt = _paths.find(it.id);
+			if (pathIt != _paths.end()) {
+				cb(*pathIt->second, it.id, it.cacheId, it.mat);
+			}
+		}
+	} else {
+		for (auto &it : _paths) {
+			cb(*it.second, it.first, StringView(), Mat4());
+		}
+	}
+}
+
 #if MODULE_STAPPLER_BITMAP
 bool VectorImage::isSvg(StringView str) {
 	return bitmap::check(bitmap::FileFormat::Svg, (const uint8_t *)str.data(), str.size());

@@ -134,8 +134,7 @@ public:
 	void setBatchDrawing(bool value) { _allowBatchDrawing = value; }
 	bool isBatchDrawing() const { return _allowBatchDrawing; }
 
-	template <typename Callback>
-	void draw(const Callback &) const;
+	void draw(const Callback<void(VectorPath &, StringView id, StringView cache, const Mat4 &)> &cb) const;
 
 protected:
 	bool _allowBatchDrawing = true;
@@ -221,22 +220,6 @@ protected:
 	Rc<VectorImageData> _data;
 	Interface::MapType<String, Rc<VectorPathRef>> _paths;
 };
-
-template <typename Callback>
-void VectorImageData::draw(const Callback &cb) const {
-	if (!_order.empty()) {
-		for (auto &it : _order) {
-			auto pathIt = _paths.find(it.id);
-			if (pathIt != _paths.end()) {
-				cb(*pathIt->second, it.cacheId, it.mat);
-			}
-		}
-	} else {
-		for (auto &it : _paths) {
-			cb(*it.second, StringView(), Mat4());
-		}
-	}
-}
 
 }
 

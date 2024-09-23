@@ -206,6 +206,22 @@ inline constexpr T minOf() {
 	return NumericLimits<T>::min();
 }
 
+// For floats - use lowest: https://en.cppreference.com/w/cpp/types/numeric_limits/lowest
+template <>
+inline constexpr double minOf<double>() {
+	return NumericLimits<double>::lowest();
+}
+
+template <>
+inline constexpr float minOf<float>() {
+	return NumericLimits<float>::lowest();
+}
+
+template <>
+inline constexpr long double minOf<long double>() {
+	return NumericLimits<long double>::lowest();
+}
+
 template <typename T, typename V>
 struct HasMultiplication {
 	template<class A, class B>
@@ -509,9 +525,9 @@ T smooth(const T &source, const T &target, float elapsed, float response) {
 }
 
 // avoid constexpr to support SIMD-based implementation
-template <typename T> inline
-T lerp(const T &a, const T &b, float alpha) {
-	return (a * (1.0f - alpha) + b * alpha);
+template <typename T, typename V = float> inline
+T lerp(const T &a, const T &b, const V &alpha) {
+	return (a * (- alpha + 1.0f) + b * alpha);
 }
 
 template<class T, class Compare> constexpr inline

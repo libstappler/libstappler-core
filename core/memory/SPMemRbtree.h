@@ -249,25 +249,28 @@ struct TreeKeyExtractor<Key, Pair<const Key, Value>> {
 	}
 };
 
-template <typename Key, typename Comp, typename Transparent = void>
-struct TreeComparator {
-	static inline bool compare(const Key &l, const Key &r, const Comp &comp) noexcept {
-		return comp(l, r);
-	}
+namespace impl {
 
-	template <typename A, typename B>
-	static inline bool compare(const A &l, const B &r, const Comp &comp, typename Comp::is_transparent * = nullptr) noexcept {
-		return comp(l, r);
-	}
+template<typename T, typename ...P>
+struct dependent_type {
+	using type = T;
 };
 
-template <typename Key, typename Comp>
-struct TreeComparator<Key, Comp, typename Comp::is_transparent> {
-	template <typename A, typename B>
-	static inline bool compare(const A &l, const B &r, const Comp &comp) noexcept {
-		return comp(l, r);
-	}
-};
+template<typename A, typename ...B>
+using void_type = typename dependent_type<void, A, B...>::type;
+
+template<typename DummyVoid, template<typename ...> typename A, typename ...B>
+struct is_detected : std::false_type {};
+
+template<template<typename ...> typename A, typename ...B>
+struct is_detected<void_type<A<B...>>, A, B...> : std::true_type {};
+
+template <template <typename...> typename A, typename ...B>
+inline constexpr bool is_detected_v = impl::is_detected<void, A, B...>::value;
+
+}
+
+template <typename T> using DetectTransparent = typename T::is_transparent;
 
 template <typename Key, typename Value, typename Comp = std::less<>>
 class Tree : public AllocPool {
@@ -557,11 +560,20 @@ protected:
 	inline const Key & extract(const Storage<Value> &s) const { return extract(s.ref()); }
 	inline const Key & extract(const NodeBase *s) const { return extract(static_cast<const Node<Value> *>(s)->value.ref()); }
 
-	template <typename A, typename B>
-	inline bool compareLtTransparent(const A &l, const B &r) const { return TreeComparator<Key, Comp>::compare(l, r, _comp); }
-
 	inline bool compareLtKey(const Key &l, const Key &r) const { return _comp(l, r); }
 	inline bool compareEqKey(const Key &l, const Key &r) const { return !compareLtKey(l, r) && !compareLtKey(r, l); }
+
+	template <typename A, typename B>
+	inline bool compareLtTransparent(const A &l, const B &r) const {
+		if constexpr (impl::is_detected_v<DetectTransparent, Comp>) {
+			return _comp(l, r);
+		} else if constexpr (std::is_same_v<A, B>) {
+			return compareLtKey(l, r);
+		} else {
+			static_assert("Comparator should be transparent or search key and stored key types must be the same");
+			return false;
+		}
+	}
 
 	inline bool compareEqValue(const Value &l, const Value &r) const { return compareEqKey(extract(l), extract(r)); }
 	inline bool compareLtValue(const Value &l, const Value &r) const { return compareLtKey(extract(l), extract(r)); }

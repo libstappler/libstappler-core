@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -195,6 +195,21 @@ inline auto notEqual(const T &v1, const T &v2) {
 template <typename T>
 inline auto round(const T &v1) {
 	return geom::_round(v1);
+}
+
+template <typename T, typename V>
+inline T mix(const T & x, const T & y, const V &a) {
+	return geom::_mix(x, y, a);
+}
+
+template <typename T>
+inline T mix(const T & x, const T & y, const bool &a) {
+	return geom::_mix(x, y, a);
+}
+
+template <typename T>
+inline T smoothstep(const float & edge0, const float & edge1, const T &x) {
+	return geom::_smoothstep(edge0, edge1, x);
 }
 
 }

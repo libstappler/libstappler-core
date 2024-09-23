@@ -157,6 +157,24 @@ inline constexpr T _round(const T &t) {
 	return apply(t, [] (float v) { return std::round(v); });
 }
 
+template <typename T, typename V>
+inline constexpr T _mix(const T & x, const T & y, const V &a) {
+	return math::lerp(x, y, a);
+}
+
+template <typename T>
+inline constexpr T _mix(const T & x, const T & y, bool a) {
+	return a ? x : y;
+}
+
+template <typename T>
+inline constexpr T _smoothstep(const float & edge0, const float & edge1, const T &x) {
+	return apply(x, [&] (float v) {
+		auto t = stappler::math::clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+		return t * t * (3.0 - 2.0 * t);
+	});
+}
+
 template <typename T>
 inline constexpr T _sign(const T &t) {
 	return apply(t, [] (float v) { return std::copysign(1.0f, v); });
