@@ -45,7 +45,7 @@ struct Tesselator::Data : ObjectAllocator {
 	float _boundaryInset = 0.0f;
 	float _contentScale = 1.0f;
 	uint32_t _nvertexes = 0;
-	uint8_t _markValue = 0;
+	uint8_t _markValue = 1;
 
 	RelocateRule _relocateRule = RelocateRule::Auto;
 
@@ -59,14 +59,14 @@ struct Tesselator::Data : ObjectAllocator {
 
 	Data(memory::pool_t *p);
 
-	void computeInterior();
+	bool computeInterior();
 
 	// Compute boundary face contour, also - split vertexes in subboundaries for antialiasing
 	uint32_t computeBoundary();
 
 	bool tessellateInterior();
 	bool tessellateMonoRegion(HalfEdge *, uint8_t);
-	void sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vertex *v);
+	bool sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vertex *v);
 	HalfEdge * processIntersect(Vertex *, const EdgeDictNode *, HalfEdge *, Vec2 &, IntersectionEvent ev);
 	HalfEdge * processIntersect(Vertex *, const EdgeDictNode *, Vec2 &, IntersectionEvent ev);
 
@@ -336,7 +336,9 @@ bool Tesselator::prepare(TessResult &res) {
 		_data->_dryRun = true;
 	}
 
-	_data->computeInterior();
+	if (!_data->computeInterior()) {
+		return false;
+	}
 
 	if (_data->_boundaryOffset > 0.0f || _data->_boundaryInset > 0.0f) {
 		auto nBoundarySegments = _data->computeBoundary();
@@ -535,7 +537,7 @@ bool Tesselator::write(TessResult &res) {
 
 	auto mark = ++ _data->_markValue;
 	for (auto &it : _data->_faceEdges) {
-		if (it->_mark != mark && isWindingInside(_data->_winding, it->_realWinding)) {
+		if (it && it->_mark != mark && isWindingInside(_data->_winding, it->_realWinding)) {
 			uint32_t vertex = 0;
 
 			it->foreachOnFace([&, this] (HalfEdge &edge) {
@@ -564,16 +566,6 @@ bool Tesselator::write(TessResult &res) {
 
 			if (vertex == 3) {
 				res.pushTriangle(res.target, triangle);
-				/*if (skipTriangles > 0) {
-					-- skipTriangles;
-				} else {
-					if (ntriangles > 0) {
-						res.pushTriangle(res.target, triangle);
-						-- ntriangles;
-					} else {
-						break;
-					}
-				}*/
 			}
 		}
 	}
@@ -584,7 +576,9 @@ bool Tesselator::write(TessResult &res) {
 Tesselator::Data::Data(memory::pool_t *p)
 : ObjectAllocator(p) { }
 
-void Tesselator::Data::computeInterior() {
+bool Tesselator::Data::computeInterior() {
+	bool result = true;
+
 	_exportVertexes.clear();
 
 	EdgeDict dict(_pool, 8);
@@ -602,16 +596,26 @@ void Tesselator::Data::computeInterior() {
 			}
 
 			vNext = pq.extractMin();
-			mergeVertexes(v, vNext);
+			if (!mergeVertexes(v, vNext)) {
+				log::error("geom::Tesselator", "Tesselation failed on mergeVertexes");
+				result = false;
+				break;
+			}
 		}
 
 		dict.update(v, _mathTolerance);
 
-		sweepVertex(pq, dict, v);
+		if (!sweepVertex(pq, dict, v)) {
+			log::error("geom::Tesselator", "Tesselation failed on sweepVertex");
+			result = false;
+			break;
+		}
 	}
 
 	_edgeDict = nullptr;
 	_vertexQueue = nullptr;
+
+	return result;
 }
 
 uint32_t Tesselator::Data::computeBoundary() {
@@ -758,7 +762,7 @@ bool Tesselator::Data::tessellateMonoRegion(HalfEdge *edge, uint8_t v) {
 				v1 = &lo->getDstVec();
 				v2 = &lo->getLeftLoopNext()->getDstVec();
 
-				if (!isDegenerateTriangle(tempHalfEdge)) {
+				if (tempHalfEdge && !isDegenerateTriangle(tempHalfEdge)) {
 					_faceEdges.emplace_back(tempHalfEdge);
 				}
 			}
@@ -788,7 +792,7 @@ bool Tesselator::Data::tessellateMonoRegion(HalfEdge *edge, uint8_t v) {
 				v1 = &up->getOrgVec();
 				v2 = &up->getLeftLoopPrev()->getOrgVec();
 
-				if (!isDegenerateTriangle(tempHalfEdge)) {
+				if (tempHalfEdge && !isDegenerateTriangle(tempHalfEdge)) {
 					_faceEdges.emplace_back(tempHalfEdge);
 				}
 			}
@@ -805,20 +809,20 @@ bool Tesselator::Data::tessellateMonoRegion(HalfEdge *edge, uint8_t v) {
 		if (tempHalfEdge == nullptr) {
 			return false;
 		}
-		if (!isDegenerateTriangle(tempHalfEdge)) {
+		if (tempHalfEdge && !isDegenerateTriangle(tempHalfEdge)) {
 			_faceEdges.emplace_back(tempHalfEdge);
 		}
 		lo = tempHalfEdge->sym();
 		lo->_mark = v;
 	}
 
-	if (!isDegenerateTriangle(lo)) {
+	if (lo && !isDegenerateTriangle(lo)) {
 		_faceEdges.emplace_back(lo);
 	}
 	return true;
 }
 
-void Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vertex *v) {
+bool Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vertex *v) {
 	auto doConnectEdges = [&, this] (HalfEdge *source, HalfEdge *target) {
 		if constexpr (TessVerbose != VerboseFlag::None) {
 			std::cout << "\t\tConnect: \n\t\t\t" << *source << "\n\t\t\t" << *target << "\n";
@@ -960,13 +964,9 @@ void Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vert
 	// so, event vertex will no longer be valid for iteration
 	do {
 		if (auto node = dict.checkForIntersects(v, tmp, event, _mathTolerance)) {
-			//if (VertLeq(v->_origin, tmp)) {
-				if (processIntersect(v, node, tmp, event) == nullptr) {
-					return;
-				}
-			//} else {
-			//	std::cout << "Test\n";
-			//}
+			if (processIntersect(v, node, tmp, event) == nullptr) {
+				return false;
+			}
 		}
 	} while (0);
 
@@ -982,22 +982,23 @@ void Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vert
 		if (e->goesRight()) {
 			// push outcoming edge
 			if (auto node = dict.checkForIntersects(e, tmp, event, _mathTolerance)) {
-				// edges in dictionary should be still valid
+				// edges in dictionary should remains valid
 				// intersections preserves left subedge, and no
 				// intersection points can be at the left of sweep line
-				//if (VertLeq(v->_origin, tmp)) {
-					processIntersect(v, node, e, tmp, event);
-				//} else {
-				//	std::cout << "Test\n";
-				//}
-				if (!_eventVertex) {
-					return;
+				if (processIntersect(v, node, e, tmp, event)) {
+					if (!_eventVertex) {
+						return false;
+					}
+					e = v->_edge;
 				}
-				e = v->_edge;
 			}
 		}
 		e = e->_originNext;
-	} while (e != v->_edge);
+	} while (e && e != v->_edge);
+
+	if (!e) {
+		return false;
+	}
 
 	// rotate to first left non-convex angle counterclockwise
 	// its critical for correct winding calculations
@@ -1168,6 +1169,7 @@ void Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vert
 
 	v->_exportIdx = _exportVertexes.size();
 	_exportVertexes.emplace_back(v);
+	return true;
 }
 
 HalfEdge *Tesselator::Data::processIntersect(Vertex *v, const EdgeDictNode *edge1, HalfEdge *edge2, Vec2 &intersect, IntersectionEvent ev) {
@@ -1227,6 +1229,7 @@ HalfEdge *Tesselator::Data::processIntersect(Vertex *v, const EdgeDictNode *edge
 		vertex = splitEdge(edge1->edge->getPostitive(), intersect);
 		fixDictEdge(edge1);
 		if (!mergeVertexes(v, vertex)) {
+			log::error("geom::Tesselator", "Tesselation failed on processIntersect: IntersectionEvent::EventIsIntersection");
 			releaseVertex(v);
 			return nullptr;
 		}
@@ -1236,6 +1239,7 @@ HalfEdge *Tesselator::Data::processIntersect(Vertex *v, const EdgeDictNode *edge
 		// split Edge1, next segment will be checked on next sweep event
 		vertex = splitEdge(edge2->getEdge()->getPostitive(), intersect);
 		if (!mergeVertexes(_vertexes[edge1->edge->getNegative()->vertex], vertex)) {
+			log::error("geom::Tesselator", "Tesselation failed on processIntersect: IntersectionEvent::EdgeConnection1");
 			releaseVertex(_vertexes[edge1->edge->getNegative()->vertex]);
 			return nullptr;
 		}
@@ -1246,9 +1250,13 @@ HalfEdge *Tesselator::Data::processIntersect(Vertex *v, const EdgeDictNode *edge
 		vertex = splitEdge(edge1->edge->getPostitive(), intersect);
 		fixDictEdge(edge1);
 		if (!mergeVertexes(_vertexes[edge2->getEdge()->getNegative()->vertex], vertex)) {
+			log::error("geom::Tesselator", "Tesselation failed on processIntersect: IntersectionEvent::EdgeConnection2");
 			releaseVertex(_vertexes[edge2->getEdge()->getNegative()->vertex]);
 			return nullptr;
 		}
+		break;
+	case IntersectionEvent::Merge:
+		return nullptr;
 		break;
 	}
 
@@ -1291,6 +1299,7 @@ HalfEdge *Tesselator::Data::processIntersect(Vertex *v, const EdgeDictNode *edge
 		vertex = splitEdge(edge1->edge->getPostitive(), intersect);
 		fixDictEdge(edge1);
 		if (!mergeVertexes(v, vertex)) {
+			log::error("geom::Tesselator", "Tesselation failed on processIntersect: IntersectionEvent::EventIsIntersection");
 			releaseVertex(v);
 			return nullptr;
 		}
@@ -1299,7 +1308,7 @@ HalfEdge *Tesselator::Data::processIntersect(Vertex *v, const EdgeDictNode *edge
 		return nullptr;
 	}
 
-	return edge1->edge->getPostitive();
+	return edge1->edge ? edge1->edge->getPostitive() : nullptr;
 }
 
 Edge *Tesselator::Data::makeEdgeLoop(const Vec2 &origin) {
@@ -1355,7 +1364,10 @@ HalfEdge *Tesselator::Data::pushVertex(HalfEdge *e, const Vec2 &origin, bool clo
 
 HalfEdge *Tesselator::Data::connectEdges(HalfEdge *eOrg, HalfEdge *eDst) {
 	if (eOrg->sym()->vertex == eDst->vertex) {
-		std::cout << "ERROR: connectEdges on same vertex:\n\t" << *eOrg << "\n\t" << *eOrg->sym() << "\n\t" << *eDst << "\n";
+		if constexpr (TessVerbose == VerboseFlag::General) {
+			std::cout << "ERROR: connectEdges on same vertex:\n\t" << *eOrg << "\n\t" << *eOrg->sym() << "\n\t" << *eDst << "\n";
+		}
+		log::error("geom::Tesselator", "Tesselation failed on connectEdges");
 		return nullptr;
 	}
 
@@ -1633,6 +1645,9 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 	auto eMergeEnd = eMerge;
 
 	float lA = EdgeAngle(eOrg->getNormVec(), eOrg->getOriginNext()->getNormVec());
+	if (isnan(lA)) {
+		return false;
+	}
 
 	// merge common edges, if any
 	do {
@@ -1656,18 +1671,21 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 
 	do {
 		auto eMergeNext = eMerge->_originNext;
+		// control infinite loop with max rotation angle metric
+		float totalAngle = 0;
 
 		do {
 			if constexpr (TessVerbose != VerboseFlag::None) {
 				std::cout << "eMerge: " << *eMerge << "\n";
 			}
 			auto rA = EdgeAngle(eOrg->getNormVec(), eMerge->getNormVec());
+			if (isnan(rA)) {
+				return false;
+			}
+
+			totalAngle += rA;
 			if (EdgeAngleIsBelowTolerance(rA, _mathTolerance)) {
 				auto tmpOrg = mergeEdges(eOrg, eMerge);
-
-				/*if (eMerge == eMerge->_originNext) {
-					std::cout << "Final:\n\t" << *eMerge << "\n";
-				}*/
 
 				if (!Tesselator_checkConnectivity(org->_edge)) {
 					log::error("geom::Tesselator", "Pizdets");
@@ -1677,32 +1695,16 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 				eMerge->vertex = eOrg->vertex;
 				eOrg = tmpOrg;
 				lA = EdgeAngle(eOrg->getNormVec(), eOrg->getOriginNext()->getNormVec());
+				if (isnan(lA)) {
+					return false;
+				}
 				break;
 			} else if (rA < lA) {
 				if constexpr (TessVerbose != VerboseFlag::None) {
 					std::cout << "Insert next:\n\t" << *eOrg << "\n\t" << *eMerge << "\n";
 				}
 
-				/*if (eMerge == eMerge->_originNext) {
-					std::cout << "Final:\n\t" << *eMerge << "\n";
-				}
-
-				std::cout << "Final2:"
-						<< "\n\tnext-next: " << *eMergeNext->_originNext
-						<< "\n\tnext: " << *eMergeNext
-						<< "\n\tmerge: " << *eMerge
-						<< "\n\tprev: " << *eMerge->getOriginPrev()
-						<< "\n";*/
 				auto tmpOrg = insertNext(eOrg, eMerge);
-
-				/*std::cout << "Final3:\n\tmerge: " << *eMergeNext
-						<< "\n\tnext: " << *eMergeNext->_originNext
-						<< "\n\tprev: " << *eMergeNext->getOriginPrev()
-						<< "\n";*/
-				if (eMergeNext->_originNext == eMerge) {
-					std::cout << "Final4:\n\t" << *eMerge << "\n";
-				}
-
 				if (!Tesselator_checkConnectivity(org->_edge)) {
 					log::error("geom::Tesselator", "Pizdets");
 				}
@@ -1711,12 +1713,22 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 				eMerge->vertex = eOrg->vertex;
 				eOrg = tmpOrg;
 				lA = EdgeAngle(eOrg->getNormVec(), eOrg->getOriginNext()->getNormVec());
+				if (isnan(lA)) {
+					return false;
+				}
 				break;
 			} else {
 				eOrg = eOrg->_originNext;
 				lA = EdgeAngle(eOrg->getNormVec(), eOrg->getOriginNext()->getNormVec());
+				if (isnan(lA)) {
+					return false;
+				}
 			}
-		} while (true);
+		} while (totalAngle < 32.0f);
+
+		if (totalAngle >= 32.0f) {
+			return false;
+		}
 
 		if (eMerge == eMergeNext) {
 			break;
@@ -1831,32 +1843,45 @@ bool Tesselator::Data::mergeVertexes(Vertex *org, Vertex *merge) {
 	// process overlaps
 	_protectedVertexes.emplace_back(org);
 
-	eOrgEnd = eOrg = org->_edge;
-	if constexpr (TessVerbose != VerboseFlag::None) {
-		std::cout << "Start: " << eOrg->vertex << " (" << _protectedVertexes.size() << "): " << *eOrg << "\n";
-	}
-	do {
-		//std::cout << "\tOverlaps: " << eOrg->vertex << " (" << _protectedVertexes.size() << "): " << *eOrg << "\n";
-		auto eOrgNext = eOrg->_originNext;
 
-		float a = EdgeAngle(eOrg->getNormVec(), eOrgNext->getNormVec());
-		if (EdgeAngleIsBelowTolerance(a, _mathTolerance)) {
-			auto eOrgJoin = eOrgNext;
-
-			eOrgNext = eOrgJoin->_originNext;
-
-			if (processEdgeOverlap(org, eOrg, eOrgJoin)) {
-				eOrgEnd = eOrg = org->_edge;
-				eOrgNext = eOrg->_originNext;
-			} else {
-				if (eOrgJoin == eOrgEnd) {
-					break;
-				}
-			}
+	bool overlapProcessed = false;
+	while (!overlapProcessed) {
+		eOrgEnd = eOrg = org->_edge;
+		if constexpr (TessVerbose != VerboseFlag::None) {
+			std::cout << "Start overlap processing: " << eOrg->vertex << " (" << _protectedVertexes.size() << "): " << *eOrg << "\n";
 		}
 
-		eOrg = eOrgNext;
-	} while (eOrg != eOrgEnd);
+		do {
+			auto eOrgNext = eOrg->_originNext;
+
+			float a = EdgeAngle(eOrg->getNormVec(), eOrgNext->getNormVec());
+			if (isnan(a)) {
+				return false;
+			}
+			if (EdgeAngleIsBelowTolerance(a, _mathTolerance)) {
+				auto eOrgJoin = eOrgNext;
+
+				eOrgNext = eOrgJoin->_originNext;
+
+				if (processEdgeOverlap(org, eOrg, eOrgJoin)) {
+					eOrgEnd = eOrg = org->_edge;
+					eOrg = eOrg->_originNext;
+					break;
+				} else {
+					if (eOrgJoin == eOrgEnd) {
+						overlapProcessed = true;
+						break;
+					}
+				}
+			}
+
+			eOrg = eOrgNext;
+		} while (eOrg != eOrgEnd);
+
+		if (eOrg == eOrgEnd) {
+			overlapProcessed = true;
+		}
+	}
 
 	// remove loops
 	eOrgEnd = eOrg = org->_edge;
@@ -1956,12 +1981,7 @@ HalfEdge *Tesselator::Data::removeEdge(HalfEdge *e) {
 }
 
 HalfEdge * Tesselator::Data::removeDegenerateEdges(HalfEdge *e, uint32_t *nedges, bool safeRemove) {
-	auto eEnd = e;
-
-	do {
-		if (!e) {
-			break;
-		}
+	while (e && !e->_mark) {
 		auto eLnext = e->_leftNext;
 
 		auto edge = e->getEdge();
@@ -1973,10 +1993,6 @@ HalfEdge * Tesselator::Data::removeDegenerateEdges(HalfEdge *e, uint32_t *nedges
 		while (VertEq(e->getOrgVec(), e->getDstVec(), _mathTolerance) && e->_leftNext->_leftNext != e) {
 			if constexpr (TessVerbose != VerboseFlag::None) {
 				std::cout << "Remove degenerate: " << *e << "\n";
-			}
-
-			if (eEnd == e) {
-				eEnd = eLnext;
 			}
 
 			auto vertex = _vertexes[e->sym()->vertex];
@@ -2030,18 +2046,10 @@ HalfEdge * Tesselator::Data::removeDegenerateEdges(HalfEdge *e, uint32_t *nedges
 		// check and remove tail-like structs
 		if (FloatEq(edge->direction, edgeNext->direction, _mathTolerance)) {
 			if (safeRemove) {
-				if (eEnd == eLnext) {
-					eEnd = eLnext->_leftNext;
-				}
-
 				HalfEdge *tmp = eLnext;
 
 				// we need to recheck e for another degenerate cases
-				if (e == eEnd) {
-					eEnd = e = e->getLeftLoopPrev();
-				} else {
-					e = e->getLeftLoopPrev();
-				}
+				e = e->getLeftLoopPrev();
 
 				if (safeRemove) {
 					auto vertex = _vertexes[tmp->sym()->vertex];
@@ -2061,10 +2069,11 @@ HalfEdge * Tesselator::Data::removeDegenerateEdges(HalfEdge *e, uint32_t *nedges
 				return nullptr;
 			}
 		}
+		e->_mark = 1;
 		e = e->_leftNext;
-	} while (e && e != eEnd);
+	};
 
-	return eEnd;
+	return e;
 }
 
 bool Tesselator::Data::processEdgeOverlap(Vertex *org, HalfEdge *e1, HalfEdge *e2) {
@@ -2108,27 +2117,26 @@ bool Tesselator::Data::processEdgeOverlap(Vertex *org, HalfEdge *e1, HalfEdge *e
 	_protectedEdges.emplace_back(e2->sym());
 	_protectedEdges.emplace_back(e1->sym());
 
-	if (vOrg != vMerge) {
-		if (std::find(_protectedVertexes.begin(), _protectedVertexes.end(), vOrg) != _protectedVertexes.end()) {
-			return false;
+	bool result = false;
+
+	do {
+		if (vOrg != vMerge) {
+			if (std::find(_protectedVertexes.begin(), _protectedVertexes.end(), vOrg) != _protectedVertexes.end()) {
+				break;
+			}
+
+			if (std::find(_protectedVertexes.begin(), _protectedVertexes.end(), vMerge) != _protectedVertexes.end()) {
+				break;
+			}
+
+			result = mergeVertexes(vOrg, vMerge);
 		}
-
-		if (std::find(_protectedVertexes.begin(), _protectedVertexes.end(), vMerge) != _protectedVertexes.end()) {
-			return false;
-		}
-
-		mergeVertexes(vOrg, vMerge);
-
-		_protectedEdges.pop_back();
-		_protectedEdges.pop_back();
-
-		return true;
-	}
+	} while (0);
 
 	_protectedEdges.pop_back();
 	_protectedEdges.pop_back();
 
-	return false;
+	return result;
 }
 
 bool Tesselator::Data::isDegenerateTriangle(HalfEdge *e) {

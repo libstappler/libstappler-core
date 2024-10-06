@@ -310,6 +310,10 @@ void VectorPathRef::setImage(VectorImage *image) {
 	_image = image;
 }
 
+auto VectorPathRef::toString(bool newline) const -> String {
+	return _path->toString(newline);
+}
+
 void VectorPathRef::copy() {
 	if (_copyOnWrite) {
 		if (_image) {
@@ -445,17 +449,17 @@ void VectorImageData::resetDrawOrder() {
 	}
 }
 
-void VectorImageData::draw(const Callback<void(VectorPath &, StringView id, StringView cache, const Mat4 &)> &cb) const {
+void VectorImageData::draw(const Callback<void(VectorPath &, StringView id, StringView cache, const Mat4 &, const Color4F &)> &cb) const {
 	if (!_order.empty()) {
 		for (auto &it : _order) {
 			auto pathIt = _paths.find(it.id);
 			if (pathIt != _paths.end()) {
-				cb(*pathIt->second, it.id, it.cacheId, it.mat);
+				cb(*pathIt->second, it.id, it.cacheId, it.mat, it.color);
 			}
 		}
 	} else {
 		for (auto &it : _paths) {
-			cb(*it.second, it.first, StringView(), Mat4());
+			cb(*it.second, it.first, StringView(), Mat4(), Color4F::WHITE);
 		}
 	}
 }

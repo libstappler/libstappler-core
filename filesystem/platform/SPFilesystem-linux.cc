@@ -75,12 +75,15 @@ struct PathSource {
 			_cachePath = _platformPath + "/Caches";
 		}
 
+#if DEBUG
+		// Only for special FS debug cases
 		auto newWD = ::getenv("SP_CWD_OVERRIDE");
 		if (newWD && ::strlen(newWD) != 0) {
 			if (filesystem::native::access_fn(newWD, Access::Exists)) {
 				::chdir(newWD);
 			}
 		}
+#endif
 	}
 
 	StringView getPlatformPath(bool readOnly) {

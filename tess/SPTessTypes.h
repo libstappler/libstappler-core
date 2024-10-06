@@ -297,6 +297,7 @@ enum class IntersectionEvent {
 	EventIsIntersection, // intersection directly on event point, new edge should split old one
 	EdgeConnection1, // connection, ends on old edge
 	EdgeConnection2, // connection, ends on new edge
+	Merge, // both edges ends in same place
 };
 
 struct EdgeDict {
@@ -393,7 +394,7 @@ SP_ATTR_OPTIMIZE_INLINE_FN static inline float EdgeAngle(const Vec2 &from, const
 
 	if (std::isnan(fromA) || std::isnan(toA)) {
 		std::cerr << "EdgeAngle (NaN): " << from << " " << to << "\n";
-		return 0.0f;
+		return nan();
 	}
 
 	if (fromA <= toA) {
@@ -421,6 +422,7 @@ operator << (std::ostream & os, const IntersectionEvent & ev) {
 	case IntersectionEvent::EventIsIntersection: os << "EventIsIntersection"; break;
 	case IntersectionEvent::EdgeConnection1: os << "EdgeConnection1"; break;
 	case IntersectionEvent::EdgeConnection2: os << "EdgeConnection2"; break;
+	case IntersectionEvent::Merge: os << "Merge"; break;
 	}
 	return os;
 }

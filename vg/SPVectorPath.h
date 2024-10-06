@@ -35,6 +35,7 @@ struct PathXRef {
 	Interface::StringType id;
 	Interface::StringType cacheId;
 	Mat4 mat;
+	Color4F color = Color4F::WHITE;
 };
 
 class SP_PUBLIC VectorPath : public RefBase<Interface> {

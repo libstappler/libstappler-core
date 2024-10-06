@@ -840,6 +840,8 @@ const EdgeDictNode * EdgeDict::push(Edge *edge, int16_t windingAbove) {
 		std::cout << "\t\tDict push: " << *edge << "\n";
 	}
 
+	SPASSERT(edge, "edge should be defined");
+
 	const EdgeDictNode *ret;
 	auto &dst = edge->getDstVec();
 	auto &org = edge->getOrgVec();
@@ -903,21 +905,14 @@ void EdgeDict::update(Vertex *v, float tolerance) {
 	auto it = nodes.begin();
 	while (it != nodes.end()) {
 		auto &n = *it;
-		if (it->edge->getRightOrg() == v->_uniqueIdx) {
-			//if (n.helper.type == VertexType::Merge) {
-				n.value.x = n.value.z;
-				n.value.y = n.value.w;
-			/*} else {
-				if constexpr (DictDebug) {
-					std::cout << "\t\t\tDict pop (v): " << *it->edge << "\n";
-				}
-				it->edge->node = nullptr;
-				it = nodes.erase(it);
-				continue;
-			}*/
+		if (!it->edge) {
+			it = nodes.erase(it);
+			continue;
+		} else if (it->edge->getRightOrg() == v->_uniqueIdx) {
+			n.value.x = n.value.z;
+			n.value.y = n.value.w;
 		} else if (n.horizontal) {
 			const float tValue = (event.x - n.org.x) / (n.norm.x);
-			// std::cout << "\t\t\t: " << *it->edge << " " << tValue << "\n";
 			if (tValue < 0.0f || tValue > 1.0f) {
 				if constexpr (DictDebug) {
 					std::cout << "\t\t\tDict pop (t): " << *it->edge << "\n";
@@ -931,7 +926,6 @@ void EdgeDict::update(Vertex *v, float tolerance) {
 			}
 		} else {
 			const float sValue = (event.y - n.org.y) / (n.norm.y);
-			// std::cout << "\t\t\t: " << *it->edge << " " << sValue << "\n";
 			if (sValue < 0.0f || sValue > 1.0f) {
 				if constexpr (DictDebug) {
 					std::cout << "\t\t\tDict pop (s): " << *it->edge << "\n";
@@ -1068,9 +1062,13 @@ const EdgeDictNode * EdgeDict::checkForIntersects(HalfEdge *edge, Vec2 &intersec
 
 				if (S >= 0.0f && S <= 1.0f && T >= 0.0f && T <= 1.0f) {
 					intersectPoint = Vec2(org.x + S * isect.x, org.y + S * isect.y);
-					if (VertEq(intersectPoint, dst, tolerance)) {
+					auto eq2 = VertEq(intersectPoint, dst, tolerance);
+					auto eq1 = VertEq(intersectPoint, nDst, tolerance);
+					if (eq1 && eq1) {
+						ev = IntersectionEvent::Merge;
+					} else if (eq2) {
 						ev = IntersectionEvent::EdgeConnection2; // edge ends on n;
-					} else if (VertEq(intersectPoint, nDst, tolerance)) {
+					} else if (eq1) {
 						intersectPoint = nDst;
 						ev = IntersectionEvent::EdgeConnection1; // n ends on edge;
 					} else {
@@ -1129,7 +1127,7 @@ const EdgeDictNode * EdgeDict::getEdgeBelow(const Vec2 &vec, uint32_t vertex) co
 		return nullptr;
 	} else {
 		-- it;
-		while (it != nodes.begin() && (it->edge->getRightOrg() == vertex || it->current() == vec)) {
+		while (it != nodes.begin() && it->edge && (it->edge->getRightOrg() == vertex || it->current() == vec)) {
 			-- it;
 		}
 		// edge before it is less then e

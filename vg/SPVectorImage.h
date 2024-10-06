@@ -89,6 +89,8 @@ public:
 	void markCopyOnWrite();
 	void setImage(VectorImage *);
 
+	String toString(bool newline) const;
+
 protected:
 	void copy();
 
@@ -134,7 +136,7 @@ public:
 	void setBatchDrawing(bool value) { _allowBatchDrawing = value; }
 	bool isBatchDrawing() const { return _allowBatchDrawing; }
 
-	void draw(const Callback<void(VectorPath &, StringView id, StringView cache, const Mat4 &)> &cb) const;
+	void draw(const Callback<void(VectorPath &, StringView id, StringView cache, const Mat4 &, const Color4F &)> &cb) const;
 
 protected:
 	bool _allowBatchDrawing = true;

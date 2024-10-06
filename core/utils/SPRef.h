@@ -90,38 +90,18 @@ SP_PUBLIC void foreachBacktrace(const RefBase<memory::PoolInterface> *,
 		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &);
 }
 
-template <typename Base>
+template <typename _Base, typename _Pointer>
 class RcBase {
 public:
-	using Type = typename std::remove_cv<Base>::type;
-	using Self = RcBase<Base>;
-	using Pointer = Type *;
-
-	template <class... Args>
-	static inline Self create(Args && ... args) {
-		auto pRet = new Type();
-	    if (pRet->init(std::forward<Args>(args)...)) {
-	    	return Self(pRet, true); // unsafe assignment
-		} else {
-			delete pRet;
-			return Self(nullptr);
-		}
-	}
-
-	static inline Self alloc() {
-		return Self(new Type(), true);
-	}
-
-	template <class... Args>
-	static inline Self alloc(Args && ... args) {
-		return Self(new Type(std::forward<Args>(args)...), true);
-	}
+	using Base = _Base;
+	using Type = typename std::remove_cv<_Base>::type;
+	using Pointer = _Pointer;
 
 	inline RcBase() : _ptr(nullptr) { }
 	inline RcBase(const nullptr_t &) : _ptr(nullptr) { }
 	inline RcBase(const Pointer &value) : _ptr(value) { doRetain(); }
-	inline RcBase(const Self &v) { _ptr = v._ptr; doRetain(); }
-	inline RcBase(Self &&v) {
+	inline RcBase(const RcBase<Base, Pointer> &v) { _ptr = v._ptr; doRetain(); }
+	inline RcBase(RcBase<Base, Pointer> &&v) {
 		_ptr = v._ptr; v._ptr = nullptr;
 #if SP_REF_DEBUG
 		_id = v._id; v._id = 0;
@@ -137,12 +117,9 @@ public:
 		return *this;
 	}
 
-	template <typename B, typename std::enable_if<std::is_convertible<B*, Base *>{}>::type* = nullptr>
-	inline RcBase & operator = (const RcBase<B> &value) { set(value); return *this; }
-
 	inline RcBase & operator = (const Pointer &value) { set(value); return *this; }
-	inline RcBase & operator = (const Self &v) { set(v._ptr); return *this; }
-	inline RcBase & operator = (Self &&v) {
+	inline RcBase & operator = (const RcBase<Base, Pointer> &v) { set(v._ptr); return *this; }
+	inline RcBase & operator = (RcBase<Base, Pointer> &&v) {
 		doRelease();
 		_ptr = v._ptr; v._ptr = nullptr;
 #if SP_REF_DEBUG
@@ -157,57 +134,34 @@ public:
 		_ptr = doSwap(value);
 	}
 
-	inline Base *get() const {
-#if SP_REF_DEBUG
-		assert(_ptr);
-#endif
-		return _ptr;
-	}
+	inline void swap(RcBase<Base, Pointer> & v) { auto ptr = _ptr; _ptr = v._ptr; v._ptr = ptr; }
 
-	inline operator Base * () const { return get(); }
-	inline explicit operator bool () const { return _ptr != nullptr; }
-
-	template <typename B, typename std::enable_if<std::is_convertible<Base *, B*>{}>::type* = nullptr>
-	inline operator RcBase<B> () { return RcBase<B>(static_cast<B *>(get())); }
-
-	inline void swap(Self & v) { auto ptr = _ptr; _ptr = v._ptr; v._ptr = ptr; }
-
-	inline Base * operator->() const { return _ptr; }
-
-	template <typename Target>
-	inline RcBase<Target> cast() const {
-		if (auto v = dynamic_cast<Target *>(_ptr)) {
-			return RcBase<Target>(v);
-		}
-		return RcBase<Target>(nullptr);
-	}
-
-	inline bool operator == (const Self & other) const { return _ptr == other._ptr; }
+	inline bool operator == (const RcBase<Base, Pointer> & other) const { return _ptr == other._ptr; }
 	inline bool operator == (const Base * & other) const { return _ptr == other; }
 	inline bool operator == (typename std::remove_const<Base>::type * other) const { return _ptr == other; }
 	inline bool operator == (const std::nullptr_t other) const { return _ptr == other; }
 
-	inline bool operator != (const Self & other) const { return _ptr != other._ptr; }
+	inline bool operator != (const RcBase<Base, Pointer> & other) const { return _ptr != other._ptr; }
 	inline bool operator != (const Base * & other) const { return _ptr != other; }
 	inline bool operator != (typename std::remove_const<Base>::type * other) const { return _ptr != other; }
 	inline bool operator != (const std::nullptr_t other) const { return _ptr != other; }
 
-	inline bool operator > (const Self & other) const { return _ptr > other._ptr; }
+	inline bool operator > (const RcBase<Base, Pointer> & other) const { return _ptr > other._ptr; }
 	inline bool operator > (const Base * other) const { return _ptr > other; }
 	inline bool operator > (typename std::remove_const<Base>::type * other) const { return _ptr > other; }
 	inline bool operator > (const std::nullptr_t other) const { return _ptr > other; }
 
-	inline bool operator < (const Self & other) const { return _ptr < other._ptr; }
+	inline bool operator < (const RcBase<Base, Pointer> & other) const { return _ptr < other._ptr; }
 	inline bool operator < (const Base * other) const { return _ptr < other; }
 	inline bool operator < (typename std::remove_const<Base>::type * other) const { return _ptr < other; }
 	inline bool operator < (const std::nullptr_t other) const { return _ptr < other; }
 
-	inline bool operator >= (const Self & other) const { return _ptr >= other._ptr; }
+	inline bool operator >= (const RcBase<Base, Pointer> & other) const { return _ptr >= other._ptr; }
 	inline bool operator >= (const Base * other) const { return _ptr >= other; }
 	inline bool operator >= (typename std::remove_const<Base>::type * other) const { return _ptr >= other; }
 	inline bool operator >= (const std::nullptr_t other) const { return _ptr >= other; }
 
-	inline bool operator <= (const Self & other) const { return _ptr <= other._ptr; }
+	inline bool operator <= (const RcBase<Base, Pointer> & other) const { return _ptr <= other._ptr; }
 	inline bool operator <= (const Base * other) const { return _ptr <= other; }
 	inline bool operator <= (typename std::remove_const<Base>::type * other) const { return _ptr <= other; }
 	inline bool operator <= (const std::nullptr_t other) const { return _ptr <= other; }
@@ -215,7 +169,7 @@ public:
 #if SP_REF_DEBUG
 	uint64_t getId() const { return _id; }
 #endif
-private:
+protected:
 	inline void doRetain() {
 #if SP_REF_DEBUG
 		if (_ptr) { _id = _ptr->retain(); }
@@ -255,8 +209,66 @@ private:
 #endif
 };
 
-template <typename T>
-using Rc = RcBase<T>;
+template <typename _Base>
+class Rc final : public RcBase<_Base, typename std::remove_cv<_Base>::type *> {
+public:
+	using Parent = RcBase<_Base, typename std::remove_cv<_Base>::type *>;
+	using Self = Rc<_Base>;
+	using Type = typename std::remove_cv<_Base>::type;
+
+	template <class... Args>
+	static inline Self create(Args && ... args) {
+		auto pRet = new Type();
+	    if (pRet->init(std::forward<Args>(args)...)) {
+	    	return Self(pRet, true); // unsafe assignment
+		} else {
+			delete pRet;
+			return Self(nullptr);
+		}
+	}
+
+	static inline Self alloc() {
+		return Self(new Type(), true);
+	}
+
+	template <class... Args>
+	static inline Self alloc(Args && ... args) {
+		return Self(new Type(std::forward<Args>(args)...), true);
+	}
+
+	using Parent::Parent;
+	using Parent::operator =;
+
+	template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type* = nullptr>
+	inline Rc & operator = (const Rc<B> &value) { this->set(value); return *this; }
+
+	// Direct call of `get` should not be on empty storage
+	_Base *get() const {
+#if SP_REF_DEBUG
+		assert(_ptr);
+#endif
+		return this->_ptr;
+	}
+
+	inline operator _Base * () const { return get(); }
+
+	inline _Base * operator->() const { return this->_ptr; }
+
+	inline explicit operator bool () const { return this->_ptr != nullptr; }
+
+	template <typename B, typename std::enable_if<std::is_convertible<_Base *, B*>{}>::type* = nullptr>
+	inline operator Rc<B> () { return Rc<B>(static_cast<B *>(get())); }
+
+	inline void swap(Self & v) { auto ptr = this->_ptr; this->_ptr = v._ptr; v._ptr = ptr; }
+
+	template <typename Target>
+	inline Rc<Target> cast() const {
+		if (auto v = dynamic_cast<Target *>(this->_ptr)) {
+			return Rc<Target>(v);
+		}
+		return Rc<Target>(nullptr);
+	}
+};
 
 #if SP_REF_DEBUG
 

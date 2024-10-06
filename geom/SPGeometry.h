@@ -420,6 +420,16 @@ inline std::ostream & operator<<(std::ostream & stream, const Extent3 & obj) {
 	return stream;
 }
 
+inline std::ostream & operator<<(std::ostream & stream, const UVec2 & obj) {
+	stream << "UVec2(x:" << obj.x << " y:" << obj.y << ");";
+	return stream;
+}
+
+inline std::ostream & operator<<(std::ostream & stream, const UVec3 & obj) {
+	stream << "UVec3(x:" << obj.x << " y:" << obj.y << " z:" << obj.z << ");";
+	return stream;
+}
+
 }
 
 #endif /* CORE_GEOM_SPGEOMETRY_H_ */
