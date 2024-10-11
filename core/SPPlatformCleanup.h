@@ -26,6 +26,11 @@
 // suppress common macro leak
 #if WIN32
 #undef interface
+
+#if XWIN
+#pragma clang diagnostic pop
+#endif
+
 #endif
 
 // IDE-specific standart library mods

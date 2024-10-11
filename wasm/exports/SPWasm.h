@@ -28,6 +28,10 @@
 
 #include <typeindex>
 
+#ifdef SP_STATIC_DEPS
+#define WASM_RUNTIME_API_EXTERN
+#endif
+
 #include "wamr/wasm_export.h"
 
 namespace stappler::wasm {

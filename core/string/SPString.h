@@ -652,7 +652,7 @@ SP_PUBLIC auto __encode_pool(const CoderSource &source) -> typename memory::Pool
 SP_PUBLIC auto __encode_std(const CoderSource &source) -> typename memory::StandartInterface::StringType;
 
 template <typename Interface>
-inline auto decode(const CoderSource &source) -> typename Interface::BytesType {
+SP_PUBLIC inline auto decode(const CoderSource &source) -> typename Interface::BytesType {
 	return base64::decode<Interface>(source);
 }
 

@@ -34,5 +34,9 @@ MODULE_STAPPLER_WASM_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/wasm/exports
 MODULE_STAPPLER_WASM_WASM_OBJS := $(STAPPLER_MODULE_DIR)/wasm/wasm/SPWasmInit.c
 MODULE_STAPPLER_WASM_DEPENDS_ON := stappler_data stappler_filesystem
 
+ifdef XWIN
+MODULE_STAPPLER_WASM_LIBS += -lpathcch -lntdll
+endif
+
 # module name resolution
 MODULE_stappler_wasm := MODULE_STAPPLER_WASM

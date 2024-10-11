@@ -28,7 +28,16 @@
 #include "SPByteOrder.h"
 #include "SPCoreCrypto.h"
 
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
 #include "simde/x86/sse2.h"
+
+#if XWIN
+#pragma clang diagnostic pop
+#endif
 
 # if defined(__GNUC__) || defined(__clang__)
 #  define RESTRICT __restrict__

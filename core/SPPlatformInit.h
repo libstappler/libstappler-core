@@ -39,7 +39,9 @@
 
 // Visibility rules (assume -fvisibility=hidden -fvisibility-inlines-hidden)
 #if WIN32
-  #ifdef SP_BUILD_SHARED_LIBRARY
+  #ifdef SP_BUILD_APPLICATION
+    #define SP_PUBLIC
+  #elif SP_BUILD_SHARED_LIBRARY
     #ifdef __GNUC__
       #define SP_PUBLIC __attribute__ ((dllexport))
     #else
@@ -253,6 +255,16 @@ using iter_reference_t = typename T::reference;
 // Suppress windows MIN/MAX macro
 // Actually, windows-specific includes should be only in SPPlatformUnistd.h with proper filters for macro leaking
 #if WIN32
+
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonportable-include-path"
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#pragma clang diagnostic ignored "-Wvla-cxx-extension"
+#pragma clang diagnostic ignored "-Wunused-local-typedef"
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wunused-value"
+#endif
 
 #define NOMINMAX 1
 #define _USE_MATH_DEFINES 1

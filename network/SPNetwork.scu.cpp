@@ -22,13 +22,10 @@ THE SOFTWARE.
 **/
 
 #include "SPCommon.h"
+
 #include "SPNetworkContext.h"
 #include "SPNetworkData.h"
 #include "SPNetworkHandle.h"
-
-#ifdef __MINGW32__
-#define CURL_STATICLIB 1
-#endif
 
 #ifdef LINUX
 // In linux, MIME types for downloaded files defined in extra FS attributes

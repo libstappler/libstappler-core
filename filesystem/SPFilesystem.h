@@ -314,7 +314,7 @@ SP_PUBLIC bool write_fn(StringView, const unsigned char *data, size_t len);
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
 template <typename Interface>
-auto writablePath(StringView path, bool relative) -> typename Interface::StringType {
+SP_PUBLIC inline auto writablePath(StringView path, bool relative) -> typename Interface::StringType {
 	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
 		return path.str<Interface>();
 	}
@@ -326,7 +326,7 @@ auto writablePath(StringView path, bool relative) -> typename Interface::StringT
 }
 
 template <typename Interface>
-auto writablePathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
+SP_PUBLIC inline auto writablePathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
 	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
 		return path.str<Interface>();
 	}
@@ -338,7 +338,7 @@ auto writablePathReadOnly(StringView path, bool relative) -> typename Interface:
 }
 
 template <typename Interface>
-auto cachesPath(StringView path, bool relative) -> typename Interface::StringType {
+SP_PUBLIC inline auto cachesPath(StringView path, bool relative) -> typename Interface::StringType {
 	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
 		return path.str<Interface>();
 	}
@@ -350,7 +350,7 @@ auto cachesPath(StringView path, bool relative) -> typename Interface::StringTyp
 }
 
 template <typename Interface>
-auto cachesPathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
+SP_PUBLIC inline auto cachesPathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
 	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
 		return path.str<Interface>();
 	}
@@ -362,7 +362,7 @@ auto cachesPathReadOnly(StringView path, bool relative) -> typename Interface::S
 }
 
 template <typename Interface>
-auto documentsPath(StringView path, bool relative) -> typename Interface::StringType {
+SP_PUBLIC inline auto documentsPath(StringView path, bool relative) -> typename Interface::StringType {
 	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
 		return path.str<Interface>();
 	}
@@ -374,7 +374,7 @@ auto documentsPath(StringView path, bool relative) -> typename Interface::String
 }
 
 template <typename Interface>
-auto documentsPathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
+SP_PUBLIC inline auto documentsPathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
 	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
 		return path.str<Interface>();
 	}
@@ -386,7 +386,7 @@ auto documentsPathReadOnly(StringView path, bool relative) -> typename Interface
 }
 
 template <typename Interface>
-auto currentDir(StringView path, bool relative) -> typename Interface::StringType {
+SP_PUBLIC inline auto currentDir(StringView path, bool relative) -> typename Interface::StringType {
 	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
 		return path.str<Interface>();
 	}
@@ -402,7 +402,7 @@ auto currentDir(StringView path, bool relative) -> typename Interface::StringTyp
 }
 
 template <typename Interface>
-auto readTextFile(StringView ipath) -> typename Interface::StringType {
+SP_PUBLIC auto readTextFile(StringView ipath) -> typename Interface::StringType {
 	auto f = openForReading(ipath);
 	if (f) {
 		auto fsize = f.size();

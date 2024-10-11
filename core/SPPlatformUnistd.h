@@ -37,6 +37,9 @@
 #pragma clang diagnostic ignored "-Wpragma-pack"
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wunused-local-typedef"
+#pragma clang diagnostic ignored "-Wmacro-redefined"
+#pragma clang diagnostic ignored "-Wcomment"
+#pragma clang diagnostic ignored "-Wunused-value"
 #endif
 
 #ifndef _MSC_VER
@@ -69,6 +72,8 @@
 #endif
 
 using pid_t = DWORD;
+
+#define PATH_MAX MAX_PATH
 
 #else
 #include <unistd.h>

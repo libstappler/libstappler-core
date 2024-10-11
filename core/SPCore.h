@@ -42,6 +42,7 @@ THE SOFTWARE.
 #include <algorithm>
 #include <tuple>
 #include <cmath>
+#include <locale>
 
 #include <tuple>
 #include <string>

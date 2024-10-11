@@ -22,6 +22,7 @@
 
 #include "SPWasm.h"
 #include "SPFilesystem.h"
+#include "SPPlatformUnistd.h"
 
 namespace stappler::wasm {
 

@@ -109,7 +109,7 @@ template <typename Interface>
 SP_PUBLIC auto merge(stappler::memory::PoolInterface::StringType &&str) -> typename Interface::StringType;
 
 template <typename Interface, class... Args>
-SP_PUBLIC auto merge(StringView root, StringView path, Args&&... args) -> typename Interface::StringType {
+SP_PUBLIC inline auto merge(StringView root, StringView path, Args&&... args) -> typename Interface::StringType {
 	return merge<Interface>(_merge<Interface>(root, path), std::forward<Args>(args)...);
 }
 
@@ -126,7 +126,7 @@ SP_PUBLIC auto replace(StringView path, StringView source, StringView dest) -> t
 // Implementation
 
 template <typename Interface>
-auto reconstructPath(StringView path) -> typename Interface::StringType {
+SP_PUBLIC auto reconstructPath(StringView path) -> typename Interface::StringType {
 	typename Interface::StringType ret; ret.reserve(path.size());
 	bool start = (path.front() == '/');
 	bool end = (path.back() == '/');
@@ -168,7 +168,7 @@ auto reconstructPath(StringView path) -> typename Interface::StringType {
 }
 
 template <typename Interface>
-auto split(StringView str) -> typename Interface::template VectorType<StringView> {
+SP_PUBLIC inline auto split(StringView str) -> typename Interface::template VectorType<StringView> {
 	typename Interface::template VectorType<StringView> ret;
 	StringView s(str);
 	do {
@@ -193,7 +193,7 @@ inline void split(StringView str, const Callback<void(StringView)> &cb) {
 }
 
 template <typename Interface>
-auto replace(StringView path, StringView source, StringView dest) -> typename Interface::StringType {
+SP_PUBLIC inline auto replace(StringView path, StringView source, StringView dest) -> typename Interface::StringType {
 	if (path.starts_with(source)) {
 		if (dest.empty()) {
 			return path.sub(source.size()).str<Interface>();

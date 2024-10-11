@@ -259,8 +259,8 @@ template <size_t Size>
 class StackBuffer {
 public:
 	StackBuffer() { }
-	StackBuffer(const StackBuffer & rhs) : _buf(rhs._buf), _size(rhs._size) { }
-	StackBuffer(StackBuffer && rhs) : _buf(rhs._buf), _size(rhs._size) { }
+	StackBuffer(const StackBuffer & rhs) : _size(rhs._size), _buf(rhs._buf) { }
+	StackBuffer(StackBuffer && rhs) : _size(rhs._size), _buf(rhs._buf) { }
 
 	StackBuffer & operator=(const StackBuffer & rhs) {
 		_buf = rhs._buf;

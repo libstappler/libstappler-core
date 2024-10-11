@@ -26,7 +26,12 @@
 
 #ifdef WIN32
 #include "SPPlatformUnistd.h"
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonportable-include-path"
 #include "winnls.h"
+#pragma clang diagnostic pop
+#endif
 #else
 #if STAPPLER_SHARED
 #include <idn2.h>
@@ -100,6 +105,7 @@ struct idn_iface {
 		return typename Interface::StringType();
 	}
 #else
+#ifndef WIN32
 	idn_iface() {}
 
 	template <typename Interface>
@@ -125,6 +131,7 @@ struct idn_iface {
 		}
 		return typename Interface::StringType();
 	}
+#endif
 #endif
 };
 

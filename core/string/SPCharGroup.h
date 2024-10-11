@@ -132,10 +132,10 @@ struct Compose {
 
 
 template <typename CharType, GroupId Group>
-struct CharGroup;
+struct SP_PUBLIC CharGroup;
 
 template <>
-struct CharGroup<char, GroupId::PunctuationBasic> : Compose<char,
+struct SP_PUBLIC CharGroup<char, GroupId::PunctuationBasic> : Compose<char,
 		Range<char, '\x21', '\x2F'>, Range<char, '\x3A', '\x40'>, Range<char, '\x5B', '\x7F'>
 > {
 	static bool match(char c);
@@ -147,12 +147,12 @@ struct CharGroup<char, GroupId::Numbers> : Compose<char, Range<char, '0', '9'> >
 };
 
 template <>
-struct CharGroup<char, GroupId::Latin> : Compose<char, Range<char, 'A', 'Z'>, Range<char, 'a', 'z'> > {
+struct SP_PUBLIC CharGroup<char, GroupId::Latin> : Compose<char, Range<char, 'A', 'Z'>, Range<char, 'a', 'z'> > {
 	static bool match(char c);
 };
 
 template <>
-struct CharGroup<char, GroupId::WhiteSpace> : Compose<char, Range<char, '\x09', '\x0D'>, Chars<char, '\x20'> > {
+struct SP_PUBLIC CharGroup<char, GroupId::WhiteSpace> : Compose<char, Range<char, '\x09', '\x0D'>, Chars<char, '\x20'> > {
 	static bool match(char c);
 };
 
@@ -165,38 +165,38 @@ struct CharGroup<char, GroupId::NonPrintable> : Compose<char,
 > { };
 
 template <>
-struct CharGroup<char, GroupId::LatinLowercase> : Compose<char, Range<char, 'a', 'z'> > {
+struct SP_PUBLIC CharGroup<char, GroupId::LatinLowercase> : Compose<char, Range<char, 'a', 'z'> > {
 	static bool match(char c);
 };
 
 template <>
-struct CharGroup<char, GroupId::LatinUppercase> : Compose<char, Range<char, 'A', 'Z'> > {
+struct SP_PUBLIC CharGroup<char, GroupId::LatinUppercase> : Compose<char, Range<char, 'A', 'Z'> > {
 	static bool match(char c);
 };
 
 template <>
-struct CharGroup<char, GroupId::Alphanumeric> : Compose<char,
+struct SP_PUBLIC CharGroup<char, GroupId::Alphanumeric> : Compose<char,
 		Range<char, '0', '9'>, Range<char, 'A', 'Z'>, Range<char, 'a', 'z'>
 > {
 	static bool match(char c);
 };
 
 template <>
-struct CharGroup<char, GroupId::Hexadecimial> : Compose<char,
+struct SP_PUBLIC CharGroup<char, GroupId::Hexadecimial> : Compose<char,
 		Range<char, '0', '9'>, Range<char, 'A', 'F'>, Range<char, 'a', 'f'>
 > {
 	static bool match(char c);
 };
 
 template <>
-struct CharGroup<char, GroupId::Base64> : Compose<char,
+struct SP_PUBLIC CharGroup<char, GroupId::Base64> : Compose<char,
 		Range<char, '0', '9'>, Range<char, 'A', 'Z'>, Range<char, 'a', 'z'>, Chars<char, '=', '/', '+', '_', '-'>
 > {
 	static bool match(char c);
 };
 
 template <>
-struct CharGroup<char, GroupId::TextPunctuation> : Compose<char,
+struct SP_PUBLIC CharGroup<char, GroupId::TextPunctuation> : Compose<char,
 		Chars<char, '=', '/', '(', ')', '.', ',', '-', '\'', '"', ':', ';', '?', '!', '@', '#', '$', '%', '^', '*', '\\', '_', '+', '[', ']'>
 > {
 	static bool match(char c);

@@ -26,6 +26,11 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
 #define SP_SIMD_DEBUG 0
 
 #if SP_SIMD_DEBUG
@@ -227,5 +232,9 @@ SP_ATTR_OPTIMIZE_INLINE_FN inline bool isVec2BboxIntersects(const f32x4 & v1, co
 }
 
 }
+
+#if XWIN
+#pragma clang diagnostic pop
+#endif
 
 #endif /* STAPPLER_GEOM_SPSIMD_H_ */

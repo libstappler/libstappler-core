@@ -48,6 +48,11 @@
  */
 # define SP_GOST_R_RNG_ERROR      126
 
+#if XWIN
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-braces"
+#endif
+
 namespace GostR3410_2001_CryptoPro_A_ParamSet { namespace {
 #include "thirdparty/openssl-gost-engine/ecp_id_GostR3410_2001_CryptoPro_A_ParamSet.cc"
 } }
@@ -79,6 +84,10 @@ namespace tc26_gost_3410_2012_512_paramSetB { namespace {
 namespace tc26_gost_3410_2012_512_paramSetC { namespace {
 #include "thirdparty/openssl-gost-engine/ecp_id_tc26_gost_3410_2012_512_paramSetC.cc"
 } }
+
+#if XWIN
+#pragma clang diagnostic pop
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::crypto {
 
