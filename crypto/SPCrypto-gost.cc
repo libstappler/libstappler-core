@@ -48,7 +48,7 @@
  */
 # define SP_GOST_R_RNG_ERROR      126
 
-#if XWIN
+#if __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-braces"
 #endif
@@ -85,7 +85,7 @@ namespace tc26_gost_3410_2012_512_paramSetC { namespace {
 #include "thirdparty/openssl-gost-engine/ecp_id_tc26_gost_3410_2012_512_paramSetC.cc"
 } }
 
-#if XWIN
+#if __clang__
 #pragma clang diagnostic pop
 #endif
 
