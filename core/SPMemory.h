@@ -165,7 +165,7 @@ public:
 	// Direct call of `get` should not be on empty storage
 	_Base *get() const {
 #if SP_REF_DEBUG
-		assert(_ptr);
+		assert(this->_ptr);
 #endif
 		return this->_ptr->get();
 	}
