@@ -430,7 +430,6 @@ static inline unsigned char* createReverseCopy(const unsigned char* const seq, c
  * @param [in] hin  Will be +1, 0 or -1.
  * @param [out] PvOut  Bitset, PvOut[i] == 1 if vout is +1, otherwise PvOut[i] == 0.
  * @param [out] MvOut  Bitset, MvOut[i] == 1 if vout is -1, otherwise MvOut[i] == 0.
- * @param [out] hout  Will be +1, 0 or -1.
  */
 static inline int calculateBlock(Word Pv, Word Mv, Word Eq, const int hin,
                                  Word &PvOut, Word &MvOut) {
@@ -1350,7 +1349,7 @@ Distance::Distance(const StringView &origin, const StringView &canonical, size_t
 	cfg.mode = EDLIB_MODE_NW;
 	cfg.task = EDLIB_TASK_PATH;
 
-	auto res = edlibAlign(origin.data(), origin.size(), canonical.data(), canonical.size(), cfg);
+	auto res = edlibAlign(origin.data(), int(origin.size()), canonical.data(), int(canonical.size()), cfg);
 
 	memory::pool::push(orig);
 	_distance = res.editDistance;

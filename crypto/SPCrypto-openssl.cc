@@ -370,11 +370,11 @@ static int s_ossl_GostR3410_2012_256_psign_resign(EVP_PKEY_CTX *ctx, unsigned ch
 		s_ossl_GostR3410_2012_256_psign(ctx, nullptr, &order, tbs, tbs_len);
 
 	    EVP_PKEY *pkey = EVP_PKEY_CTX_get0_pkey(ctx);
-		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, tbs_len, (EC_KEY *)EVP_PKEY_get0(pkey), 32);
+		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, int(tbs_len), (EC_KEY *)EVP_PKEY_get0(pkey), 32);
 		if (!unpacked_sig) {
 			return 0;
 		}
-		return pack_sign_cp(unpacked_sig, order / 2, sig, siglen);
+		return pack_sign_cp(unpacked_sig, int(order / 2), sig, siglen);
 	}
 }
 
@@ -386,11 +386,11 @@ static int s_ossl_GostR3410_2012_512_psign_resign(EVP_PKEY_CTX *ctx, unsigned ch
 		s_ossl_GostR3410_2012_512_psign(ctx, nullptr, &order, tbs, tbs_len);
 
 	    EVP_PKEY *pkey = EVP_PKEY_CTX_get0_pkey(ctx);
-		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, tbs_len, (EC_KEY *)EVP_PKEY_get0(pkey), 64);
+		auto unpacked_sig = hook_ossl_gost_ec_sign(tbs, int(tbs_len), (EC_KEY *)EVP_PKEY_get0(pkey), 64);
 		if (!unpacked_sig) {
 			return 0;
 		}
-		return pack_sign_cp(unpacked_sig, order / 2, sig, siglen);
+		return pack_sign_cp(unpacked_sig, int(order / 2), sig, siglen);
 	}
 }
 
@@ -592,7 +592,7 @@ static BackendCtx s_openSSLCtx = {
 		auto perform = [] (EVP_CIPHER_CTX *en, const uint8_t *target, size_t targetSize, uint8_t *out) {
 			int outSize = 0;
 			while (targetSize > 0) {
-				if (!EVP_EncryptUpdate(en, out, &outSize, target, targetSize)) {
+				if (!EVP_EncryptUpdate(en, out, &outSize, target, int(targetSize))) {
 					return false;
 				}
 
@@ -667,7 +667,7 @@ static BackendCtx s_openSSLCtx = {
 
 		int outSize = 0;
 		while (targetSize > 0) {
-			if (!EVP_DecryptUpdate(de, out, &outSize, target, targetSize)) {
+			if (!EVP_DecryptUpdate(de, out, &outSize, target, int(targetSize))) {
 				return finalize(false);
 			}
 
@@ -877,7 +877,7 @@ static BackendCtx s_openSSLCtx = {
 			return value;
 		};
 
-		bioData = BIO_new_mem_buf(data.data(), data.size());
+		bioData = BIO_new_mem_buf(data.data(), int(data.size()));
 		if (!bioData) {
 			return finalize(false);
 		}
@@ -885,7 +885,7 @@ static BackendCtx s_openSSLCtx = {
 		if (isPemKey(data)) {
 			ctx.keyCtx = PEM_read_bio_PrivateKey(bioData, NULL, [] (char *buf, int size, int rwflag, void *userdata) -> int {
 				auto passwd = static_cast<const CoderSource *>(userdata);
-				int i = passwd->size();
+				int i = int(passwd->size());
 				i = (i > size) ? size : i;
 				memcpy(buf, passwd->data(), i);
 				return i;
@@ -898,7 +898,7 @@ static BackendCtx s_openSSLCtx = {
 			if (!passwd.empty()) {
 				ctx.keyCtx = d2i_PKCS8PrivateKey_bio(bioData, NULL, [] (char *buf, int size, int rwflag, void *userdata) -> int {
 					auto passwd = static_cast<const CoderSource *>(userdata);
-					int i = passwd->size();
+					int i = int(passwd->size());
 					i = (i > size) ? size : i;
 					memcpy(buf, passwd->data(), i);
 					return i;
@@ -1379,7 +1379,7 @@ static BackendCtx s_openSSLCtx = {
 			return value;
 		};
 
-		bioData = BIO_new_mem_buf((void*)data.data(), data.size());
+		bioData = BIO_new_mem_buf((void*)data.data(), int(data.size()));
 		if (isPemKey(data)) {
 			ctx.keyCtx = PEM_read_bio_PUBKEY(bioData, NULL, NULL, NULL);
 			if (ctx.keyCtx) {
@@ -1446,7 +1446,7 @@ static BackendCtx s_openSSLCtx = {
 
 			std::string tmp = stream.str();
 
-			bioData = BIO_new_mem_buf(tmp.data(), tmp.size());
+			bioData = BIO_new_mem_buf(tmp.data(), int(tmp.size()));
 			ctx.keyCtx = PEM_read_bio_PUBKEY(bioData, NULL, NULL, NULL);
 			if (ctx.keyCtx) {
 				return finalize(true);

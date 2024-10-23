@@ -974,7 +974,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 		for (auto it : versions) {
 			auto tIt = ret.find(it.toString(0));
 			if (tIt != ret.end()) {
-				tIt->second.version = it.toInteger(1);
+				tIt->second.version = uint32_t(it.toInteger(1));
 			}
 		}
 	});

@@ -120,7 +120,7 @@ Runtime::Runtime() {
 	}
 }
 
-NativeModule::NativeModule(StringView n, NativeSymbol *s, size_t count)
+NativeModule::NativeModule(StringView n, NativeSymbol *s, uint32_t count)
 : name(n.str<Interface>()), symbols(s), symbolsCount(count) {
 	RuntimeNativeStorage::getInstance()->s_nativeModules.emplace(this);
 }
@@ -292,11 +292,11 @@ void *ModuleInstance::appToNative(uint32_t offset) const {
 }
 
 uint32_t ModuleInstance::nativeToApp(void *ptr) const {
-	return wasm_runtime_addr_native_to_app(_inst, ptr);
+	return uint32_t(wasm_runtime_addr_native_to_app(_inst, ptr));
 }
 
 uint32_t ModuleInstance::allocate(uint32_t size, void **ptr) {
-	return wasm_runtime_module_malloc(_inst, size, ptr);
+	return uint32_t(wasm_runtime_module_malloc(_inst, size, ptr));
 }
 
 uint32_t ModuleInstance::reallocate(uint32_t offset, uint32_t size, void **ptr) {
@@ -316,7 +316,7 @@ uint32_t ModuleInstance::reallocate(uint32_t offset, uint32_t size, void **ptr) 
 	}
 
 	wasm_runtime_module_free(_inst, offset);
-	return wasm_runtime_module_malloc(_inst, size, ptr);
+	return uint32_t(wasm_runtime_module_malloc(_inst, size, ptr));
 }
 
 void ModuleInstance::free(uint32_t ptr) {
@@ -373,7 +373,7 @@ uint32_t ModuleInstance::addHandleObject(void *obj, std::type_index &&idx, Funct
 		slot->nextIndex = InvalidHandle;
 	} else {
 		slot = &_handles.emplace_back(HandleSlot());
-		slot->index = _handles.size() - 1;
+		slot->index = uint32_t(_handles.size() - 1);
 	}
 
 	slot->object = obj;
@@ -525,12 +525,12 @@ bool ExecFunction::call(ExecEnv *env, SpanView<wasm_val_t> args, VectorAdapter<w
 	bool ret = false;
 	if (results) {
 		results->resize(_nResults);
-		ret = wasm_runtime_call_wasm_a(env->getEnv(), _func, _nResults, results->begin(), args.size(), const_cast<wasm_val_t *>(args.data()));
+		ret = wasm_runtime_call_wasm_a(env->getEnv(), _func, _nResults, results->begin(), uint32_t(args.size()), const_cast<wasm_val_t *>(args.data()));
 	} else {
 		if (_nResults) {
 			log::warn("wasm::ExecFunction", "Results buffer was not provided for call of '", _name, "' from module '", _inst->getModule()->getName(), "'");
 		}
-		ret = wasm_runtime_call_wasm_a(env->getEnv(), _func, 0, nullptr, args.size(), const_cast<wasm_val_t *>(args.data()));
+		ret = wasm_runtime_call_wasm_a(env->getEnv(), _func, 0, nullptr, uint32_t(args.size()), const_cast<wasm_val_t *>(args.data()));
 	}
 
 	if (!ret) {
@@ -555,7 +555,7 @@ wasm_val_t ExecFunction::call1(ExecEnv *env, SpanView<wasm_val_t> args) const {
 	if (_nResults != 1) {
 		log::warn("wasm::ExecFunction", "Function '", _name, "' from module '", _inst->getModule()->getName(), "' called as single-argument function");
 	}
-	auto success = wasm_runtime_call_wasm_a(env->getEnv(), _func, 1, &ret, args.size(), const_cast<wasm_val_t *>(args.data()));
+	auto success = wasm_runtime_call_wasm_a(env->getEnv(), _func, 1, &ret, uint32_t(args.size()), const_cast<wasm_val_t *>(args.data()));
 	if (!success) {
 		auto ex = wasm_runtime_get_exception(_inst->getInstance());
 		if (ex) {

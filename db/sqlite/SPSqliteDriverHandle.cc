@@ -359,7 +359,7 @@ void DriverLibStorage::closeLib(DriverSym *sym) {
 
 static StringView Driver_exec(const DriverSym *sym, pool_t *p, sqlite3 *db, StringView query) {
 	sqlite3_stmt *stmt = nullptr;
-	auto err = sym->prepare(db, query.data(), query.size(), 0, &stmt, nullptr);
+	auto err = sym->prepare(db, query.data(), int(query.size()), 0, &stmt, nullptr);
 	if (err != SQLITE_OK) {
 		log::error("sqlite::Driver", err, ": ", sym->_errstr(int(err)), ": ", sym->_errmsg(db), ":\n", query);
 		return StringView();

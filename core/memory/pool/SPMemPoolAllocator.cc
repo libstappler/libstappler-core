@@ -205,7 +205,7 @@ Allocator::~Allocator() {
 	-- s_nAllocators;
 }
 
-void Allocator::set_max(uint32_t size) {
+void Allocator::set_max(size_t size) {
 	std::unique_lock<Allocator> lock(*this);
 
 	uint32_t max_free_index = uint32_t(SPALIGN(size, BOUNDARY_SIZE) >> BOUNDARY_INDEX);
@@ -217,10 +217,10 @@ void Allocator::set_max(uint32_t size) {
 	}
 }
 
-MemNode *Allocator::alloc(uint32_t in_size) {
+MemNode *Allocator::alloc(size_t in_size) {
 	std::unique_lock<Allocator> lock;
 
-	uint32_t size = uint32_t(SPALIGN(in_size + SIZEOF_MEMNODE, BOUNDARY_SIZE));
+	size_t size = uint32_t(SPALIGN(in_size + SIZEOF_MEMNODE, BOUNDARY_SIZE));
 	if (size < in_size) {
 		return nullptr;
 	}
@@ -228,7 +228,7 @@ MemNode *Allocator::alloc(uint32_t in_size) {
 		size = MIN_ALLOC;
 	}
 
-	size_t index = (size >> BOUNDARY_INDEX) - 1;
+	uint32_t index = uint32_t(size >> BOUNDARY_INDEX) - 1;
 	if (index > maxOf<uint32_t>()) {
 		return nullptr;
 	}

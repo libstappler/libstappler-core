@@ -732,7 +732,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 				bool isNullable = (it.at(2) == "YES");
 				auto type = it.at(3);
 				if (it.at(1) != "__oid") {
-					auto storageType = h.getDriver()->getTypeById(it.toInteger(4));
+					auto storageType = h.getDriver()->getTypeById(uint32_t(it.toInteger(4)));
 					switch (storageType) {
 					case BackendInterface::StorageType::Unknown:
 						table.cols.emplace(it.at(1).str<Interface>(), ColRec(type, it.toInteger(4), !isNullable));
@@ -806,7 +806,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 		for (auto it : versions) {
 			auto tIt = ret.find(it.toString(0));
 			if (tIt != ret.end()) {
-				tIt->second.version = it.toInteger(1);
+				tIt->second.version = uint32_t(it.toInteger(1));
 			}
 		}
 	});

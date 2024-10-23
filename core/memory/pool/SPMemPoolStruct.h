@@ -108,9 +108,9 @@ struct SP_LOCAL Allocator {
 	Allocator(bool threadSafe = true);
 	~Allocator();
 
-	void set_max(uint32_t);
+	void set_max(size_t);
 
-	MemNode *alloc(uint32_t);
+	MemNode *alloc(size_t);
 	void free(MemNode *);
 
 	void lock();

@@ -49,7 +49,7 @@ SqliteQueryInterface::SqliteQueryInterface(const sql::Driver *d, const sql::Quer
 size_t SqliteQueryInterface::push(String &&val) {
 	auto &it = params.emplace_back(BindingData());
 	it.data.assign_strong((uint8_t *)val.data(), val.size() + 1);
-	it.idx = params.size();
+	it.idx = uint32_t(params.size());
 	it.type = Type::Text;
 	return it.idx;
 }
@@ -58,7 +58,7 @@ size_t SqliteQueryInterface::push(const StringView &val) {
 	auto &it = params.emplace_back(BindingData());
 	it.data.assign_strong((uint8_t *)val.data(), val.size() + 1);
 	it.data.data()[val.size()] = 0;
-	it.idx = params.size();
+	it.idx = uint32_t(params.size());
 	it.type = Type::Text;
 	return it.idx;
 }
@@ -66,7 +66,7 @@ size_t SqliteQueryInterface::push(const StringView &val) {
 size_t SqliteQueryInterface::push(Bytes &&val) {
 	auto &it = params.emplace_back(BindingData());
 	it.data = std::move(val);
-	it.idx = params.size();
+	it.idx = uint32_t(params.size());
 	it.type = Type::Bytes;
 	return it.idx;
 }
@@ -307,7 +307,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	auto queryString = query.getQuery().weak();
 
 	sqlite3_stmt *stmt = nullptr;
-	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), queryString.data(), queryString.size(), 0, &stmt, nullptr);
+	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), queryString.data(), int(queryString.size()), 0, &stmt, nullptr);
 	if (err != SQLITE_OK) {
 		auto info = driver->getInfo(conn, err);
 		info.setString(query.getQuery().str(), "query");
@@ -327,10 +327,10 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	for (auto &it : queryInterface->params) {
 		switch (it.type) {
 		case Type::Text:
-			driver->getHandle()->_bind_text(stmt, it.idx, (const char *)it.data.data(), it.data.size() - 1, SQLITE_STATIC);
+			driver->getHandle()->_bind_text(stmt, it.idx, (const char *)it.data.data(), int(it.data.size() - 1), SQLITE_STATIC);
 			break;
 		case Type::Bytes:
-			driver->getHandle()->_bind_blob(stmt, it.idx, it.data.data(), it.data.size(), SQLITE_STATIC);
+			driver->getHandle()->_bind_blob(stmt, it.idx, it.data.data(), int(it.data.size()), SQLITE_STATIC);
 			break;
 		default:
 			break;
@@ -378,7 +378,7 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 		}
 
 		sqlite3_stmt *stmt = nullptr;
-		auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), nextQuery.data(), nextQuery.size(), 0, &stmt, &outPtr);
+		auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), nextQuery.data(), int(nextQuery.size()), 0, &stmt, &outPtr);
 		if (err != SQLITE_OK) {
 			auto len = outPtr - nextQuery.data();
 			StringView performedQuery(nextQuery.data(), len);
@@ -427,7 +427,7 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 	}
 
 	sqlite3_stmt *stmt = nullptr;
-	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), query.data(), query.size(), 0, &stmt, nullptr);
+	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), query.data(), int(query.size()), 0, &stmt, nullptr);
 	if (err != SQLITE_OK) {
 		auto info = driver->getInfo(conn, err);
 		info.setString(query, "query");

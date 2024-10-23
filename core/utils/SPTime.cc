@@ -182,7 +182,7 @@ sp_time_exp_t::sp_time_exp_t(int64_t t, int32_t offset, bool use_localtime) {
 	tm_yday = tm.tm_yday;
 	tm_isdst = tm.tm_isdst;
 #ifndef WIN32
-	tm_gmtoff = tm.tm_gmtoff;
+	tm_gmtoff = int32_t(tm.tm_gmtoff);
 #else
 	tm_gmtoff = offset;
 #endif
@@ -757,12 +757,12 @@ size_t sp_time_exp_t::encodeIso8601(char *date_str, size_t precision) const {
 		};
 
 		*date_str++ = '.';
-		const int desc = SP_USEC_PER_SEC / intpow(10, precision);
+		const int desc = SP_USEC_PER_SEC / intpow(10, int(precision));
 		auto val = int32_t(std::round(tm_usec / double(desc)));
 		while (precision > 0) {
-			auto d = val / intpow(10, precision - 1);
+			auto d = val / intpow(10, int(precision - 1));
 			*date_str++ = '0' + d;
-			val = val % intpow(10, precision - 1);
+			val = val % intpow(10, int(precision - 1));
 			-- precision;
 		}
 	}

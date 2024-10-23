@@ -184,7 +184,7 @@ struct JpegReadStruct {
 		outputData.resize(outputData.target, dataLen);
 
 		JSAMPROW row_pointer[1] = {0};
-		unsigned long location = 0;
+		uint32_t location = 0;
 
 		if (cinfo.out_color_space == JCS_CMYK || cinfo.out_color_space == JCS_YCCK) {
 			memory::PoolInterface::BytesType buf; buf.resize(cinfo.output_width * cinfo.output_components);
@@ -307,7 +307,7 @@ struct JpegWriteStruct {
 
 	    if (vec) {
 	    	if (memSize) {
-		    	vec->assign(vec->target, mem, memSize);
+		    	vec->assign(vec->target, mem, uint32_t(memSize));
 	    	} else {
 	    		return false;
 	    	}

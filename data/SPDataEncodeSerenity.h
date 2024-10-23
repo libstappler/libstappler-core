@@ -25,7 +25,10 @@ THE SOFTWARE.
 #define STAPPLER_DATA_SPDATAENCODESERENITY_H_
 
 #include "SPDataValue.h"
+
+#if MODULE_STAPPLER_FILESYSTEM
 #include "SPFilesystem.h"
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::data::serenity {
 
@@ -309,6 +312,7 @@ inline auto write(const ValueTemplate<Interface> &val, bool pretty = false) -> t
 	return stream;
 }
 
+#if MODULE_STAPPLER_FILESYSTEM
 template <typename Interface>
 bool save(const ValueTemplate<Interface> &val, StringView ipath, bool pretty) {
 	auto path = filesystem::native::posixToNative<Interface>(ipath);
@@ -323,6 +327,7 @@ bool save(const ValueTemplate<Interface> &val, StringView ipath, bool pretty) {
 	}
 	return false;
 }
+#endif
 
 template <typename Interface>
 auto toString(const ValueTemplate<Interface> &data, bool pretty) -> typename Interface::StringType {

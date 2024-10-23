@@ -109,7 +109,7 @@ static uint32_t s_hashfunc_default(const char *char_key, size_t *klen, uint32_t 
 		*klen = strlen(char_key);
 	}
 
-	return hash::hash32(char_key, *klen, 0);
+	return hash::hash32(char_key, uint32_t(*klen), 0);
 }
 
 static HashEntry **find_entry(HashTable *ht, const void *key, size_t klen, const void *val) {

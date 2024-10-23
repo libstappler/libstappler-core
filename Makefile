@@ -1,5 +1,4 @@
-# Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-# Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+# Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,25 +18,36 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-MODULE_STAPPLER_IDN_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
-MODULE_STAPPLER_IDN_LIBS :=
-MODULE_STAPPLER_IDN_SRCS_DIRS := $(STAPPLER_MODULE_DIR)/idn
-MODULE_STAPPLER_IDN_SRCS_OBJS :=
-MODULE_STAPPLER_IDN_INCLUDES_DIRS :=
-MODULE_STAPPLER_IDN_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/idn
-MODULE_STAPPLER_IDN_DEPENDS_ON := stappler_core
+STAPPLER_ROOT ?= ..
 
-ifdef LINUX
-MODULE_STAPPLER_IDN_LIBS += -l:libidn2.a
-endif
+LOCAL_LIBRARY := libstappler-core
 
-ifdef ANDROID
-MODULE_STAPPLER_IDN_LIBS += -l:libidn2.a
-endif
+# force to rebuild if this makefile changed
+LOCAL_MAKEFILE := $(lastword $(MAKEFILE_LIST))
 
-ifdef MACOS
-MODULE_STAPPLER_IDN_GENERAL_LDFLAGS += -licucore
-endif
+LOCAL_OUTDIR := stappler-build
 
-# module name resolution
-MODULE_stappler_idn := MODULE_STAPPLER_IDN
+LOCAL_MODULES_PATHS = \
+	$(STAPPLER_ROOT)/core/stappler-modules.mk
+
+LOCAL_MODULES ?= \
+	stappler_core \
+	stappler_backtrace \
+	stappler_bitmap \
+	stappler_crypto \
+	stappler_data \
+	stappler_filesystem \
+	stappler_db \
+	stappler_font \
+	stappler_geom \
+	stappler_idn \
+	stappler_network \
+	stappler_search \
+	stappler_sql \
+	stappler_tess \
+	stappler_threads \
+	stappler_vg \
+	stappler_wasm \
+	stappler_zip
+
+include $(STAPPLER_ROOT)/build/make/shared.mk

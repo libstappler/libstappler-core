@@ -33,7 +33,7 @@
 #pragma clang diagnostic pop
 #endif
 #else
-#if STAPPLER_SHARED
+#if !defined(__APPLE__) && STAPPLER_SHARED
 #include <idn2.h>
 #else
 #if LINUX
@@ -46,7 +46,7 @@
 namespace STAPPLER_VERSIONIZED stappler::idn {
 
 struct idn_iface {
-#if STAPPLER_SHARED || LINUX
+#if !defined(__APPLE__) && (STAPPLER_SHARED || LINUX)
 	Dso obj;
 	decltype(&idn2_lookup_u8) lookup_u8 = nullptr;
 	decltype(&idn2_to_unicode_8z8z) to_unicode_8z8z = nullptr;
@@ -105,14 +105,22 @@ struct idn_iface {
 		return typename Interface::StringType();
 	}
 #else
-#ifndef WIN32
+#ifdef __APPLE__
 	idn_iface() {}
 
 	template <typename Interface>
 	auto _idnToAscii(StringView source) -> typename Interface::StringType {
 		char buf[1_KiB] = { 0 };
 		UErrorCode code = U_ZERO_ERROR;
-		auto retLen = u_nameToASCII_UTF8(UIDNA_NONTRANSITIONAL_TO_ASCII, source.data(), source.size(), buf, 1_KiB, nullptr, &code);
+		UIDNA* idna = uidna_openUTS46(UIDNA_NONTRANSITIONAL_TO_ASCII, &code);
+		if (U_FAILURE(code)) {
+			return typename Interface::StringType();
+		}
+
+		UIDNAInfo info = UIDNA_INFO_INITIALIZER;
+		auto retLen = uidna_nameToASCII_UTF8(idna, source.data(), int32_t(source.size()), buf, 1_KiB, &info, &code);
+
+		uidna_close(idna);
 		if (retLen > 0 && code == U_ZERO_ERROR) {
 			typename Interface::StringType ret(buf, retLen);
 			return ret;
@@ -124,7 +132,41 @@ struct idn_iface {
 	auto _idnToUnicode(StringView source) -> typename Interface::StringType {
 		char buf[1_KiB] = { 0 };
 		UErrorCode code = U_ZERO_ERROR;
-		auto retLen = u_nameToUnicodeUTF8(0, source.data(), source.size(), buf, 1_KiB, nullptr, &code);
+		UIDNA* idna = uidna_openUTS46(UIDNA_NONTRANSITIONAL_TO_UNICODE, &code);
+		if (U_FAILURE(code)) {
+			return typename Interface::StringType();
+		}
+
+		UIDNAInfo info = UIDNA_INFO_INITIALIZER;
+		auto retLen = uidna_nameToUnicodeUTF8(0, source.data(), int32_t(source.size()), buf, 1_KiB, &info, &code);
+		
+		uidna_close(idna);
+		if (retLen > 0 && code == U_ZERO_ERROR) {
+			typename Interface::StringType ret(buf, retLen);
+			return ret;
+		}
+		return typename Interface::StringType();
+	}
+#elif !defined(WIN32)
+	idn_iface() {}
+
+	template <typename Interface>
+	auto _idnToAscii(StringView source) -> typename Interface::StringType {
+		char buf[1_KiB] = { 0 };
+		UErrorCode code = U_ZERO_ERROR;
+		auto retLen = u_nameToASCII_UTF8(UIDNA_NONTRANSITIONAL_TO_ASCII, source.data(), int32_t(source.size()), buf, 1_KiB, nullptr, &code);
+		if (retLen > 0 && code == U_ZERO_ERROR) {
+			typename Interface::StringType ret(buf, retLen);
+			return ret;
+		}
+		return typename Interface::StringType();
+	}
+
+	template <typename Interface>
+	auto _idnToUnicode(StringView source) -> typename Interface::StringType {
+		char buf[1_KiB] = { 0 };
+		UErrorCode code = U_ZERO_ERROR;
+		auto retLen = u_nameToUnicodeUTF8(0, source.data(), int32_t(source.size()), buf, 1_KiB, nullptr, &code);
 		if (retLen > 0 && code == U_ZERO_ERROR) {
 			typename Interface::StringType ret(buf, retLen);
 			return ret;

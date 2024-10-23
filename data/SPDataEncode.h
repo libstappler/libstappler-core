@@ -278,7 +278,7 @@ operator<<(std::basic_ostream<CharT, Traits> & stream, EncodeFormat::Format f) {
 
 template<typename CharT, typename Traits, typename Interface> inline std::basic_ostream<CharT, Traits>&
 operator<<(std::basic_ostream<CharT, Traits> & stream, const ValueTemplate<Interface> &val) {
-	EncodeFormat fmt(stream.iword( EncodeFormat::EncodeStreamIndex ));
+	EncodeFormat fmt(int(stream.iword( EncodeFormat::EncodeStreamIndex )));
 	write<Interface>([&] (StringViewBase<CharT> str) {
 		stream << str;
 	}, val, fmt);

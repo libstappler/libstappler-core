@@ -319,7 +319,7 @@ static bool AreInCyclicOrder(Cam16Float a, Cam16Float b, Cam16Float c) {
  *
  * @param y The Y value of the color.
  * @param target_hue The hue of the color.
- * @return A list of two sets of linear RGB coordinates, each corresponding to
+ * @param out return a list of two sets of linear RGB coordinates, each corresponding to
  * an endpoint of the segment containing the desired color.
  */
 void BisectToSegment(Cam16Float y, Cam16Float target_hue, Cam16Vec3 out[2]) {

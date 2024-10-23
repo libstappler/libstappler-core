@@ -58,7 +58,7 @@ void *AllocManager::alloc(size_t &sizeInBytes, AllocFn allocFn) {
 
 void AllocManager::free(void *ptr, size_t sizeInBytes, AllocFn allocFn) {
 	MemAddr *addr = nullptr;
-	if (allocated == 0) {
+	if (allocated == 0 || sizeInBytes > 2_MiB) {
 		return;
 	}
 
@@ -71,7 +71,7 @@ void AllocManager::free(void *ptr, size_t sizeInBytes, AllocFn allocFn) {
 	}
 
 	if (addr) {
-		addr->size = sizeInBytes;
+		addr->size = uint32_t(sizeInBytes);
 		addr->address = ptr;
 		addr->next = nullptr;
 

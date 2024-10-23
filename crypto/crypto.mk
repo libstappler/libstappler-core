@@ -20,6 +20,12 @@
 # THE SOFTWARE.
 
 
+#
+# GnuTLS backend
+#
+# GnuTLS backend available only on Linux for OS distribution
+#
+
 ifdef LINUX
 
 MODULE_STAPPLER_CRYPTO_GNUTLS_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
@@ -34,7 +40,12 @@ MODULE_STAPPLER_CRYPTO_GNUTLS_DEPENDS_ON :=
 # module name resolution
 MODULE_stappler_crypto_gnutls := MODULE_STAPPLER_CRYPTO_GNUTLS
 
-endif
+endif # LINUX
+
+
+#
+# OpenSSL backend
+#
 
 MODULE_STAPPLER_CRYPTO_OPENSSL_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
 MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS := -l:libgost.a -l:libssl.a -l:libcrypto.a
@@ -58,9 +69,6 @@ ifdef WIN32
 MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lz
 endif
 
-# module name resolution
-MODULE_stappler_crypto_openssl := MODULE_STAPPLER_CRYPTO_OPENSSL
-
 ifdef LINUX
 MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lpthread
 endif
@@ -69,6 +77,13 @@ ifdef WIN32
 MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lcrypt32 -ladvapi32 -luser32
 endif
 
+# module name resolution
+MODULE_stappler_crypto_openssl := MODULE_STAPPLER_CRYPTO_OPENSSL
+
+
+#
+# MbedTLS backend
+#
 
 MODULE_STAPPLER_CRYPTO_MBEDTLS_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
 MODULE_STAPPLER_CRYPTO_MBEDTLS_LIBS := -l:libmbedtls.a -l:libmbedcrypto.a -l:libmbedx509.a
@@ -79,12 +94,12 @@ MODULE_STAPPLER_CRYPTO_MBEDTLS_INCLUDES_DIRS :=
 MODULE_STAPPLER_CRYPTO_MBEDTLS_INCLUDES_OBJS :=
 MODULE_STAPPLER_CRYPTO_MBEDTLS_DEPENDS_ON :=
 
-# module name resolution
-MODULE_stappler_crypto_mbedtls := MODULE_STAPPLER_CRYPTO_MBEDTLS
-
 ifdef WIN32
 MODULE_STAPPLER_CRYPTO_MBEDTLS_LIBS += -lcrypt32 -ladvapi32
 endif
+
+# module name resolution
+MODULE_stappler_crypto_mbedtls := MODULE_STAPPLER_CRYPTO_MBEDTLS
 
 
 MODULE_STAPPLER_CRYPTO_DEFINED_IN := $(TOOLKIT_MODULE_PATH)

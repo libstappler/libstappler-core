@@ -22,6 +22,7 @@
 
 #include "SPIdn.h"
 #include "SPString.h"
+#include "SPSharedModule.h"
 
 namespace STAPPLER_VERSIONIZED stappler::idn {
 
@@ -1522,5 +1523,12 @@ bool isKnownTld(StringView data) {
 		return s_tldList.has(d);
 	}
 }
+
+static SharedSymbol s_idnSharedSymbols[] = {
+	SharedSymbol{"isKnownTld(StringView)",
+		(void *)static_cast<bool(*)(StringView)>(isKnownTld)},
+};
+
+static SharedModule s_idnSharedModule("data", s_idnSharedSymbols, sizeof(s_idnSharedSymbols) / sizeof(SharedSymbol));
 
 }
