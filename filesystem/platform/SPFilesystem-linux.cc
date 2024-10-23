@@ -123,9 +123,9 @@ struct PathSource {
 	}
 	StringView getWritablePath(bool readOnly) {
 		if (!readOnly) {
-			if (!_platformInit) {
+			if (!_writableInit) {
 				filesystem::mkdir(_writablePath);
-				_platformInit = true;
+				_writableInit = true;
 			}
 		}
 		return _writablePath;

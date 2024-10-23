@@ -280,7 +280,7 @@ struct WebpStruct {
 		}
 
 		if (out) {
-			out->resize(out->target, writer.size);
+			out->resize(out->target, uint32_t(writer.size));
 			memcpy(out->getData(out->target, 0), writer.mem, writer.size);
 		}
 

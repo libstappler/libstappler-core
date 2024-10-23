@@ -27,7 +27,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::bitmap::custom {
 
-static size_t detectSvgSize(StringView value) {
+static uint32_t detectSvgSize(StringView value) {
 	StringView str(value);
 	auto fRes = str.readFloat();
 	if (!fRes.valid()) {
@@ -56,7 +56,7 @@ static size_t detectSvgSize(StringView value) {
 		return 0;
 	}
 
-	return size_t(ceilf(fvalue));
+	return uint32_t(ceilf(fvalue));
 }
 
 static bool detectSvg(StringView str, uint32_t &w, uint32_t &h) {

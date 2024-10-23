@@ -448,7 +448,7 @@ bool Tesselator::write(TessResult &res) {
 	if (_data->_boundaryOffset > 0.0f || _data->_boundaryInset > 0.0f) {
 		uint32_t tl, tr, bl, br, origin;
 
-		uint32_t nexports = _data->_exportVertexes.size();
+		uint32_t nexports = uint32_t(_data->_exportVertexes.size());
 
 		auto exportExtraVertex = [&, this] (FaceEdge *e) {
 			auto originVertex = nexports;
@@ -619,7 +619,7 @@ bool Tesselator::Data::computeInterior() {
 }
 
 uint32_t Tesselator::Data::computeBoundary() {
-	_nvertexes = _vertexes.size(); // for new vertexes handling
+	_nvertexes = uint32_t(_vertexes.size()); // for new vertexes handling
 	uint32_t nsegments = 0;
 	auto mark = ++ _markValue;
 
@@ -1167,7 +1167,7 @@ bool Tesselator::Data::sweepVertex(VertexPriorityQueue &pq, EdgeDict &dict, Vert
 
 	_eventVertex = nullptr;
 
-	v->_exportIdx = _exportVertexes.size();
+	v->_exportIdx = uint32_t(_exportVertexes.size());
 	_exportVertexes.emplace_back(v);
 	return true;
 }

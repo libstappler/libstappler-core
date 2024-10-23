@@ -79,7 +79,7 @@ bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memo
 	auto m = curl_multi_init();
 	memory::PoolInterface::MapType<CURL *, Context<memory::PoolInterface>> handles;
 
-	auto initPending = [&, this] {
+	auto initPending = [&, this] () -> int {
 		for (auto &it : pending) {
 			auto h = CurlHandle_alloc();
 			auto i = handles.emplace(h, Context<memory::PoolInterface>()).first;
@@ -92,7 +92,7 @@ bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memo
 		}
 		auto s = pending.size();
 		pending.clear();
-		return s;
+		return int(s);
 	};
 
 	auto cancel = [&] {
@@ -162,7 +162,7 @@ bool MultiHandle<memory::StandartInterface>::perform(const Callback<bool(Handle<
 	auto m = curl_multi_init();
 	memory::StandartInterface::MapType<CURL *, Context<memory::StandartInterface>> handles;
 
-	auto initPending = [&, this] {
+	auto initPending = [&, this] () -> int {
 		for (auto &it : pending) {
 			auto h = CurlHandle_alloc();
 			auto i = handles.emplace(h, Context<memory::StandartInterface>()).first;
@@ -175,7 +175,7 @@ bool MultiHandle<memory::StandartInterface>::perform(const Callback<bool(Handle<
 		}
 		auto s = pending.size();
 		pending.clear();
-		return s;
+		return int(s);
 	};
 
 	auto cancel = [&] {

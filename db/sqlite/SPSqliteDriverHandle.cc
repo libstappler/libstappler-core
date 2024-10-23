@@ -32,10 +32,7 @@ struct DriverSym : AllocBase {
 	static const DriverSym *getCurrent();
 
 	DriverSym(StringView n, Dso &&d);
-
-#ifndef STAPPLER_SHARED
 	DriverSym(StringView n);
-#endif
 
 	~DriverSym();
 
@@ -136,6 +133,8 @@ struct DriverLibStorage {
 
 	static DriverLibStorage *getInstance();
 
+	DriverSym *openSelf();
+
 	DriverSym *openLib(StringView lib);
 	void closeLib(DriverSym *sym);
 };
@@ -194,8 +193,8 @@ DriverSym::DriverSym(StringView n, Dso &&d) : name(n), ptr(move(d)) {
 	_shutdown = d.sym<decltype(_shutdown)>("sqlite3_shutdown");
 }
 
-#ifndef STAPPLER_SHARED
 DriverSym::DriverSym(StringView n) : name(n) {
+#if !defined(STAPPLER_SHARED) || defined(STAPPLER_SQLITE_LINKED)
 	_initialize = &sqlite3_initialize;
 	_malloc = &sqlite3_malloc;
 	_free = &sqlite3_free;
@@ -240,8 +239,8 @@ DriverSym::DriverSym(StringView n) : name(n) {
 	_changes = &sqlite3_changes;
 	_user_data = &sqlite3_user_data;
 	_shutdown = &sqlite3_shutdown;
-}
 #endif
+}
 
 DriverSym::~DriverSym() { }
 
@@ -312,10 +311,38 @@ DriverLibStorage *DriverLibStorage::getInstance() {
 	return s_libStorage;
 }
 
+DriverSym *DriverLibStorage::openSelf() {
+#if !defined(STAPPLER_SHARED) || defined(STAPPLER_SQLITE_LINKED)
+	return openLib(StringView());
+#else
+	std::unique_lock<std::mutex> lock(_driverMutex);
+
+	std::string target;
+	auto it = _driverLibs.find(target);
+	if (it != _driverLibs.end()) {
+		++ it->second.refCount;
+		return &it->second;
+	}
+
+	if (auto d = Dso(StringView(), DsoFlags::Self)) {
+		if (d.sym("sqlite3_initialize")) {
+			DriverSym syms(target, move(d));
+			if (syms) {
+				auto ret = _driverLibs.emplace(target, move(syms)).first;
+				ret->second.name = ret->first;
+				return &ret->second;
+			}
+		}
+	}
+
+	return nullptr;
+#endif
+}
+
 DriverSym *DriverLibStorage::openLib(StringView lib) {
 	std::unique_lock<std::mutex> lock(_driverMutex);
 
-#if STAPPLER_SHARED
+#if STAPPLER_SHARED && !defined(STAPPLER_SQLITE_LINKED)
 	auto target = lib.str<stappler::memory::StandartInterface>();
 	auto it = _driverLibs.find(target);
 	if (it != _driverLibs.end()) {
@@ -359,7 +386,7 @@ void DriverLibStorage::closeLib(DriverSym *sym) {
 
 static StringView Driver_exec(const DriverSym *sym, pool_t *p, sqlite3 *db, StringView query) {
 	sqlite3_stmt *stmt = nullptr;
-	auto err = sym->prepare(db, query.data(), query.size(), 0, &stmt, nullptr);
+	auto err = sym->prepare(db, query.data(), int(query.size()), 0, &stmt, nullptr);
 	if (err != SQLITE_OK) {
 		log::error("sqlite::Driver", err, ": ", sym->_errstr(int(err)), ": ", sym->_errmsg(db), ":\n", query);
 		return StringView();

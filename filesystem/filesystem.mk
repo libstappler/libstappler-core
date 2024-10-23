@@ -30,5 +30,9 @@ ifdef ANDROID
 MODULE_STAPPLER_FILESYSTEM_DEPENDS_ON += stappler_zip
 endif
 
+ifdef MACOS
+MODULE_STAPPLER_FILESYSTEM_GENERAL_LDFLAGS += -framework UniformTypeIdentifiers
+endif
+
 # module name resolution
 MODULE_stappler_filesystem := MODULE_STAPPLER_FILESYSTEM

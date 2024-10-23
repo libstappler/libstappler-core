@@ -204,7 +204,7 @@ size_t Distance::size() const {
 
 int32_t Distance::diff_original(size_t pos, bool forward) const {
 	if (empty()) {
-		return pos;
+		return int32_t(pos);
 	}
 
 	int32_t ret = 0;
@@ -235,7 +235,7 @@ int32_t Distance::diff_original(size_t pos, bool forward) const {
 
 int32_t Distance::diff_canonical(size_t pos, bool forward) const {
 	if (empty()) {
-		return pos;
+		return int32_t(pos);
 	}
 
 	int32_t ret = 0;

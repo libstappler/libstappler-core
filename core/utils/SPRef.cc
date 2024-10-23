@@ -133,7 +133,7 @@ struct BacktraceState {
 	}
 
 	void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
-		::backtrace_full(_backtraceState, 2 + offset, debug_backtrace_full_callback, debug_backtrace_error, (void *)&cb);
+		::backtrace_full(_backtraceState, int(2 + offset), debug_backtrace_full_callback, debug_backtrace_error, (void *)&cb);
 	}
 
 	::backtrace_state *_backtraceState;

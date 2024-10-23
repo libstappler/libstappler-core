@@ -49,7 +49,7 @@ static uint32_t adapt_bias(uint32_t delta, unsigned n_points, int is_first) {
 	return k + (((BASE - TMIN + 1) * delta) / (delta + SKEW));
 }
 
-static char encode_digit(int c) {
+static char encode_digit(size_t c) {
 	assert(c >= 0 && c <= BASE - TMIN);
 	if (c > 25) {
 		return c + 22; /* '0'..'9' */
@@ -184,8 +184,8 @@ static bool punycode_decode(const char *const pEncoded, const size_t enc_len, ch
 	uint32_t n = INITIAL_N;
 	uint32_t i = 0;
 	uint32_t bias = INITIAL_BIAS;
-	size_t processed_in = 0, written_out = 0;
-	uint32_t max_out = pDecoded ? *pout_length : maxOf<uint32_t>();
+	uint32_t processed_in = 0, written_out = 0;
+	uint32_t max_out = pDecoded ? uint32_t(*pout_length) : maxOf<uint32_t>();
 	uint32_t basic_count = 0;
 	uint32_t loop;
 

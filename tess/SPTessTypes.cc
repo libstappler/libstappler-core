@@ -324,7 +324,7 @@ Vertex *ObjectAllocator::allocVertex() {
 	auto node = _freeVertexes;
 	_freeVertexes = (Vertex *)node->_edge;
 	vertex = new (node) Vertex();
-	vertex->_uniqueIdx = _vertexes.size();
+	vertex->_uniqueIdx = uint32_t(_vertexes.size());
 
 	_vertexes.emplace_back(vertex);
 
@@ -636,7 +636,7 @@ void VertexPriorityQueue::Heap::floatUp(int curr) {
 }
 
 VertexPriorityQueue::VertexPriorityQueue(memory::pool_t *p, const memory::vector<Vertex *> &vec)
-: heap(p, vec.size()), max(vec.size()), pool(p) {
+: heap(p, uint32_t(vec.size())), max(uint32_t(vec.size())), pool(p) {
 	keys = (Key*) memory::pool::palloc(p, max * sizeof(Key));
 
 	for (auto &v : vec) {

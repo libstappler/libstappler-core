@@ -219,12 +219,12 @@ static uint32_t stappler_wasm_data_process_foreach_dict(wasm_exec_env_t exec_env
 		args[0] = userdata;
 
 		char *buf = nullptr;
-		auto bufOffset = inst->allocate(it->first.size(), (void **)&buf);
+		auto bufOffset = inst->allocate(uint32_t(it->first.size()), (void **)&buf);
 
 		memcpy(buf, it->first.data(), it->first.size());
 
 		args[1] = bufOffset;
-		args[2] = it->first.size();
+		args[2] = uint32_t(it->first.size());
 		args[3] = iterHandle;
 
 		iterContainer.value = &it->second;

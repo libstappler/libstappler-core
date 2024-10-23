@@ -64,12 +64,12 @@ static void StapplerFilesystemWritablePath(wasm_exec_env_t exec_env, char *ptr, 
 	}
 
 	char *outStringBuffer = nullptr;
-	auto outOffset = env->allocate(result.size() * sizeof(char), &outStringBuffer);
+	auto outOffset = env->allocate(uint32_t(result.size() * sizeof(char)), &outStringBuffer);
 
 	memcpy(outStringBuffer, result.data(), result.size() * sizeof(char));
 
 	target->ptr = outOffset;
-	target->len = result.size();
+	target->len = uint32_t(result.size());
 }
 
 static void StapplerFilesystemDocumentsPath(wasm_exec_env_t exec_env, char *ptr, uint32_t size, bool rel, bool readOnly, ListOutput *target) {
@@ -83,12 +83,12 @@ static void StapplerFilesystemDocumentsPath(wasm_exec_env_t exec_env, char *ptr,
 	}
 
 	char *outStringBuffer = nullptr;
-	auto outOffset = env->allocate(result.size() * sizeof(char), &outStringBuffer);
+	auto outOffset = env->allocate(uint32_t(result.size() * sizeof(char)), &outStringBuffer);
 
 	memcpy(outStringBuffer, result.data(), result.size() * sizeof(char));
 
 	target->ptr = outOffset;
-	target->len = result.size();
+	target->len = uint32_t(result.size());
 }
 
 static void StapplerFilesystemCachesPath(wasm_exec_env_t exec_env, char *ptr, uint32_t size, bool rel, bool readOnly, ListOutput *target) {
@@ -102,12 +102,12 @@ static void StapplerFilesystemCachesPath(wasm_exec_env_t exec_env, char *ptr, ui
 	}
 
 	char *outStringBuffer = nullptr;
-	auto outOffset = env->allocate(result.size() * sizeof(char), &outStringBuffer);
+	auto outOffset = env->allocate(uint32_t(result.size() * sizeof(char)), &outStringBuffer);
 
 	memcpy(outStringBuffer, result.data(), result.size() * sizeof(char));
 
 	target->ptr = outOffset;
-	target->len = result.size();
+	target->len = uint32_t(result.size());
 }
 
 static void StapplerFilesystemCurrentDir(wasm_exec_env_t exec_env, char *ptr, uint32_t size, bool rel, ListOutput *target) {
@@ -116,12 +116,12 @@ static void StapplerFilesystemCurrentDir(wasm_exec_env_t exec_env, char *ptr, ui
 	String result = filesystem::currentDir<Interface>(StringView(ptr, size), rel);
 
 	char *outStringBuffer = nullptr;
-	auto outOffset = env->allocate(result.size() * sizeof(char), &outStringBuffer);
+	auto outOffset = env->allocate(uint32_t(result.size() * sizeof(char)), &outStringBuffer);
 
 	memcpy(outStringBuffer, result.data(), result.size() * sizeof(char));
 
 	target->ptr = outOffset;
-	target->len = result.size();
+	target->len = uint32_t(result.size());
 }
 
 static void StapplerFilesystemFtw(wasm_exec_env_t exec_env, char *ptr, uint32_t size, uint32_t fn, uint32_t arg, int32_t depth, bool dirFirst) {
@@ -220,7 +220,7 @@ static uint32_t StapplerFilesystemFileRead(wasm_exec_env_t exec_env, uint32_t ha
 		return 0;
 	}
 
-	return file->read(buf, bufSize);
+	return uint32_t(file->read(buf, bufSize));
 }
 
 static uint64_t StapplerFilesystemFileSeek(wasm_exec_env_t exec_env, uint32_t handle, int64_t offset, io::Seek pos) {
@@ -280,7 +280,7 @@ static uint32_t StapplerFilesystemFileXsputn(wasm_exec_env_t exec_env, uint32_t 
 		return 0;
 	}
 
-	return file->xsputn((const char *)buf, bufSize);
+	return uint32_t(file->xsputn((const char *)buf, bufSize));
 }
 
 static uint32_t StapplerFilesystemFileXsgetn(wasm_exec_env_t exec_env, uint32_t handle, uint8_t *buf, uint32_t bufSize) {
@@ -290,7 +290,7 @@ static uint32_t StapplerFilesystemFileXsgetn(wasm_exec_env_t exec_env, uint32_t 
 		return 0;
 	}
 
-	return file->xsgetn((char *)buf, bufSize);
+	return uint32_t(file->xsgetn((char *)buf, bufSize));
 }
 
 static uint32_t StapplerFilesystemFileIsOpen(wasm_exec_env_t exec_env, uint32_t handle) {

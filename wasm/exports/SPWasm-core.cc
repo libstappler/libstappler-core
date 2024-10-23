@@ -26,27 +26,27 @@
 namespace stappler::wasm {
 
 static uint32_t StapplerCoreItoaU8(wasm_exec_env_t exec_env, int64_t val, char *buf, uint32_t bufLen) {
-	return string::_itoa(val, buf, bufLen);
+	return uint32_t(string::_itoa(val, buf, bufLen));
 }
 
 static uint32_t StapplerCoreItoaU16(wasm_exec_env_t exec_env, int64_t val, char16_t *buf, uint32_t bufLen) {
-	return string::_itoa(val, buf, bufLen);
+	return uint32_t(string::_itoa(val, buf, bufLen));
 }
 
 static uint32_t StapplerCoreItoaLen(wasm_exec_env_t exec_env, int64_t val) {
-	return string::_itoa_len(val);
+	return uint32_t(string::_itoa_len(val));
 }
 
 static uint32_t StapplerCoreDtoaU8(wasm_exec_env_t exec_env, double val, char *buf, uint32_t bufLen) {
-	return string::_dtoa(val, buf, bufLen);
+	return uint32_t(string::_dtoa(val, buf, bufLen));
 }
 
 static uint32_t StapplerCoreDtoaU16(wasm_exec_env_t exec_env, double val, char16_t *buf, uint32_t bufLen) {
-	return string::_dtoa(val, buf, bufLen);
+	return uint32_t(string::_dtoa(val, buf, bufLen));
 }
 
 static uint32_t StapplerCoreDtoaLen(wasm_exec_env_t exec_env, double val) {
-	return string::_dtoa_len(val);
+	return uint32_t(string::_dtoa_len(val));
 }
 
 static void StapplerCoreToUtf16(wasm_exec_env_t exec_env, char *ptr, uint32_t size, ListOutput *outputData) {
@@ -56,7 +56,7 @@ static void StapplerCoreToUtf16(wasm_exec_env_t exec_env, char *ptr, uint32_t si
 	const auto outSize = string::getUtf16Length(sourceString);
 
 	char16_t *outStringBuffer = nullptr;
-	auto outOffset = env->allocate(outSize * sizeof(char16_t), &outStringBuffer);
+	auto outOffset = env->allocate(uint32_t(outSize * sizeof(char16_t)), &outStringBuffer);
 
 	auto targetBuf = outStringBuffer;
 
@@ -70,7 +70,7 @@ static void StapplerCoreToUtf16(wasm_exec_env_t exec_env, char *ptr, uint32_t si
 	}
 
 	outputData->ptr = outOffset;
-	outputData->len = outSize;
+	outputData->len = uint32_t(outSize);
 }
 
 static void StapplerCoreToUtf8(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size, ListOutput *outputData) {
@@ -80,7 +80,7 @@ static void StapplerCoreToUtf8(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t
 	const auto outSize = string::getUtf8Length(sourceString);
 
 	char *outStringBuffer = nullptr;
-	auto outOffset = env->allocate(outSize * sizeof(char), &outStringBuffer);
+	auto outOffset = env->allocate(uint32_t(outSize * sizeof(char)), &outStringBuffer);
 
 	auto targetBuf = outStringBuffer;
 
@@ -94,7 +94,7 @@ static void StapplerCoreToUtf8(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t
 	}
 
 	outputData->ptr = outOffset;
-	outputData->len = outSize;
+	outputData->len = uint32_t(outSize);
 }
 
 template <typename Char>
@@ -106,12 +106,12 @@ static void StapplerCoreConvertCase(wasm_exec_env_t exec_env, Char *ptr, uint32_
 	auto outString = cb(sourceString);
 
 	char *outStringBuffer = nullptr;
-	auto outOffset = env->allocate(outString.size() * sizeof(Char), &outStringBuffer);
+	auto outOffset = env->allocate(uint32_t(outString.size() * sizeof(Char)), &outStringBuffer);
 
 	memcpy(outStringBuffer, outString.data(), outString.size() * sizeof(Char));
 
 	outputData->ptr = outOffset;
-	outputData->len = outString.size();
+	outputData->len = uint32_t(outString.size());
 }
 
 static void StapplerCoreToUpperU8(wasm_exec_env_t exec_env, char *ptr, uint32_t size, ListOutput *target) {
@@ -160,7 +160,7 @@ static uint32_t StapplerCoreTimeToHttp(wasm_exec_env_t exec_env, uint64_t t, cha
 	}
 
 	sp_time_exp_t xt(t);
-	return xt.encodeRfc822(buf);
+	return uint32_t(xt.encodeRfc822(buf));
 }
 
 static uint32_t StapplerCoreTimeToAtomXml(wasm_exec_env_t exec_env, uint64_t t, char *buf, uint32_t size) {
@@ -169,7 +169,7 @@ static uint32_t StapplerCoreTimeToAtomXml(wasm_exec_env_t exec_env, uint64_t t, 
 	}
 
 	sp_time_exp_t xt(t, false);
-	return xt.encodeIso8601(buf, 0);
+	return uint32_t(xt.encodeIso8601(buf, 0));
 }
 
 static uint32_t StapplerCoreTimeToCTime(wasm_exec_env_t exec_env, uint64_t t, char *buf, uint32_t size) {
@@ -178,7 +178,7 @@ static uint32_t StapplerCoreTimeToCTime(wasm_exec_env_t exec_env, uint64_t t, ch
 	}
 
 	sp_time_exp_t xt(t, true);
-	return xt.encodeCTime(buf);
+	return uint32_t(xt.encodeCTime(buf));
 }
 
 static uint32_t StapplerCoreTimeToIso8601(wasm_exec_env_t exec_env, uint64_t t, uint32_t precision, char *buf, uint32_t size) {
@@ -187,11 +187,11 @@ static uint32_t StapplerCoreTimeToIso8601(wasm_exec_env_t exec_env, uint64_t t, 
 	}
 
 	sp_time_exp_t xt(t, true);
-	return xt.encodeIso8601(buf, precision);
+	return uint32_t(xt.encodeIso8601(buf, precision));
 }
 
 static uint32_t StapplerCoreTimeToFormat(wasm_exec_env_t exec_env, uint64_t t, char *fmt, uint32_t fmtLen, char *buf, uint32_t bufLen) {
-	return Time(t).encodeToFormat(buf, bufLen, fmt);
+	return uint32_t(Time(t).encodeToFormat(buf, bufLen, fmt));
 }
 
 static NativeSymbol stapper_core_symbols[] = {

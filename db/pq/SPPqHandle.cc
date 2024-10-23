@@ -407,7 +407,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	auto queryInterface = static_cast<PgQueryInterface *>(query.getInterface());
 
 	ExecParamData data(query);
-	ResultCursor res(driver, driver->exec(conn, query.getQuery().weak().data(), queryInterface->params.size(),
+	ResultCursor res(driver, driver->exec(conn, query.getQuery().weak().data(), 	int(queryInterface->params.size()),
 			data.paramValues, data.paramLengths, data.paramFormats, 1));
 	if (!res.isSuccess()) {
 		auto info = res.getInfo();

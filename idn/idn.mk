@@ -27,8 +27,16 @@ MODULE_STAPPLER_IDN_INCLUDES_DIRS :=
 MODULE_STAPPLER_IDN_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/idn
 MODULE_STAPPLER_IDN_DEPENDS_ON := stappler_core
 
-ifndef WIN32
+ifdef LINUX
 MODULE_STAPPLER_IDN_LIBS += -l:libidn2.a
+endif
+
+ifdef ANDROID
+MODULE_STAPPLER_IDN_LIBS += -l:libidn2.a
+endif
+
+ifdef MACOS
+MODULE_STAPPLER_IDN_GENERAL_LDFLAGS += -licucore
 endif
 
 # module name resolution

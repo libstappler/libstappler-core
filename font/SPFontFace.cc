@@ -198,16 +198,16 @@ void FontFaceData::inspectVariableFont(FontLayoutParameters params, FT_Library l
 				_variations.stretch.max = FontStretch(masters->axis[i].maximum >> 15);
 			} else if (tag == getAxisTag("ital")) {
 				_variations.axisMask |= FontVariableAxis::Italic;
-				_variations.italic.min = masters->axis[i].minimum;
-				_variations.italic.max = masters->axis[i].maximum;
+				_variations.italic.min = uint32_t(masters->axis[i].minimum);
+				_variations.italic.max = uint32_t(masters->axis[i].maximum);
 			} else if (tag == getAxisTag("slnt")) {
 				_variations.axisMask |= FontVariableAxis::Slant;
 				_variations.slant.min = FontStyle(masters->axis[i].minimum >> 10);
 				_variations.slant.max = FontStyle(masters->axis[i].maximum >> 10);
 			} else if (tag == getAxisTag("opsz")) {
 				_variations.axisMask |= FontVariableAxis::OpticalSize;
-				_variations.opticalSize.min = masters->axis[i].minimum;
-				_variations.opticalSize.max = masters->axis[i].maximum;
+				_variations.opticalSize.min = uint32_t(masters->axis[i].minimum);
+				_variations.opticalSize.max = uint32_t(masters->axis[i].maximum);
 			} else if (tag == getAxisTag("GRAD")) {
 				_variations.axisMask |= FontVariableAxis::Grade;
 				_variations.grade.min = FontGrade(masters->axis[i].minimum >> 16);
@@ -288,7 +288,7 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Libr
 				}
 			}
 
-			FT_Set_Var_Design_Coordinates(face, vector.size(), vector.data());
+			FT_Set_Var_Design_Coordinates(face, FT_UInt(vector.size()), vector.data());
 			FT_Done_MM_Var(lib, masters);
 		}
 	}

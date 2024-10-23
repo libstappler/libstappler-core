@@ -55,7 +55,7 @@ static int Gif_InputFunc(GifFileType *file, GifByteType *bytes, int count) {
 	auto reader = (CoderSource *)file->UserData;
 
 	if (count >= 0) {
-		return reader->read(bytes, count);
+		return int(reader->read(bytes, size_t(count)));
 	}
 	return 0;
 }

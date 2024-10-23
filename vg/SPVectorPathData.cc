@@ -238,7 +238,7 @@ protected:
 					x2 = _x + x2; y2 = _y + y2;
 					x = _x + x; y = _y + y;
 				}
-				_x = x; _y = y; _bx = x2, _by = y2; _b = true;
+				_x = x; _y = y; _bx = x2; _by = y2; _b = true;
 				SP_PATH_LOG("C %f %f %f %f %f %f", x1, y1, x2, y2, x, y);
 				path->cubicTo(x1, y1, x2, y2, x, y);
 			}
@@ -262,7 +262,7 @@ protected:
 					x2 = _x + x2; y2 = _y + y2;
 					x = _x + x; y = _y + y;
 				}
-				_x = x; _y = y; _bx = x2, _by = y2; _b = true;
+				_x = x; _y = y; _bx = x2; _by = y2; _b = true;
 				SP_PATH_LOG("S (%f %f) %f %f %f %f", x1, y1, x2, y2, x, y);
 				path->cubicTo(x1, y1, x2, y2, x, y);
 			}
@@ -284,7 +284,7 @@ protected:
 					x1 = _x + x1; y1 = _y + y1;
 					x = _x + x; y = _y + y;
 				}
-				_x = x; _y = y; _bx = x1, _by = y1; _b = true;
+				_x = x; _y = y; _bx = x1; _by = y1; _b = true;
 				path->quadTo(x1, y1, x, y);
 			}
 		}
@@ -305,7 +305,7 @@ protected:
 				if (relative) {
 					x = _x + x; y = _y + y;
 				}
-				_x = x; _y = y; _bx = x1, _by = y1; _b = true;
+				_x = x; _y = y; _bx = x1; _by = y1; _b = true;
 				path->quadTo(x1, y1, x, y);
 			}
 		}
@@ -997,7 +997,7 @@ bool PathWriter::addPath(BytesView data) {
 			x2 = data::cbor::_readNumber(reader);
 			y2 = data::cbor::_readNumber(reader);
 			x3 = data::cbor::_readNumber(reader);
-			tmp = data::cbor::_readInt(reader);
+			tmp = uint32_t(data::cbor::_readInt(reader));
 			SP_PATH_LOG_TEXT("A ", x1, " ", y1, " ", x2, " ", y2, " ", x3, " ", tmp, " ", ((tmp & 2) != 0), " ", ((tmp & 1) != 0));
 			arcTo(x1, y1, x3, (tmp & 2) != 0, (tmp & 1) != 0, x2, y2);
 			break;

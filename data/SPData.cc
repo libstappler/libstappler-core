@@ -160,7 +160,7 @@ size_t getCompressBounds(size_t size, EncodeFormat::Compression c) {
 	case EncodeFormat::LZ4Compression:
 	case EncodeFormat::LZ4HCCompression: {
 		if (size < LZ4_MAX_INPUT_SIZE) {
-			return LZ4_compressBound(size) + ((size <= 0xFFFF) ? 2 : 4);
+			return LZ4_compressBound(int(size)) + ((size <= 0xFFFF) ? 2 : 4);
 		}
 		return 0;
 		break;
@@ -190,13 +190,13 @@ size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t de
 	switch (c) {
 	case EncodeFormat::LZ4Compression: {
 		const int offSize = ((srcSize <= 0xFFFF) ? 2 : 4);
-		const int ret = LZ4_compress_fast_extState(tl_lz4HCEncodeState, (const char *)src, (char *)dest + offSize, srcSize, destSize - offSize, 1);
+		const int ret = LZ4_compress_fast_extState(tl_lz4HCEncodeState, (const char *)src, (char *)dest + offSize, int(srcSize), int(destSize - offSize), 1);
 		if (ret > 0) {
 			if (srcSize <= 0xFFFF) {
 				uint16_t sz = srcSize;
 				memcpy(dest, &sz, sizeof(sz));
 			} else {
-				uint32_t sz = srcSize;
+				uint32_t sz = uint32_t(srcSize);
 				memcpy(dest, &sz, sizeof(sz));
 			}
 			return ret + offSize;
@@ -205,13 +205,13 @@ size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t de
 	}
 	case EncodeFormat::LZ4HCCompression: {
 		const int offSize = ((srcSize <= 0xFFFF) ? 2 : 4);
-		const int ret = LZ4_compress_HC_extStateHC(tl_lz4HCEncodeState, (const char *)src, (char *)dest + offSize, srcSize, destSize - offSize, LZ4HC_CLEVEL_MAX);
+		const int ret = LZ4_compress_HC_extStateHC(tl_lz4HCEncodeState, (const char *)src, (char *)dest + offSize, int(srcSize), int(destSize - offSize), LZ4HC_CLEVEL_MAX);
 		if (ret > 0) {
 			if (srcSize <= 0xFFFF) {
 				uint16_t sz = srcSize;
 				memcpy(dest, &sz, sizeof(sz));
 			} else {
-				uint32_t sz = srcSize;
+				uint32_t sz = uint32_t(srcSize);
 				memcpy(dest, &sz, sizeof(sz));
 			}
 			return ret + offSize;
@@ -228,7 +228,7 @@ size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t de
 				uint16_t sz = srcSize;
 				memcpy(dest, &sz, sizeof(sz));
 			} else {
-				uint32_t sz = srcSize;
+				uint32_t sz = uint32_t(srcSize);
 				memcpy(dest, &sz, sizeof(sz));
 			}
 			return ret + offSize;
@@ -329,7 +329,7 @@ auto compress<memory::StandartInterface>(const uint8_t *src, size_t size, Encode
 using decompress_ptr = const uint8_t *;
 
 static bool doDecompressLZ4Frame(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t destSize) {
-	return LZ4_decompress_safe((const char *)src, (char *)dest, srcSize, destSize) > 0;
+	return LZ4_decompress_safe((const char *)src, (char *)dest, int(srcSize), int(destSize)) > 0;
 }
 
 template <typename Interface>

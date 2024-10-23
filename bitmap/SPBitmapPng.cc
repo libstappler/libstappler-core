@@ -248,7 +248,7 @@ struct PngWriteStruct {
 
 	static void writePngFn(png_structp png_ptr, png_bytep data, png_size_t length) {
 		auto out = (BitmapWriter *)png_get_io_ptr(png_ptr);
-		out->push(out->target, data, length);
+		out->push(out->target, data, uint32_t(length));
 	}
 
 	bool write(const uint8_t *data, BitmapWriter &state, bool invert = false) {

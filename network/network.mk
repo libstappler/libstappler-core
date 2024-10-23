@@ -29,9 +29,9 @@ MODULE_STAPPLER_NETWORK_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/network
 MODULE_STAPPLER_NETWORK_DEPENDS_ON := stappler_idn stappler_crypto stappler_filesystem stappler_brotli_lib stappler_data
 
 ifdef MACOS
-MODULE_STAPPLER_NETWORK_GENERAL_LDFLAGS += -framework SystemConfiguration -framework CoreFoundation -framework Security
+MODULE_STAPPLER_NETWORK_GENERAL_LDFLAGS += -framework SystemConfiguration -framework CoreFoundation -framework Security -liconv
 endif
- 
+
 ifdef WIN32
 MODULE_STAPPLER_NETWORK_GENERAL_LDFLAGS += -lnormaliz -loldnames -lbcrypt
 endif

@@ -25,7 +25,10 @@ THE SOFTWARE.
 #define STAPPLER_DATA_SPDATAENCODEJSON_H_
 
 #include "SPDataValue.h"
+
+#if MODULE_STAPPLER_FILESYSTEM
 #include "SPFilesystem.h"
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::data::json {
 
@@ -261,6 +264,7 @@ inline auto write(const ValueTemplate<Interface> &val, bool pretty = false, bool
 	return stream;
 }
 
+#if MODULE_STAPPLER_FILESYSTEM
 template <typename Interface>
 bool save(const ValueTemplate<Interface> &val, StringView ipath, bool pretty, bool timeMarkers = false) {
 	auto path = filesystem::native::posixToNative<Interface>(ipath);
@@ -275,6 +279,7 @@ bool save(const ValueTemplate<Interface> &val, StringView ipath, bool pretty, bo
 	}
 	return false;
 }
+#endif
 
 template <typename Interface>
 auto toString(const ValueTemplate<Interface> &data, bool pretty) -> typename Interface::StringType {

@@ -31,5 +31,4 @@ THE SOFTWARE.
 
 #include "platform/SPFilesystem-android.cc"
 #include "platform/SPFilesystem-linux.cc"
-#include "platform/SPFilesystem-mac.cc"
 #include "platform/SPFilesystem-win32.cc"

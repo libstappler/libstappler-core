@@ -26,7 +26,10 @@ THE SOFTWARE.
 
 #include "SPDataCbor.h"
 #include "SPDataValue.h"
+
+#if MODULE_STAPPLER_FILESYSTEM
 #include "SPFilesystem.h"
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::data::cbor {
 
@@ -59,6 +62,7 @@ struct Encoder : public Interface::AllocBaseType {
 		return enc.data();
 	}
 
+#if MODULE_STAPPLER_FILESYSTEM
 	Encoder(StringView filename) : type(File) {
 		auto path = filesystem::native::posixToNative<Interface>(filename);
 		file = new std::ofstream(path.data(), std::ios::binary);
@@ -66,6 +70,7 @@ struct Encoder : public Interface::AllocBaseType {
 			cbor::_writeId(*this);
 		}
 	}
+#endif
 
 	Encoder(const Callback<void(BytesView)> *s) : type(Stream) {
 		stream = s;

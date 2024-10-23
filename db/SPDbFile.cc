@@ -299,8 +299,8 @@ Value File::createFile(const Transaction &t, const StringView &type, const Bytes
 }
 
 #if MODULE_STAPPLER_BITMAP
-static bool getTargetImageSize(size_t W, size_t H, const MinImageSize &min, const MaxImageSize &max
-		, size_t &tW, size_t &tH) {
+static bool getTargetImageSize(uint32_t W, uint32_t H, const MinImageSize &min, const MaxImageSize &max
+		, uint32_t &tW, uint32_t &tH) {
 
 	if (min.width > W || min.height > H) {
 		float scale = 0.0f;
@@ -354,7 +354,7 @@ static String saveImage(Bitmap &bmp) {
     return String();
 }
 
-static String resizeImage(Bitmap &bmp, size_t width, size_t height) {
+static String resizeImage(Bitmap &bmp, uint32_t width, uint32_t height) {
 	auto newImage = bmp.resample(width, height);
     if (newImage) {
     	return saveImage(newImage);
@@ -367,7 +367,7 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 	auto field = static_cast<const FieldImage *>(f.getSlot());
 
 	uint32_t width = 0, height = 0;
-	size_t targetWidth, targetHeight;
+	uint32_t targetWidth, targetHeight;
 	if (!bitmap::getImageSize(file.file, width, height)) {
 		return Map<String, String>();
 	}
@@ -417,7 +417,7 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 	auto field = static_cast<const FieldImage *>(f.getSlot());
 
 	uint32_t width = 0, height = 0;
-	size_t targetWidth, targetHeight;
+	uint32_t targetWidth, targetHeight;
 	stappler::CoderSource source(data);
 	if (!bitmap::getImageSize(source, width, height)) {
 		return Map<String, String>();

@@ -24,6 +24,7 @@ THE SOFTWARE.
 #include "SPSearchConfiguration.h"
 #include "SPHtmlParser.h"
 #include "SPValid.h"
+#include "SPData.h"
 #include <inttypes.h>
 
 namespace STAPPLER_VERSIONIZED stappler::search {
@@ -387,7 +388,7 @@ Bytes Configuration::encodeSearchVectorData(const SearchVector &data, SearchData
 		}
 	}
 	auto result = enc.data();
-	auto r = data::compress<Interface>(result.data(), result.size(), EncodeFormat::Compression::LZ4HCCompression, true);
+	auto r = data::compress<Interface>(result.data(), result.size(), data::EncodeFormat::Compression::LZ4HCCompression, true);
 	if (r.empty()) {
 		return result;
 	}
@@ -891,7 +892,7 @@ static bool Configuration_parseQueryBlank(Configuration_ParserControl &control, 
 	return true;
 }
 
-static bool Configuration_parseQueryWord(Configuration_ParserControl &control, StringView word, size_t offset = 0, StringView source = StringView()) {
+static bool Configuration_parseQueryWord(Configuration_ParserControl &control, StringView word, uint32_t offset = 0, StringView source = StringView()) {
 	auto q = control.stack.back();
 
 	if (q->op == SearchOp::None) {
@@ -930,8 +931,8 @@ SearchQuery Configuration::parseQuery(StringView str, bool strict, StringView *e
 	control.stack.emplace_back(&query);
 	control.strict = strict;
 
-	size_t prev = 0;
-	size_t counter = 0;
+	uint32_t prev = 0;
+	uint32_t counter = 0;
 	auto ret = search::parsePhrase(str, [&, this] (StringView word, ParserToken tok) {
 		auto status = isComplexWord(tok) ? ParserStatus::PreventSubdivide : ParserStatus::Continue;
 		if (tok == ParserToken::Blank) {
@@ -943,7 +944,7 @@ SearchQuery Configuration::parseQuery(StringView str, bool strict, StringView *e
 			if (data->preStem && !isWordPart(tok)) {
 				auto ret = data->preStem(word, tok);
 				if (!ret.empty()) {
-					auto offset = counter - prev;
+					uint32_t offset = counter - prev;
 					prev = counter;
 					for (auto &it : ret) {
 						auto str = normalizeWord(it);

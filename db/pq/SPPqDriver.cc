@@ -542,27 +542,27 @@ Driver::Status Driver::getStatus(Result res) const {
 }
 
 bool Driver::isBinaryFormat(Result res, size_t field) const {
-	return _handle->PQfformat(res.get(), field) != 0;
+	return _handle->PQfformat(res.get(), int(field)) != 0;
 }
 
 bool Driver::isNull(Result res, size_t row, size_t field) const {
-	return _handle->PQgetisnull(res.get(), row, field);
+	return _handle->PQgetisnull(res.get(), int(row), int(field));
 }
 
 char *Driver::getValue(Result res, size_t row, size_t field) const {
-	return _handle->PQgetvalue(res.get(), row, field);
+	return _handle->PQgetvalue(res.get(), int(row), int(field));
 }
 
 size_t Driver::getLength(Result res, size_t row, size_t field) const {
-	return size_t(_handle->PQgetlength(res.get(), row, field));
+	return size_t(_handle->PQgetlength(res.get(), int(row), int(field)));
 }
 
 char *Driver::getName(Result res, size_t field) const {
-	return _handle->PQfname(res.get(), field);
+	return _handle->PQfname(res.get(), int(field));
 }
 
 unsigned int Driver::getType(Result res, size_t field) const {
-	return _handle->PQftype(res.get(), field);
+	return _handle->PQftype(res.get(), int(field));
 }
 
 size_t Driver::getNTuples(Result res) const {

@@ -64,12 +64,12 @@ protected:
 };
 
 struct NativeModule {
-	NativeModule(StringView, NativeSymbol *, size_t count);
+	NativeModule(StringView, NativeSymbol *, uint32_t count);
 	~NativeModule();
 
 	String name;
 	NativeSymbol *symbols;
-	size_t symbolsCount;
+	uint32_t symbolsCount;
 };
 
 class Module final : public Ref {
@@ -265,8 +265,8 @@ inline wasm_val_t MakeValue(double val) {
 template <typename T>
 void ListOutput::setData(ModuleInstance *inst, const T *data, size_t count) {
 	uint8_t *buf = nullptr;
-	ptr = inst->allocate(count * sizeof(T), (void **)&buf);
-	len = count;
+	this->ptr = inst->allocate(uint32_t(count * sizeof(T)), (void **)&buf);
+	this->len = uint32_t(count);
 	memcpy(buf, data, count * sizeof(T));
 }
 
