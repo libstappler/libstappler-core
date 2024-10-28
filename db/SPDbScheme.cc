@@ -188,7 +188,9 @@ bool Scheme::init() {
 	if (_init) {
 		return true;
 	}
-	memory::pool::push(_fields.get_allocator());
+
+	pool::context<pool_t *> ctx(_fields.get_allocator(), pool::context<pool_t *>::conditional);
+
 	// init non-linked object fields as StrongReferences
 	for (auto &fit : _fields) {
 		const_cast<Field::Slot *>(fit.second.getSlot())->owner = this;
@@ -253,7 +255,7 @@ bool Scheme::init() {
 			}
 		}
 	}
-	memory::pool::pop();
+
 	_init = true;
 	return true;
 }
@@ -1276,7 +1278,8 @@ void Scheme::purgeFilePatch(const Transaction &t, const Value &patch) const {
 }
 
 void Scheme::addView(const Scheme *s, const Field *f) {
-	memory::pool::push(_views.get_allocator());
+	pool::context<pool_t *> ctx(_views.get_allocator(), pool::context<pool_t *>::conditional);
+
 	if (auto view = static_cast<const FieldView *>(f->getSlot())) {
 		_views.emplace_back(new ViewScheme{s, f, *view});
 		auto viewScheme = _views.back();
@@ -1327,11 +1330,11 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 			}));
 		}
 	}
-	memory::pool::pop();
 }
 
 void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme &a) {
-	memory::pool::push(_views.get_allocator());
+	pool::context<pool_t *> ctx(_views.get_allocator(), pool::context<pool_t *>::conditional);
+
 	_views.emplace_back(new ViewScheme{s, f, a});
 	auto viewScheme = _views.back();
 
@@ -1404,11 +1407,11 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 			}));
 		}
 	}
-	memory::pool::pop();
 }
 
 void Scheme::addParent(const Scheme *s, const Field *f) {
-	memory::pool::push(_parents.get_allocator());
+	pool::context<pool_t *> ctx(_parents.get_allocator(), pool::context<pool_t *>::conditional);
+
 	_parents.emplace_back(new ParentScheme(s, f));
 	auto &p = _parents.back();
 
@@ -1420,7 +1423,6 @@ void Scheme::addParent(const Scheme *s, const Field *f) {
 			_forceInclude.emplace(p->backReference);
 		}
 	}
-	memory::pool::pop();
 }
 
 Vector<uint64_t> Scheme::getLinkageForView(const Value &obj, const ViewScheme &s) const {

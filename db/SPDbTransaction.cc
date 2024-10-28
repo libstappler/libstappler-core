@@ -124,11 +124,9 @@ const Value &Transaction::getValue(const StringView &key) const {
 
 Value Transaction::setObject(int64_t id, Value &&val) const {
 	Value ret;
-	pool::push(_data->objects.get_allocator());
-	do {
+	pool::perform_conditional([&] {
 		ret = _data->objects.emplace(id, std::move(val)).first->second;
-	} while (0);
-	pool::pop();
+	}, _data->objects.get_allocator());
 	return ret;
 }
 
@@ -798,8 +796,7 @@ Transaction::Data::Data(const Adapter &adapter, memory::pool_t *p) : adapter(ada
 
 Value Transaction::acquireObject(const Scheme &scheme, uint64_t oid) const {
 	Value ret;
-	pool::push(_data->objects.get_allocator());
-	do {
+	pool::perform_conditional([&] {
 		auto it = _data->objects.find(oid);
 		if (it == _data->objects.end()) {
 			if (auto obj = Worker(scheme, *this).asSystem().get(oid)) {
@@ -808,8 +805,7 @@ Value Transaction::acquireObject(const Scheme &scheme, uint64_t oid) const {
 		} else {
 			ret = it->second;
 		}
-	} while (0);
-	pool::pop();
+	}, _data->objects.get_allocator());
 	return ret;
 }
 

@@ -47,7 +47,11 @@ static void ThreadCallbacks_performInAutorelease(Callback &&cb) {
 	((AutoreleasePool_drain_type)&objc_msgSend)(pool, sel_getUid("drain"));
 }
 
-void _workerThread(const ThreadCallbacks &cb, void *tm) {
+SP_LOCAL void _setThreadName(StringView name) {
+	// TODO: https://stackoverflow.com/questions/2057960/how-to-set-a-threadname-in-macosx
+}
+
+SP_LOCAL void _workerThread(const ThreadCallbacks &cb, void *tm) {
 	ThreadCallbacks_performInAutorelease([&] {
 		ThreadCallbacks_init(cb, tm);
 	});

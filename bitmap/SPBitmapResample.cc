@@ -1135,7 +1135,7 @@ protected:
 
 template <typename Interface>
 void ResamplerData::resample(Filter filter, const BitmapTemplate<Interface> &source, BitmapTemplate<Interface> &target) {
-	memory::pool::push(pool);
+	memory::pool::context ctx(pool);
 
 	auto bpp = getBytesPerPixel(source.format());
 
@@ -1169,7 +1169,6 @@ void ResamplerData::resample(Filter filter, const BitmapTemplate<Interface> &sou
 		for (auto &it : nodes) {
 			if (!it.resampler->put_line(it.sample.data())) {
 				log::error("Bitmap", "Resampler: Out of memory!");
-				memory::pool::pop();
 				return;
 			}
 		}
@@ -1205,10 +1204,6 @@ void ResamplerData::resample(Filter filter, const BitmapTemplate<Interface> &sou
 			dst_y++;
 		}
 	}
-
-	//std::cout << memory::pool::get_allocated_bytes(pool) << "\n";
-
-	memory::pool::pop();
 }
 
 template <>
@@ -1239,14 +1234,10 @@ auto BitmapTemplate<memory::PoolInterface>::resample(ResampleFilter f, uint32_t 
 	ret._originalFormat = _originalFormat;
 	ret._originalFormatName = _originalFormatName;
 
-	auto p = memory::pool::create(memory::pool::acquire());
-	memory::pool::push(p);
-
-	ResamplerData data(p);
-	data.resample(f, *this, ret);
-
-	memory::pool::pop();
-	memory::pool::destroy(p);
+	memory::pool::perform_temporary([&] {
+		ResamplerData data(memory::pool::acquire());
+		data.resample(f, *this, ret);
+	});
 
 	return ret;
 }
@@ -1284,14 +1275,10 @@ auto BitmapTemplate<memory::StandartInterface>::resample(ResampleFilter f, uint3
 	ret._originalFormat = _originalFormat;
 	ret._originalFormatName = _originalFormatName;
 
-	auto p = memory::pool::create(memory::pool::acquire());
-	memory::pool::push(p);
-
-	ResamplerData data(p);
-	data.resample(f, *this, ret);
-
-	memory::pool::pop();
-	memory::pool::destroy(p);
+	memory::pool::perform_temporary([&] {
+		ResamplerData data(memory::pool::acquire());
+		data.resample(f, *this, ret);
+	});
 
 	return ret;
 }

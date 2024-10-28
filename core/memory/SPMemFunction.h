@@ -213,9 +213,9 @@ private:
 			Allocator<BaseType> ialloc = alloc;
 			auto mem = ialloc.allocate(1);
 
-			memory::pool::push(alloc);
-			new (mem) BaseType(std::forward<FunctionT>(f));
-			memory::pool::pop();
+			memory::pool::perform_conditional([&] {
+				new (mem) BaseType(std::forward<FunctionT>(f));
+			}, alloc);
 
 			new (buf) (const BaseType *)(mem);
 		}

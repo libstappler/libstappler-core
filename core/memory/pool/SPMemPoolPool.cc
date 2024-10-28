@@ -39,6 +39,28 @@ SPUNUSED static std::atomic<int> s_global_init = 0;
 
 static std::atomic<size_t> s_nPools = 0;
 
+static void Pool_performCleanup(Pool *pool) {
+	memory::pool::perform_conditional([&] {
+		Cleanup::run(&pool->pre_cleanups);
+	}, (stappler::memory::pool_t *)pool);
+
+	pool->pre_cleanups = nullptr;
+
+	// DO NOT push current pool when childs is destroyed
+	while (pool->child) {
+		pool->child->~Pool();
+	}
+
+	/* Run cleanups */
+	memory::pool::perform_conditional([&] {
+		Cleanup::run(&pool->cleanups);
+	}, (stappler::memory::pool_t *)pool);
+
+	pool->cleanups = nullptr;
+	pool->free_cleanups = nullptr;
+	pool->user_data = nullptr;
+}
+
 void *Pool::alloc(size_t &sizeInBytes) {
 	std::unique_lock<Pool> lock(*this);
 	if (sizeInBytes >= BlockThreshold) {
@@ -153,22 +175,7 @@ char *Pool::pstrdup(const char *s) {
 }
 
 void Pool::clear() {
-	stappler::memory::pool::push((stappler::memory::pool_t *)this);
-	Cleanup::run(&this->pre_cleanups);
-	stappler::memory::pool::pop();
-	this->pre_cleanups = nullptr;
-
-	while (this->child) {
-		this->child->~Pool();
-	}
-
-	/* Run cleanups */
-	stappler::memory::pool::push((stappler::memory::pool_t *)this);
-	Cleanup::run(&this->cleanups);
-	stappler::memory::pool::pop();
-	this->cleanups = nullptr;
-	this->free_cleanups = nullptr;
-	this->user_data = nullptr;
+	Pool_performCleanup(this);
 
 	/* Find the node attached to the pool structure, reset it, make
 	 * it the active node and free the rest of the nodes.
@@ -242,23 +249,9 @@ Pool::Pool(Pool *p, Allocator *alloc, MemNode *node, bool threadSafe)
 }
 
 Pool::~Pool() {
-	stappler::memory::pool::push((stappler::memory::pool_t *)this);
-	Cleanup::run(&this->pre_cleanups);
-	stappler::memory::pool::pop();
-	this->pre_cleanups = nullptr;
-
-	while (this->child) {
-		this->child->~Pool();
-	}
+	Pool_performCleanup(this);
 
 	memory::pool::popPoolInfo((memory::pool_t *)this);
-
-	stappler::memory::pool::push((stappler::memory::pool_t *)this);
-	Cleanup::run(&this->cleanups);
-	stappler::memory::pool::pop();
-	this->cleanups = nullptr;
-	this->free_cleanups = nullptr;
-	this->user_data = nullptr;
 
 	/* Remove the pool from the parents child list */
 	if (this->parent) {
@@ -451,23 +444,18 @@ struct StaticHolder {
 } s_global_holder;
 
 void initialize() {
+	// We do not know, what thread calls this first!
 	if (s_global_init.fetch_add(1) == 0) {
 		if (!s_global_allocator) {
 			s_global_allocator = new Allocator();
 		}
 		s_global_pool = Pool::create(s_global_allocator);
 		s_global_pool->allocmngr.name = "Global";
-#ifndef MODULE_STAPPLER_APR
-		stappler::memory::pool::push((memory::pool_t *)s_global_pool);
-#endif
 	}
 }
 
 void terminate() {
 	if (s_global_init.fetch_sub(1) == 1) {
-#ifndef MODULE_STAPPLER_APR
-		stappler::memory::pool::pop();
-#endif
 		Pool::destroy(s_global_pool);
 		delete s_global_allocator;
 	}

@@ -1342,27 +1342,25 @@ Distance::Distance(const StringView &origin, const StringView &canonical, size_t
 	auto orig = memory::pool::acquire();
 
 	auto pool = tl_pool.getPool();
-	memory::pool::push(pool);
+	memory::pool::perform_clear([&] {
+		EdlibAlignConfig cfg;
+		cfg.k = (maxDistance == maxOf<size_t>()) ? -1 : int(maxDistance);
+		cfg.mode = EDLIB_MODE_NW;
+		cfg.task = EDLIB_TASK_PATH;
 
-	EdlibAlignConfig cfg;
-	cfg.k = (maxDistance == maxOf<size_t>()) ? -1 : int(maxDistance);
-	cfg.mode = EDLIB_MODE_NW;
-	cfg.task = EDLIB_TASK_PATH;
+		auto res = edlibAlign(origin.data(), int(origin.size()), canonical.data(), int(canonical.size()), cfg);
 
-	auto res = edlibAlign(origin.data(), int(origin.size()), canonical.data(), int(canonical.size()), cfg);
+		memory::pool::perform([&] {
+			_distance = res.editDistance;
+			_storage.reserve(res.alignmentLength);
+			for (int i = 0; i < res.alignmentLength; ++ i) {
+				_storage.emplace_back(Value(res.alignment[i]));
+			}
+		}, orig);
 
-	memory::pool::push(orig);
-	_distance = res.editDistance;
-	_storage.reserve(res.alignmentLength);
-	for (int i = 0; i < res.alignmentLength; ++ i) {
-		_storage.emplace_back(Value(res.alignment[i]));
-	}
-	memory::pool::pop();
+		edlibFreeAlignResult(res);
+	}, pool);
 
-	edlibFreeAlignResult(res);
-
-	memory::pool::clear(pool);
-	memory::pool::pop();
 }
 
 }

@@ -158,9 +158,9 @@ void Driver::performWithStorage(Handle handle, const Callback<void(const db::Ada
 
 BackendInterface *Driver::acquireInterface(Handle handle, pool_t *pool) const {
 	BackendInterface *ret = nullptr;
-	pool::push(pool);
-	ret = new (pool) db::sqlite::Handle(this, handle);
-	pool::pop();
+	pool::perform_conditional([&] {
+		ret = new (pool) db::sqlite::Handle(this, handle);
+	}, pool);
 	return ret;
 }
 
@@ -194,214 +194,219 @@ static void sp_sqlite_user_xFunc(sqlite3_context *ctx, int nargs, sqlite3_value 
 	sym->_result_int64(ctx, data->userId);
 }
 
+static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, pool_t *p,
+		StringView dbname, StringView journal, int flags) {
+	sqlite3 *db = nullptr;
+	if (!dbname.is('/') && !dbname.is(':')) {
+		if (auto app = d->getApplicationInterface()) {
+			dbname = StringView(filepath::merge<Interface>(app->getDocumentRoot(), dbname)).pdup();
+		} else {
+			dbname = StringView(filesystem::writablePath<Interface>(dbname)).pdup();
+		}
+		stappler::filesystem::mkdir(stappler::filepath::root(dbname));
+	}
+#if WIN32
+	dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
+#endif
+	if (_handle->open(dbname.data(), &db, flags, nullptr) == SQLITE_OK) {
+		_handle->_db_config(db, SQLITE_DBCONFIG_DQS_DDL, 0, nullptr);
+		_handle->_db_config(db, SQLITE_DBCONFIG_DQS_DML, 0, nullptr);
+		_handle->_db_config(db, SQLITE_DBCONFIG_ENABLE_FKEY, 1, nullptr);
+
+		if (!journal.empty()) {
+			auto m = stappler::string::toupper<Interface>(journal);
+			auto mode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, "PRAGMA journal_mode;"));
+			if (mode.empty()) {
+				_handle->close(db);
+				return Driver::Handle(nullptr);
+			}
+
+			if (mode != m) {
+				auto query = toString("PRAGMA journal_mode = ", m);
+				auto cmode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, query));
+				if (mode.empty() || cmode != m) {
+					std::cout << "[sqlite::Driver] fail to enable journal_mode '" << m << "'\n";
+					_handle->close(db);
+					return Driver::Handle(nullptr);
+				}
+			}
+		}
+
+		auto queryData = DATABASE_DEFAULTS;
+		auto outPtr = queryData.data();
+
+		bool success = true;
+		while (outPtr && *outPtr != 0 && success) {
+			auto size = queryData.size() - (outPtr - queryData.data());
+			StringView nextQuery(outPtr, size);
+			nextQuery.skipChars<StringView::WhiteSpace>();
+			if (nextQuery.empty()) {
+				break;
+			}
+
+			sqlite3_stmt *stmt = nullptr;
+			auto err = _handle->prepare(db, nextQuery.data(), int(nextQuery.size()), 0, &stmt, &outPtr);
+			if (err != SQLITE_OK) {
+				auto len = outPtr - nextQuery.data();
+				StringView performedQuery(nextQuery.data(), len);
+				auto info = d->getInfo(Driver::Connection(db), err);
+				info.setString(performedQuery, "query");
+#if DEBUG
+				log::debug("pq::Handle", EncodeFormat::Pretty, info);
+#endif
+				break;
+			}
+
+			err = _handle->step(stmt);
+
+			if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
+				auto info = d->getInfo(Driver::Connection(db), err);
+				info.setString(nextQuery, "query");
+#if DEBUG
+				log::debug("pq::Handle", EncodeFormat::Pretty, info);
+#endif
+				_handle->finalize(stmt);
+				break;
+			}
+
+			success = ResultCursor::statusIsSuccess(err);
+			_handle->finalize(stmt);
+		}
+
+		auto mem = pool::palloc(p, sizeof(DriverHandle));
+		auto h = new (mem) DriverHandle;
+		h->pool = p;
+		h->driver = d;
+		h->sym = _handle;;
+		h->conn = db;
+		h->name = dbname.pdup(p);
+		h->ctime = Time::now();
+		h->mutex.lock();
+
+		do {
+			StringView getStmt("SELECT \"__oid\" FROM \"__objects\" WHERE \"control\" = 0;");
+			sqlite3_stmt *gstmt = nullptr;
+			auto err = _handle->prepare(db, getStmt.data(), int(getStmt.size()), 0, &gstmt, nullptr);
+			err = _handle->step(gstmt);
+			if (err == SQLITE_DONE) {
+				StringView createStmt("INSERT OR IGNORE INTO \"__objects\" (\"__oid\") VALUES (0);");
+				sqlite3_stmt *cstmt = nullptr;
+				err = _handle->prepare(db, createStmt.data(), int(createStmt.size()), 0, &cstmt, nullptr);
+				err = _handle->step(cstmt);
+				_handle->finalize(cstmt);
+			}
+			_handle->finalize(gstmt);
+
+			StringView oidStmt("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
+
+			sqlite3_stmt *stmt = nullptr;
+			err = _handle->prepare(db, oidStmt.data(), int(oidStmt.size()), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+			if (err == SQLITE_OK) {
+				h->oidQuery = stmt;
+			}
+		} while (0);
+
+		do {
+			StringView str("INSERT INTO \"__words\"(\"id\",\"word\") VALUES(?1, ?2) ON CONFLICT(id) DO UPDATE SET word=word RETURNING \"id\", \"word\";");
+
+			sqlite3_stmt *stmt = nullptr;
+			auto err = _handle->prepare(db, str.data(), int(str.size()), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+			if (err == SQLITE_OK) {
+				h->wordsQuery = stmt;
+			}
+		} while (0);
+
+		_handle->_create_function_v2(db, "sp_sqlite_next_oid", 0, SQLITE_UTF8, (void *)h,
+				sp_sqlite_next_oid_xFunc, nullptr, nullptr, nullptr);
+		_handle->_create_function_v2(db, "sp_sqlite_now", 0, SQLITE_UTF8, (void *)h,
+				sp_sqlite_now_xFunc, nullptr, nullptr, nullptr);
+		_handle->_create_function_v2(db, "sp_sqlite_user", 0, SQLITE_UTF8, (void *)h,
+				sp_sqlite_user_xFunc, nullptr, nullptr, nullptr);
+
+		_handle->_create_function_v2(db, "sp_ts_update", 6, SQLITE_UTF8, (void *)h,
+				sp_ts_update_xFunc, nullptr, nullptr, nullptr);
+		_handle->_create_function_v2(db, "sp_ts_rank", 3, SQLITE_UTF8, (void *)h,
+				sp_ts_rank_xFunc, nullptr, nullptr, nullptr);
+		_handle->_create_function_v2(db, "sp_ts_query_valid", 2, SQLITE_UTF8, (void *)h,
+				sp_ts_query_valid_xFunc, nullptr, nullptr, nullptr);
+
+		_handle->_create_module(db, "sp_unwrap", &s_UnwrapModule, (void *)d);
+
+		h->mutex.unlock();
+
+		pool::pre_cleanup_register(p, [h] {
+			if (h->oidQuery) {
+				h->sym->finalize(h->oidQuery);
+			}
+			if (h->wordsQuery) {
+				h->sym->finalize(h->wordsQuery);
+			}
+			h->sym->close(h->conn);
+		});
+
+		return Driver::Handle(h);
+	}
+
+	return Driver::Handle(nullptr);
+}
+
 Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const {
 	auto p = pool::create(pool::acquire());
 	Driver::Handle rec = Driver::Handle(nullptr);
-	pool::push(p);
 
-	int flags = 0;
-	StringView mode;
-	StringView dbname("");
-	StringView journal;
+	pool::perform([&] {
+		int flags = 0;
+		StringView mode;
+		StringView dbname("");
+		StringView journal;
 
-	for (auto &it : params) {
-		if (it.first == "dbname") {
-			dbname = it.second;
-		} else if (it.first == "mode") {
-			mode = it.second;
-		} else if (it.first == "cache") {
-			if (it.second == "shared") {
-				flags |= SQLITE_OPEN_SHAREDCACHE;
-			} else if (it.second == "private") {
-				flags |= SQLITE_OPEN_PRIVATECACHE;
+		for (auto &it : params) {
+			if (it.first == "dbname") {
+				dbname = it.second;
+			} else if (it.first == "mode") {
+				mode = it.second;
+			} else if (it.first == "cache") {
+				if (it.second == "shared") {
+					flags |= SQLITE_OPEN_SHAREDCACHE;
+				} else if (it.second == "private") {
+					flags |= SQLITE_OPEN_PRIVATECACHE;
+				}
+			} else if (it.first == "threading") {
+				if (it.second == "serialized") {
+					flags |= SQLITE_OPEN_FULLMUTEX;
+				} else if (it.second == "multi" || it.second == "multithread" || it.second == "multithreaded") {
+					flags |= SQLITE_OPEN_NOMUTEX;
+				}
+			} else if (it.first == "journal") {
+				if (it.second == "delete" || it.second == "truncate" || it.second == "persist"
+						|| it.second == "memory" || it.second == "wal" || it.second == "off") {
+					journal = it.second;
+				}
+			} else if (it.first != "driver" && it.first == "nmin" && it.first == "nkeep"
+					&& it.first == "nmax" && it.first == "exptime" && it.first == "persistent") {
+				std::cout << "[sqlite::Driver] unknown connection parameter: " << it.first << "=" << it.second << "\n";
 			}
-		} else if (it.first == "threading") {
-			if (it.second == "serialized") {
-				flags |= SQLITE_OPEN_FULLMUTEX;
-			} else if (it.second == "multi" || it.second == "multithread" || it.second == "multithreaded") {
-				flags |= SQLITE_OPEN_NOMUTEX;
-			}
-		} else if (it.first == "journal") {
-			if (it.second == "delete" || it.second == "truncate" || it.second == "persist"
-					|| it.second == "memory" || it.second == "wal" || it.second == "off") {
-				journal = it.second;
-			}
-		} else if (it.first != "driver" && it.first == "nmin" && it.first == "nkeep"
-				&& it.first == "nmax" && it.first == "exptime" && it.first == "persistent") {
-			std::cout << "[sqlite::Driver] unknown connection parameter: " << it.first << "=" << it.second << "\n";
 		}
-	}
 
-	if (!mode.empty()) {
-		if (mode == "ro") {
-			flags |= SQLITE_OPEN_READONLY;
-		} else if (mode == "rw") {
-			flags |= SQLITE_OPEN_READWRITE;
-		} else if (mode == "rwc") {
-			flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
-		} else if (mode == "memory") {
-			flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY;
-		} else {
-			std::cout << "[sqlite::Driver] unknown mode parameter: " << mode << "\n";
-		}
-	} else {
-		flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
-	}
-
-	do {
-		sqlite3 *db = nullptr;
-		if (!dbname.is('/') && !dbname.is(':')) {
-			if (_application) {
-				dbname = StringView(filepath::merge<Interface>(_application->getDocumentRoot(), dbname)).pdup();
+		if (!mode.empty()) {
+			if (mode == "ro") {
+				flags |= SQLITE_OPEN_READONLY;
+			} else if (mode == "rw") {
+				flags |= SQLITE_OPEN_READWRITE;
+			} else if (mode == "rwc") {
+				flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+			} else if (mode == "memory") {
+				flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY;
 			} else {
-				dbname = StringView(filesystem::writablePath<Interface>(dbname)).pdup();
+				std::cout << "[sqlite::Driver] unknown mode parameter: " << mode << "\n";
 			}
-			stappler::filesystem::mkdir(stappler::filepath::root(dbname));
+		} else {
+			flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
 		}
-#if WIN32
-		dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
-#endif
-		if (_handle->open(dbname.data(), &db, flags, nullptr) == SQLITE_OK) {
-			_handle->_db_config(db, SQLITE_DBCONFIG_DQS_DDL, 0, nullptr);
-			_handle->_db_config(db, SQLITE_DBCONFIG_DQS_DML, 0, nullptr);
-			_handle->_db_config(db, SQLITE_DBCONFIG_ENABLE_FKEY, 1, nullptr);
 
-			if (!journal.empty()) {
-				auto m = stappler::string::toupper<Interface>(journal);
-				auto mode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, "PRAGMA journal_mode;"));
-				if (mode.empty()) {
-					_handle->close(db);
-					break;
-				}
+		rec = Driver_setupDriver(this, _handle, p, dbname, journal, flags);
+	}, p);
 
-				if (mode != m) {
-					auto query = toString("PRAGMA journal_mode = ", m);
-					auto cmode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, query));
-					if (mode.empty() || cmode != m) {
-						std::cout << "[sqlite::Driver] fail to enable journal_mode '" << m << "'\n";
-						_handle->close(db);
-						break;
-					}
-				}
-			}
-
-			auto queryData = DATABASE_DEFAULTS;
-			auto outPtr = queryData.data();
-
-			bool success = true;
-			while (outPtr && *outPtr != 0 && success) {
-				auto size = queryData.size() - (outPtr - queryData.data());
-				StringView nextQuery(outPtr, size);
-				nextQuery.skipChars<StringView::WhiteSpace>();
-				if (nextQuery.empty()) {
-					break;
-				}
-
-				sqlite3_stmt *stmt = nullptr;
-				auto err = _handle->prepare(db, nextQuery.data(), int(nextQuery.size()), 0, &stmt, &outPtr);
-				if (err != SQLITE_OK) {
-					auto len = outPtr - nextQuery.data();
-					StringView performedQuery(nextQuery.data(), len);
-					auto info = getInfo(Connection(db), err);
-					info.setString(performedQuery, "query");
-#if DEBUG
-					log::debug("pq::Handle", EncodeFormat::Pretty, info);
-#endif
-					break;
-				}
-
-				err = _handle->step(stmt);
-
-				if (err != SQLITE_OK && err != SQLITE_DONE && err != SQLITE_ROW) {
-					auto info = getInfo(Connection(db), err);
-					info.setString(nextQuery, "query");
-#if DEBUG
-					log::debug("pq::Handle", EncodeFormat::Pretty, info);
-#endif
-					_handle->finalize(stmt);
-					break;
-				}
-
-				success = ResultCursor::statusIsSuccess(err);
-				_handle->finalize(stmt);
-			}
-
-			auto mem = pool::palloc(p, sizeof(DriverHandle));
-			auto h = new (mem) DriverHandle;
-			h->pool = p;
-			h->driver = this;
-			h->sym = _handle;;
-			h->conn = db;
-			h->name = dbname.pdup(p);
-			h->ctime = Time::now();
-			h->mutex.lock();
-
-			do {
-				StringView getStmt("SELECT \"__oid\" FROM \"__objects\" WHERE \"control\" = 0;");
-				sqlite3_stmt *gstmt = nullptr;
-				auto err = _handle->prepare(db, getStmt.data(), int(getStmt.size()), 0, &gstmt, nullptr);
-				err = _handle->step(gstmt);
-				if (err == SQLITE_DONE) {
-					StringView createStmt("INSERT OR IGNORE INTO \"__objects\" (\"__oid\") VALUES (0);");
-					sqlite3_stmt *cstmt = nullptr;
-					err = _handle->prepare(db, createStmt.data(), int(createStmt.size()), 0, &cstmt, nullptr);
-					err = _handle->step(cstmt);
-					_handle->finalize(cstmt);
-				}
-				_handle->finalize(gstmt);
-
-				StringView oidStmt("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
-
-				sqlite3_stmt *stmt = nullptr;
-				err = _handle->prepare(db, oidStmt.data(), int(oidStmt.size()), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
-				if (err == SQLITE_OK) {
-					h->oidQuery = stmt;
-				}
-			} while (0);
-
-			do {
-				StringView str("INSERT INTO \"__words\"(\"id\",\"word\") VALUES(?1, ?2) ON CONFLICT(id) DO UPDATE SET word=word RETURNING \"id\", \"word\";");
-
-				sqlite3_stmt *stmt = nullptr;
-				auto err = _handle->prepare(db, str.data(), int(str.size()), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
-				if (err == SQLITE_OK) {
-					h->wordsQuery = stmt;
-				}
-			} while (0);
-
-			_handle->_create_function_v2(db, "sp_sqlite_next_oid", 0, SQLITE_UTF8, (void *)h,
-					sp_sqlite_next_oid_xFunc, nullptr, nullptr, nullptr);
-			_handle->_create_function_v2(db, "sp_sqlite_now", 0, SQLITE_UTF8, (void *)h,
-					sp_sqlite_now_xFunc, nullptr, nullptr, nullptr);
-			_handle->_create_function_v2(db, "sp_sqlite_user", 0, SQLITE_UTF8, (void *)h,
-					sp_sqlite_user_xFunc, nullptr, nullptr, nullptr);
-
-			_handle->_create_function_v2(db, "sp_ts_update", 6, SQLITE_UTF8, (void *)h,
-					sp_ts_update_xFunc, nullptr, nullptr, nullptr);
-			_handle->_create_function_v2(db, "sp_ts_rank", 3, SQLITE_UTF8, (void *)h,
-					sp_ts_rank_xFunc, nullptr, nullptr, nullptr);
-			_handle->_create_function_v2(db, "sp_ts_query_valid", 2, SQLITE_UTF8, (void *)h,
-					sp_ts_query_valid_xFunc, nullptr, nullptr, nullptr);
-
-			_handle->_create_module(db, "sp_unwrap", &s_UnwrapModule, (void *)this);
-
-			h->mutex.unlock();
-
-			pool::pre_cleanup_register(p, [h] {
-				if (h->oidQuery) {
-					h->sym->finalize(h->oidQuery);
-				}
-				if (h->wordsQuery) {
-					h->sym->finalize(h->wordsQuery);
-				}
-				h->sym->close(h->conn);
-			});
-
-			rec = Handle(h);
-		}
-	} while (0);
-
-	pool::pop();
 	if (!rec.get()) {
 		pool::destroy(p);
 	}

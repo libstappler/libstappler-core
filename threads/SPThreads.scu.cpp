@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 #include "SPThread.h"
+#include "SPLog.h"
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
@@ -110,7 +111,7 @@ namespace STAPPLER_VERSIONIZED stappler::thread {
 
 thread_local ThreadInfo tl_threadInfo;
 
-ThreadInfo *ThreadInfo::getThreadLocal() {
+ThreadInfo *ThreadInfo::getThreadInfo() {
 	if (!tl_threadInfo.managed) {
 		return nullptr;
 	}
@@ -126,9 +127,8 @@ void ThreadInfo::setMainThread() {
 }
 
 void ThreadInfo::setThreadInfo(uint32_t t, uint32_t w, StringView name, bool m) {
-#if LINUX
-	pthread_setname_np(pthread_self(), name.data());
-#endif
+	_setThreadName(name);
+
 	tl_threadInfo.threadId = t;
 	tl_threadInfo.workerId = w;
 	tl_threadInfo.name = name;
@@ -136,9 +136,8 @@ void ThreadInfo::setThreadInfo(uint32_t t, uint32_t w, StringView name, bool m) 
 }
 
 void ThreadInfo::setThreadInfo(StringView name) {
-#if LINUX
-	pthread_setname_np(pthread_self(), name.data());
-#endif
+	_setThreadName(name);
+
 	tl_threadInfo.threadId = 0;
 	tl_threadInfo.workerId = 0;
 	tl_threadInfo.name = name;
@@ -151,15 +150,38 @@ const TaskQueue *TaskQueue::getOwner() {
 }
 
 static void ThreadCallbacks_init(const ThreadCallbacks &cb, void *tm) {
-	cb.init(tm);
+	memory::pool::initialize();
+
+	tl_threadInfo.threadAlloc = memory::allocator::create();
+	tl_threadInfo.threadPool = memory::pool::create(tl_threadInfo.threadAlloc);
+	tl_threadInfo.workerPool = memory::pool::create(tl_threadInfo.threadPool);
+
+	memory::pool::perform([&] {
+		cb.init(tm);
+	}, tl_threadInfo.threadPool);
 }
 
 static bool ThreadCallbacks_worker(const ThreadCallbacks &cb, void *tm) {
-	return cb.worker(tm);
+	SPASSERT(tl_threadInfo.workerPool, "Thread pool should be initialized");
+	bool ret = false;
+
+	memory::pool::perform_clear([&] {
+		ret = cb.worker(tm);
+	}, tl_threadInfo.workerPool);
+
+	return ret;
 }
 
 static void ThreadCallbacks_dispose(const ThreadCallbacks &cb, void *tm) {
-	cb.dispose(tm);
+	memory::pool::perform([&] {
+		cb.dispose(tm);
+	}, tl_threadInfo.threadPool);
+
+	memory::pool::destroy(tl_threadInfo.workerPool);
+	memory::pool::destroy(tl_threadInfo.threadPool);
+	memory::allocator::destroy(tl_threadInfo.threadAlloc);
+
+	memory::pool::terminate();
 }
 
 }

@@ -240,9 +240,9 @@ struct __CleaupData {
 
 	static status_t doCleanup(void *data) {
 		if (auto d = (__CleaupData *)data) {
-			memory::pool::push((memory::pool_t *)d->pool);
-			d->callback(d->data);
-			memory::pool::pop();
+			memory::pool::perform_conditional([&] {
+					d->callback(d->data);
+			}, (memory::pool_t *)d->pool);
 		}
 		return 0;
 	}

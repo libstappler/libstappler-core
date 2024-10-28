@@ -293,7 +293,9 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 	ResultCursor result(this, exec(conn, LIST_DB_TYPES));
 
 	db::sql::Result res(&result);
-	pool::push(_storageTypes.get_allocator());
+
+	memory::pool::context<memory::pool_t *> ctx(_storageTypes.get_allocator(), memory::pool::context<memory::pool_t *>::conditional);
+
 	for (auto it : res) {
 		auto tid = it.toInteger(0);
 		auto tname = it.at(1);
@@ -327,7 +329,6 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 			Driver_insert_sorted(_customTypes, uint32_t(tid), tname);
 		}
 	}
-	pool::pop();
 
 	_init = true;
 	return true;
@@ -357,17 +358,16 @@ void Driver::performWithStorage(Handle handle, const Callback<void(const db::Ada
 
 BackendInterface *Driver::acquireInterface(Handle handle, pool_t *pool) const {
 	BackendInterface *ret = nullptr;
-	pool::push(pool);
-	ret = new (pool) db::pq::Handle(this, handle);
-	pool::pop();
+	memory::pool::perform_conditional([&] {
+		ret = new (pool) db::pq::Handle(this, handle);
+	}, pool);
 	return ret;
 }
 
 Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const {
 	auto p = pool::create(pool::acquire());
 	Driver::Handle rec;
-	pool::push(p);
-	do {
+	memory::pool::perform_conditional([&] {
 		Vector<const char *> keywords; keywords.reserve(params.size());
 		Vector<const char *> values; values.reserve(params.size());
 
@@ -419,8 +419,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 		values.emplace_back(nullptr);
 
 		rec = doConnect(keywords.data(), values.data(), 0);
-	} while (0);
-	pool::pop();
+	}, p);
 
 	if (!rec.get()) {
 		pool::destroy(p);

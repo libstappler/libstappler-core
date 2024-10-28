@@ -53,8 +53,10 @@ QueryStorageHandle& QueryStorageHandle::operator=(QueryStorageHandle &&other) {
 }
 
 Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, const void *external) {
+	pool::context ctx(pool, pool::context<pool_t *>::conditional);
+
 	Driver *ret = nullptr;
-	pool::push(pool);
+
 	if (path == "pgsql") {
 		ret = pq::Driver::open(pool, app, StringView(), external);
 	} else if (path.starts_with("pgsql:")) {
@@ -65,8 +67,6 @@ Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, c
 	}
 
 	registerCleanupDestructor(ret, pool);
-
-	pool::pop();
 	return ret;
 }
 

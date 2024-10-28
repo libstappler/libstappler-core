@@ -223,7 +223,7 @@ void RefContainer<Item>::removeAllItemsByTag(uint32_t tag) {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
-		std::remove_if(target, end, [&, this] (Item *a) {
+		static_cast<void>(std::remove_if(target, end, [&, this] (Item *a) {
 			if (a->getTag() == tag) {
 				a->invalidate();
 				a->release(0);
@@ -231,7 +231,7 @@ void RefContainer<Item>::removeAllItemsByTag(uint32_t tag) {
 				return true;
 			}
 			return false;
-		});
+		}));
 	} else {
 		auto target = (Vector<Item *> *)_container.data();
 		auto it = target->begin();
@@ -252,14 +252,14 @@ bool RefContainer<Item>::cleanup() {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
-		std::remove_if(target, end, [&, this] (Item *a) {
+		static_cast<void>(std::remove_if(target, end, [&, this] (Item *a) {
 			if (a->isDone()) {
 				a->release(0);
 				-- _nitems;
 				return true;
 			}
 			return false;
-		});
+		}));
 		return _nitems == 0;
 	} else {
 		auto target = (Vector<Item *> *)_container.data();

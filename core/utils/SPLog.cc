@@ -56,7 +56,7 @@ static void DefaultLog2(LogType type, const StringView &tag, const StringView &t
 #endif
 
 #if MODULE_STAPPLER_THREADS
-	if (auto local = thread::ThreadInfo::getThreadLocal()) {
+	if (auto local = thread::ThreadInfo::getThreadInfo()) {
 		if (!local->managed) {
 			stream << "[Thread:" << std::this_thread::get_id() << "] ";
 		} else if (local->threadId == thread::ThreadInfo::mainThreadId) {

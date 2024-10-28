@@ -232,14 +232,9 @@ using Mutex = std::mutex;
 
 using stappler::makeSpanView;
 
-template <typename Callback>
-auto perform(const Callback &cb, memory::pool_t *p);
-
-template <typename Callback>
-auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr);
-
-template <typename Callback>
-auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr);
+using memory::pool::perform;
+using memory::pool::perform_clear;
+using memory::pool::perform_temporary;
 
 template <typename T>
 bool emplace_ordered(Vector<T> &vec, T val);
@@ -302,14 +297,9 @@ using Mutex = std::mutex;
 
 using stappler::makeSpanView;
 
-template <typename Callback>
-auto perform(const Callback &cb, memory::pool_t *p);
-
-template <typename Callback>
-auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr);
-
-template <typename Callback>
-auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr);
+using memory::pool::perform;
+using memory::pool::perform_clear;
+using memory::pool::perform_temporary;
 
 template <typename T>
 bool emplace_ordered(Vector<T> &vec, T val);
@@ -382,53 +372,6 @@ inline bool emplace_ordered(Vector<Value> &vec, const Value &val) {
 
 namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
-template <typename Callback>
-inline auto perform(const Callback &cb, memory::pool_t *p) {
-	struct Context {
-		Context(memory::pool_t *pool) : _pool(pool) {
-			memory::pool::push(_pool);
-		}
-		~Context() {
-			memory::pool::pop();
-		}
-
-		memory::pool_t *_pool = nullptr;
-	} holder(p);
-	return cb();
-}
-
-template <typename Callback>
-inline auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr) {
-	struct Context {
-		Context(memory::pool_t *pool, uint32_t t, void *p) : _pool(pool) {
-			memory::pool::push(_pool, t, p);
-		}
-		~Context() {
-			memory::pool::pop();
-		}
-
-		memory::pool_t *_pool = nullptr;
-	} holder(p, tag, ptr);
-	return cb();
-}
-
-template <typename Callback>
-inline auto perform_temporary(const Callback &cb, memory::pool_t *p) {
-	struct Context {
-		Context(memory::pool_t *pool)
-		: _pool(pool ? memory::pool::create(pool) :  memory::pool::create(memory::pool::acquire())) {
-			memory::pool::push(_pool);
-		}
-		~Context() {
-			memory::pool::pop();
-			memory::pool::destroy(_pool);
-		}
-
-		memory::pool_t *_pool = nullptr;
-	} holder(p);
-	return cb();
-}
-
 template <typename T>
 inline bool emplace_ordered(Vector<T> &vec, T val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
@@ -455,38 +398,6 @@ inline bool exists_ordered(Vector<T> &vec, const T & val) {
 
 
 namespace STAPPLER_VERSIONIZED stappler::mem_std {
-
-template <typename Callback>
-inline auto perform(const Callback &cb, memory::pool_t *p) {
-	struct Context {
-		Context(memory::pool_t *pool) : _pool(pool) {
-			memory::pool::push(_pool);
-		}
-		~Context() {
-			memory::pool::pop();
-		}
-
-		memory::pool_t *_pool = nullptr;
-	} holder(p);
-	return cb();
-}
-
-template <typename Callback>
-inline auto perform_temporary(const Callback &cb, memory::pool_t *p) {
-	struct Context {
-		Context(memory::pool_t *pool)
-		: _pool(pool ? memory::pool::create(pool) :  memory::pool::create(memory::pool::acquire())) {
-			memory::pool::push(_pool);
-		}
-		~Context() {
-			memory::pool::pop();
-			memory::pool::destroy(_pool);
-		}
-
-		memory::pool_t *_pool = nullptr;
-	} holder(p);
-	return cb();
-}
 
 template <typename T>
 inline bool emplace_ordered(Vector<T> &vec, T val) {

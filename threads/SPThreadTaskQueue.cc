@@ -58,9 +58,6 @@ protected:
 	std::atomic<int32_t> _refCount;
 	std::atomic_flag _shouldQuit;
 
-	memory::PoolFlags _flags = memory::PoolFlags::None;
-	memory::pool_t *_pool = nullptr;
-
 	uint32_t _managerId;
 	uint32_t _workerId;
 	StringView _name;
@@ -286,18 +283,15 @@ struct TaskQueue::WorkerContext {
 
 		outputMutex.unlock();
 
-		memory::pool::push(pool);
+		memory::pool::perform_clear([&] {
+			for (Rc<Task> &task : stack) {
+				task->onComplete();
+			}
 
-		for (Rc<Task> &task : stack) {
-			task->onComplete();
-		}
-
-		for (Pair<std::function<void()>, Rc<Ref>> &task : callbacks) {
-			task.first();
-		}
-
-		memory::pool::pop();
-		memory::pool::clear(pool);
+			for (Pair<std::function<void()>, Rc<Ref>> &task : callbacks) {
+				task.first();
+			}
+		}, pool);
 
 		if (count) {
 			*count += stack.size() + callbacks.size();
@@ -322,27 +316,22 @@ public:
 
 	virtual void threadInit() override {
 		ThreadInfo::setThreadInfo(_managerId, 0, "Worker", true);
+
+		memory::pool::cleanup_register(memory::pool::acquire(), [self = this] () {
+			delete self;
+		});
 	}
 
 	virtual bool worker() override {
 		if (_task) {
-			memory::pool::initialize();
-			auto pool = memory::pool::create();
-
-			memory::pool::push(pool);
 			auto ret = execute(_task);
-			memory::pool::pop();
 
 			_task->setSuccessful(ret);
 			if (!_task->getCompleteTasks().empty()) {
 				_queue->onMainThread(std::move(_task));
 			}
-
-			memory::pool::destroy(pool);
-			memory::pool::terminate();
 		}
 
-		delete this;
 		return false;
 	}
 
@@ -535,33 +524,21 @@ void Worker::release(uint64_t) {
 }
 
 bool Worker::execute(Task *task) {
-	memory::pool::push(_pool);
-	auto ret = task->execute();
-	memory::pool::pop();
-	memory::pool::clear(_pool);
-	return ret;
+	return task->execute();
 }
 
 void Worker::threadInit() {
-	memory::pool::initialize();
-	_pool = memory::pool::createTagged(_name.data(), _flags);
+	ThreadInfo::setThreadInfo(_managerId, _workerId, _name, true);
 
 	_shouldQuit.test_and_set();
 	_threadId = std::this_thread::get_id();
-
-	ThreadInfo::setThreadInfo(_managerId, _workerId, _name, true);
 }
 
-void Worker::threadDispose() {
-	memory::pool::destroy(_pool);
-	memory::pool::terminate();
-}
+void Worker::threadDispose() { }
 
 bool Worker::worker() {
 	if (!_shouldQuit.test_and_set()) {
 		return false;
-	} else {
-		memory::pool::clear(_pool);
 	}
 
 	Rc<Task> task;

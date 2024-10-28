@@ -33,7 +33,11 @@ static void ThreadCallbacks_init(const ThreadCallbacks &, void *tm);
 static bool ThreadCallbacks_worker(const ThreadCallbacks &, void *tm);
 static void ThreadCallbacks_dispose(const ThreadCallbacks &, void *tm);
 
-void _workerThread(const ThreadCallbacks &cb, void *tm) {
+SP_LOCAL void _setThreadName(StringView name) {
+	// TODO: https://learn.microsoft.com/ru-ru/previous-versions/visualstudio/visual-studio-2015/debugger/how-to-set-a-thread-name-in-native-code?view=vs-2015&redirectedfrom=MSDN
+}
+
+SP_LOCAL void _workerThread(const ThreadCallbacks &cb, void *tm) {
 	ThreadCallbacks_init(cb, tm);
     while (ThreadCallbacks_worker(cb, tm)) { }
     ThreadCallbacks_dispose(cb, tm);

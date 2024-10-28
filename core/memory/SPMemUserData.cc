@@ -34,16 +34,16 @@ static status_t sa_request_store_custom_cleanup(void *ptr) {
 	if (ptr) {
 		auto ref = (Pool_StoreHandle *)ptr;
 		if (ref->callback) {
-			memory::pool::push(ref->callback.get_allocator());
-			ref->callback();
-			memory::pool::pop();
+			memory::pool::perform_conditional([&] {
+				ref->callback();
+			}, ref->callback.get_allocator());
 		}
 	}
 	return SUCCESS;
 }
 
 void store(pool_t *pool, void *ptr, const StringView &key, memory::function<void()> &&cb) {
-	memory::pool::push(pool);
+	pool::context<pool_t *> ctx(pool, pool::context<pool_t *>::conditional);
 
 	void * ret = nullptr;
 	pool::userdata_get(&ret, key.data(), key.size(), pool);
@@ -71,7 +71,6 @@ void store(pool_t *pool, void *ptr, const StringView &key, memory::function<void
 			pool::userdata_set(h, key.data(), sa_request_store_custom_cleanup, pool);
 		}
 	}
-	memory::pool::pop();
 }
 
 }

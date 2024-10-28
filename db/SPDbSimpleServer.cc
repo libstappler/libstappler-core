@@ -126,12 +126,12 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 }
 
 void SimpleServer::scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const {
-	memory::pool::push(_data->updatePool);
+	pool::context<pool_t *> ctx(_data->updatePool, pool::context<pool_t *>::conditional);
+
 	if (!_data->asyncTasks) {
 		_data->asyncTasks = new (_data->updatePool) Vector<Function<void(const Transaction &)>>;
 	}
 	_data->asyncTasks->emplace_back(setupCb(_data->updatePool));
-	memory::pool::pop();
 }
 
 StringView SimpleServer::getDocumentRoot() const {

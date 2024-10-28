@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::thread {
 struct SP_PUBLIC ThreadInfo {
 	static constexpr uint32_t mainThreadId = maxOf<uint32_t>() - 1;
 
-	static ThreadInfo *getThreadLocal();
+	static ThreadInfo *getThreadInfo();
 	static void setMainThread();
 	static void setThreadInfo(uint32_t, uint32_t, StringView, bool);
 	static void setThreadInfo(StringView);
@@ -41,6 +41,10 @@ struct SP_PUBLIC ThreadInfo {
 	StringView name;
 	bool managed = false;
 	bool detouched = false;
+
+	memory::allocator_t *threadAlloc = nullptr;
+	memory::pool_t *threadPool = nullptr;
+	memory::pool_t *workerPool = nullptr;
 };
 
 /* Interface for thread workers or handlers */

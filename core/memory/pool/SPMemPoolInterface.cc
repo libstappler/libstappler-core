@@ -769,17 +769,17 @@ static status_t cleanup_register_fn(void *ptr) {
 }
 
 void cleanup_register(pool_t *p, memory::function<void()> &&cb) {
-	pool::push(p);
-	auto fn = new (p) memory::function<void()>(move(cb));
-	pool::pop();
-	pool::cleanup_register(p, fn, &cleanup_register_fn);
+	memory::pool::perform_conditional([&] {
+		auto fn = new (p) memory::function<void()>(move(cb));
+		pool::cleanup_register(p, fn, &cleanup_register_fn);
+	}, p);
 }
 
 void pre_cleanup_register(pool_t *p, memory::function<void()> &&cb) {
-	pool::push(p);
-	auto fn = new (p) memory::function<void()>(move(cb));
-	pool::pop();
-	pool::pre_cleanup_register(p, fn, &cleanup_register_fn);
+	memory::pool::perform_conditional([&] {
+		auto fn = new (p) memory::function<void()>(move(cb));
+		pool::pre_cleanup_register(p, fn, &cleanup_register_fn);
+	}, p);
 }
 
 size_t get_active_count() {
