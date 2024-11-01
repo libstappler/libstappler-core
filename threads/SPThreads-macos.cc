@@ -36,6 +36,10 @@ struct ThreadCallbacks;
 using AutoreleasePool_new_type = id(*)(Class, SEL);
 using AutoreleasePool_drain_type = void(*)(id, SEL);
 
+using NSThread_currentThread_type = id(*)(Class, SEL);
+using NSString_stringWithUTF8String_type = id(*)(Class, SEL, const char *);
+using NSThread_setName_type = id(*)(id, SEL, id);
+
 static void ThreadCallbacks_init(const ThreadCallbacks &, void *tm);
 static bool ThreadCallbacks_worker(const ThreadCallbacks &, void *tm);
 static void ThreadCallbacks_dispose(const ThreadCallbacks &, void *tm);
@@ -48,7 +52,10 @@ static void ThreadCallbacks_performInAutorelease(Callback &&cb) {
 }
 
 SP_LOCAL void _setThreadName(StringView name) {
-	// TODO: https://stackoverflow.com/questions/2057960/how-to-set-a-threadname-in-macosx
+	id thread = ((NSThread_currentThread_type)&objc_msgSend)(objc_getClass("NSThread"), sel_getUid("currentThread"));
+	id string = ((NSString_stringWithUTF8String_type)&objc_msgSend)(objc_getClass("NSString"), sel_getUid("stringWithUTF8String:"), name.terminated() ? name.data() : name.str<memory::StandartInterface>().data());
+
+	((NSThread_setName_type)&objc_msgSend)(thread, sel_getUid("setName:"), string);
 }
 
 SP_LOCAL void _workerThread(const ThreadCallbacks &cb, void *tm) {

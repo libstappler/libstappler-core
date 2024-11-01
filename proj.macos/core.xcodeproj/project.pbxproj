@@ -34,30 +34,6 @@
 		};
 /* End PBXAggregateTarget section */
 
-/* Begin PBXBuildFile section */
-		268C41DF2CC8EF35006E6D5D /* SPCore.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E0792CC5770500B3A76A /* SPCore.scu.cpp */; };
-		268C42072CC8F109006E6D5D /* SPCrypto.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E0902CC5770500B3A76A /* SPCrypto.scu.cpp */; };
-		268C42082CC8F111006E6D5D /* lz4.c in Sources */ = {isa = PBXBuildFile; fileRef = 2670E0962CC5770500B3A76A /* lz4.c */; };
-		268C42092CC8F114006E6D5D /* SPData.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E09E2CC5770500B3A76A /* SPData.scu.cpp */; };
-		268C42462CC91F81006E6D5D /* SPIdn.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268C41AE2CC8B4AD006E6D5D /* SPIdn.scu.cpp */; };
-		268C42472CC91F8A006E6D5D /* SPThreads.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1A82CC5770500B3A76A /* SPThreads.scu.cpp */; };
-		268C424A2CC9297A006E6D5D /* SPFilesystem.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E0F32CC5770500B3A76A /* SPFilesystem.scu.cpp */; };
-		268C43022CC93D58006E6D5D /* SPBitmap.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E0152CC5770500B3A76A /* SPBitmap.scu.cpp */; };
-		268C43032CC93D64006E6D5D /* SPDb.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E0C92CC5770500B3A76A /* SPDb.scu.cpp */; };
-		268C43042CC93D7F006E6D5D /* SPSql.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1752CC5770500B3A76A /* SPSql.scu.cpp */; };
-		268C43052CC93D8D006E6D5D /* hyphen.c in Sources */ = {isa = PBXBuildFile; fileRef = 2670E0FE2CC5770500B3A76A /* hyphen.c */; };
-		268C43062CC93D91006E6D5D /* SPFont.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1092CC5770500B3A76A /* SPFont.scu.cpp */; };
-		268C43072CC93D9F006E6D5D /* SPGeom.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1232CC5770500B3A76A /* SPGeom.scu.cpp */; };
-		268C43082CC93DA9006E6D5D /* SPNetwork.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E13E2CC5770500B3A76A /* SPNetwork.scu.cpp */; };
-		268C43092CC93DB6006E6D5D /* SPSnowballStemmer.c in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1492CC5770500B3A76A /* SPSnowballStemmer.c */; };
-		268C430A2CC93DBA006E6D5D /* SPSearch.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1632CC5770500B3A76A /* SPSearch.scu.cpp */; };
-		268C430B2CC93DC7006E6D5D /* SPTess.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E17E2CC5770500B3A76A /* SPTess.scu.cpp */; };
-		268C430C2CC93DD6006E6D5D /* SPVg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1B72CC5770500B3A76A /* SPVg.cpp */; };
-		268C430D2CC93DDD006E6D5D /* SPWasm.scu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1BE2CC5770500B3A76A /* SPWasm.scu.cpp */; };
-		268C430E2CC93DE7006E6D5D /* SPZip.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2670E1C62CC5770500B3A76A /* SPZip.cpp */; };
-		268C48D42CCAD196006E6D5D /* SPFilesystem-mac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 268C48D32CCAD070006E6D5D /* SPFilesystem-mac.mm */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		268C470A2CCA31B9006E6D5D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -153,404 +129,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		2670E0122CC5770500B3A76A /* bitmap.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = bitmap.mk; sourceTree = "<group>"; };
-		2670E0132CC5770500B3A76A /* SPBitmap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPBitmap.h; sourceTree = "<group>"; };
-		2670E0142CC5770500B3A76A /* SPBitmap.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmap.cc; sourceTree = "<group>"; };
-		2670E0152CC5770500B3A76A /* SPBitmap.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmap.scu.cpp; sourceTree = "<group>"; };
-		2670E0162CC5770500B3A76A /* SPBitmapCustom.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmapCustom.cc; sourceTree = "<group>"; };
-		2670E0172CC5770500B3A76A /* SPBitmapFormat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPBitmapFormat.h; sourceTree = "<group>"; };
-		2670E0182CC5770500B3A76A /* SPBitmapFormat.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmapFormat.cc; sourceTree = "<group>"; };
-		2670E0192CC5770500B3A76A /* SPBitmapGif.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmapGif.cc; sourceTree = "<group>"; };
-		2670E01A2CC5770500B3A76A /* SPBitmapJpeg.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmapJpeg.cc; sourceTree = "<group>"; };
-		2670E01B2CC5770500B3A76A /* SPBitmapPng.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmapPng.cc; sourceTree = "<group>"; };
-		2670E01C2CC5770500B3A76A /* SPBitmapResample.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmapResample.cc; sourceTree = "<group>"; };
-		2670E01D2CC5770500B3A76A /* SPBitmapShared.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmapShared.cc; sourceTree = "<group>"; };
-		2670E01E2CC5770500B3A76A /* SPBitmapWebp.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBitmapWebp.cc; sourceTree = "<group>"; };
-		2670E0202CC5770500B3A76A /* SPIO.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPIO.h; sourceTree = "<group>"; };
-		2670E0212CC5770500B3A76A /* SPIO.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPIO.cc; sourceTree = "<group>"; };
-		2670E0222CC5770500B3A76A /* SPIOBuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPIOBuffer.h; sourceTree = "<group>"; };
-		2670E0232CC5770500B3A76A /* SPIOCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPIOCommon.h; sourceTree = "<group>"; };
-		2670E0242CC5770500B3A76A /* SPIOConsumer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPIOConsumer.h; sourceTree = "<group>"; };
-		2670E0252CC5770500B3A76A /* SPIOProducer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPIOProducer.h; sourceTree = "<group>"; };
-		2670E0272CC5770500B3A76A /* SPMemPoolAllocator.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemPoolAllocator.cc; sourceTree = "<group>"; };
-		2670E0282CC5770500B3A76A /* SPMemPoolApr.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemPoolApr.cc; sourceTree = "<group>"; };
-		2670E0292CC5770500B3A76A /* SPMemPoolConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemPoolConfig.h; sourceTree = "<group>"; };
-		2670E02A2CC5770500B3A76A /* SPMemPoolHash.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemPoolHash.cc; sourceTree = "<group>"; };
-		2670E02B2CC5770500B3A76A /* SPMemPoolInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemPoolInterface.h; sourceTree = "<group>"; };
-		2670E02C2CC5770500B3A76A /* SPMemPoolInterface.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemPoolInterface.cc; sourceTree = "<group>"; };
-		2670E02D2CC5770500B3A76A /* SPMemPoolPool.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemPoolPool.cc; sourceTree = "<group>"; };
-		2670E02E2CC5770500B3A76A /* SPMemPoolStruct.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemPoolStruct.h; sourceTree = "<group>"; };
-		2670E02F2CC5770500B3A76A /* SPMemPoolUtils.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemPoolUtils.cc; sourceTree = "<group>"; };
-		2670E0312CC5770500B3A76A /* SPMemAlloc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemAlloc.h; sourceTree = "<group>"; };
-		2670E0322CC5770500B3A76A /* SPMemAlloc.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemAlloc.cc; sourceTree = "<group>"; };
-		2670E0332CC5770500B3A76A /* SPMemDict.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemDict.h; sourceTree = "<group>"; };
-		2670E0342CC5770500B3A76A /* SPMemFunction.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemFunction.h; sourceTree = "<group>"; };
-		2670E0352CC5770500B3A76A /* SPMemInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemInterface.h; sourceTree = "<group>"; };
-		2670E0362CC5770500B3A76A /* SPMemMap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemMap.h; sourceTree = "<group>"; };
-		2670E0372CC5770500B3A76A /* SPMemPointerIterator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemPointerIterator.h; sourceTree = "<group>"; };
-		2670E0382CC5770500B3A76A /* SPMemPoolApi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemPoolApi.h; sourceTree = "<group>"; };
-		2670E0392CC5770500B3A76A /* SPMemPriorityQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemPriorityQueue.h; sourceTree = "<group>"; };
-		2670E03A2CC5770500B3A76A /* SPMemRbtree.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemRbtree.h; sourceTree = "<group>"; };
-		2670E03B2CC5770500B3A76A /* SPMemRbtree.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemRbtree.cc; sourceTree = "<group>"; };
-		2670E03C2CC5770500B3A76A /* SPMemSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemSet.h; sourceTree = "<group>"; };
-		2670E03D2CC5770500B3A76A /* SPMemStorageMem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemStorageMem.h; sourceTree = "<group>"; };
-		2670E03E2CC5770500B3A76A /* SPMemStorageMemImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemStorageMemImpl.h; sourceTree = "<group>"; };
-		2670E03F2CC5770500B3A76A /* SPMemString.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemString.h; sourceTree = "<group>"; };
-		2670E0402CC5770500B3A76A /* SPMemStringStream.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemStringStream.h; sourceTree = "<group>"; };
-		2670E0412CC5770500B3A76A /* SPMemUserData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemUserData.h; sourceTree = "<group>"; };
-		2670E0422CC5770500B3A76A /* SPMemUserData.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemUserData.cc; sourceTree = "<group>"; };
-		2670E0432CC5770500B3A76A /* SPMemUuid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemUuid.h; sourceTree = "<group>"; };
-		2670E0442CC5770500B3A76A /* SPMemUuid.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMemUuid.cc; sourceTree = "<group>"; };
-		2670E0452CC5770500B3A76A /* SPMemVector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemVector.h; sourceTree = "<group>"; };
-		2670E0472CC5770500B3A76A /* SPCore-android.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPCore-android.cc"; sourceTree = "<group>"; };
-		2670E0482CC5770500B3A76A /* SPCore-darwin.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPCore-darwin.cc"; sourceTree = "<group>"; };
-		2670E0492CC5770500B3A76A /* SPCore-linux.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPCore-linux.cc"; sourceTree = "<group>"; };
-		2670E04A2CC5770500B3A76A /* SPCore-win32.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPCore-win32.cc"; sourceTree = "<group>"; };
-		2670E04C2CC5770500B3A76A /* SPBase64.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPBase64.cc; sourceTree = "<group>"; };
-		2670E04D2CC5770500B3A76A /* SPByteOrder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPByteOrder.h; sourceTree = "<group>"; };
-		2670E04E2CC5770500B3A76A /* SPBytesReader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPBytesReader.h; sourceTree = "<group>"; };
-		2670E04F2CC5770500B3A76A /* SPBytesView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPBytesView.h; sourceTree = "<group>"; };
-		2670E0502CC5770500B3A76A /* SPCharGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPCharGroup.h; sourceTree = "<group>"; };
-		2670E0512CC5770500B3A76A /* SPCharGroup.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPCharGroup.cc; sourceTree = "<group>"; };
-		2670E0522CC5770500B3A76A /* SPCoreCrypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPCoreCrypto.h; sourceTree = "<group>"; };
-		2670E0532CC5770500B3A76A /* SPGost3411-2012.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPGost3411-2012.cc"; sourceTree = "<group>"; };
-		2670E0542CC5770500B3A76A /* SPHash.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPHash.h; sourceTree = "<group>"; };
-		2670E0552CC5770500B3A76A /* SPMetastring.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMetastring.h; sourceTree = "<group>"; };
-		2670E0562CC5770500B3A76A /* SPSha2.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSha2.cc; sourceTree = "<group>"; };
-		2670E0572CC5770500B3A76A /* SPSpanView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSpanView.h; sourceTree = "<group>"; };
-		2670E0582CC5770500B3A76A /* SPString.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPString.h; sourceTree = "<group>"; };
-		2670E0592CC5770500B3A76A /* SPString.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPString.cc; sourceTree = "<group>"; };
-		2670E05A2CC5770500B3A76A /* SPStringStream.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPStringStream.h; sourceTree = "<group>"; };
-		2670E05B2CC5770500B3A76A /* SPStringView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPStringView.h; sourceTree = "<group>"; };
-		2670E05C2CC5770500B3A76A /* SPUnicode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPUnicode.h; sourceTree = "<group>"; };
-		2670E05D2CC5770500B3A76A /* SPUnicode.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPUnicode.cc; sourceTree = "<group>"; };
-		2670E05F2CC5770500B3A76A /* SPBuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPBuffer.h; sourceTree = "<group>"; };
-		2670E0602CC5770500B3A76A /* SPDso.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDso.h; sourceTree = "<group>"; };
-		2670E0612CC5770500B3A76A /* SPDso.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDso.cc; sourceTree = "<group>"; };
-		2670E0622CC5770500B3A76A /* SPHalfFloat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPHalfFloat.h; sourceTree = "<group>"; };
-		2670E0632CC5770500B3A76A /* SPHashTable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPHashTable.h; sourceTree = "<group>"; };
-		2670E0642CC5770500B3A76A /* SPHtmlParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPHtmlParser.h; sourceTree = "<group>"; };
-		2670E0652CC5770500B3A76A /* SPHtmlParser.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPHtmlParser.cc; sourceTree = "<group>"; };
-		2670E0662CC5770500B3A76A /* SPLog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPLog.h; sourceTree = "<group>"; };
-		2670E0672CC5770500B3A76A /* SPLog.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPLog.cc; sourceTree = "<group>"; };
-		2670E0682CC5770500B3A76A /* SPMovingAverage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMovingAverage.h; sourceTree = "<group>"; };
-		2670E0692CC5770500B3A76A /* SPPriorityList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPPriorityList.h; sourceTree = "<group>"; };
-		2670E06A2CC5770500B3A76A /* SPRef.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPRef.h; sourceTree = "<group>"; };
-		2670E06B2CC5770500B3A76A /* SPRef.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPRef.cc; sourceTree = "<group>"; };
-		2670E06C2CC5770500B3A76A /* SPRefContainer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPRefContainer.h; sourceTree = "<group>"; };
-		2670E06D2CC5770500B3A76A /* SPSharedModule.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSharedModule.h; sourceTree = "<group>"; };
-		2670E06E2CC5770500B3A76A /* SPSharedModule.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSharedModule.cc; sourceTree = "<group>"; };
-		2670E06F2CC5770500B3A76A /* SPSubscription.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSubscription.h; sourceTree = "<group>"; };
-		2670E0702CC5770500B3A76A /* SPTime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPTime.h; sourceTree = "<group>"; };
-		2670E0712CC5770500B3A76A /* SPTime.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPTime.cc; sourceTree = "<group>"; };
-		2670E0722CC5770500B3A76A /* SPUrl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPUrl.h; sourceTree = "<group>"; };
-		2670E0732CC5770500B3A76A /* SPUrl.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPUrl.cc; sourceTree = "<group>"; };
-		2670E0742CC5770500B3A76A /* SPValid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPValid.h; sourceTree = "<group>"; };
-		2670E0752CC5770500B3A76A /* SPValid.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPValid.cc; sourceTree = "<group>"; };
-		2670E0772CC5770500B3A76A /* SPCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPCommon.h; sourceTree = "<group>"; };
-		2670E0782CC5770500B3A76A /* SPCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPCore.h; sourceTree = "<group>"; };
-		2670E0792CC5770500B3A76A /* SPCore.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPCore.scu.cpp; sourceTree = "<group>"; };
-		2670E07A2CC5770500B3A76A /* SPMemory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMemory.h; sourceTree = "<group>"; };
-		2670E07B2CC5770500B3A76A /* SPPlatformCleanup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPPlatformCleanup.h; sourceTree = "<group>"; };
-		2670E07C2CC5770500B3A76A /* SPPlatformInit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPPlatformInit.h; sourceTree = "<group>"; };
-		2670E07D2CC5770500B3A76A /* SPPlatformUnistd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPPlatformUnistd.h; sourceTree = "<group>"; };
-		2670E07E2CC5770500B3A76A /* stappler-core.wit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "stappler-core.wit"; sourceTree = "<group>"; };
-		2670E0802CC5770500B3A76A /* ecp_id_GostR3410_2001_CryptoPro_A_ParamSet.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ecp_id_GostR3410_2001_CryptoPro_A_ParamSet.cc; sourceTree = "<group>"; };
-		2670E0812CC5770500B3A76A /* ecp_id_GostR3410_2001_CryptoPro_B_ParamSet.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ecp_id_GostR3410_2001_CryptoPro_B_ParamSet.cc; sourceTree = "<group>"; };
-		2670E0822CC5770500B3A76A /* ecp_id_GostR3410_2001_CryptoPro_C_ParamSet.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ecp_id_GostR3410_2001_CryptoPro_C_ParamSet.cc; sourceTree = "<group>"; };
-		2670E0832CC5770500B3A76A /* ecp_id_GostR3410_2001_TestParamSet.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ecp_id_GostR3410_2001_TestParamSet.cc; sourceTree = "<group>"; };
-		2670E0842CC5770500B3A76A /* ecp_id_tc26_gost_3410_2012_256_paramSetA.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ecp_id_tc26_gost_3410_2012_256_paramSetA.cc; sourceTree = "<group>"; };
-		2670E0852CC5770500B3A76A /* ecp_id_tc26_gost_3410_2012_512_paramSetA.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ecp_id_tc26_gost_3410_2012_512_paramSetA.cc; sourceTree = "<group>"; };
-		2670E0862CC5770500B3A76A /* ecp_id_tc26_gost_3410_2012_512_paramSetB.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ecp_id_tc26_gost_3410_2012_512_paramSetB.cc; sourceTree = "<group>"; };
-		2670E0872CC5770500B3A76A /* ecp_id_tc26_gost_3410_2012_512_paramSetC.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ecp_id_tc26_gost_3410_2012_512_paramSetC.cc; sourceTree = "<group>"; };
-		2670E08A2CC5770500B3A76A /* crypto.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = crypto.mk; sourceTree = "<group>"; };
-		2670E08B2CC5770500B3A76A /* SPCrypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPCrypto.h; sourceTree = "<group>"; };
-		2670E08C2CC5770500B3A76A /* SPCrypto-gnutls.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPCrypto-gnutls.cc"; sourceTree = "<group>"; };
-		2670E08D2CC5770500B3A76A /* SPCrypto-gost.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPCrypto-gost.cc"; sourceTree = "<group>"; };
-		2670E08E2CC5770500B3A76A /* SPCrypto-mbedtls.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPCrypto-mbedtls.cc"; sourceTree = "<group>"; };
-		2670E08F2CC5770500B3A76A /* SPCrypto-openssl.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPCrypto-openssl.cc"; sourceTree = "<group>"; };
-		2670E0902CC5770500B3A76A /* SPCrypto.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPCrypto.scu.cpp; sourceTree = "<group>"; };
-		2670E0912CC5770500B3A76A /* SPCryptoAsn1.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPCryptoAsn1.h; sourceTree = "<group>"; };
-		2670E0922CC5770500B3A76A /* SPJsonWebToken.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPJsonWebToken.h; sourceTree = "<group>"; };
-		2670E0942CC5770500B3A76A /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
-		2670E0952CC5770500B3A76A /* lz4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lz4.h; sourceTree = "<group>"; };
-		2670E0962CC5770500B3A76A /* lz4.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lz4.c; sourceTree = "<group>"; };
-		2670E0972CC5770500B3A76A /* lz4hc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lz4hc.h; sourceTree = "<group>"; };
-		2670E09B2CC5770500B3A76A /* data.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = data.mk; sourceTree = "<group>"; };
-		2670E09C2CC5770500B3A76A /* SPData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPData.h; sourceTree = "<group>"; };
-		2670E09D2CC5770500B3A76A /* SPData.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPData.cc; sourceTree = "<group>"; };
-		2670E09E2CC5770500B3A76A /* SPData.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPData.scu.cpp; sourceTree = "<group>"; };
-		2670E09F2CC5770500B3A76A /* SPDataCbor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataCbor.h; sourceTree = "<group>"; };
-		2670E0A02CC5770500B3A76A /* SPDataDecode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataDecode.h; sourceTree = "<group>"; };
-		2670E0A12CC5770500B3A76A /* SPDataDecodeCbor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataDecodeCbor.h; sourceTree = "<group>"; };
-		2670E0A22CC5770500B3A76A /* SPDataDecodeJson.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataDecodeJson.h; sourceTree = "<group>"; };
-		2670E0A32CC5770500B3A76A /* SPDataDecodeSerenity.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataDecodeSerenity.h; sourceTree = "<group>"; };
-		2670E0A42CC5770500B3A76A /* SPDataEncode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataEncode.h; sourceTree = "<group>"; };
-		2670E0A52CC5770500B3A76A /* SPDataEncodeCbor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataEncodeCbor.h; sourceTree = "<group>"; };
-		2670E0A62CC5770500B3A76A /* SPDataEncodeJson.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataEncodeJson.h; sourceTree = "<group>"; };
-		2670E0A72CC5770500B3A76A /* SPDataEncodeSerenity.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataEncodeSerenity.h; sourceTree = "<group>"; };
-		2670E0A82CC5770500B3A76A /* SPDataShared.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDataShared.cc; sourceTree = "<group>"; };
-		2670E0A92CC5770500B3A76A /* SPDataTraits.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataTraits.h; sourceTree = "<group>"; };
-		2670E0AA2CC5770500B3A76A /* SPDataUrlencoded.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDataUrlencoded.cc; sourceTree = "<group>"; };
-		2670E0AB2CC5770500B3A76A /* SPDataValue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataValue.h; sourceTree = "<group>"; };
-		2670E0AC2CC5770500B3A76A /* SPDataWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDataWrapper.h; sourceTree = "<group>"; };
-		2670E0AD2CC5770500B3A76A /* stappler-data.wit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "stappler-data.wit"; sourceTree = "<group>"; };
-		2670E0AF2CC5770500B3A76A /* SPPqDriver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPPqDriver.h; sourceTree = "<group>"; };
-		2670E0B02CC5770500B3A76A /* SPPqDriver.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPPqDriver.cc; sourceTree = "<group>"; };
-		2670E0B12CC5770500B3A76A /* SPPqHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPPqHandle.h; sourceTree = "<group>"; };
-		2670E0B22CC5770500B3A76A /* SPPqHandle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPPqHandle.cc; sourceTree = "<group>"; };
-		2670E0B32CC5770500B3A76A /* SPPqHandleInit.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPPqHandleInit.cc; sourceTree = "<group>"; };
-		2670E0B52CC5770500B3A76A /* SPSqlDriver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSqlDriver.h; sourceTree = "<group>"; };
-		2670E0B62CC5770500B3A76A /* SPSqlDriver.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqlDriver.cc; sourceTree = "<group>"; };
-		2670E0B72CC5770500B3A76A /* SPSqlHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSqlHandle.h; sourceTree = "<group>"; };
-		2670E0B82CC5770500B3A76A /* SPSqlHandle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqlHandle.cc; sourceTree = "<group>"; };
-		2670E0B92CC5770500B3A76A /* SPSqlHandleObject.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqlHandleObject.cc; sourceTree = "<group>"; };
-		2670E0BA2CC5770500B3A76A /* SPSqlHandleProp.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqlHandleProp.cc; sourceTree = "<group>"; };
-		2670E0BB2CC5770500B3A76A /* SPSqlQuery.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSqlQuery.h; sourceTree = "<group>"; };
-		2670E0BC2CC5770500B3A76A /* SPSqlQuery.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqlQuery.cc; sourceTree = "<group>"; };
-		2670E0BE2CC5770500B3A76A /* SPSqliteDriver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSqliteDriver.h; sourceTree = "<group>"; };
-		2670E0BF2CC5770500B3A76A /* SPSqliteDriver.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqliteDriver.cc; sourceTree = "<group>"; };
-		2670E0C02CC5770500B3A76A /* SPSqliteDriverHandle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqliteDriverHandle.cc; sourceTree = "<group>"; };
-		2670E0C12CC5770500B3A76A /* SPSqliteHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSqliteHandle.h; sourceTree = "<group>"; };
-		2670E0C22CC5770500B3A76A /* SPSqliteHandle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqliteHandle.cc; sourceTree = "<group>"; };
-		2670E0C32CC5770500B3A76A /* SPSqliteHandleInit.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqliteHandleInit.cc; sourceTree = "<group>"; };
-		2670E0C42CC5770500B3A76A /* SPSqliteModuleTextSearch.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqliteModuleTextSearch.cc; sourceTree = "<group>"; };
-		2670E0C52CC5770500B3A76A /* SPSqliteModuleUnwrap.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSqliteModuleUnwrap.cc; sourceTree = "<group>"; };
-		2670E0C72CC5770500B3A76A /* db.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = db.mk; sourceTree = "<group>"; };
-		2670E0C82CC5770500B3A76A /* SPDb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDb.h; sourceTree = "<group>"; };
-		2670E0C92CC5770500B3A76A /* SPDb.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDb.scu.cpp; sourceTree = "<group>"; };
-		2670E0CA2CC5770500B3A76A /* SPDbAdapter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbAdapter.h; sourceTree = "<group>"; };
-		2670E0CB2CC5770500B3A76A /* SPDbAdapter.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbAdapter.cc; sourceTree = "<group>"; };
-		2670E0CC2CC5770500B3A76A /* SPDbAuth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbAuth.h; sourceTree = "<group>"; };
-		2670E0CD2CC5770500B3A76A /* SPDbAuth.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbAuth.cc; sourceTree = "<group>"; };
-		2670E0CE2CC5770500B3A76A /* SPDbBackendInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbBackendInterface.h; sourceTree = "<group>"; };
-		2670E0CF2CC5770500B3A76A /* SPDbConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbConfig.h; sourceTree = "<group>"; };
-		2670E0D02CC5770500B3A76A /* SPDbContinueToken.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbContinueToken.h; sourceTree = "<group>"; };
-		2670E0D12CC5770500B3A76A /* SPDbContinueToken.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbContinueToken.cc; sourceTree = "<group>"; };
-		2670E0D22CC5770500B3A76A /* SPDbField.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbField.h; sourceTree = "<group>"; };
-		2670E0D32CC5770500B3A76A /* SPDbField.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbField.cc; sourceTree = "<group>"; };
-		2670E0D42CC5770500B3A76A /* SPDbFieldExtensions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbFieldExtensions.h; sourceTree = "<group>"; };
-		2670E0D52CC5770500B3A76A /* SPDbFieldExtensions.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbFieldExtensions.cc; sourceTree = "<group>"; };
-		2670E0D62CC5770500B3A76A /* SPDbFile.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbFile.h; sourceTree = "<group>"; };
-		2670E0D72CC5770500B3A76A /* SPDbFile.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbFile.cc; sourceTree = "<group>"; };
-		2670E0D82CC5770500B3A76A /* SPDbObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbObject.h; sourceTree = "<group>"; };
-		2670E0D92CC5770500B3A76A /* SPDbObject.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbObject.cc; sourceTree = "<group>"; };
-		2670E0DA2CC5770500B3A76A /* SPDbQuery.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbQuery.h; sourceTree = "<group>"; };
-		2670E0DB2CC5770500B3A76A /* SPDbQuery.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbQuery.cc; sourceTree = "<group>"; };
-		2670E0DC2CC5770500B3A76A /* SPDbQueryList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbQueryList.h; sourceTree = "<group>"; };
-		2670E0DD2CC5770500B3A76A /* SPDbQueryList.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbQueryList.cc; sourceTree = "<group>"; };
-		2670E0DE2CC5770500B3A76A /* SPDbScheme.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbScheme.h; sourceTree = "<group>"; };
-		2670E0DF2CC5770500B3A76A /* SPDbScheme.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbScheme.cc; sourceTree = "<group>"; };
-		2670E0E02CC5770500B3A76A /* SPDbSimpleServer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbSimpleServer.h; sourceTree = "<group>"; };
-		2670E0E12CC5770500B3A76A /* SPDbSimpleServer.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbSimpleServer.cc; sourceTree = "<group>"; };
-		2670E0E22CC5770500B3A76A /* SPDbTransaction.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbTransaction.h; sourceTree = "<group>"; };
-		2670E0E32CC5770500B3A76A /* SPDbTransaction.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbTransaction.cc; sourceTree = "<group>"; };
-		2670E0E42CC5770500B3A76A /* SPDbUser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbUser.h; sourceTree = "<group>"; };
-		2670E0E52CC5770500B3A76A /* SPDbUser.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbUser.cc; sourceTree = "<group>"; };
-		2670E0E62CC5770500B3A76A /* SPDbWorker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPDbWorker.h; sourceTree = "<group>"; };
-		2670E0E72CC5770500B3A76A /* SPDbWorker.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPDbWorker.cc; sourceTree = "<group>"; };
-		2670E0E92CC5770500B3A76A /* SPFilesystem-android.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPFilesystem-android.cc"; sourceTree = "<group>"; };
-		2670E0EA2CC5770500B3A76A /* SPFilesystem-linux.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPFilesystem-linux.cc"; sourceTree = "<group>"; };
-		2670E0EC2CC5770500B3A76A /* SPFilesystem-win32.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPFilesystem-win32.cc"; sourceTree = "<group>"; };
-		2670E0EE2CC5770500B3A76A /* filesystem.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = filesystem.mk; sourceTree = "<group>"; };
-		2670E0EF2CC5770500B3A76A /* SPFilepath.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFilepath.h; sourceTree = "<group>"; };
-		2670E0F02CC5770500B3A76A /* SPFilepath.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFilepath.cc; sourceTree = "<group>"; };
-		2670E0F12CC5770500B3A76A /* SPFilesystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFilesystem.h; sourceTree = "<group>"; };
-		2670E0F22CC5770500B3A76A /* SPFilesystem.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFilesystem.cc; sourceTree = "<group>"; };
-		2670E0F32CC5770500B3A76A /* SPFilesystem.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFilesystem.scu.cpp; sourceTree = "<group>"; };
-		2670E0F42CC5770500B3A76A /* SPFilesystemMime.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFilesystemMime.cc; sourceTree = "<group>"; };
-		2670E0F52CC5770500B3A76A /* SPFilesystemNativePosix.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFilesystemNativePosix.cc; sourceTree = "<group>"; };
-		2670E0F62CC5770500B3A76A /* SPFilesystemNativeWin32.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFilesystemNativeWin32.cc; sourceTree = "<group>"; };
-		2670E0F72CC5770500B3A76A /* stappler-filesystem.wit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "stappler-filesystem.wit"; sourceTree = "<group>"; };
-		2670E0F92CC5770500B3A76A /* ChangeLog */ = {isa = PBXFileReference; lastKnownFileType = text; path = ChangeLog; sourceTree = "<group>"; };
-		2670E0FA2CC5770500B3A76A /* COPYING */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
-		2670E0FB2CC5770500B3A76A /* COPYING.LGPL */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.LGPL; sourceTree = "<group>"; };
-		2670E0FC2CC5770500B3A76A /* COPYING.MPL */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING.MPL; sourceTree = "<group>"; };
-		2670E0FD2CC5770500B3A76A /* hyphen.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hyphen.h; sourceTree = "<group>"; };
-		2670E0FE2CC5770500B3A76A /* hyphen.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = hyphen.c; sourceTree = "<group>"; };
-		2670E0FF2CC5770500B3A76A /* README */ = {isa = PBXFileReference; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
-		2670E1022CC5770500B3A76A /* font.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = font.mk; sourceTree = "<group>"; };
-		2670E1032CC5770500B3A76A /* SPFont.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFont.h; sourceTree = "<group>"; };
-		2670E1042CC5770500B3A76A /* SPFont.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFont.cc; sourceTree = "<group>"; };
-		2670E1052CC5770500B3A76A /* SPFont-DejaVuSansStappler.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPFont-DejaVuSansStappler.cc"; sourceTree = "<group>"; };
-		2670E1062CC5770500B3A76A /* SPFont-RobotoFlex-VariableFont.ttf.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPFont-RobotoFlex-VariableFont.ttf.cc"; sourceTree = "<group>"; };
-		2670E1072CC5770500B3A76A /* SPFont-RobotoMono-Italic-VariableFont_wght.ttf.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPFont-RobotoMono-Italic-VariableFont_wght.ttf.cc"; sourceTree = "<group>"; };
-		2670E1082CC5770500B3A76A /* SPFont-RobotoMono-VariableFont_wght.ttf.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPFont-RobotoMono-VariableFont_wght.ttf.cc"; sourceTree = "<group>"; };
-		2670E1092CC5770500B3A76A /* SPFont.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFont.scu.cpp; sourceTree = "<group>"; };
-		2670E10A2CC5770500B3A76A /* SPFontEmplace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFontEmplace.h; sourceTree = "<group>"; };
-		2670E10B2CC5770500B3A76A /* SPFontEmplace.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFontEmplace.cc; sourceTree = "<group>"; };
-		2670E10C2CC5770500B3A76A /* SPFontFace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFontFace.h; sourceTree = "<group>"; };
-		2670E10D2CC5770500B3A76A /* SPFontFace.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFontFace.cc; sourceTree = "<group>"; };
-		2670E10E2CC5770500B3A76A /* SPFontFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFontFormatter.h; sourceTree = "<group>"; };
-		2670E10F2CC5770500B3A76A /* SPFontFormatter.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFontFormatter.cc; sourceTree = "<group>"; };
-		2670E1102CC5770500B3A76A /* SPFontHyphenMap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFontHyphenMap.h; sourceTree = "<group>"; };
-		2670E1112CC5770500B3A76A /* SPFontHyphenMap.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFontHyphenMap.cc; sourceTree = "<group>"; };
-		2670E1122CC5770500B3A76A /* SPFontLibrary.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFontLibrary.h; sourceTree = "<group>"; };
-		2670E1132CC5770500B3A76A /* SPFontLibrary.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFontLibrary.cc; sourceTree = "<group>"; };
-		2670E1142CC5770500B3A76A /* SPFontStyle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFontStyle.h; sourceTree = "<group>"; };
-		2670E1152CC5770500B3A76A /* SPFontStyle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFontStyle.cc; sourceTree = "<group>"; };
-		2670E1162CC5770500B3A76A /* SPFontTextLayout.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPFontTextLayout.h; sourceTree = "<group>"; };
-		2670E1172CC5770500B3A76A /* SPFontTextLayout.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPFontTextLayout.cc; sourceTree = "<group>"; };
-		2670E1192CC5770500B3A76A /* SPGlsl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPGlsl.h; sourceTree = "<group>"; };
-		2670E11A2CC5770500B3A76A /* SPGlslInit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPGlslInit.h; sourceTree = "<group>"; };
-		2670E11C2CC5770500B3A76A /* geom.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = geom.mk; sourceTree = "<group>"; };
-		2670E11D2CC5770500B3A76A /* SPColor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPColor.h; sourceTree = "<group>"; };
-		2670E11E2CC5770500B3A76A /* SPColor.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPColor.cc; sourceTree = "<group>"; };
-		2670E11F2CC5770500B3A76A /* SPColorCam16.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPColorCam16.h; sourceTree = "<group>"; };
-		2670E1202CC5770500B3A76A /* SPColorCam16.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPColorCam16.cc; sourceTree = "<group>"; };
-		2670E1212CC5770500B3A76A /* SPColorHCT.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPColorHCT.h; sourceTree = "<group>"; };
-		2670E1222CC5770500B3A76A /* SPGeom.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPGeom.h; sourceTree = "<group>"; };
-		2670E1232CC5770500B3A76A /* SPGeom.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPGeom.scu.cpp; sourceTree = "<group>"; };
-		2670E1242CC5770500B3A76A /* SPGeometry.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPGeometry.h; sourceTree = "<group>"; };
-		2670E1252CC5770500B3A76A /* SPGeometry.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPGeometry.cc; sourceTree = "<group>"; };
-		2670E1262CC5770500B3A76A /* SPMat4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPMat4.h; sourceTree = "<group>"; };
-		2670E1272CC5770500B3A76A /* SPMat4.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPMat4.cc; sourceTree = "<group>"; };
-		2670E1282CC5770500B3A76A /* SPPadding.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPPadding.h; sourceTree = "<group>"; };
-		2670E1292CC5770500B3A76A /* SPQuaternion.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPQuaternion.h; sourceTree = "<group>"; };
-		2670E12A2CC5770500B3A76A /* SPQuaternion.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPQuaternion.cc; sourceTree = "<group>"; };
-		2670E12B2CC5770500B3A76A /* SPSIMD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSIMD.h; sourceTree = "<group>"; };
-		2670E12C2CC5770500B3A76A /* SPSIMD_Neon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSIMD_Neon.h; sourceTree = "<group>"; };
-		2670E12D2CC5770500B3A76A /* SPSIMD_Neon64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSIMD_Neon64.h; sourceTree = "<group>"; };
-		2670E12E2CC5770500B3A76A /* SPSIMD_Sse.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSIMD_Sse.h; sourceTree = "<group>"; };
-		2670E12F2CC5770500B3A76A /* SPVec2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPVec2.h; sourceTree = "<group>"; };
-		2670E1302CC5770500B3A76A /* SPVec2.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPVec2.cc; sourceTree = "<group>"; };
-		2670E1312CC5770500B3A76A /* SPVec3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPVec3.h; sourceTree = "<group>"; };
-		2670E1322CC5770500B3A76A /* SPVec3.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPVec3.cc; sourceTree = "<group>"; };
-		2670E1332CC5770500B3A76A /* SPVec4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPVec4.h; sourceTree = "<group>"; };
-		2670E1342CC5770500B3A76A /* SPVec4.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPVec4.cc; sourceTree = "<group>"; };
-		2670E1362CC5770500B3A76A /* idn.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = idn.mk; sourceTree = "<group>"; };
-		2670E1372CC5770500B3A76A /* SPIdn.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPIdn.h; sourceTree = "<group>"; };
-		2670E1382CC5770500B3A76A /* SPIdn.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPIdn.cc; sourceTree = "<group>"; };
-		2670E13A2CC5770500B3A76A /* SPIdnPunycode.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPIdnPunycode.cc; sourceTree = "<group>"; };
-		2670E13B2CC5770500B3A76A /* SPIdnTld.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPIdnTld.cc; sourceTree = "<group>"; };
-		2670E13D2CC5770500B3A76A /* network.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = network.mk; sourceTree = "<group>"; };
-		2670E13E2CC5770500B3A76A /* SPNetwork.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPNetwork.scu.cpp; sourceTree = "<group>"; };
-		2670E13F2CC5770500B3A76A /* SPNetworkCABundle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPNetworkCABundle.cc; sourceTree = "<group>"; };
-		2670E1402CC5770500B3A76A /* SPNetworkContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPNetworkContext.h; sourceTree = "<group>"; };
-		2670E1412CC5770500B3A76A /* SPNetworkData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPNetworkData.h; sourceTree = "<group>"; };
-		2670E1422CC5770500B3A76A /* SPNetworkData.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPNetworkData.cc; sourceTree = "<group>"; };
-		2670E1432CC5770500B3A76A /* SPNetworkHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPNetworkHandle.h; sourceTree = "<group>"; };
-		2670E1442CC5770500B3A76A /* SPNetworkHandle.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPNetworkHandle.cc; sourceTree = "<group>"; };
-		2670E1452CC5770500B3A76A /* SPNetworkSetup.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPNetworkSetup.cc; sourceTree = "<group>"; };
-		2670E1472CC5770500B3A76A /* COPYING */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
-		2670E1482CC5770500B3A76A /* SPSnowballStemmer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSnowballStemmer.h; sourceTree = "<group>"; };
-		2670E1492CC5770500B3A76A /* SPSnowballStemmer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SPSnowballStemmer.c; sourceTree = "<group>"; };
-		2670E14A2CC5770500B3A76A /* stem_UTF_8_arabic.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_arabic.cc; sourceTree = "<group>"; };
-		2670E14B2CC5770500B3A76A /* stem_UTF_8_danish.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_danish.cc; sourceTree = "<group>"; };
-		2670E14C2CC5770500B3A76A /* stem_UTF_8_dutch.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_dutch.cc; sourceTree = "<group>"; };
-		2670E14D2CC5770500B3A76A /* stem_UTF_8_english.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_english.cc; sourceTree = "<group>"; };
-		2670E14E2CC5770500B3A76A /* stem_UTF_8_finnish.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_finnish.cc; sourceTree = "<group>"; };
-		2670E14F2CC5770500B3A76A /* stem_UTF_8_french.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_french.cc; sourceTree = "<group>"; };
-		2670E1502CC5770500B3A76A /* stem_UTF_8_german.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_german.cc; sourceTree = "<group>"; };
-		2670E1512CC5770500B3A76A /* stem_UTF_8_greek.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_greek.cc; sourceTree = "<group>"; };
-		2670E1522CC5770500B3A76A /* stem_UTF_8_hungarian.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_hungarian.cc; sourceTree = "<group>"; };
-		2670E1532CC5770500B3A76A /* stem_UTF_8_indonesian.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_indonesian.cc; sourceTree = "<group>"; };
-		2670E1542CC5770500B3A76A /* stem_UTF_8_irish.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_irish.cc; sourceTree = "<group>"; };
-		2670E1552CC5770500B3A76A /* stem_UTF_8_italian.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_italian.cc; sourceTree = "<group>"; };
-		2670E1562CC5770500B3A76A /* stem_UTF_8_lithuanian.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_lithuanian.cc; sourceTree = "<group>"; };
-		2670E1572CC5770500B3A76A /* stem_UTF_8_nepali.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_nepali.cc; sourceTree = "<group>"; };
-		2670E1582CC5770500B3A76A /* stem_UTF_8_norwegian.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_norwegian.cc; sourceTree = "<group>"; };
-		2670E1592CC5770500B3A76A /* stem_UTF_8_portuguese.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_portuguese.cc; sourceTree = "<group>"; };
-		2670E15A2CC5770500B3A76A /* stem_UTF_8_romanian.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_romanian.cc; sourceTree = "<group>"; };
-		2670E15B2CC5770500B3A76A /* stem_UTF_8_russian.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_russian.cc; sourceTree = "<group>"; };
-		2670E15C2CC5770500B3A76A /* stem_UTF_8_spanish.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_spanish.cc; sourceTree = "<group>"; };
-		2670E15D2CC5770500B3A76A /* stem_UTF_8_swedish.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_swedish.cc; sourceTree = "<group>"; };
-		2670E15E2CC5770500B3A76A /* stem_UTF_8_tamil.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_tamil.cc; sourceTree = "<group>"; };
-		2670E15F2CC5770500B3A76A /* stem_UTF_8_turkish.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stem_UTF_8_turkish.cc; sourceTree = "<group>"; };
-		2670E1622CC5770500B3A76A /* search.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = search.mk; sourceTree = "<group>"; };
-		2670E1632CC5770500B3A76A /* SPSearch.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSearch.scu.cpp; sourceTree = "<group>"; };
-		2670E1642CC5770500B3A76A /* SPSearchConfiguration.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSearchConfiguration.h; sourceTree = "<group>"; };
-		2670E1652CC5770500B3A76A /* SPSearchConfiguration.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSearchConfiguration.cc; sourceTree = "<group>"; };
-		2670E1662CC5770500B3A76A /* SPSearchDistance.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSearchDistance.h; sourceTree = "<group>"; };
-		2670E1672CC5770500B3A76A /* SPSearchDistance.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSearchDistance.cc; sourceTree = "<group>"; };
-		2670E1682CC5770500B3A76A /* SPSearchDistanceEdLib.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSearchDistanceEdLib.cc; sourceTree = "<group>"; };
-		2670E1692CC5770500B3A76A /* SPSearchEnum.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSearchEnum.h; sourceTree = "<group>"; };
-		2670E16A2CC5770500B3A76A /* SPSearchIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSearchIndex.h; sourceTree = "<group>"; };
-		2670E16B2CC5770500B3A76A /* SPSearchIndex.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSearchIndex.cc; sourceTree = "<group>"; };
-		2670E16C2CC5770500B3A76A /* SPSearchParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSearchParser.h; sourceTree = "<group>"; };
-		2670E16D2CC5770500B3A76A /* SPSearchParser.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSearchParser.cc; sourceTree = "<group>"; };
-		2670E16E2CC5770500B3A76A /* SPSearchQuery.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSearchQuery.h; sourceTree = "<group>"; };
-		2670E16F2CC5770500B3A76A /* SPSearchQuery.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSearchQuery.cc; sourceTree = "<group>"; };
-		2670E1702CC5770500B3A76A /* SPSearchUrl.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSearchUrl.cc; sourceTree = "<group>"; };
-		2670E1712CC5770500B3A76A /* SPSnowballStopwords.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSnowballStopwords.cc; sourceTree = "<group>"; };
-		2670E1732CC5770500B3A76A /* SPSql.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSql.h; sourceTree = "<group>"; };
-		2670E1742CC5770500B3A76A /* SPSql.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSql.cc; sourceTree = "<group>"; };
-		2670E1752CC5770500B3A76A /* SPSql.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSql.scu.cpp; sourceTree = "<group>"; };
-		2670E1762CC5770500B3A76A /* SPSqlInsert.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SPSqlInsert.hpp; sourceTree = "<group>"; };
-		2670E1772CC5770500B3A76A /* SPSqlSelect.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SPSqlSelect.hpp; sourceTree = "<group>"; };
-		2670E1782CC5770500B3A76A /* SPSqlUpdate.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SPSqlUpdate.hpp; sourceTree = "<group>"; };
-		2670E1792CC5770500B3A76A /* SPSqlWhere.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SPSqlWhere.hpp; sourceTree = "<group>"; };
-		2670E17A2CC5770500B3A76A /* sql.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = sql.mk; sourceTree = "<group>"; };
-		2670E17C2CC5770500B3A76A /* SPTess.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPTess.h; sourceTree = "<group>"; };
-		2670E17D2CC5770500B3A76A /* SPTess.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPTess.cc; sourceTree = "<group>"; };
-		2670E17E2CC5770500B3A76A /* SPTess.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPTess.scu.cpp; sourceTree = "<group>"; };
-		2670E17F2CC5770500B3A76A /* SPTessLine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPTessLine.h; sourceTree = "<group>"; };
-		2670E1802CC5770500B3A76A /* SPTessLine.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPTessLine.cc; sourceTree = "<group>"; };
-		2670E1812CC5770500B3A76A /* SPTessSimd.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SPTessSimd.hpp; sourceTree = "<group>"; };
-		2670E1822CC5770500B3A76A /* SPTessTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPTessTypes.h; sourceTree = "<group>"; };
-		2670E1832CC5770500B3A76A /* SPTessTypes.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPTessTypes.cc; sourceTree = "<group>"; };
-		2670E1842CC5770500B3A76A /* tess.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = tess.mk; sourceTree = "<group>"; };
-		2670E1862CC5770500B3A76A /* neon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = neon.h; sourceTree = "<group>"; };
-		2670E1872CC5770500B3A76A /* sve.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sve.h; sourceTree = "<group>"; };
-		2670E1892CC5770500B3A76A /* msa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = msa.h; sourceTree = "<group>"; };
-		2670E18B2CC5770500B3A76A /* relaxed-simd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "relaxed-simd.h"; sourceTree = "<group>"; };
-		2670E18C2CC5770500B3A76A /* simd128.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = simd128.h; sourceTree = "<group>"; };
-		2670E18E2CC5770500B3A76A /* aes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = aes.h; sourceTree = "<group>"; };
-		2670E18F2CC5770500B3A76A /* avx.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avx.h; sourceTree = "<group>"; };
-		2670E1902CC5770500B3A76A /* avx2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avx2.h; sourceTree = "<group>"; };
-		2670E1912CC5770500B3A76A /* avx512.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = avx512.h; sourceTree = "<group>"; };
-		2670E1922CC5770500B3A76A /* clmul.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = clmul.h; sourceTree = "<group>"; };
-		2670E1932CC5770500B3A76A /* f16c.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = f16c.h; sourceTree = "<group>"; };
-		2670E1942CC5770500B3A76A /* fma.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fma.h; sourceTree = "<group>"; };
-		2670E1952CC5770500B3A76A /* gfni.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = gfni.h; sourceTree = "<group>"; };
-		2670E1962CC5770500B3A76A /* mmx.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mmx.h; sourceTree = "<group>"; };
-		2670E1972CC5770500B3A76A /* sse.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse.h; sourceTree = "<group>"; };
-		2670E1982CC5770500B3A76A /* sse2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse2.h; sourceTree = "<group>"; };
-		2670E1992CC5770500B3A76A /* sse3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse3.h; sourceTree = "<group>"; };
-		2670E19A2CC5770500B3A76A /* sse4.1.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse4.1.h; sourceTree = "<group>"; };
-		2670E19B2CC5770500B3A76A /* sse4.2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sse4.2.h; sourceTree = "<group>"; };
-		2670E19C2CC5770500B3A76A /* ssse3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ssse3.h; sourceTree = "<group>"; };
-		2670E19D2CC5770500B3A76A /* svml.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = svml.h; sourceTree = "<group>"; };
-		2670E19E2CC5770500B3A76A /* xop.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xop.h; sourceTree = "<group>"; };
-		2670E1A02CC5770500B3A76A /* COPYING */ = {isa = PBXFileReference; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
-		2670E1A32CC5770500B3A76A /* SPThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPThread.h; sourceTree = "<group>"; };
-		2670E1A42CC5770500B3A76A /* SPThreads-android.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPThreads-android.cc"; sourceTree = "<group>"; };
-		2670E1A52CC5770500B3A76A /* SPThreads-linux.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPThreads-linux.cc"; sourceTree = "<group>"; };
-		2670E1A62CC5770500B3A76A /* SPThreads-macos.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPThreads-macos.cc"; sourceTree = "<group>"; };
-		2670E1A72CC5770500B3A76A /* SPThreads-win32.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPThreads-win32.cc"; sourceTree = "<group>"; };
-		2670E1A82CC5770500B3A76A /* SPThreads.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPThreads.scu.cpp; sourceTree = "<group>"; };
-		2670E1A92CC5770500B3A76A /* SPThreadTask.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPThreadTask.h; sourceTree = "<group>"; };
-		2670E1AA2CC5770500B3A76A /* SPThreadTask.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPThreadTask.cc; sourceTree = "<group>"; };
-		2670E1AB2CC5770500B3A76A /* SPThreadTaskQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPThreadTaskQueue.h; sourceTree = "<group>"; };
-		2670E1AC2CC5770500B3A76A /* SPThreadTaskQueue.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPThreadTaskQueue.cc; sourceTree = "<group>"; };
-		2670E1AD2CC5770500B3A76A /* threads.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = threads.mk; sourceTree = "<group>"; };
-		2670E1AF2CC5770500B3A76A /* SPSvgReader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPSvgReader.h; sourceTree = "<group>"; };
-		2670E1B02CC5770500B3A76A /* SPSvgReader.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPSvgReader.cc; sourceTree = "<group>"; };
-		2670E1B12CC5770500B3A76A /* SPVectorImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPVectorImage.h; sourceTree = "<group>"; };
-		2670E1B22CC5770500B3A76A /* SPVectorImage.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPVectorImage.cc; sourceTree = "<group>"; };
-		2670E1B32CC5770500B3A76A /* SPVectorPath.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPVectorPath.h; sourceTree = "<group>"; };
-		2670E1B42CC5770500B3A76A /* SPVectorPath.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPVectorPath.cc; sourceTree = "<group>"; };
-		2670E1B52CC5770500B3A76A /* SPVectorPathData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPVectorPathData.h; sourceTree = "<group>"; };
-		2670E1B62CC5770500B3A76A /* SPVectorPathData.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPVectorPathData.cc; sourceTree = "<group>"; };
-		2670E1B72CC5770500B3A76A /* SPVg.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPVg.cpp; sourceTree = "<group>"; };
-		2670E1B82CC5770500B3A76A /* vg.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = vg.mk; sourceTree = "<group>"; };
-		2670E1BA2CC5770500B3A76A /* SPWasm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPWasm.h; sourceTree = "<group>"; };
-		2670E1BB2CC5770500B3A76A /* SPWasm-core.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPWasm-core.cc"; sourceTree = "<group>"; };
-		2670E1BC2CC5770500B3A76A /* SPWasm-data.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPWasm-data.cc"; sourceTree = "<group>"; };
-		2670E1BD2CC5770500B3A76A /* SPWasm-filesystem.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "SPWasm-filesystem.cc"; sourceTree = "<group>"; };
-		2670E1BE2CC5770500B3A76A /* SPWasm.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPWasm.scu.cpp; sourceTree = "<group>"; };
-		2670E1BF2CC5770500B3A76A /* stappler-wasm.wit */ = {isa = PBXFileReference; lastKnownFileType = text; path = "stappler-wasm.wit"; sourceTree = "<group>"; };
-		2670E1C12CC5770500B3A76A /* SPWasmInit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SPWasmInit.c; sourceTree = "<group>"; };
-		2670E1C32CC5770500B3A76A /* wasm.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = wasm.mk; sourceTree = "<group>"; };
-		2670E1C52CC5770500B3A76A /* SPZip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPZip.h; sourceTree = "<group>"; };
-		2670E1C62CC5770500B3A76A /* SPZip.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPZip.cpp; sourceTree = "<group>"; };
-		2670E1C72CC5770500B3A76A /* zip.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = zip.mk; sourceTree = "<group>"; };
 		2670E1C92CC5772500B3A76A /* backtrace.mk */ = {isa = PBXFileReference; lastKnownFileType = text; name = backtrace.mk; path = ../backtrace.mk; sourceTree = SOURCE_ROOT; };
 		2670E1CB2CC5772500B3A76A /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; name = Makefile; path = ../Makefile; sourceTree = SOURCE_ROOT; };
 		2670E1CC2CC5772500B3A76A /* stappler-modules.mk */ = {isa = PBXFileReference; lastKnownFileType = text; name = "stappler-modules.mk"; path = "../stappler-modules.mk"; sourceTree = SOURCE_ROOT; };
-		2670E1CD2CC5779A00B3A76A /* core.mk */ = {isa = PBXFileReference; lastKnownFileType = text; path = core.mk; sourceTree = "<group>"; };
 		268C41A32CC8B2B1006E6D5D /* macos.projectconfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = macos.projectconfig.xcconfig; sourceTree = "<group>"; };
-		268C41AE2CC8B4AD006E6D5D /* SPIdn.scu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SPIdn.scu.cpp; sourceTree = "<group>"; };
 		268C41C22CC8EE0D006E6D5D /* core.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = core.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		268C41F22CC8F096006E6D5D /* data.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = data.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		268C41FF2CC8F0A1006E6D5D /* crypto.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = crypto.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -577,8 +159,295 @@
 		268C42B82CC93C63006E6D5D /* vg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = vg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		268C42C52CC93C75006E6D5D /* wasm.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = wasm.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		268C42D22CC93C8C006E6D5D /* zip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = zip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		268C48D32CCAD070006E6D5D /* SPFilesystem-mac.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "SPFilesystem-mac.mm"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		26130EF02CD3A3B6008E4213 /* Exceptions for "bitmap" folder in "bitmap" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPBitmap.scu.cpp,
+			);
+			target = 268C425C2CC93B3D006E6D5D /* bitmap */;
+		};
+		26130EF22CD3A3C4008E4213 /* Exceptions for "core" folder in "core" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPCore.scu.cpp,
+			);
+			target = 268C41C12CC8EE0D006E6D5D /* core */;
+		};
+		26130EF42CD3A3E0008E4213 /* Exceptions for "filesystem" folder in "core" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"platform/SPFilesystem-mac.mm",
+				SPFilesystem.scu.cpp,
+			);
+			target = 268C41C12CC8EE0D006E6D5D /* core */;
+		};
+		26130EF72CD3A3F0008E4213 /* Exceptions for "idn" folder in "core" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPIdn.scu.cpp,
+			);
+			target = 268C41C12CC8EE0D006E6D5D /* core */;
+		};
+		26130EF92CD3A3FF008E4213 /* Exceptions for "threads" folder in "core" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPThreads.scu.cpp,
+			);
+			target = 268C41C12CC8EE0D006E6D5D /* core */;
+		};
+		26130EFB2CD3A410008E4213 /* Exceptions for "crypto" folder in "crypto" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPCrypto.scu.cpp,
+			);
+			target = 268C41FE2CC8F0A1006E6D5D /* crypto */;
+		};
+		26130EFD2CD3A424008E4213 /* Exceptions for "data" folder in "data" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPData.scu.cpp,
+				thirdparty/lz4/lib/lz4.c,
+			);
+			target = 268C41F12CC8F096006E6D5D /* data */;
+		};
+		26130F002CD3A435008E4213 /* Exceptions for "db" folder in "db" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPDb.scu.cpp,
+			);
+			target = 268C42692CC93B78006E6D5D /* db */;
+		};
+		26130F022CD3A448008E4213 /* Exceptions for "font" folder in "font" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPFont.scu.cpp,
+				thirdparty/hyphen/hyphen.c,
+			);
+			target = 268C42762CC93B8D006E6D5D /* font */;
+		};
+		26130F052CD3A47A008E4213 /* Exceptions for "geom" folder in "geom" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPGeom.scu.cpp,
+			);
+			target = 268C42832CC93BE0006E6D5D /* geom */;
+		};
+		26130F072CD3A482008E4213 /* Exceptions for "network" folder in "network" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPNetwork.scu.cpp,
+			);
+			target = 268C42902CC93C01006E6D5D /* network */;
+		};
+		26130F092CD3A48B008E4213 /* Exceptions for "search" folder in "search" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPSearch.scu.cpp,
+				thirdparty/snowball/SPSnowballStemmer.c,
+			);
+			target = 268C429D2CC93C30006E6D5D /* search */;
+		};
+		26130F0C2CD3A49D008E4213 /* Exceptions for "tess" folder in "tess" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPTess.scu.cpp,
+			);
+			target = 268C42AA2CC93C4A006E6D5D /* tess */;
+		};
+		26130F0E2CD3A4A3008E4213 /* Exceptions for "sql" folder in "db" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPSql.scu.cpp,
+			);
+			target = 268C42692CC93B78006E6D5D /* db */;
+		};
+		26130F102CD3A4B3008E4213 /* Exceptions for "vg" folder in "vg" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPVg.cpp,
+			);
+			target = 268C42B72CC93C63006E6D5D /* vg */;
+		};
+		26130F122CD3A4BE008E4213 /* Exceptions for "wasm" folder in "wasm" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				exports/SPWasm.scu.cpp,
+			);
+			target = 268C42C42CC93C75006E6D5D /* wasm */;
+		};
+		26130F142CD3A4CB008E4213 /* Exceptions for "zip" folder in "zip" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SPZip.cpp,
+			);
+			target = 268C42D12CC93C8C006E6D5D /* zip */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		26130D442CD3A390008E4213 /* bitmap */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130EF02CD3A3B6008E4213 /* Exceptions for "bitmap" folder in "bitmap" target */,
+			);
+			name = bitmap;
+			path = ../bitmap;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130DA52CD3A390008E4213 /* core */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130EF22CD3A3C4008E4213 /* Exceptions for "core" folder in "core" target */,
+			);
+			name = core;
+			path = ../core;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130DB92CD3A390008E4213 /* crypto */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130EFB2CD3A410008E4213 /* Exceptions for "crypto" folder in "crypto" target */,
+			);
+			name = crypto;
+			path = ../crypto;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130DD42CD3A390008E4213 /* data */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130EFD2CD3A424008E4213 /* Exceptions for "data" folder in "data" target */,
+			);
+			name = data;
+			path = ../data;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130E0E2CD3A390008E4213 /* db */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F002CD3A435008E4213 /* Exceptions for "db" folder in "db" target */,
+			);
+			name = db;
+			path = ../db;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130E1E2CD3A390008E4213 /* filesystem */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130EF42CD3A3E0008E4213 /* Exceptions for "filesystem" folder in "core" target */,
+			);
+			name = filesystem;
+			path = ../filesystem;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130E3E2CD3A390008E4213 /* font */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F022CD3A448008E4213 /* Exceptions for "font" folder in "font" target */,
+			);
+			name = font;
+			path = ../font;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130E5B2CD3A390008E4213 /* geom */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F052CD3A47A008E4213 /* Exceptions for "geom" folder in "geom" target */,
+			);
+			name = geom;
+			path = ../geom;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130E622CD3A390008E4213 /* idn */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130EF72CD3A3F0008E4213 /* Exceptions for "idn" folder in "core" target */,
+			);
+			name = idn;
+			path = ../idn;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130E6C2CD3A390008E4213 /* network */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F072CD3A482008E4213 /* Exceptions for "network" folder in "network" target */,
+			);
+			name = network;
+			path = ../network;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130E982CD3A390008E4213 /* search */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F092CD3A48B008E4213 /* Exceptions for "search" folder in "search" target */,
+			);
+			name = search;
+			path = ../search;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130EA12CD3A390008E4213 /* sql */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F0E2CD3A4A3008E4213 /* Exceptions for "sql" folder in "db" target */,
+			);
+			name = sql;
+			path = ../sql;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130EAB2CD3A390008E4213 /* tess */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F0C2CD3A49D008E4213 /* Exceptions for "tess" folder in "tess" target */,
+			);
+			name = tess;
+			path = ../tess;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130EC82CD3A390008E4213 /* thirdparty */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = thirdparty;
+			path = ../thirdparty;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130ED42CD3A390008E4213 /* threads */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130EF92CD3A3FF008E4213 /* Exceptions for "threads" folder in "core" target */,
+			);
+			name = threads;
+			path = ../threads;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130EDF2CD3A390008E4213 /* vg */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F102CD3A4B3008E4213 /* Exceptions for "vg" folder in "vg" target */,
+			);
+			name = vg;
+			path = ../vg;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130EEA2CD3A390008E4213 /* wasm */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F122CD3A4BE008E4213 /* Exceptions for "wasm" folder in "wasm" target */,
+			);
+			name = wasm;
+			path = ../wasm;
+			sourceTree = SOURCE_ROOT;
+		};
+		26130EEE2CD3A390008E4213 /* zip */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26130F142CD3A4CB008E4213 /* Exceptions for "zip" folder in "zip" target */,
+			);
+			name = zip;
+			path = ../zip;
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		268C41BF2CC8EE0D006E6D5D /* Frameworks */ = {
@@ -692,24 +561,24 @@
 				268C42552CC92CDE006E6D5D /* stappler_vg.xcconfig */,
 				268C42562CC92CDE006E6D5D /* stappler_wasm.xcconfig */,
 				268C42572CC92CDE006E6D5D /* stappler_zip.xcconfig */,
-				2670E01F2CC5770500B3A76A /* bitmap */,
-				2670E07F2CC5770500B3A76A /* core */,
-				2670E0932CC5770500B3A76A /* crypto */,
-				2670E0AE2CC5770500B3A76A /* data */,
-				2670E0E82CC5770500B3A76A /* db */,
-				2670E0F82CC5770500B3A76A /* filesystem */,
-				2670E1182CC5770500B3A76A /* font */,
-				2670E1352CC5770500B3A76A /* geom */,
-				2670E13C2CC5770500B3A76A /* idn */,
-				2670E1462CC5770500B3A76A /* network */,
-				2670E1722CC5770500B3A76A /* search */,
-				2670E17B2CC5770500B3A76A /* sql */,
-				2670E1852CC5770500B3A76A /* tess */,
-				2670E1A22CC5770500B3A76A /* thirdparty */,
-				2670E1AE2CC5770500B3A76A /* threads */,
-				2670E1B92CC5770500B3A76A /* vg */,
-				2670E1C42CC5770500B3A76A /* wasm */,
-				2670E1C82CC5770500B3A76A /* zip */,
+				26130D442CD3A390008E4213 /* bitmap */,
+				26130DA52CD3A390008E4213 /* core */,
+				26130DB92CD3A390008E4213 /* crypto */,
+				26130DD42CD3A390008E4213 /* data */,
+				26130E0E2CD3A390008E4213 /* db */,
+				26130E1E2CD3A390008E4213 /* filesystem */,
+				26130E3E2CD3A390008E4213 /* font */,
+				26130E5B2CD3A390008E4213 /* geom */,
+				26130E622CD3A390008E4213 /* idn */,
+				26130E6C2CD3A390008E4213 /* network */,
+				26130E982CD3A390008E4213 /* search */,
+				26130EA12CD3A390008E4213 /* sql */,
+				26130EAB2CD3A390008E4213 /* tess */,
+				26130EC82CD3A390008E4213 /* thirdparty */,
+				26130ED42CD3A390008E4213 /* threads */,
+				26130EDF2CD3A390008E4213 /* vg */,
+				26130EEA2CD3A390008E4213 /* wasm */,
+				26130EEE2CD3A390008E4213 /* zip */,
 				2670DFF62CC5766A00B3A76A /* Products */,
 				2670E1C92CC5772500B3A76A /* backtrace.mk */,
 				2670E1CB2CC5772500B3A76A /* Makefile */,
@@ -737,761 +606,6 @@
 			);
 			name = Products;
 			sourceTree = "<group>";
-		};
-		2670E01F2CC5770500B3A76A /* bitmap */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0122CC5770500B3A76A /* bitmap.mk */,
-				2670E0132CC5770500B3A76A /* SPBitmap.h */,
-				2670E0142CC5770500B3A76A /* SPBitmap.cc */,
-				2670E0152CC5770500B3A76A /* SPBitmap.scu.cpp */,
-				2670E0162CC5770500B3A76A /* SPBitmapCustom.cc */,
-				2670E0172CC5770500B3A76A /* SPBitmapFormat.h */,
-				2670E0182CC5770500B3A76A /* SPBitmapFormat.cc */,
-				2670E0192CC5770500B3A76A /* SPBitmapGif.cc */,
-				2670E01A2CC5770500B3A76A /* SPBitmapJpeg.cc */,
-				2670E01B2CC5770500B3A76A /* SPBitmapPng.cc */,
-				2670E01C2CC5770500B3A76A /* SPBitmapResample.cc */,
-				2670E01D2CC5770500B3A76A /* SPBitmapShared.cc */,
-				2670E01E2CC5770500B3A76A /* SPBitmapWebp.cc */,
-			);
-			name = bitmap;
-			path = ../bitmap;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E0262CC5770500B3A76A /* io */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0202CC5770500B3A76A /* SPIO.h */,
-				2670E0212CC5770500B3A76A /* SPIO.cc */,
-				2670E0222CC5770500B3A76A /* SPIOBuffer.h */,
-				2670E0232CC5770500B3A76A /* SPIOCommon.h */,
-				2670E0242CC5770500B3A76A /* SPIOConsumer.h */,
-				2670E0252CC5770500B3A76A /* SPIOProducer.h */,
-			);
-			path = io;
-			sourceTree = "<group>";
-		};
-		2670E0302CC5770500B3A76A /* pool */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0272CC5770500B3A76A /* SPMemPoolAllocator.cc */,
-				2670E0282CC5770500B3A76A /* SPMemPoolApr.cc */,
-				2670E0292CC5770500B3A76A /* SPMemPoolConfig.h */,
-				2670E02A2CC5770500B3A76A /* SPMemPoolHash.cc */,
-				2670E02B2CC5770500B3A76A /* SPMemPoolInterface.h */,
-				2670E02C2CC5770500B3A76A /* SPMemPoolInterface.cc */,
-				2670E02D2CC5770500B3A76A /* SPMemPoolPool.cc */,
-				2670E02E2CC5770500B3A76A /* SPMemPoolStruct.h */,
-				2670E02F2CC5770500B3A76A /* SPMemPoolUtils.cc */,
-			);
-			path = pool;
-			sourceTree = "<group>";
-		};
-		2670E0462CC5770500B3A76A /* memory */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0302CC5770500B3A76A /* pool */,
-				2670E0312CC5770500B3A76A /* SPMemAlloc.h */,
-				2670E0322CC5770500B3A76A /* SPMemAlloc.cc */,
-				2670E0332CC5770500B3A76A /* SPMemDict.h */,
-				2670E0342CC5770500B3A76A /* SPMemFunction.h */,
-				2670E0352CC5770500B3A76A /* SPMemInterface.h */,
-				2670E0362CC5770500B3A76A /* SPMemMap.h */,
-				2670E0372CC5770500B3A76A /* SPMemPointerIterator.h */,
-				2670E0382CC5770500B3A76A /* SPMemPoolApi.h */,
-				2670E0392CC5770500B3A76A /* SPMemPriorityQueue.h */,
-				2670E03A2CC5770500B3A76A /* SPMemRbtree.h */,
-				2670E03B2CC5770500B3A76A /* SPMemRbtree.cc */,
-				2670E03C2CC5770500B3A76A /* SPMemSet.h */,
-				2670E03D2CC5770500B3A76A /* SPMemStorageMem.h */,
-				2670E03E2CC5770500B3A76A /* SPMemStorageMemImpl.h */,
-				2670E03F2CC5770500B3A76A /* SPMemString.h */,
-				2670E0402CC5770500B3A76A /* SPMemStringStream.h */,
-				2670E0412CC5770500B3A76A /* SPMemUserData.h */,
-				2670E0422CC5770500B3A76A /* SPMemUserData.cc */,
-				2670E0432CC5770500B3A76A /* SPMemUuid.h */,
-				2670E0442CC5770500B3A76A /* SPMemUuid.cc */,
-				2670E0452CC5770500B3A76A /* SPMemVector.h */,
-			);
-			path = memory;
-			sourceTree = "<group>";
-		};
-		2670E04B2CC5770500B3A76A /* platform */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0472CC5770500B3A76A /* SPCore-android.cc */,
-				2670E0482CC5770500B3A76A /* SPCore-darwin.cc */,
-				2670E0492CC5770500B3A76A /* SPCore-linux.cc */,
-				2670E04A2CC5770500B3A76A /* SPCore-win32.cc */,
-			);
-			path = platform;
-			sourceTree = "<group>";
-		};
-		2670E05E2CC5770500B3A76A /* string */ = {
-			isa = PBXGroup;
-			children = (
-				2670E04C2CC5770500B3A76A /* SPBase64.cc */,
-				2670E04D2CC5770500B3A76A /* SPByteOrder.h */,
-				2670E04E2CC5770500B3A76A /* SPBytesReader.h */,
-				2670E04F2CC5770500B3A76A /* SPBytesView.h */,
-				2670E0502CC5770500B3A76A /* SPCharGroup.h */,
-				2670E0512CC5770500B3A76A /* SPCharGroup.cc */,
-				2670E0522CC5770500B3A76A /* SPCoreCrypto.h */,
-				2670E0532CC5770500B3A76A /* SPGost3411-2012.cc */,
-				2670E0542CC5770500B3A76A /* SPHash.h */,
-				2670E0552CC5770500B3A76A /* SPMetastring.h */,
-				2670E0562CC5770500B3A76A /* SPSha2.cc */,
-				2670E0572CC5770500B3A76A /* SPSpanView.h */,
-				2670E0582CC5770500B3A76A /* SPString.h */,
-				2670E0592CC5770500B3A76A /* SPString.cc */,
-				2670E05A2CC5770500B3A76A /* SPStringStream.h */,
-				2670E05B2CC5770500B3A76A /* SPStringView.h */,
-				2670E05C2CC5770500B3A76A /* SPUnicode.h */,
-				2670E05D2CC5770500B3A76A /* SPUnicode.cc */,
-			);
-			path = string;
-			sourceTree = "<group>";
-		};
-		2670E0762CC5770500B3A76A /* utils */ = {
-			isa = PBXGroup;
-			children = (
-				2670E05F2CC5770500B3A76A /* SPBuffer.h */,
-				2670E0602CC5770500B3A76A /* SPDso.h */,
-				2670E0612CC5770500B3A76A /* SPDso.cc */,
-				2670E0622CC5770500B3A76A /* SPHalfFloat.h */,
-				2670E0632CC5770500B3A76A /* SPHashTable.h */,
-				2670E0642CC5770500B3A76A /* SPHtmlParser.h */,
-				2670E0652CC5770500B3A76A /* SPHtmlParser.cc */,
-				2670E0662CC5770500B3A76A /* SPLog.h */,
-				2670E0672CC5770500B3A76A /* SPLog.cc */,
-				2670E0682CC5770500B3A76A /* SPMovingAverage.h */,
-				2670E0692CC5770500B3A76A /* SPPriorityList.h */,
-				2670E06A2CC5770500B3A76A /* SPRef.h */,
-				2670E06B2CC5770500B3A76A /* SPRef.cc */,
-				2670E06C2CC5770500B3A76A /* SPRefContainer.h */,
-				2670E06D2CC5770500B3A76A /* SPSharedModule.h */,
-				2670E06E2CC5770500B3A76A /* SPSharedModule.cc */,
-				2670E06F2CC5770500B3A76A /* SPSubscription.h */,
-				2670E0702CC5770500B3A76A /* SPTime.h */,
-				2670E0712CC5770500B3A76A /* SPTime.cc */,
-				2670E0722CC5770500B3A76A /* SPUrl.h */,
-				2670E0732CC5770500B3A76A /* SPUrl.cc */,
-				2670E0742CC5770500B3A76A /* SPValid.h */,
-				2670E0752CC5770500B3A76A /* SPValid.cc */,
-			);
-			path = utils;
-			sourceTree = "<group>";
-		};
-		2670E07F2CC5770500B3A76A /* core */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0262CC5770500B3A76A /* io */,
-				2670E0462CC5770500B3A76A /* memory */,
-				2670E04B2CC5770500B3A76A /* platform */,
-				2670E05E2CC5770500B3A76A /* string */,
-				2670E0762CC5770500B3A76A /* utils */,
-				2670E0772CC5770500B3A76A /* SPCommon.h */,
-				2670E0782CC5770500B3A76A /* SPCore.h */,
-				2670E0792CC5770500B3A76A /* SPCore.scu.cpp */,
-				2670E07A2CC5770500B3A76A /* SPMemory.h */,
-				2670E07B2CC5770500B3A76A /* SPPlatformCleanup.h */,
-				2670E07C2CC5770500B3A76A /* SPPlatformInit.h */,
-				2670E07D2CC5770500B3A76A /* SPPlatformUnistd.h */,
-				2670E07E2CC5770500B3A76A /* stappler-core.wit */,
-				2670E1CD2CC5779A00B3A76A /* core.mk */,
-			);
-			name = core;
-			path = ../core;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E0882CC5770500B3A76A /* openssl-gost-engine */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0802CC5770500B3A76A /* ecp_id_GostR3410_2001_CryptoPro_A_ParamSet.cc */,
-				2670E0812CC5770500B3A76A /* ecp_id_GostR3410_2001_CryptoPro_B_ParamSet.cc */,
-				2670E0822CC5770500B3A76A /* ecp_id_GostR3410_2001_CryptoPro_C_ParamSet.cc */,
-				2670E0832CC5770500B3A76A /* ecp_id_GostR3410_2001_TestParamSet.cc */,
-				2670E0842CC5770500B3A76A /* ecp_id_tc26_gost_3410_2012_256_paramSetA.cc */,
-				2670E0852CC5770500B3A76A /* ecp_id_tc26_gost_3410_2012_512_paramSetA.cc */,
-				2670E0862CC5770500B3A76A /* ecp_id_tc26_gost_3410_2012_512_paramSetB.cc */,
-				2670E0872CC5770500B3A76A /* ecp_id_tc26_gost_3410_2012_512_paramSetC.cc */,
-			);
-			path = "openssl-gost-engine";
-			sourceTree = "<group>";
-		};
-		2670E0892CC5770500B3A76A /* thirdparty */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0882CC5770500B3A76A /* openssl-gost-engine */,
-			);
-			path = thirdparty;
-			sourceTree = "<group>";
-		};
-		2670E0932CC5770500B3A76A /* crypto */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0892CC5770500B3A76A /* thirdparty */,
-				2670E08A2CC5770500B3A76A /* crypto.mk */,
-				2670E08B2CC5770500B3A76A /* SPCrypto.h */,
-				2670E08C2CC5770500B3A76A /* SPCrypto-gnutls.cc */,
-				2670E08D2CC5770500B3A76A /* SPCrypto-gost.cc */,
-				2670E08E2CC5770500B3A76A /* SPCrypto-mbedtls.cc */,
-				2670E08F2CC5770500B3A76A /* SPCrypto-openssl.cc */,
-				2670E0902CC5770500B3A76A /* SPCrypto.scu.cpp */,
-				2670E0912CC5770500B3A76A /* SPCryptoAsn1.h */,
-				2670E0922CC5770500B3A76A /* SPJsonWebToken.h */,
-			);
-			name = crypto;
-			path = ../crypto;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E0982CC5770500B3A76A /* lib */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0942CC5770500B3A76A /* LICENSE */,
-				2670E0952CC5770500B3A76A /* lz4.h */,
-				2670E0962CC5770500B3A76A /* lz4.c */,
-				2670E0972CC5770500B3A76A /* lz4hc.h */,
-			);
-			path = lib;
-			sourceTree = "<group>";
-		};
-		2670E0992CC5770500B3A76A /* lz4 */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0982CC5770500B3A76A /* lib */,
-			);
-			path = lz4;
-			sourceTree = "<group>";
-		};
-		2670E09A2CC5770500B3A76A /* thirdparty */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0992CC5770500B3A76A /* lz4 */,
-			);
-			path = thirdparty;
-			sourceTree = "<group>";
-		};
-		2670E0AE2CC5770500B3A76A /* data */ = {
-			isa = PBXGroup;
-			children = (
-				2670E09A2CC5770500B3A76A /* thirdparty */,
-				2670E09B2CC5770500B3A76A /* data.mk */,
-				2670E09C2CC5770500B3A76A /* SPData.h */,
-				2670E09D2CC5770500B3A76A /* SPData.cc */,
-				2670E09E2CC5770500B3A76A /* SPData.scu.cpp */,
-				2670E09F2CC5770500B3A76A /* SPDataCbor.h */,
-				2670E0A02CC5770500B3A76A /* SPDataDecode.h */,
-				2670E0A12CC5770500B3A76A /* SPDataDecodeCbor.h */,
-				2670E0A22CC5770500B3A76A /* SPDataDecodeJson.h */,
-				2670E0A32CC5770500B3A76A /* SPDataDecodeSerenity.h */,
-				2670E0A42CC5770500B3A76A /* SPDataEncode.h */,
-				2670E0A52CC5770500B3A76A /* SPDataEncodeCbor.h */,
-				2670E0A62CC5770500B3A76A /* SPDataEncodeJson.h */,
-				2670E0A72CC5770500B3A76A /* SPDataEncodeSerenity.h */,
-				2670E0A82CC5770500B3A76A /* SPDataShared.cc */,
-				2670E0A92CC5770500B3A76A /* SPDataTraits.h */,
-				2670E0AA2CC5770500B3A76A /* SPDataUrlencoded.cc */,
-				2670E0AB2CC5770500B3A76A /* SPDataValue.h */,
-				2670E0AC2CC5770500B3A76A /* SPDataWrapper.h */,
-				2670E0AD2CC5770500B3A76A /* stappler-data.wit */,
-			);
-			name = data;
-			path = ../data;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E0B42CC5770500B3A76A /* pq */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0AF2CC5770500B3A76A /* SPPqDriver.h */,
-				2670E0B02CC5770500B3A76A /* SPPqDriver.cc */,
-				2670E0B12CC5770500B3A76A /* SPPqHandle.h */,
-				2670E0B22CC5770500B3A76A /* SPPqHandle.cc */,
-				2670E0B32CC5770500B3A76A /* SPPqHandleInit.cc */,
-			);
-			path = pq;
-			sourceTree = "<group>";
-		};
-		2670E0BD2CC5770500B3A76A /* sql */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0B52CC5770500B3A76A /* SPSqlDriver.h */,
-				2670E0B62CC5770500B3A76A /* SPSqlDriver.cc */,
-				2670E0B72CC5770500B3A76A /* SPSqlHandle.h */,
-				2670E0B82CC5770500B3A76A /* SPSqlHandle.cc */,
-				2670E0B92CC5770500B3A76A /* SPSqlHandleObject.cc */,
-				2670E0BA2CC5770500B3A76A /* SPSqlHandleProp.cc */,
-				2670E0BB2CC5770500B3A76A /* SPSqlQuery.h */,
-				2670E0BC2CC5770500B3A76A /* SPSqlQuery.cc */,
-			);
-			path = sql;
-			sourceTree = "<group>";
-		};
-		2670E0C62CC5770500B3A76A /* sqlite */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0BE2CC5770500B3A76A /* SPSqliteDriver.h */,
-				2670E0BF2CC5770500B3A76A /* SPSqliteDriver.cc */,
-				2670E0C02CC5770500B3A76A /* SPSqliteDriverHandle.cc */,
-				2670E0C12CC5770500B3A76A /* SPSqliteHandle.h */,
-				2670E0C22CC5770500B3A76A /* SPSqliteHandle.cc */,
-				2670E0C32CC5770500B3A76A /* SPSqliteHandleInit.cc */,
-				2670E0C42CC5770500B3A76A /* SPSqliteModuleTextSearch.cc */,
-				2670E0C52CC5770500B3A76A /* SPSqliteModuleUnwrap.cc */,
-			);
-			path = sqlite;
-			sourceTree = "<group>";
-		};
-		2670E0E82CC5770500B3A76A /* db */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0B42CC5770500B3A76A /* pq */,
-				2670E0BD2CC5770500B3A76A /* sql */,
-				2670E0C62CC5770500B3A76A /* sqlite */,
-				2670E0C72CC5770500B3A76A /* db.mk */,
-				2670E0C82CC5770500B3A76A /* SPDb.h */,
-				2670E0C92CC5770500B3A76A /* SPDb.scu.cpp */,
-				2670E0CA2CC5770500B3A76A /* SPDbAdapter.h */,
-				2670E0CB2CC5770500B3A76A /* SPDbAdapter.cc */,
-				2670E0CC2CC5770500B3A76A /* SPDbAuth.h */,
-				2670E0CD2CC5770500B3A76A /* SPDbAuth.cc */,
-				2670E0CE2CC5770500B3A76A /* SPDbBackendInterface.h */,
-				2670E0CF2CC5770500B3A76A /* SPDbConfig.h */,
-				2670E0D02CC5770500B3A76A /* SPDbContinueToken.h */,
-				2670E0D12CC5770500B3A76A /* SPDbContinueToken.cc */,
-				2670E0D22CC5770500B3A76A /* SPDbField.h */,
-				2670E0D32CC5770500B3A76A /* SPDbField.cc */,
-				2670E0D42CC5770500B3A76A /* SPDbFieldExtensions.h */,
-				2670E0D52CC5770500B3A76A /* SPDbFieldExtensions.cc */,
-				2670E0D62CC5770500B3A76A /* SPDbFile.h */,
-				2670E0D72CC5770500B3A76A /* SPDbFile.cc */,
-				2670E0D82CC5770500B3A76A /* SPDbObject.h */,
-				2670E0D92CC5770500B3A76A /* SPDbObject.cc */,
-				2670E0DA2CC5770500B3A76A /* SPDbQuery.h */,
-				2670E0DB2CC5770500B3A76A /* SPDbQuery.cc */,
-				2670E0DC2CC5770500B3A76A /* SPDbQueryList.h */,
-				2670E0DD2CC5770500B3A76A /* SPDbQueryList.cc */,
-				2670E0DE2CC5770500B3A76A /* SPDbScheme.h */,
-				2670E0DF2CC5770500B3A76A /* SPDbScheme.cc */,
-				2670E0E02CC5770500B3A76A /* SPDbSimpleServer.h */,
-				2670E0E12CC5770500B3A76A /* SPDbSimpleServer.cc */,
-				2670E0E22CC5770500B3A76A /* SPDbTransaction.h */,
-				2670E0E32CC5770500B3A76A /* SPDbTransaction.cc */,
-				2670E0E42CC5770500B3A76A /* SPDbUser.h */,
-				2670E0E52CC5770500B3A76A /* SPDbUser.cc */,
-				2670E0E62CC5770500B3A76A /* SPDbWorker.h */,
-				2670E0E72CC5770500B3A76A /* SPDbWorker.cc */,
-			);
-			name = db;
-			path = ../db;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E0ED2CC5770500B3A76A /* platform */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0E92CC5770500B3A76A /* SPFilesystem-android.cc */,
-				2670E0EA2CC5770500B3A76A /* SPFilesystem-linux.cc */,
-				2670E0EC2CC5770500B3A76A /* SPFilesystem-win32.cc */,
-				268C48D32CCAD070006E6D5D /* SPFilesystem-mac.mm */,
-			);
-			path = platform;
-			sourceTree = "<group>";
-		};
-		2670E0F82CC5770500B3A76A /* filesystem */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0ED2CC5770500B3A76A /* platform */,
-				2670E0EE2CC5770500B3A76A /* filesystem.mk */,
-				2670E0EF2CC5770500B3A76A /* SPFilepath.h */,
-				2670E0F02CC5770500B3A76A /* SPFilepath.cc */,
-				2670E0F12CC5770500B3A76A /* SPFilesystem.h */,
-				2670E0F22CC5770500B3A76A /* SPFilesystem.cc */,
-				2670E0F32CC5770500B3A76A /* SPFilesystem.scu.cpp */,
-				2670E0F42CC5770500B3A76A /* SPFilesystemMime.cc */,
-				2670E0F52CC5770500B3A76A /* SPFilesystemNativePosix.cc */,
-				2670E0F62CC5770500B3A76A /* SPFilesystemNativeWin32.cc */,
-				2670E0F72CC5770500B3A76A /* stappler-filesystem.wit */,
-			);
-			name = filesystem;
-			path = ../filesystem;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1002CC5770500B3A76A /* hyphen */ = {
-			isa = PBXGroup;
-			children = (
-				2670E0F92CC5770500B3A76A /* ChangeLog */,
-				2670E0FA2CC5770500B3A76A /* COPYING */,
-				2670E0FB2CC5770500B3A76A /* COPYING.LGPL */,
-				2670E0FC2CC5770500B3A76A /* COPYING.MPL */,
-				2670E0FD2CC5770500B3A76A /* hyphen.h */,
-				2670E0FE2CC5770500B3A76A /* hyphen.c */,
-				2670E0FF2CC5770500B3A76A /* README */,
-			);
-			path = hyphen;
-			sourceTree = "<group>";
-		};
-		2670E1012CC5770500B3A76A /* thirdparty */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1002CC5770500B3A76A /* hyphen */,
-			);
-			path = thirdparty;
-			sourceTree = "<group>";
-		};
-		2670E1182CC5770500B3A76A /* font */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1012CC5770500B3A76A /* thirdparty */,
-				2670E1022CC5770500B3A76A /* font.mk */,
-				2670E1032CC5770500B3A76A /* SPFont.h */,
-				2670E1042CC5770500B3A76A /* SPFont.cc */,
-				2670E1052CC5770500B3A76A /* SPFont-DejaVuSansStappler.cc */,
-				2670E1062CC5770500B3A76A /* SPFont-RobotoFlex-VariableFont.ttf.cc */,
-				2670E1072CC5770500B3A76A /* SPFont-RobotoMono-Italic-VariableFont_wght.ttf.cc */,
-				2670E1082CC5770500B3A76A /* SPFont-RobotoMono-VariableFont_wght.ttf.cc */,
-				2670E1092CC5770500B3A76A /* SPFont.scu.cpp */,
-				2670E10A2CC5770500B3A76A /* SPFontEmplace.h */,
-				2670E10B2CC5770500B3A76A /* SPFontEmplace.cc */,
-				2670E10C2CC5770500B3A76A /* SPFontFace.h */,
-				2670E10D2CC5770500B3A76A /* SPFontFace.cc */,
-				2670E10E2CC5770500B3A76A /* SPFontFormatter.h */,
-				2670E10F2CC5770500B3A76A /* SPFontFormatter.cc */,
-				2670E1102CC5770500B3A76A /* SPFontHyphenMap.h */,
-				2670E1112CC5770500B3A76A /* SPFontHyphenMap.cc */,
-				2670E1122CC5770500B3A76A /* SPFontLibrary.h */,
-				2670E1132CC5770500B3A76A /* SPFontLibrary.cc */,
-				2670E1142CC5770500B3A76A /* SPFontStyle.h */,
-				2670E1152CC5770500B3A76A /* SPFontStyle.cc */,
-				2670E1162CC5770500B3A76A /* SPFontTextLayout.h */,
-				2670E1172CC5770500B3A76A /* SPFontTextLayout.cc */,
-			);
-			name = font;
-			path = ../font;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E11B2CC5770500B3A76A /* glsl */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1192CC5770500B3A76A /* SPGlsl.h */,
-				2670E11A2CC5770500B3A76A /* SPGlslInit.h */,
-			);
-			path = glsl;
-			sourceTree = "<group>";
-		};
-		2670E1352CC5770500B3A76A /* geom */ = {
-			isa = PBXGroup;
-			children = (
-				2670E11B2CC5770500B3A76A /* glsl */,
-				2670E11C2CC5770500B3A76A /* geom.mk */,
-				2670E11D2CC5770500B3A76A /* SPColor.h */,
-				2670E11E2CC5770500B3A76A /* SPColor.cc */,
-				2670E11F2CC5770500B3A76A /* SPColorCam16.h */,
-				2670E1202CC5770500B3A76A /* SPColorCam16.cc */,
-				2670E1212CC5770500B3A76A /* SPColorHCT.h */,
-				2670E1222CC5770500B3A76A /* SPGeom.h */,
-				2670E1232CC5770500B3A76A /* SPGeom.scu.cpp */,
-				2670E1242CC5770500B3A76A /* SPGeometry.h */,
-				2670E1252CC5770500B3A76A /* SPGeometry.cc */,
-				2670E1262CC5770500B3A76A /* SPMat4.h */,
-				2670E1272CC5770500B3A76A /* SPMat4.cc */,
-				2670E1282CC5770500B3A76A /* SPPadding.h */,
-				2670E1292CC5770500B3A76A /* SPQuaternion.h */,
-				2670E12A2CC5770500B3A76A /* SPQuaternion.cc */,
-				2670E12B2CC5770500B3A76A /* SPSIMD.h */,
-				2670E12C2CC5770500B3A76A /* SPSIMD_Neon.h */,
-				2670E12D2CC5770500B3A76A /* SPSIMD_Neon64.h */,
-				2670E12E2CC5770500B3A76A /* SPSIMD_Sse.h */,
-				2670E12F2CC5770500B3A76A /* SPVec2.h */,
-				2670E1302CC5770500B3A76A /* SPVec2.cc */,
-				2670E1312CC5770500B3A76A /* SPVec3.h */,
-				2670E1322CC5770500B3A76A /* SPVec3.cc */,
-				2670E1332CC5770500B3A76A /* SPVec4.h */,
-				2670E1342CC5770500B3A76A /* SPVec4.cc */,
-			);
-			name = geom;
-			path = ../geom;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E13C2CC5770500B3A76A /* idn */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1362CC5770500B3A76A /* idn.mk */,
-				2670E1372CC5770500B3A76A /* SPIdn.h */,
-				2670E1382CC5770500B3A76A /* SPIdn.cc */,
-				268C41AE2CC8B4AD006E6D5D /* SPIdn.scu.cpp */,
-				2670E13A2CC5770500B3A76A /* SPIdnPunycode.cc */,
-				2670E13B2CC5770500B3A76A /* SPIdnTld.cc */,
-			);
-			name = idn;
-			path = ../idn;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1462CC5770500B3A76A /* network */ = {
-			isa = PBXGroup;
-			children = (
-				2670E13D2CC5770500B3A76A /* network.mk */,
-				2670E13E2CC5770500B3A76A /* SPNetwork.scu.cpp */,
-				2670E13F2CC5770500B3A76A /* SPNetworkCABundle.cc */,
-				2670E1402CC5770500B3A76A /* SPNetworkContext.h */,
-				2670E1412CC5770500B3A76A /* SPNetworkData.h */,
-				2670E1422CC5770500B3A76A /* SPNetworkData.cc */,
-				2670E1432CC5770500B3A76A /* SPNetworkHandle.h */,
-				2670E1442CC5770500B3A76A /* SPNetworkHandle.cc */,
-				2670E1452CC5770500B3A76A /* SPNetworkSetup.cc */,
-			);
-			name = network;
-			path = ../network;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1602CC5770500B3A76A /* snowball */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1472CC5770500B3A76A /* COPYING */,
-				2670E1482CC5770500B3A76A /* SPSnowballStemmer.h */,
-				2670E1492CC5770500B3A76A /* SPSnowballStemmer.c */,
-				2670E14A2CC5770500B3A76A /* stem_UTF_8_arabic.cc */,
-				2670E14B2CC5770500B3A76A /* stem_UTF_8_danish.cc */,
-				2670E14C2CC5770500B3A76A /* stem_UTF_8_dutch.cc */,
-				2670E14D2CC5770500B3A76A /* stem_UTF_8_english.cc */,
-				2670E14E2CC5770500B3A76A /* stem_UTF_8_finnish.cc */,
-				2670E14F2CC5770500B3A76A /* stem_UTF_8_french.cc */,
-				2670E1502CC5770500B3A76A /* stem_UTF_8_german.cc */,
-				2670E1512CC5770500B3A76A /* stem_UTF_8_greek.cc */,
-				2670E1522CC5770500B3A76A /* stem_UTF_8_hungarian.cc */,
-				2670E1532CC5770500B3A76A /* stem_UTF_8_indonesian.cc */,
-				2670E1542CC5770500B3A76A /* stem_UTF_8_irish.cc */,
-				2670E1552CC5770500B3A76A /* stem_UTF_8_italian.cc */,
-				2670E1562CC5770500B3A76A /* stem_UTF_8_lithuanian.cc */,
-				2670E1572CC5770500B3A76A /* stem_UTF_8_nepali.cc */,
-				2670E1582CC5770500B3A76A /* stem_UTF_8_norwegian.cc */,
-				2670E1592CC5770500B3A76A /* stem_UTF_8_portuguese.cc */,
-				2670E15A2CC5770500B3A76A /* stem_UTF_8_romanian.cc */,
-				2670E15B2CC5770500B3A76A /* stem_UTF_8_russian.cc */,
-				2670E15C2CC5770500B3A76A /* stem_UTF_8_spanish.cc */,
-				2670E15D2CC5770500B3A76A /* stem_UTF_8_swedish.cc */,
-				2670E15E2CC5770500B3A76A /* stem_UTF_8_tamil.cc */,
-				2670E15F2CC5770500B3A76A /* stem_UTF_8_turkish.cc */,
-			);
-			path = snowball;
-			sourceTree = "<group>";
-		};
-		2670E1612CC5770500B3A76A /* thirdparty */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1602CC5770500B3A76A /* snowball */,
-			);
-			path = thirdparty;
-			sourceTree = "<group>";
-		};
-		2670E1722CC5770500B3A76A /* search */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1612CC5770500B3A76A /* thirdparty */,
-				2670E1622CC5770500B3A76A /* search.mk */,
-				2670E1632CC5770500B3A76A /* SPSearch.scu.cpp */,
-				2670E1642CC5770500B3A76A /* SPSearchConfiguration.h */,
-				2670E1652CC5770500B3A76A /* SPSearchConfiguration.cc */,
-				2670E1662CC5770500B3A76A /* SPSearchDistance.h */,
-				2670E1672CC5770500B3A76A /* SPSearchDistance.cc */,
-				2670E1682CC5770500B3A76A /* SPSearchDistanceEdLib.cc */,
-				2670E1692CC5770500B3A76A /* SPSearchEnum.h */,
-				2670E16A2CC5770500B3A76A /* SPSearchIndex.h */,
-				2670E16B2CC5770500B3A76A /* SPSearchIndex.cc */,
-				2670E16C2CC5770500B3A76A /* SPSearchParser.h */,
-				2670E16D2CC5770500B3A76A /* SPSearchParser.cc */,
-				2670E16E2CC5770500B3A76A /* SPSearchQuery.h */,
-				2670E16F2CC5770500B3A76A /* SPSearchQuery.cc */,
-				2670E1702CC5770500B3A76A /* SPSearchUrl.cc */,
-				2670E1712CC5770500B3A76A /* SPSnowballStopwords.cc */,
-			);
-			name = search;
-			path = ../search;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E17B2CC5770500B3A76A /* sql */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1732CC5770500B3A76A /* SPSql.h */,
-				2670E1742CC5770500B3A76A /* SPSql.cc */,
-				2670E1752CC5770500B3A76A /* SPSql.scu.cpp */,
-				2670E1762CC5770500B3A76A /* SPSqlInsert.hpp */,
-				2670E1772CC5770500B3A76A /* SPSqlSelect.hpp */,
-				2670E1782CC5770500B3A76A /* SPSqlUpdate.hpp */,
-				2670E1792CC5770500B3A76A /* SPSqlWhere.hpp */,
-				2670E17A2CC5770500B3A76A /* sql.mk */,
-			);
-			name = sql;
-			path = ../sql;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1852CC5770500B3A76A /* tess */ = {
-			isa = PBXGroup;
-			children = (
-				2670E17C2CC5770500B3A76A /* SPTess.h */,
-				2670E17D2CC5770500B3A76A /* SPTess.cc */,
-				2670E17E2CC5770500B3A76A /* SPTess.scu.cpp */,
-				2670E17F2CC5770500B3A76A /* SPTessLine.h */,
-				2670E1802CC5770500B3A76A /* SPTessLine.cc */,
-				2670E1812CC5770500B3A76A /* SPTessSimd.hpp */,
-				2670E1822CC5770500B3A76A /* SPTessTypes.h */,
-				2670E1832CC5770500B3A76A /* SPTessTypes.cc */,
-				2670E1842CC5770500B3A76A /* tess.mk */,
-			);
-			name = tess;
-			path = ../tess;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1882CC5770500B3A76A /* arm */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1862CC5770500B3A76A /* neon.h */,
-				2670E1872CC5770500B3A76A /* sve.h */,
-			);
-			path = arm;
-			sourceTree = "<group>";
-		};
-		2670E18A2CC5770500B3A76A /* mips */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1892CC5770500B3A76A /* msa.h */,
-			);
-			path = mips;
-			sourceTree = "<group>";
-		};
-		2670E18D2CC5770500B3A76A /* wasm */ = {
-			isa = PBXGroup;
-			children = (
-				2670E18B2CC5770500B3A76A /* relaxed-simd.h */,
-				2670E18C2CC5770500B3A76A /* simd128.h */,
-			);
-			path = wasm;
-			sourceTree = "<group>";
-		};
-		2670E19F2CC5770500B3A76A /* x86 */ = {
-			isa = PBXGroup;
-			children = (
-				2670E18E2CC5770500B3A76A /* aes.h */,
-				2670E18F2CC5770500B3A76A /* avx.h */,
-				2670E1902CC5770500B3A76A /* avx2.h */,
-				2670E1912CC5770500B3A76A /* avx512.h */,
-				2670E1922CC5770500B3A76A /* clmul.h */,
-				2670E1932CC5770500B3A76A /* f16c.h */,
-				2670E1942CC5770500B3A76A /* fma.h */,
-				2670E1952CC5770500B3A76A /* gfni.h */,
-				2670E1962CC5770500B3A76A /* mmx.h */,
-				2670E1972CC5770500B3A76A /* sse.h */,
-				2670E1982CC5770500B3A76A /* sse2.h */,
-				2670E1992CC5770500B3A76A /* sse3.h */,
-				2670E19A2CC5770500B3A76A /* sse4.1.h */,
-				2670E19B2CC5770500B3A76A /* sse4.2.h */,
-				2670E19C2CC5770500B3A76A /* ssse3.h */,
-				2670E19D2CC5770500B3A76A /* svml.h */,
-				2670E19E2CC5770500B3A76A /* xop.h */,
-			);
-			path = x86;
-			sourceTree = "<group>";
-		};
-		2670E1A12CC5770500B3A76A /* simde */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1882CC5770500B3A76A /* arm */,
-				2670E18A2CC5770500B3A76A /* mips */,
-				2670E18D2CC5770500B3A76A /* wasm */,
-				2670E19F2CC5770500B3A76A /* x86 */,
-				2670E1A02CC5770500B3A76A /* COPYING */,
-			);
-			path = simde;
-			sourceTree = "<group>";
-		};
-		2670E1A22CC5770500B3A76A /* thirdparty */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1A12CC5770500B3A76A /* simde */,
-			);
-			name = thirdparty;
-			path = ../thirdparty;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1AE2CC5770500B3A76A /* threads */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1A32CC5770500B3A76A /* SPThread.h */,
-				2670E1A42CC5770500B3A76A /* SPThreads-android.cc */,
-				2670E1A52CC5770500B3A76A /* SPThreads-linux.cc */,
-				2670E1A62CC5770500B3A76A /* SPThreads-macos.cc */,
-				2670E1A72CC5770500B3A76A /* SPThreads-win32.cc */,
-				2670E1A82CC5770500B3A76A /* SPThreads.scu.cpp */,
-				2670E1A92CC5770500B3A76A /* SPThreadTask.h */,
-				2670E1AA2CC5770500B3A76A /* SPThreadTask.cc */,
-				2670E1AB2CC5770500B3A76A /* SPThreadTaskQueue.h */,
-				2670E1AC2CC5770500B3A76A /* SPThreadTaskQueue.cc */,
-				2670E1AD2CC5770500B3A76A /* threads.mk */,
-			);
-			name = threads;
-			path = ../threads;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1B92CC5770500B3A76A /* vg */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1AF2CC5770500B3A76A /* SPSvgReader.h */,
-				2670E1B02CC5770500B3A76A /* SPSvgReader.cc */,
-				2670E1B12CC5770500B3A76A /* SPVectorImage.h */,
-				2670E1B22CC5770500B3A76A /* SPVectorImage.cc */,
-				2670E1B32CC5770500B3A76A /* SPVectorPath.h */,
-				2670E1B42CC5770500B3A76A /* SPVectorPath.cc */,
-				2670E1B52CC5770500B3A76A /* SPVectorPathData.h */,
-				2670E1B62CC5770500B3A76A /* SPVectorPathData.cc */,
-				2670E1B72CC5770500B3A76A /* SPVg.cpp */,
-				2670E1B82CC5770500B3A76A /* vg.mk */,
-			);
-			name = vg;
-			path = ../vg;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1C02CC5770500B3A76A /* exports */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1BA2CC5770500B3A76A /* SPWasm.h */,
-				2670E1BB2CC5770500B3A76A /* SPWasm-core.cc */,
-				2670E1BC2CC5770500B3A76A /* SPWasm-data.cc */,
-				2670E1BD2CC5770500B3A76A /* SPWasm-filesystem.cc */,
-				2670E1BE2CC5770500B3A76A /* SPWasm.scu.cpp */,
-				2670E1BF2CC5770500B3A76A /* stappler-wasm.wit */,
-			);
-			path = exports;
-			sourceTree = "<group>";
-		};
-		2670E1C22CC5770500B3A76A /* wasm */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1C12CC5770500B3A76A /* SPWasmInit.c */,
-			);
-			path = wasm;
-			sourceTree = "<group>";
-		};
-		2670E1C42CC5770500B3A76A /* wasm */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1C02CC5770500B3A76A /* exports */,
-				2670E1C22CC5770500B3A76A /* wasm */,
-				2670E1C32CC5770500B3A76A /* wasm.mk */,
-			);
-			name = wasm;
-			path = ../wasm;
-			sourceTree = SOURCE_ROOT;
-		};
-		2670E1C82CC5770500B3A76A /* zip */ = {
-			isa = PBXGroup;
-			children = (
-				2670E1C52CC5770500B3A76A /* SPZip.h */,
-				2670E1C62CC5770500B3A76A /* SPZip.cpp */,
-				2670E1C72CC5770500B3A76A /* zip.mk */,
-			);
-			name = zip;
-			path = ../zip;
-			sourceTree = SOURCE_ROOT;
 		};
 		2670E2102CC581E200B3A76A /* Frameworks */ = {
 			isa = PBXGroup;
@@ -1864,7 +978,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 1610;
 				TargetAttributes = {
 					268C41C12CC8EE0D006E6D5D = {
 						CreatedOnToolsVersion = 16.0;
@@ -2041,11 +1155,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C41DF2CC8EF35006E6D5D /* SPCore.scu.cpp in Sources */,
-				268C42462CC91F81006E6D5D /* SPIdn.scu.cpp in Sources */,
-				268C42472CC91F8A006E6D5D /* SPThreads.scu.cpp in Sources */,
-				268C424A2CC9297A006E6D5D /* SPFilesystem.scu.cpp in Sources */,
-				268C48D42CCAD196006E6D5D /* SPFilesystem-mac.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2053,8 +1162,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C42082CC8F111006E6D5D /* lz4.c in Sources */,
-				268C42092CC8F114006E6D5D /* SPData.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2062,7 +1169,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C42072CC8F109006E6D5D /* SPCrypto.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2070,7 +1176,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C43022CC93D58006E6D5D /* SPBitmap.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2078,8 +1183,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C43032CC93D64006E6D5D /* SPDb.scu.cpp in Sources */,
-				268C43042CC93D7F006E6D5D /* SPSql.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2087,8 +1190,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C43052CC93D8D006E6D5D /* hyphen.c in Sources */,
-				268C43062CC93D91006E6D5D /* SPFont.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2096,7 +1197,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C43072CC93D9F006E6D5D /* SPGeom.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2104,7 +1204,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C43082CC93DA9006E6D5D /* SPNetwork.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2112,8 +1211,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C43092CC93DB6006E6D5D /* SPSnowballStemmer.c in Sources */,
-				268C430A2CC93DBA006E6D5D /* SPSearch.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2121,7 +1218,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C430B2CC93DC7006E6D5D /* SPTess.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2129,7 +1225,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C430C2CC93DD6006E6D5D /* SPVg.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2137,7 +1232,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C430D2CC93DDD006E6D5D /* SPWasm.scu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2145,7 +1239,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				268C430E2CC93DE7006E6D5D /* SPZip.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
