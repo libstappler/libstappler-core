@@ -17,7 +17,7 @@ OTHER_CPLUSPLUSFLAGS = $(STAPPLER_MACOS_GENERAL_CXXFLAGS)
 HEADER_SEARCH_PATHS = /usr/local/include ../core ../core/memory ../core/memory/pool ../core/platform ../core/io ../core/utils ../core/string ../db ../db/pq ../db/sqlite ../db/sql ../../deps/mac/arm64/include ../thirdparty ../bitmap ../crypto ../data ../filesystem ../font ../geom ../geom/glsl ../idn ../network ../search ../sql ../tess ../threads ../vg ../wasm/exports ../zip ../../deps/mac/$(CURRENT_ARCH)/include ../stappler-build/host/debug/glslangValidator/embedded ../stappler-build/host/debug/glslangValidator/embedded_files
 LIBRARY_SEARCH_PATHS = /usr/local/lib ../../deps/mac/$(CURRENT_ARCH)/lib
 SDKROOT = macOS
-SUPPORTED_PLATFORMS = macOS
+SUPPORTED_PLATFORMS = macosx
 GCC_PREPROCESSOR_DEFINITIONS[config=Debug] = DEBUG=1
 GCC_PREPROCESSOR_DEFINITIONS[config=Release] = NDEBUG=1
 MACOSX_DEPLOYMENT_TARGET = 12.4
