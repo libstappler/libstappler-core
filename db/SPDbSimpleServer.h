@@ -46,7 +46,7 @@ struct SP_PUBLIC SimpleServerData : AllocBase {
 	mutable Vector<Function<void(const Transaction &)>> *asyncTasks = nullptr;
 };
 
-class SP_PUBLIC SimpleServer : public RefBase<memory::StandartInterface>, public ApplicationInterface {
+class SP_PUBLIC SimpleServer : public Ref, public ApplicationInterface {
 public:
 	virtual ~SimpleServer();
 	SimpleServer();

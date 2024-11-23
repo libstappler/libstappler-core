@@ -40,15 +40,18 @@ enum class LineJoin {
 	Bevel
 };
 
-enum class DrawStyle {
+enum class DrawFlags {
 	None = 0,
 	Fill = 1 << 0,
 	Stroke = 1 << 1,
 	FillAndStroke = Fill | Stroke,
-	PseudoSdf = 1 << 2
+	PseudoSdf = 1 << 2,
+	UV = 1 << 3
 };
 
-SP_DEFINE_ENUM_AS_MASK(DrawStyle)
+SP_DEFINE_ENUM_AS_MASK(DrawFlags)
+
+using DrawStyle = DrawFlags;
 
 // Helper class, that transform lines in SVG notation (bezier2/3, arcs) into series of segments,
 // then output this segments to contour in tesselator

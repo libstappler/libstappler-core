@@ -43,7 +43,7 @@ public:
 	pointer_iterator(const iterator & other) noexcept : current(other.current) {}
 	explicit pointer_iterator(pointer p) noexcept : current(p) {}
 
-	iterator& operator=(const iterator &other) { current = other.current; return *this; }
+	iterator& operator=(const iterator &other) noexcept { current = other.current; return *this; }
 	bool operator==(const iterator &other) const { return current == other.current; }
 	bool operator!=(const iterator &other) const { return current != other.current; }
 	bool operator<(const iterator &other) const { return current < other.current; }

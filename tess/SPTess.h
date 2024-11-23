@@ -54,7 +54,7 @@ struct SP_PUBLIC TessResult {
 	void (*pushTriangle) (void *, uint32_t[3]);
 };
 
-class SP_PUBLIC Tesselator : public RefBase<memory::StandartInterface> {
+class SP_PUBLIC Tesselator : public Ref {
 public:
 	struct Cursor {
 		HalfEdge *edge = nullptr;

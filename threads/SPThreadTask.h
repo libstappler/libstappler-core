@@ -29,9 +29,9 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
-class SP_PUBLIC Task : public RefBase<memory::StandartInterface> {
+class SP_PUBLIC Task : public Ref {
 public: /* typedefs */
-	using Ref = RefBase<memory::StandartInterface>;
+	using Ref = Ref;
 
 	/* Function to be executed in init phase */
 	using PrepareCallback = std::function<bool(const Task &)>;

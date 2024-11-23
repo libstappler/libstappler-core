@@ -59,7 +59,7 @@ public:
 	}
 
 	template< class InputIt >
-	vector( InputIt first, InputIt last, const allocator_type& alloc = allocator_type() ) : _mem(alloc) {
+	vector( InputIt first, InputIt last, const allocator_type& alloc = allocator_type() ) noexcept : _mem(alloc) {
 		auto size = std::distance(first, last);
 		_mem.reserve(size);
 		for (auto it = first; it != last; it ++) {

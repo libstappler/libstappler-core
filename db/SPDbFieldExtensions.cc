@@ -417,7 +417,7 @@ bool FieldTextArray::registerForPostgres(CustomFieldInfo &info) {
 			bool init = true;
 			for (auto &it : val.asArray()) {
 				if (init) { init = false; } else { query << ","; }
-				if (auto q = dynamic_cast<db::pq::PgQueryInterface *>(&iface)) {
+				if (auto q = static_cast<db::pq::PgQueryInterface *>(&iface)) {
 					q->push(query, it, false, false);
 				}
 			}
@@ -451,12 +451,12 @@ bool FieldTextArray::registerForPostgres(CustomFieldInfo &info) {
 			whi.where(op, db::sql::SqlQuery::Field(s.getName(), f), cmp, val);
 		} else {
 			if (val.isString()) {
-				if (auto q = dynamic_cast<db::pq::PgQueryInterface *>(whi.query->getBinder().getInterface())) {
+				if (auto q = static_cast<db::pq::PgQueryInterface *>(whi.query->getBinder().getInterface())) {
 					auto id = q->push(val.asString());
 					whi.where(op, db::sql::SqlQuery::Field(s.getName(), f), "@>", db::sql::SqlQuery::RawString{toString("ARRAY[$", id, "::text]")});
 				}
 			} else if (val.isArray()) {
-				if (auto q = dynamic_cast<db::pq::PgQueryInterface *>(whi.query->getBinder().getInterface())) {
+				if (auto q = static_cast<db::pq::PgQueryInterface *>(whi.query->getBinder().getInterface())) {
 					StringStream str; str << "ARRAY[";
 					bool init = false;
 					for (auto &it : val.asArray()) {
@@ -507,7 +507,7 @@ bool FieldTextArray::registerForSqlite(CustomFieldInfo &info) {
 			whi.where(op, db::sql::SqlQuery::Field(s.getName(), f), cmp, val);
 		} else {
 			if (val.isString()) {
-				if (auto q = dynamic_cast<db::sqlite::SqliteQueryInterface *>(whi.query->getBinder().getInterface())) {
+				if (auto q = static_cast<db::sqlite::SqliteQueryInterface *>(whi.query->getBinder().getInterface())) {
 					auto id = q->push(val.asString());
 					auto unwrapTable = toString(s.getName(), "_", f, "_unwrap");
 					whi.where(op, db::sql::SqlQuery::Field(unwrapTable, StringView("__unwrap_value")), "=?", Value(id));

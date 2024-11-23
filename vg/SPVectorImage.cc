@@ -193,7 +193,7 @@ vg::Winding VectorPathRef::getWindingRule() const {
 	return _path ? _path->getWindingRule() : vg::Winding::NonZero;
 }
 
-VectorPathRef & VectorPathRef::setStyle(vg::DrawStyle s) {
+VectorPathRef & VectorPathRef::setStyle(vg::DrawFlags s) {
 	if (_path && _path->getStyle() == s) {
 		return *this;
 	}
@@ -209,8 +209,8 @@ VectorPathRef & VectorPathRef::setStyle(vg::DrawStyle s) {
 	return *this;
 }
 
-vg::DrawStyle VectorPathRef::getStyle() const {
-	return _path ? _path->getStyle() : vg::DrawStyle::FillAndStroke;
+vg::DrawFlags VectorPathRef::getStyle() const {
+	return _path ? _path->getStyle() : vg::DrawFlags::FillAndStroke;
 }
 
 VectorPathRef & VectorPathRef::setTransform(const Mat4 &t) {

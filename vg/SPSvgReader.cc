@@ -295,12 +295,12 @@ void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &val
 		});
 	} else if (name.equals("fill")) {
 		if (value.equals("none")) {
-			tag.getPath().setStyle(tag.getPath().getStyle() & (~DrawStyle::Fill));
+			tag.getPath().setStyle(tag.getPath().getStyle() & (~DrawFlags::Fill));
 		} else {
 			Color3B color;
 			if (readColor(value, color)) {
 				tag.getPath().setFillColor(color, true);
-				tag.getPath().setStyle(tag.getPath().getStyle() | DrawStyle::Fill);
+				tag.getPath().setStyle(tag.getPath().getStyle() | DrawFlags::Fill);
 			}
 		}
 	} else if (name.equals("fill-rule")) {
@@ -321,12 +321,12 @@ void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &val
 		});
 	} else if (name.equals("stroke")) {
 		if (value.equals("none")) {
-			tag.getPath().setStyle(tag.getPath().getStyle() & (~DrawStyle::Stroke));
+			tag.getPath().setStyle(tag.getPath().getStyle() & (~DrawFlags::Stroke));
 		} else {
 			Color3B color;
 			if (readColor(value, color)) {
 				tag.getPath().setStrokeColor(color, true);
-				tag.getPath().setStyle(tag.getPath().getStyle() | DrawStyle::Stroke);
+				tag.getPath().setStyle(tag.getPath().getStyle() | DrawFlags::Stroke);
 			}
 		}
 	} else if (name.equals("stroke-opacity")) {

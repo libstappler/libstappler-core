@@ -118,7 +118,7 @@ static void DefaultLog(LogType type, const StringView &tag, CustomLog::Type t, C
 	}
 }
 
-struct CustomLogManager : RefBase<memory::StandartInterface> {
+struct CustomLogManager : Ref {
 	CustomLog::log_fn logFuncArr[MAX_LOG_FUNC] = { 0 };
 	std::atomic<int> logFuncCount;
 	std::mutex logFuncMutex;

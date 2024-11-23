@@ -99,7 +99,7 @@ public:
 		LockInterface lock;
 	};
 
-	PriorityQueue() {
+	PriorityQueue() noexcept {
 		initNodes(&_preallocated[0], &_preallocated[_preallocated.size() - 1], nullptr);
 		_free.first = &_preallocated[0];
 		_free.last = &_preallocated[_preallocated.size() - 1];

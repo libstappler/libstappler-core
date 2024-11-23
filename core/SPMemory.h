@@ -60,12 +60,12 @@ public:
 	void reserve(size_t count) const { reserve_fn(target, count); }
 	void resize(size_t count) const { resize_fn(target, count); }
 
-	explicit operator bool () const { return target != nullptr; }
+	explicit operator bool () const noexcept { return target != nullptr; }
 
-	VectorAdapter() = default;
+	VectorAdapter() noexcept = default;
 
-	VectorAdapter(memory::StandartInterface::VectorType<T> &vec);
-	VectorAdapter(memory::PoolInterface::VectorType<T> &vec);
+	VectorAdapter(memory::StandartInterface::VectorType<T> &vec) noexcept;
+	VectorAdapter(memory::PoolInterface::VectorType<T> &vec) noexcept;
 
 public:
 	void *target = nullptr;
@@ -80,103 +80,6 @@ public:
 	void (*clear_fn) (void *) = nullptr;
 	void (*reserve_fn) (void *, size_t) = nullptr;
 	void (*resize_fn) (void *, size_t) = nullptr;
-};
-
-/** Интерфейс разделяемых объектов на основе пулов памяти и подсчёта ссылок
- *
- * Используется в виде Rc<SharedRef<Type>>. Интерфейс аналогичен Rc<Type> для
- * простого подсчёта ссылок.
- *
- * Пул памяти связывается с новым объектом и удаляется при исчерпании ссылок.
- *
- */
-
-enum class SharedRefMode {
-	Pool,
-	Allocator,
-};
-
-template <typename T>
-class SP_PUBLIC SharedRef : public RefBase<memory::PoolInterface> {
-public:
-	template <typename ...Args>
-	static SharedRef *create(Args && ...);
-
-	template <typename ...Args>
-	static SharedRef *create(memory::pool_t *, Args && ...);
-
-	template <typename ...Args>
-	static SharedRef *create(SharedRefMode, Args && ...);
-
-	virtual ~SharedRef();
-
-	template <typename Callback>
-	void perform(Callback &&cb);
-
-	inline T *get() const { return _shared; }
-
-	inline operator T * () const { return get(); }
-	inline T * operator->() const { return get(); }
-
-	inline explicit operator bool () const { return _shared != nullptr; }
-
-	memory::pool_t *getPool() const { return _pool; }
-	memory::allocator_t *getAllocator() const { return _allocator; }
-
-protected:
-	SharedRef(SharedRefMode m, memory::allocator_t *, memory::pool_t *, T *);
-
-	memory::allocator_t *_allocator = nullptr;
-	memory::pool_t *_pool = nullptr;
-	T *_shared = nullptr;
-	SharedRefMode _mode = SharedRefMode::Pool;
-};
-
-template <typename _Base>
-class Rc<SharedRef<_Base>> final : public RcBase<_Base, SharedRef<_Base> *> {
-public:
-	using Parent = RcBase<_Base, SharedRef<_Base> *>;
-	using Self = Rc<SharedRef<_Base>>;
-	using Type = SharedRef<_Base>;
-
-	template <class... Args>
-	static Self create(Args && ... args);
-
-	template <class... Args>
-	static Self create(memory::pool_t *pool, Args && ... args);
-
-	template <class... Args>
-	static Self create(SharedRefMode mode, Args && ... args);
-
-	static Self alloc();
-
-	template <class... Args>
-	static Self alloc(Args && ... args);
-
-	template <class... Args>
-	static Self alloc(memory::pool_t *pool, Args && ... args);
-
-	template <class... Args>
-	static Self alloc(SharedRefMode mode, Args && ... args);
-
-	using Parent::Parent;
-	using Parent::operator =;
-
-	// Direct call of `get` should not be on empty storage
-	_Base *get() const {
-#if SP_REF_DEBUG
-		assert(this->_ptr);
-#endif
-		return this->_ptr->get();
-	}
-
-	inline operator _Base * () const { return get(); }
-
-	inline _Base * operator->() const { return this->_ptr->get(); }
-
-	inline explicit operator bool () const { return this->_ptr != nullptr && this->_ptr->get() != nullptr; }
-
-	inline void swap(Self & v) { auto ptr = this->_ptr; this->_ptr = v._ptr; v._ptr = ptr; }
 };
 
 }
@@ -262,7 +165,7 @@ using stappler::WideStringView;
 using stappler::BytesView;
 using stappler::SpanView;
 
-using AllocBase = stappler::memory::AllocBase;
+using AllocBase = stappler::memory::StandartInterface::AllocBaseType;
 
 using String = std::string;
 using WideString = std::u16string;
@@ -426,7 +329,7 @@ inline bool exists_ordered(Vector<T> &vec, const T & val) {
 namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename T>
-VectorAdapter<T>::VectorAdapter(memory::StandartInterface::VectorType<T> &vec)
+VectorAdapter<T>::VectorAdapter(memory::StandartInterface::VectorType<T> &vec) noexcept
 : target(&vec), size_fn([] (void *target) {
 	return ((mem_std::Vector<T> *)target)->size();
 }), back_fn([] (void *target) -> T & {
@@ -452,7 +355,7 @@ VectorAdapter<T>::VectorAdapter(memory::StandartInterface::VectorType<T> &vec)
 }) { }
 
 template <typename T>
-VectorAdapter<T>::VectorAdapter(memory::PoolInterface::VectorType<T> &vec)
+VectorAdapter<T>::VectorAdapter(memory::PoolInterface::VectorType<T> &vec) noexcept
 : target(&vec), size_fn([] (void *target) {
 	return ((mem_pool::Vector<T> *)target)->size();
 }), back_fn([] (void *target) -> T & {
@@ -476,163 +379,6 @@ VectorAdapter<T>::VectorAdapter(memory::PoolInterface::VectorType<T> &vec)
 }), resize_fn([] (void *target, size_t s) {
 	((mem_pool::Vector<T> *)target)->resize(s);
 }) { }
-
-template <typename T>
-template <typename ...Args>
-auto SharedRef<T>::create(Args && ... args) -> SharedRef * {
-	auto pool = memory::pool::create((memory::pool_t *)nullptr);
-
-	SharedRef *shared = nullptr;
-	mem_pool::perform([&] {
-		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool,
-			new (pool) T(pool, std::forward<Args>(args)...));
-	}, pool);
-	return shared;
-}
-
-template <typename T>
-template <typename ...Args>
-auto SharedRef<T>::create(memory::pool_t *p, Args && ... args) -> SharedRef * {
-	auto pool = memory::pool::create(p);
-
-	SharedRef *shared = nullptr;
-	mem_pool::perform([&] {
-		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool,
-			new (pool) T(pool, std::forward<Args>(args)...));
-	}, pool);
-	return shared;
-}
-
-template <typename T>
-template <typename ...Args>
-auto SharedRef<T>::create(SharedRefMode mode, Args && ... args) -> SharedRef * {
-	memory::allocator_t *alloc = nullptr;
-	memory::pool_t *pool = nullptr;
-
-	switch (mode) {
-	case SharedRefMode::Pool:
-		pool = memory::pool::create((memory::pool_t *)nullptr);
-		break;
-	case SharedRefMode::Allocator:
-		alloc = memory::allocator::create();
-		pool = memory::pool::create(alloc);
-		break;
-	}
-
-	SharedRef *shared = nullptr;
-	mem_pool::perform([&] {
-		shared = new (pool) SharedRef(mode, alloc, pool,
-			new (pool) T(pool, std::forward<Args>(args)...));
-	}, pool);
-	return shared;
-}
-
-template <typename T>
-SharedRef<T>::~SharedRef() {
-	if (_shared) {
-		mem_pool::perform([&, this] {
-			delete _shared;
-		}, _pool);
-		_shared = nullptr;
-	}
-
-	auto pool = _pool;
-	auto allocator = _allocator;
-
-	_pool = nullptr;
-	_allocator = nullptr;
-
-	if (pool) {
-		memory::pool::destroy(pool);
-	}
-	if (allocator) {
-		memory::allocator::destroy(allocator);
-	}
-}
-
-template <typename T>
-template <typename Callback>
-void SharedRef<T>::perform(Callback &&cb) {
-	mem_pool::perform([&, this] {
-		cb(_shared);
-	}, _pool);
-}
-
-template <typename T>
-SharedRef<T>::SharedRef(SharedRefMode m, memory::allocator_t *alloc, memory::pool_t *pool, T *obj)
-: _allocator(alloc), _pool(pool), _shared(obj), _mode(m) { }
-
-
-template <typename _Base>
-template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(Args && ... args) {
-	auto pRet = Type::create();
-	Self ret(nullptr);
-	pRet->perform([&] (_Base *base) {
-		if (base->init(std::forward<Args>(args)...)) {
-			ret = Self(pRet, true); // unsafe assignment
-		}
-	});
-	if (!ret) {
-		delete pRet;
-	}
-	return ret;
-}
-
-template <typename _Base>
-template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(memory::pool_t *pool, Args && ... args) {
-	auto pRet = Type::create(pool);
-	Self ret(nullptr);
-	pRet->perform([&] (_Base *base) {
-		if (base->init(std::forward<Args>(args)...)) {
-			ret = Self(pRet, true); // unsafe assignment
-		}
-	});
-	if (!ret) {
-		delete pRet;
-	}
-	return ret;
-}
-
-template <typename _Base>
-template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(SharedRefMode mode, Args && ... args) {
-	auto pRet = Type::create(mode);
-	Self ret(nullptr);
-	pRet->perform([&] (_Base *base) {
-		if (base->init(std::forward<Args>(args)...)) {
-			ret = Self(pRet, true); // unsafe assignment
-		}
-	});
-	if (!ret) {
-		delete pRet;
-	}
-	return ret;
-}
-
-template <typename _Base>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc() {
-	return Self(Type::create(), true);
-}
-
-template <typename _Base>
-template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(Args && ... args) {
-	return Self(Type::create(std::forward<Args>(args)...), true);
-}
-
-template <typename _Base>
-template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(memory::pool_t *pool, Args && ... args) {
-	return Self(Type::create(pool, std::forward<Args>(args)...), true);
-}
-
-template <typename _Base>
-template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(SharedRefMode mode, Args && ... args) {
-	return Self(Type::create(mode, std::forward<Args>(args)...), true);
-}
 
 }
 

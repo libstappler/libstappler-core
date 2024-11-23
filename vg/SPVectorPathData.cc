@@ -538,17 +538,33 @@ private:
 };
 
 template <typename Interface, typename Source>
-auto encodePath(const Source &source) -> typename Interface::BytesType {
+auto encodePath(const PathData<Source> &source) -> typename Interface::BytesType {
+	size_t bufferSize = source.commands.size() * sizeof(Command) + source.points.size() * sizeof(CommandData) + 2 * (sizeof(size_t) + 1);
+
+	bool hasUV = false;
+	if ((source.params.style & DrawFlags::UV) != DrawFlags::None) {
+		bufferSize +=  source.uv.size() * sizeof(Vec2);
+		hasUV = true;
+	}
+
 	typename Interface::BytesType ret;
-	ret.reserve(source.commands.size() * sizeof(Command) + source.points.size() * sizeof(CommandData) + 2 * (sizeof(size_t) + 1));
+	ret.reserve(bufferSize);
+
 	PathBinaryEncoder<Interface> enc(&ret);
 
-	data::cbor::_writeInt(enc, 1); // version
+	data::cbor::_writeInt(enc, hasUV ? 2 : 1); // version
 	data::cbor::_writeInt(enc, source.commands.size());
 	data::cbor::_writeInt(enc, source.points.size());
 	auto d = source.points.data();
+	auto uv = source.uv.data();
 	for (auto &it : source.commands) {
 		data::cbor::_writeInt(enc, toInt(it));
+		if (hasUV) {
+			data::cbor::_writeNumber(enc, uv->x);
+			data::cbor::_writeNumber(enc, uv->y);
+			++ uv;
+		}
+
 		switch (it) {
 		case Command::MoveTo:
 		case Command::LineTo:
@@ -716,10 +732,10 @@ auto PathData<memory::StandartInterface>::toString<memory::StandartInterface>(bo
 }
 
 PathWriter::PathWriter(PathData<mem_std::Interface> &d)
-: points(d.points), commands(d.commands) { }
+: points(d.points), commands(d.commands), uvPoints(d.uv) { }
 
 PathWriter::PathWriter(PathData<mem_pool::Interface> &d)
-: points(d.points), commands(d.commands) { }
+: points(d.points), commands(d.commands), uvPoints(d.uv) { }
 
 PathWriter::operator bool () const {
 	return points && commands;
@@ -731,11 +747,13 @@ bool PathWriter::empty() const {
 
 void PathWriter::reserve(size_t size) {
 	commands.reserve(size);
+	uvPoints.reserve(size);
 	points.reserve(size * 3);
 }
 
 bool PathWriter::readFromPathString(StringView str) {
 	commands.clear();
+	uvPoints.clear();
 	points.clear();
 
 	if (!SVGPathReader::readPath(this, str)) {
@@ -746,6 +764,7 @@ bool PathWriter::readFromPathString(StringView str) {
 
 bool PathWriter::readFromFileContent(StringView str) {
 	commands.clear();
+	uvPoints.clear();
 	points.clear();
 
 	if (!SVGPathReader::readFileContent(this, str)) {
@@ -756,6 +775,7 @@ bool PathWriter::readFromFileContent(StringView str) {
 
 bool PathWriter::readFromFile(StringView str) {
 	commands.clear();
+	uvPoints.clear();
 	points.clear();
 
 	if (!SVGPathReader::readFile(this, str)) {
@@ -766,70 +786,76 @@ bool PathWriter::readFromFile(StringView str) {
 
 bool PathWriter::readFromBytes(BytesView bytes) {
 	commands.clear();
+	uvPoints.clear();
 	points.clear();
 
 	return addPath(bytes);
 }
 
-PathWriter &PathWriter::moveTo(float x, float y) {
+PathWriter &PathWriter::moveTo(float x, float y, float u, float v) {
 	commands.emplace_back(Command::MoveTo);
+	uvPoints.emplace_back(Vec2(u, v));
 	points.emplace_back(CommandData(x, y));
 	return *this;
 }
 
-PathWriter &PathWriter::moveTo(const Vec2 &point) {
-	return this->moveTo(point.x, point.y);
-	return *this;
+PathWriter &PathWriter::moveTo(const Vec2 &point, const Vec2 &uv) {
+	return this->moveTo(point.x, point.y, uv.x, uv.y);
 }
 
-PathWriter &PathWriter::lineTo(float x, float y) {
+PathWriter &PathWriter::lineTo(float x, float y, float u, float v) {
 	commands.emplace_back((commands.empty() || commands.back() == Command::ClosePath) ? Command::MoveTo : Command::LineTo);
+	uvPoints.emplace_back(Vec2(u, v));
 	points.emplace_back(CommandData(x, y));
 	return *this;
 }
-PathWriter &PathWriter::lineTo(const Vec2 &point) {
-	this->lineTo(point.x, point.y);
+PathWriter &PathWriter::lineTo(const Vec2 &point, const Vec2 &uv) {
+	this->lineTo(point.x, point.y, uv.x, uv.y);
 	return *this;
 }
 
-PathWriter &PathWriter::quadTo(float x1, float y1, float x2, float y2) {
+PathWriter &PathWriter::quadTo(float x1, float y1, float x2, float y2, float u, float v) {
 	commands.emplace_back(Command::QuadTo);
+	uvPoints.emplace_back(Vec2(u, v));
 	points.emplace_back(CommandData(x1, y1));
 	points.emplace_back(CommandData(x2, y2));
 	return *this;
 }
-PathWriter &PathWriter::quadTo(const Vec2& p1, const Vec2& p2) {
-	this->quadTo(p1.x, p1.y, p2.x, p2.y);
+PathWriter &PathWriter::quadTo(const Vec2& p1, const Vec2& p2, const Vec2 &uv) {
+	this->quadTo(p1.x, p1.y, p2.x, p2.y, uv.x, uv.y);
 	return *this;
 }
 
-PathWriter &PathWriter::cubicTo(float x1, float y1, float x2, float y2, float x3, float y3) {
+PathWriter &PathWriter::cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, float u, float v) {
 	commands.emplace_back(Command::CubicTo);
+	uvPoints.emplace_back(Vec2(u, v));
 	points.emplace_back(CommandData(x1, y1));
 	points.emplace_back(CommandData(x2, y2));
 	points.emplace_back(CommandData(x3, y3));
 	return *this;
 }
-PathWriter &PathWriter::cubicTo(const Vec2& p1, const Vec2& p2, const Vec2& p3) {
-	this->cubicTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+PathWriter &PathWriter::cubicTo(const Vec2& p1, const Vec2& p2, const Vec2& p3, const Vec2 &uv) {
+	this->cubicTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, uv.x, uv.y);
 	return *this;
 }
 
 // use _to_rad user suffix to convert from degrees to radians
-PathWriter &PathWriter::arcTo(float rx, float ry, float rotation, bool largeFlag, bool sweepFlag, float x, float y) {
+PathWriter &PathWriter::arcTo(float rx, float ry, float rotation, bool largeFlag, bool sweepFlag, float x, float y, float u, float v) {
 	commands.emplace_back(Command::ArcTo);
+	uvPoints.emplace_back(Vec2(u, v));
 	points.emplace_back(CommandData(rx, ry));
 	points.emplace_back(CommandData(x, y));
 	points.emplace_back(CommandData(rotation, largeFlag, sweepFlag));
 	return *this;
 }
-PathWriter &PathWriter::arcTo(const Vec2 & r, float rotation, bool largeFlag, bool sweepFlag, const Vec2 &target) {
-	this->arcTo(r.x, r.y, rotation, largeFlag, sweepFlag, target.x, target.y);
+PathWriter &PathWriter::arcTo(const Vec2 & r, float rotation, bool largeFlag, bool sweepFlag, const Vec2 &target, const Vec2 &uv) {
+	this->arcTo(r.x, r.y, rotation, largeFlag, sweepFlag, target.x, target.y, uv.x, uv.y);
 	return *this;
 }
 
 PathWriter &PathWriter::closePath() {
 	commands.emplace_back(Command::ClosePath);
+	uvPoints.emplace_back(Vec2(nan(), nan()));
 	return *this;
 }
 
@@ -927,6 +953,9 @@ bool PathWriter::addPath(const PathData<memory::StandartInterface> &d) {
 	commands.reserve(commands.size() + d.commands.size());
 	for (auto &it : d.commands) { commands.emplace_back(Command(it)); }
 
+	uvPoints.reserve(uvPoints.size() + d.uv.size());
+	for (auto &it : d.uv) { uvPoints.emplace_back(Vec2(it)); }
+
 	points.reserve(points.size() + d.points.size());
 	for (auto &it : d.points) { points.emplace_back(CommandData(it)); }
 
@@ -937,6 +966,9 @@ bool PathWriter::addPath(const PathData<memory::PoolInterface> &d) {
 	commands.reserve(commands.size() + d.commands.size());
 	for (auto &it : d.commands) { commands.emplace_back(Command(it)); }
 
+	uvPoints.reserve(uvPoints.size() + d.uv.size());
+	for (auto &it : d.uv) { uvPoints.emplace_back(Vec2(it)); }
+
 	points.reserve(points.size() + d.points.size());
 	for (auto &it : d.points) { points.emplace_back(CommandData(it)); }
 
@@ -944,34 +976,42 @@ bool PathWriter::addPath(const PathData<memory::PoolInterface> &d) {
 }
 
 bool PathWriter::addPath(BytesView data) {
-	float x1, y1, x2, y2, x3, y3;
+	float x1, y1, x2, y2, x3, y3, u = nan(), v = nan();
 	uint32_t tmp;
 
 	BytesViewNetwork reader(data);
 
-	auto v = data::cbor::_readInt(reader);
-	if (v != 1) {
+	auto version = data::cbor::_readInt(reader);
+	if (version != 1 && version != 2) {
+		log::error("vg::PathWriter", "Unsupported binary encoding version: ", version);
 		return false; // unsupported version
 	}
 
 	auto ncommands = data::cbor::_readInt(reader);
 	auto npoints = data::cbor::_readInt(reader);
 	commands.reserve(ncommands);
+	uvPoints.reserve(ncommands);
 	points.reserve(npoints);
 	for (; ncommands != 0; --ncommands) {
 		auto cmd = data::cbor::_readInt(reader);
+
+		if (version == 2) {
+			u = data::cbor::_readNumber(reader);
+			v = data::cbor::_readNumber(reader);
+		}
+
 		switch (uint8_t(cmd)) {
 		case toInt(Command::MoveTo):
 			x1 = data::cbor::_readNumber(reader);
 			y1 = data::cbor::_readNumber(reader);
 			SP_PATH_LOG_TEXT("L ", x1, " ", y1);
-			moveTo(x1, y1);
+			moveTo(x1, y1, u, v);
 			break;
 		case toInt(Command::LineTo):
 			x1 = data::cbor::_readNumber(reader);
 			y1 = data::cbor::_readNumber(reader);
 			SP_PATH_LOG_TEXT("L ", x1, " ", y1);
-			lineTo(x1, y1);
+			lineTo(x1, y1, u, v);
 			break;
 		case toInt(Command::QuadTo):
 			x1 = data::cbor::_readNumber(reader);
@@ -979,7 +1019,7 @@ bool PathWriter::addPath(BytesView data) {
 			x2 = data::cbor::_readNumber(reader);
 			y2 = data::cbor::_readNumber(reader);
 			SP_PATH_LOG_TEXT("Q ", x1, " ", y1, " ", x2, " ", y2);
-			quadTo(x1, y1, x2, y2);
+			quadTo(x1, y1, x2, y2, u, v);
 			break;
 		case toInt(Command::CubicTo):
 			x1 = data::cbor::_readNumber(reader);
@@ -989,7 +1029,7 @@ bool PathWriter::addPath(BytesView data) {
 			x3 = data::cbor::_readNumber(reader);
 			y3 = data::cbor::_readNumber(reader);
 			SP_PATH_LOG_TEXT("C ", x1, " ", y1, " ", x2, " ", y2, " ", x3, " ", y3);
-			cubicTo(x1, y1, x2, y2, x3, y3);
+			cubicTo(x1, y1, x2, y2, x3, y3, u, v);
 			break;
 		case toInt(Command::ArcTo):
 			x1 = data::cbor::_readNumber(reader);
@@ -999,7 +1039,7 @@ bool PathWriter::addPath(BytesView data) {
 			x3 = data::cbor::_readNumber(reader);
 			tmp = uint32_t(data::cbor::_readInt(reader));
 			SP_PATH_LOG_TEXT("A ", x1, " ", y1, " ", x2, " ", y2, " ", x3, " ", tmp, " ", ((tmp & 2) != 0), " ", ((tmp & 1) != 0));
-			arcTo(x1, y1, x3, (tmp & 2) != 0, (tmp & 1) != 0, x2, y2);
+			arcTo(x1, y1, x3, (tmp & 2) != 0, (tmp & 1) != 0, x2, y2, u, v);
 			break;
 		case toInt(Command::ClosePath):
 			closePath();

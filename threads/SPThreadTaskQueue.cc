@@ -29,18 +29,10 @@ namespace STAPPLER_VERSIONIZED stappler::thread {
 
 SPUNUSED static uint32_t getNextThreadId();
 
-class Worker : public ThreadInterface<memory::StandartInterface> {
+class Worker : public Thread {
 public:
 	Worker(TaskQueue::WorkerContext *queue, uint32_t threadId, uint32_t workerId, StringView name);
 	virtual ~Worker();
-
-#if SP_REF_DEBUG
-	virtual uint64_t retain() override;
-	virtual void release(uint64_t) override;
-#else
-	uint64_t retain();
-	void release(uint64_t);
-#endif
 
 	bool execute(Task *task);
 
@@ -48,20 +40,13 @@ public:
 	virtual void threadDispose() override;
 	virtual bool worker() override;
 
-	std::thread &getThread();
-	std::thread::id getThreadId() const { return _threadId; }
-
 protected:
 	uint64_t _queueRefId = 0;
 	TaskQueue::WorkerContext *_queue = nullptr;
-	std::thread::id _threadId;
-	std::atomic<int32_t> _refCount;
-	std::atomic_flag _shouldQuit;
 
 	uint32_t _managerId;
 	uint32_t _workerId;
 	StringView _name;
-	std::thread _thread;
 };
 
 struct TaskQueue::WorkerContext {
@@ -143,19 +128,21 @@ struct TaskQueue::WorkerContext {
 
 	void spawn(uint32_t threadId, uint32_t threadCount, StringView name) {
 		for (uint32_t i = 0; i < threadCount; i++) {
-			workers.push_back(new Worker(this, threadId, i, name.empty() ? queue->getName() : name));
+			auto worker = new Worker(this, threadId, i, name.empty() ? queue->getName() : name);
+			workers.push_back(worker);
+			worker->run();
 		}
 	}
 
 	void cancel() {
 		for (auto &it : workers) {
-			it->release(0);
+			it->stop();
 		}
 
 		notifyInputAll();
 
 		for (auto &it : workers) {
-			it->getThread().join();
+			it->waitStopped();
 			delete it;
 		}
 
@@ -303,7 +290,7 @@ struct TaskQueue::WorkerContext {
 	}
 };
 
-class _SingleTaskWorker : public ThreadInterface<memory::StandartInterface> {
+class _SingleTaskWorker : public Thread {
 public:
 	_SingleTaskWorker(const Rc<TaskQueue> &q, Rc<Task> &&task)
 	: _queue(q), _task(std::move(task)), _managerId(getNextThreadId()) { }
@@ -320,6 +307,8 @@ public:
 		memory::pool::cleanup_register(memory::pool::acquire(), [self = this] () {
 			delete self;
 		});
+
+		Thread::threadInit();
 	}
 
 	virtual bool worker() override {
@@ -367,8 +356,7 @@ void TaskQueue::finalize() {
 void TaskQueue::performAsync(Rc<Task> &&task) {
 	if (task) {
 		_SingleTaskWorker *worker = new _SingleTaskWorker(this, std::move(task));
-		std::thread wThread(_SingleTaskWorker::workerThread, worker, this);
-		wThread.detach();
+		worker->run();
 	}
 }
 
@@ -503,24 +491,12 @@ void TaskQueue::unlock() {
 
 
 Worker::Worker(TaskQueue::WorkerContext *queue, uint32_t threadId, uint32_t workerId, StringView name)
-: _queue(queue), _refCount(1), _shouldQuit(), _managerId(threadId), _workerId(workerId), _name(name) {
+: _queue(queue), _managerId(threadId), _workerId(workerId), _name(name) {
 	_queueRefId = _queue->queue->retain();
-	_thread = std::thread(Worker::workerThread, this, queue->queue);
 }
 
 Worker::~Worker() {
 	_queue->queue->release(_queueRefId);
-}
-
-uint64_t Worker::retain() {
-	_refCount ++;
-	return 0;
-}
-
-void Worker::release(uint64_t) {
-	if (--_refCount <= 0) {
-		_shouldQuit.clear();
-	}
 }
 
 bool Worker::execute(Task *task) {
@@ -529,15 +505,15 @@ bool Worker::execute(Task *task) {
 
 void Worker::threadInit() {
 	ThreadInfo::setThreadInfo(_managerId, _workerId, _name, true);
-
-	_shouldQuit.test_and_set();
-	_threadId = std::this_thread::get_id();
+	Thread::threadInit();
 }
 
-void Worker::threadDispose() { }
+void Worker::threadDispose() {
+	Thread::threadDispose();
+}
 
 bool Worker::worker() {
-	if (!_shouldQuit.test_and_set()) {
+	if (!_continueExecution.test_and_set()) {
 		return false;
 	}
 
@@ -561,10 +537,6 @@ bool Worker::worker() {
 	_queue->onMainThreadWorker(std::move(task));
 
 	return true;
-}
-
-std::thread &Worker::getThread() {
-	return _thread;
 }
 
 }

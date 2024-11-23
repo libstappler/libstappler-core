@@ -31,6 +31,67 @@ THE SOFTWARE.
 #include <cxxabi.h>
 #endif
 
+namespace stappler {
+
+struct RefAllocData {
+	void *lastPtr = nullptr;
+	std::forward_list<memory::pool_t *> delayedPools;
+	std::forward_list<memory::allocator_t *> delayedAllocs;
+
+	void clear() {
+		while (!delayedPools.empty()) {
+			memory::pool::destroy(delayedPools.front());
+			delayedPools.pop_front();
+		}
+
+		while (!delayedAllocs.empty()) {
+			memory::allocator::destroy(delayedAllocs.front());
+			delayedAllocs.pop_front();
+		}
+	}
+};
+
+static thread_local RefAllocData tl_RefAllocData;
+
+void * RefAlloc::operator new (size_t size, memory::pool_t* pool) noexcept {
+	SPASSERT(pool, "Context pool should be defined for allocation");
+
+	auto ptr = memory::pool::palloc(pool, size);
+	tl_RefAllocData.lastPtr = ptr;
+	return ptr;
+}
+
+void RefAlloc::operator delete(void *ptr) noexcept {
+	if (ptr != tl_RefAllocData.lastPtr) {
+		AllocBaseType::operator delete(ptr);
+	}
+	tl_RefAllocData.lastPtr = nullptr;
+	tl_RefAllocData.clear();
+}
+
+RefAlloc::~RefAlloc() {
+	if ((_referenceCount.load() & PoolAllocBit) != 0) {
+		tl_RefAllocData.lastPtr = this;
+	}
+}
+
+RefAlloc::RefAlloc() noexcept {
+	if (tl_RefAllocData.lastPtr == this) {
+		_referenceCount.fetch_or(PoolAllocBit);
+	}
+	tl_RefAllocData.lastPtr = nullptr;
+}
+
+void RefAlloc::destroySelfContained(memory::pool_t *pool) {
+	tl_RefAllocData.delayedPools.emplace_front(pool);
+}
+
+void RefAlloc::destroySelfContained(memory::allocator_t *alloc) {
+	tl_RefAllocData.delayedAllocs.emplace_front(alloc);
+}
+
+}
+
 namespace STAPPLER_VERSIONIZED stappler::backtrace {
 
 static StringView filepath_lastComponent(StringView path) {
@@ -237,14 +298,13 @@ struct BackraceInfo {
 	std::vector<std::string> backtrace;
 };
 
-static std::map<const RefBase<memory::StandartInterface> *, std::map<uint64_t, BackraceInfo>> s_retainStdMap;
-static std::map<const RefBase<memory::PoolInterface> *, std::map<uint64_t, BackraceInfo>> s_retainPoolMap;
+static std::map<const Ref *, std::map<uint64_t, BackraceInfo>> s_retainMap;
 
 uint64_t getNextRefId() {
 	return s_refId.fetch_add(1);
 }
 
-uint64_t retainBacktrace(const RefBase<memory::StandartInterface> *ptr) {
+uint64_t retainBacktrace(const Ref *ptr) {
 	auto id = getNextRefId();
 	std::vector<std::string> bt;
 	getBacktrace(0, [&] (StringView str) {
@@ -252,9 +312,9 @@ uint64_t retainBacktrace(const RefBase<memory::StandartInterface> *ptr) {
 	});
 	s_mutex.lock();
 
-	auto it = s_retainStdMap.find(ptr);
-	if (it == s_retainStdMap.end()) {
-		it = s_retainStdMap.emplace(ptr, std::map<uint64_t, BackraceInfo>()).first;
+	auto it = s_retainMap.find(ptr);
+	if (it == s_retainMap.end()) {
+		it = s_retainMap.emplace(ptr, std::map<uint64_t, BackraceInfo>()).first;
 	}
 
 	auto iit = it->second.find(id);
@@ -266,33 +326,33 @@ uint64_t retainBacktrace(const RefBase<memory::StandartInterface> *ptr) {
 	return id;
 }
 
-void releaseBacktrace(const RefBase<memory::StandartInterface> *ptr, uint64_t id) {
+void releaseBacktrace(const Ref *ptr, uint64_t id) {
 	if (!id) {
 		return;
 	}
 
 	s_mutex.lock();
 
-	auto it = s_retainStdMap.find(ptr);
-	if (it != s_retainStdMap.end()) {
+	auto it = s_retainMap.find(ptr);
+	if (it != s_retainMap.end()) {
 		auto iit = it->second.find(id);
 		if (iit != it->second.end()) {
 			it->second.erase(iit);
 		}
 		if (it->second.size() == 0) {
-			s_retainStdMap.erase(it);
+			s_retainMap.erase(it);
 		}
 	}
 
 	s_mutex.unlock();
 }
 
-void foreachBacktrace(const RefBase<memory::StandartInterface> *ptr,
+void foreachBacktrace(const Ref *ptr,
 		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &cb) {
 	s_mutex.lock();
 
-	auto it = s_retainStdMap.find(ptr);
-	if (it != s_retainStdMap.end()) {
+	auto it = s_retainMap.find(ptr);
+	if (it != s_retainMap.end()) {
 		for (auto &iit : it->second) {
 			cb(iit.first, iit.second.t, iit.second.backtrace);
 		}
@@ -301,62 +361,30 @@ void foreachBacktrace(const RefBase<memory::StandartInterface> *ptr,
 	s_mutex.unlock();
 }
 
-uint64_t retainBacktrace(const RefBase<memory::PoolInterface> *ptr) {
-	auto id = getNextRefId();
-	std::vector<std::string> bt;
-	getBacktrace(0, [&] (StringView str) {
-		bt.emplace_back(str.str<memory::StandartInterface>());
-	});
-	s_mutex.lock();
+#if SP_REF_DEBUG
 
-	auto it = s_retainPoolMap.find(ptr);
-	if (it == s_retainPoolMap.end()) {
-		it = s_retainPoolMap.emplace(ptr, std::map<uint64_t, BackraceInfo>()).first;
+uint64_t Ref::retain() {
+	incrementReferenceCount();
+	if (isRetainTrackerEnabled()) {
+		return memleak::retainBacktrace(this);
 	}
-
-	auto iit = it->second.find(id);
-	if (iit == it->second.end()) {
-		it->second.emplace(id, BackraceInfo{Time::now(), move(bt)});
-	}
-
-	s_mutex.unlock();
-	return id;
+	return 0;
 }
 
-void releaseBacktrace(const RefBase<memory::PoolInterface> *ptr, uint64_t id) {
-	if (!id) {
-		return;
+void Ref::release(uint64_t v) {
+	if (isRetainTrackerEnabled()) {
+		memleak::releaseBacktrace(this, v);
 	}
-
-	s_mutex.lock();
-
-	auto it = s_retainPoolMap.find(ptr);
-	if (it != s_retainPoolMap.end()) {
-		auto iit = it->second.find(id);
-		if (iit != it->second.end()) {
-			it->second.erase(iit);
-		}
-		if (it->second.size() == 0) {
-			s_retainPoolMap.erase(it);
-		}
+	if (decrementReferenceCount()) {
+		delete this;
 	}
-
-	s_mutex.unlock();
 }
 
-void foreachBacktrace(const RefBase<memory::PoolInterface> *ptr,
-		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &cb) {
-	s_mutex.lock();
-
-	auto it = s_retainPoolMap.find(ptr);
-	if (it != s_retainPoolMap.end()) {
-		for (auto &iit : it->second) {
-			cb(iit.first, iit.second.t, iit.second.backtrace);
-		}
-	}
-
-	s_mutex.unlock();
+void Ref::foreachBacktrace(const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &cb) const {
+	memleak::foreachBacktrace(this, cb);
 }
+
+#endif
 
 }
 

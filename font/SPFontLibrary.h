@@ -29,7 +29,7 @@ namespace STAPPLER_VERSIONIZED stappler::font {
 
 class FontLibrary;
 
-class SP_PUBLIC FontFaceObjectHandle : public RefBase<memory::StandartInterface>, public InterfaceObject<memory::StandartInterface> {
+class SP_PUBLIC FontFaceObjectHandle : public Ref, public InterfaceObject<memory::StandartInterface> {
 public:
 	virtual ~FontFaceObjectHandle();
 
@@ -45,7 +45,7 @@ protected:
 	Function<void(const FontFaceObjectHandle *)> _onDestroy;
 };
 
-class SP_PUBLIC FontLibrary : public RefBase<memory::StandartInterface>, public InterfaceObject<memory::StandartInterface> {
+class SP_PUBLIC FontLibrary : public Ref, public InterfaceObject<memory::StandartInterface> {
 public:
 	enum class DefaultFontName {
 		None,

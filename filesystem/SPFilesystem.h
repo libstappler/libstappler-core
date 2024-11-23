@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SPIO.h"
 #include "SPTime.h"
 #include "SPFilepath.h"
+#include "SPLog.h"
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
@@ -186,6 +187,14 @@ SP_PUBLIC auto cachesPath(StringView path = StringView(), bool relative = false)
 template <typename Interface>
 SP_PUBLIC auto cachesPathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
 
+// returns path, from which loadable resource can be read (from application bundle or dedicated resource directory)
+template <typename Interface>
+SP_PUBLIC auto loadableResourcePath(StringView path) -> typename Interface::StringType;
+
+template <typename Interface>
+SP_PUBLIC auto loadableResourcePath(FilePath path) -> typename Interface::StringType;
+
+
 // write data into file on path
 SP_PUBLIC bool write(StringView path, const uint8_t *data, size_t len);
 
@@ -235,7 +244,8 @@ SP_PUBLIC StringView detectMimeType(StringView path);
 
 }
 
-
+// *::platform::* functions handles some FS actions in platform-specific way
+// (like inside Android apk or MacOS app bundle)
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 #if ANDROID
@@ -272,10 +282,11 @@ SP_PUBLIC bool _ftw_b(StringView path, const Callback<bool(StringView path, bool
 
 }
 
-
-// functions to access native filesystem directly
+// *::native::* functions (in contrast with ::platform::) works with native platform filesystem directly
+// (so, not in bundle or archive)
+//
 // libstappler uses posix path scheme, it should be transformed when transferred from/to other apps/libraries
-// no transformation required within libstappler itself
+// No transformation required within libstappler itself
 namespace STAPPLER_VERSIONIZED stappler::filesystem::native {
 
 // C:\dirname\filename -> /c/dirname/filename
@@ -399,6 +410,54 @@ SP_PUBLIC inline auto currentDir(StringView path, bool relative) -> typename Int
 		}
 	}
 	return typename Interface::StringType();
+}
+
+template <typename Interface>
+SP_PUBLIC inline auto loadableResourcePath(StringView path) -> typename Interface::StringType {
+	if (filepath::isAbsolute(path)) {
+		// absolute path handled by native functions
+		if (filesystem::native::access_fn(path, Access::Exists)) {
+			return path.str<Interface>();
+		}
+	} else if (filepath::isBundled(path) && filesystem::platform::_exists(path)) {
+		// path forced to be bundled via %PLATFORM% prefix
+		return path.str<Interface>();
+	} else if (!filepath::isAboveRoot(path)) {
+		if (filesystem::platform::_exists(path)) {
+			// path can be found within bundle
+			return path.str<Interface>();
+		} else {
+			typename Interface::StringType npath;
+
+			// Try application-bin-relative
+			// On windows desktop apps it conventionally like app bundle
+			npath = filepath::merge<Interface>(filesystem::platform::_getApplicationPath<Interface>(), path);
+			if (filesystem::exists(npath)) {
+				return npath;
+			}
+
+			// Try writable path
+			npath = filesystem::writablePathReadOnly<Interface>(path);
+			if (filesystem::exists(npath)) {
+				return npath;
+			}
+
+			// Try current-dir relative
+			npath = filesystem::currentDir<Interface>(path);
+			if (filesystem::exists(npath)) {
+				return npath;
+			}
+		}
+	}
+
+	log::warn("filesystem", "No path found for resource: ", path);
+	// not a loadable resource path
+	return typename Interface::StringType();
+}
+
+template <typename Interface>
+SP_PUBLIC auto loadableResourcePath(FilePath path) -> typename Interface::StringType {
+	return loadableResourcePath<Interface>(path.get());
 }
 
 template <typename Interface>

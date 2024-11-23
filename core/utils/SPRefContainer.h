@@ -28,10 +28,8 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-template <typename Item>
+template <typename Item, typename Interface>
 struct RefContainer {
-	using Interface = typename Item::InterfaceType;
-
 	template <typename T>
 	using Vector = typename Interface::template VectorType<T>;
 
@@ -66,8 +64,8 @@ struct RefContainer {
 	size_t size() const;
 };
 
-template <typename Item>
-RefContainer<Item>::~RefContainer() {
+template <typename Item, typename Interface>
+RefContainer<Item, Interface>::~RefContainer() {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
@@ -85,11 +83,11 @@ RefContainer<Item>::~RefContainer() {
 	}
 }
 
-template <typename Item>
-RefContainer<Item>::RefContainer() { }
+template <typename Item, typename Interface>
+RefContainer<Item, Interface>::RefContainer() { }
 
-template <typename Item>
-auto RefContainer<Item>::getItemByTag(uint32_t tag) const -> Item * {
+template <typename Item, typename Interface>
+auto RefContainer<Item, Interface>::getItemByTag(uint32_t tag) const -> Item * {
 	Item *ret = nullptr;
 	foreach([&] (Item *item) {
 		if (item->getTag() == tag) {
@@ -101,8 +99,8 @@ auto RefContainer<Item>::getItemByTag(uint32_t tag) const -> Item * {
 	return ret;
 }
 
-template <typename Item>
-auto RefContainer<Item>::addItem(Item *item) -> Item * {
+template <typename Item, typename Interface>
+auto RefContainer<Item, Interface>::addItem(Item *item) -> Item * {
 	if (_nitems < ReserveItems) {
 		auto target = _container.data() + sizeof(Item *) * _nitems;
 		item->retain();
@@ -128,8 +126,8 @@ auto RefContainer<Item>::addItem(Item *item) -> Item * {
 	return item;
 }
 
-template <typename Item>
-void RefContainer<Item>::removeItem(Item *item) {
+template <typename Item, typename Interface>
+void RefContainer<Item, Interface>::removeItem(Item *item) {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
@@ -153,8 +151,8 @@ void RefContainer<Item>::removeItem(Item *item) {
 	}
 }
 
-template <typename Item>
-bool RefContainer<Item>::invalidateItemByTag(uint32_t tag) {
+template <typename Item, typename Interface>
+bool RefContainer<Item, Interface>::invalidateItemByTag(uint32_t tag) {
 	bool ret = false;
 	foreach([&] (Item *item) {
 		if (item->getTag() == tag) {
@@ -167,8 +165,8 @@ bool RefContainer<Item>::invalidateItemByTag(uint32_t tag) {
 	return ret;
 }
 
-template <typename Item>
-void RefContainer<Item>::invalidateAllItemsByTag(uint32_t tag) {
+template <typename Item, typename Interface>
+void RefContainer<Item, Interface>::invalidateAllItemsByTag(uint32_t tag) {
 	foreach([&] (Item *item) {
 		if (item->getTag() == tag) {
 			item->invalidate();
@@ -177,8 +175,8 @@ void RefContainer<Item>::invalidateAllItemsByTag(uint32_t tag) {
 	});
 }
 
-template <typename Item>
-bool RefContainer<Item>::removeItemByTag(uint32_t tag) {
+template <typename Item, typename Interface>
+bool RefContainer<Item, Interface>::removeItemByTag(uint32_t tag) {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
@@ -218,8 +216,8 @@ bool RefContainer<Item>::removeItemByTag(uint32_t tag) {
 #pragma clang diagnostic ignored "-Wunused-result"
 #endif
 
-template <typename Item>
-void RefContainer<Item>::removeAllItemsByTag(uint32_t tag) {
+template <typename Item, typename Interface>
+void RefContainer<Item, Interface>::removeAllItemsByTag(uint32_t tag) {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
@@ -247,8 +245,8 @@ void RefContainer<Item>::removeAllItemsByTag(uint32_t tag) {
 	}
 }
 
-template <typename Item>
-bool RefContainer<Item>::cleanup() {
+template <typename Item, typename Interface>
+bool RefContainer<Item, Interface>::cleanup() {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
@@ -280,9 +278,9 @@ bool RefContainer<Item>::cleanup() {
 #pragma clang diagnostic pop
 #endif
 
-template <typename Item>
+template <typename Item, typename Interface>
 template <typename Callback>
-void RefContainer<Item>::foreach(const Callback &cb) const {
+void RefContainer<Item, Interface>::foreach(const Callback &cb) const {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
@@ -303,8 +301,8 @@ void RefContainer<Item>::foreach(const Callback &cb) const {
 }
 
 
-template <typename Item>
-void RefContainer<Item>::clear() {
+template <typename Item, typename Interface>
+void RefContainer<Item, Interface>::clear() {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
@@ -323,8 +321,8 @@ void RefContainer<Item>::clear() {
 	_nitems = 0;
 }
 
-template <typename Item>
-bool RefContainer<Item>::empty() const {
+template <typename Item, typename Interface>
+bool RefContainer<Item, Interface>::empty() const {
 	if (_nitems <= ReserveItems) {
 		return _nitems == 0;
 	} else {
@@ -333,8 +331,8 @@ bool RefContainer<Item>::empty() const {
 	}
 }
 
-template <typename Item>
-size_t RefContainer<Item>::size() const {
+template <typename Item, typename Interface>
+size_t RefContainer<Item, Interface>::size() const {
 	if (_nitems <= ReserveItems) {
 		return _nitems;
 	} else {

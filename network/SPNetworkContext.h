@@ -51,7 +51,7 @@ namespace STAPPLER_VERSIONIZED stappler::network {
 
 template <typename Interface>
 struct SP_PUBLIC Context {
-	Rc<RefBase<Interface>> userdata;
+	Rc<Ref> userdata;
 	CURL *curl = nullptr;
 	CURLSH *share = nullptr;
 	Handle<Interface> *origHandle = nullptr;

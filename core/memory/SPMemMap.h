@@ -59,14 +59,15 @@ public:
 
 	template<class InputIterator>
 	map(InputIterator first, InputIterator last,
-			const Comp& comp = Comp(),  const allocator_type& alloc = allocator_type())
+			const Comp& comp = Comp(),  const allocator_type& alloc = allocator_type()) noexcept
 	: _tree(comp, alloc) {
 		for (auto it = first; it != last; it ++) {
 			do_insert(*it);
 		}
 	}
 	template< class InputIterator >
-	map( InputIterator first, InputIterator last, const allocator_type& alloc ) : _tree(key_compare(), alloc) {
+	map( InputIterator first, InputIterator last, const allocator_type& alloc ) noexcept
+	: _tree(key_compare(), alloc) {
 		for (auto it = first; it != last; it ++) {
 			do_insert(*it);
 		}

@@ -30,14 +30,12 @@ namespace STAPPLER_VERSIONIZED stappler::thread {
 
 class Worker;
 
-class SP_PUBLIC TaskQueue : public RefBase<memory::StandartInterface> {
+class SP_PUBLIC TaskQueue : public Ref {
 public:
-	using Ref = RefBase<memory::StandartInterface>;
+	using Ref = Ref;
 	using TaskMap = std::map<uint32_t, std::vector<Rc<Task>>, std::less<void>>;
 
 	struct WorkerContext;
-
-	static const TaskQueue *getOwner();
 
 	TaskQueue(StringView name = StringView(), std::function<void()> &&wakeup = std::function<void()>());
 	~TaskQueue();

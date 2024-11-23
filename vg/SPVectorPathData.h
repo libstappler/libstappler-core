@@ -62,7 +62,7 @@ struct SP_PUBLIC PathParams {
 	Mat4 transform;
 	Color4B fillColor = Color4B(255, 255, 255, 255);
 	Color4B strokeColor = Color4B(255, 255, 255, 255);
-	DrawStyle style = DrawStyle::Fill;
+	DrawFlags style = DrawFlags::Fill;
 	float strokeWidth = 1.0f;
 
 	Winding winding = Winding::NonZero;
@@ -81,6 +81,8 @@ struct SP_PUBLIC PathData : Interface::AllocBaseType {
 
 	Vector<CommandData> points;
 	Vector<Command> commands;
+	Vector<Vec2> uv;
+
 	PathParams params;
 
 	PathData() = default;
@@ -104,6 +106,7 @@ struct SP_PUBLIC PathData : Interface::AllocBaseType {
 struct SP_PUBLIC PathWriter {
 	VectorAdapter<CommandData> points;
 	VectorAdapter<Command> commands;
+	VectorAdapter<Vec2> uvPoints;
 
 	PathWriter(PathData<mem_std::Interface> &);
 	PathWriter(PathData<mem_pool::Interface> &);
@@ -126,18 +129,22 @@ struct SP_PUBLIC PathWriter {
 	bool readFromFile(StringView);
 	bool readFromBytes(BytesView);
 
-	PathWriter &moveTo(float x, float y);
-	PathWriter &moveTo(const Vec2 &point);
-	PathWriter &lineTo(float x, float y);
-	PathWriter &lineTo(const Vec2 &point);
-	PathWriter &quadTo(float x1, float y1, float x2, float y2);
-	PathWriter &quadTo(const Vec2& p1, const Vec2& p2);
-	PathWriter &cubicTo(float x1, float y1, float x2, float y2, float x3, float y3);
-	PathWriter &cubicTo(const Vec2& p1, const Vec2& p2, const Vec2& p3);
+	PathWriter &moveTo(float x, float y, float u = nan(), float v = nan());
+	PathWriter &moveTo(const Vec2 &point, const Vec2 &uv = Vec2(nan(), nan()));
 
-	PathWriter &arcTo(float rx, float ry, float rotation, bool largeFlag, bool sweepFlag, float x, float y);
-	PathWriter &arcTo(const Vec2 & r, float rotation, bool largeFlag, bool sweepFlag, const Vec2 &target);
+	PathWriter &lineTo(float x, float y, float u = nan(), float v = nan());
+	PathWriter &lineTo(const Vec2 &point, const Vec2 &uv = Vec2(nan(), nan()));
+
+	PathWriter &quadTo(float x1, float y1, float x2, float y2, float u = nan(), float v = nan());
+	PathWriter &quadTo(const Vec2& p1, const Vec2& p2, const Vec2 &uv = Vec2(nan(), nan()));
+
+	PathWriter &cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, float u = nan(), float v = nan());
+	PathWriter &cubicTo(const Vec2& p1, const Vec2& p2, const Vec2& p3, const Vec2 &uv = Vec2(nan(), nan()));
+
+	PathWriter &arcTo(float rx, float ry, float rotation, bool largeFlag, bool sweepFlag, float x, float y, float u = nan(), float v = nan());
+	PathWriter &arcTo(const Vec2 & r, float rotation, bool largeFlag, bool sweepFlag, const Vec2 &target, const Vec2 &uv = Vec2(nan(), nan()));
 	PathWriter &closePath();
+
 	PathWriter &addRect(const Rect& rect);
 	PathWriter &addRect(const Rect& rect, float rx, float ry);
 	PathWriter &addRect(float x, float y, float width, float height);

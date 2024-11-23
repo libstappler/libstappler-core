@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-class SP_PUBLIC NamedRef : public RefBase<memory::StandartInterface> {
+class SP_PUBLIC NamedRef : public Ref {
 public:
 	virtual ~NamedRef() { }
 	virtual StringView getName() const = 0;

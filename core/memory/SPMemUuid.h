@@ -36,47 +36,47 @@ struct SP_PUBLIC uuid : AllocPool {
 
 	using uuid_t = std::array<uint8_t, 16>;
 
-	static bool parse(uuid_t &, const char *);
+	static bool parse(uuid_t &, StringView str);
 	static void format(char *, const uuid_t &);
 	static uuid generate();
 
-	uuid() {
+	uuid() noexcept {
 		memset(_uuid.data(), 0, 16);
 	}
 
-	uuid(StringView str) {
-		parse(_uuid, str.data());
+	uuid(StringView str) noexcept {
+		parse(_uuid, str);
 	}
 
-	uuid(BytesView b) {
+	uuid(BytesView b) noexcept {
 		if (b.size() == 16) {
 			memcpy(_uuid.data(), b.data(), 16);
 		}
 	}
 
-	uuid(const uuid_t &u) : _uuid(u) { }
-	uuid(const uuid &u) : _uuid(u._uuid) { }
+	uuid(const uuid_t &u) noexcept : _uuid(u) { }
+	uuid(const uuid &u) noexcept : _uuid(u._uuid) { }
 
-	uuid &operator= (const uuid &u) { _uuid = u._uuid; return *this; }
+	uuid &operator= (const uuid &u) noexcept { _uuid = u._uuid; return *this; }
 
-	uuid &operator= (const memory::string &str) {
+	uuid &operator= (const memory::string &str) noexcept {
 		parse(_uuid, str.data());
 		return *this;
 	}
 
-	uuid &operator= (const std::string &str) {
+	uuid &operator= (const std::string &str) noexcept {
 		parse(_uuid, str.data());
 		return *this;
 	}
 
-	uuid &operator= (const memory::vector<uint8_t> &b) {
+	uuid &operator= (const memory::vector<uint8_t> &b) noexcept {
 		if (b.size() == 16) {
 			memcpy(_uuid.data(), b.data(), 16);
 		}
 		return *this;
 	}
 
-	uuid &operator= (const std::vector<uint8_t> &b) {
+	uuid &operator= (const std::vector<uint8_t> &b) noexcept {
 		if (b.size() == 16) {
 			memcpy(_uuid.data(), b.data(), 16);
 		}
@@ -105,6 +105,30 @@ struct SP_PUBLIC uuid : AllocPool {
 
 	const uint8_t *data() const { return _uuid.data(); }
 	size_t size() const { return 16; }
+
+	bool operator==(const uuid &other) const {
+		return ::memcmp(_uuid.data(), other._uuid.data(), _uuid.size()) == 0;
+	}
+
+	bool operator!=(const uuid &other) const {
+		return ::memcmp(_uuid.data(), other._uuid.data(), _uuid.size()) != 0;
+	}
+
+	bool operator<(const uuid &other) const {
+		return ::memcmp(_uuid.data(), other._uuid.data(), _uuid.size()) < 0;
+	}
+
+	bool operator<=(const uuid &other) const {
+		return ::memcmp(_uuid.data(), other._uuid.data(), _uuid.size()) <= 0;
+	}
+
+	bool operator>(const uuid &other) const {
+		return ::memcmp(_uuid.data(), other._uuid.data(), _uuid.size()) > 0;
+	}
+
+	bool operator>=(const uuid &other) const {
+		return ::memcmp(_uuid.data(), other._uuid.data(), _uuid.size()) >= 0;
+	}
 
 	uuid_t _uuid;
 };

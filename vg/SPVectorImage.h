@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::vg {
 
 class VectorImage;
 
-class SP_PUBLIC VectorPathRef : public RefBase<Interface> {
+class SP_PUBLIC VectorPathRef : public Ref {
 public:
 	using String = Interface::StringType;
 
@@ -64,8 +64,8 @@ public:
 	VectorPathRef &setWindingRule(vg::Winding);
 	vg::Winding getWindingRule() const;
 
-	VectorPathRef & setStyle(vg::DrawStyle s);
-	vg::DrawStyle getStyle() const;
+	VectorPathRef & setStyle(vg::DrawFlags s);
+	vg::DrawFlags getStyle() const;
 
 	VectorPathRef & setTransform(const Mat4 &);
 	VectorPathRef & applyTransform(const Mat4 &);
@@ -100,7 +100,7 @@ protected:
 	VectorImage *_image;
 };
 
-class SP_PUBLIC VectorImageData : public RefBase<Interface> {
+class SP_PUBLIC VectorImageData : public Ref {
 public:
 	using String = Interface::StringType;
 
@@ -149,7 +149,7 @@ protected:
 	VectorImage *_image = nullptr;
 };
 
-class SP_PUBLIC VectorImage : public RefBase<Interface> {
+class SP_PUBLIC VectorImage : public Ref {
 public:
 	using String = Interface::StringType;
 

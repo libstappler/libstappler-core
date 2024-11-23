@@ -370,15 +370,15 @@ struct ValueWrapper {
 	static constexpr ValueWrapper<T, Flag> epsilon() { return ValueWrapper<T, Flag>(NumericLimits<T>::epsilon()); }
 	static constexpr ValueWrapper<T, Flag> zero() { return ValueWrapper<T, Flag>(0); }
 
-	inline constexpr ValueWrapper() = default;
-	inline explicit constexpr ValueWrapper(const T &val) : value(val) { }
-	inline explicit constexpr ValueWrapper(T &&val) : value(std::move(val)) { }
+	inline constexpr ValueWrapper() noexcept = default;
+	inline explicit constexpr ValueWrapper(const T &val) noexcept : value(val) { }
+	inline explicit constexpr ValueWrapper(T &&val) noexcept : value(std::move(val)) { }
 
-	inline ValueWrapper(const ValueWrapper<T, Flag> &other) = default;
-	inline ValueWrapper<T, Flag> &operator=(const ValueWrapper<T, Flag> &other) = default;
+	inline ValueWrapper(const ValueWrapper<T, Flag> &other) noexcept = default;
+	inline ValueWrapper<T, Flag> &operator=(const ValueWrapper<T, Flag> &other) noexcept = default;
 
-	inline ValueWrapper(ValueWrapper<T, Flag> &&other) = default;
-	inline ValueWrapper<T, Flag> &operator=(ValueWrapper<T, Flag> &&other) = default;
+	inline ValueWrapper(ValueWrapper<T, Flag> &&other) noexcept = default;
+	inline ValueWrapper<T, Flag> &operator=(ValueWrapper<T, Flag> &&other) noexcept = default;
 
 	inline void set(const T &val) { value = val; }
 	inline void set(T &&val) { value = std::move(val); }
@@ -447,14 +447,14 @@ struct Result {
 
 	static Result<T> error() { return Result(); }
 
-	Result(T && t) : status(Ok), result(move(t)) { }
-	Result(const T & t) : status(Ok), result(t) { }
+	Result(T && t) noexcept : status(Ok), result(move(t)) { }
+	Result(const T & t) noexcept : status(Ok), result(t) { }
 
-	Result() = default;
-	Result(const Result &) = default;
-	Result(Result &&) = default;
-	Result& operator=(const Result &) = default;
-	Result& operator=(Result &&) = default;
+	Result() noexcept = default;
+	Result(const Result &) noexcept = default;
+	Result(Result &&) noexcept = default;
+	Result& operator=(const Result &) noexcept = default;
+	Result& operator=(Result &&) noexcept = default;
 
 	bool valid() const { return status == Ok; }
 

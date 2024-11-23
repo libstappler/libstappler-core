@@ -76,14 +76,15 @@ public:
 
 	template<class InputIterator>
 	dict(InputIterator first, InputIterator last,
-			const Comp& comp = Comp(),  const allocator_type& alloc = allocator_type())
+			const Comp& comp = Comp(),  const allocator_type& alloc = allocator_type()) noexcept
 	: _data(alloc), _comp(comp) {
 		for (auto it = first; it != last; it ++) {
 			do_insert(*it);
 		}
 	}
 	template< class InputIterator >
-	dict( InputIterator first, InputIterator last, const allocator_type& alloc ) : _data(alloc), _comp(key_compare()) {
+	dict( InputIterator first, InputIterator last, const allocator_type& alloc ) noexcept
+	: _data(alloc), _comp(key_compare()) {
 		for (auto it = first; it != last; it ++) {
 			do_insert(*it);
 		}

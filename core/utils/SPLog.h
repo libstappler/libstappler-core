@@ -68,7 +68,7 @@ struct SP_PUBLIC CustomLog {
 	CustomLog& operator=(CustomLog &&);
 
 	log_fn fn;
-	Rc<RefBase<memory::StandartInterface>> manager;
+	Rc<Ref> manager;
 };
 
 // log is suppressed if bit is set

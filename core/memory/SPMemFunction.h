@@ -68,6 +68,10 @@ public:
 	}
 
 	function & operator = (const function & other) noexcept {
+		if (&other == this) {
+			return *this;
+		}
+
 		clear();
 		mCallback = other.mCallback;
 		if (mCallback) {
@@ -88,6 +92,10 @@ public:
 	}
 
 	function & operator = (function && other) noexcept {
+		if (&other == this) {
+			return *this;
+		}
+
 		clear();
 		mCallback = other.mCallback;
 		if (mCallback) {

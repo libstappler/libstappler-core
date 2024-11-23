@@ -202,7 +202,7 @@ VectorPath & VectorPath::setStyle(DrawStyle s) {
 	return *this;
 }
 
-vg::DrawStyle VectorPath::getStyle() const {
+vg::DrawFlags VectorPath::getStyle() const {
 	return _data.params.style;
 }
 

@@ -34,7 +34,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
-struct SP_PUBLIC PoolInterface : public memory::AllocPool {
+struct SP_PUBLIC PoolInterface final {
 	using AllocBaseType = memory::AllocPool;
 	using StringType = memory::string;
 	using WideStringType = memory::u16string;
@@ -59,8 +59,17 @@ struct SP_PUBLIC PoolInterface : public memory::AllocPool {
 	static constexpr bool usesMemoryPool() { return true; }
 };
 
-struct SP_PUBLIC StandartInterface : public memory::AllocBase {
-	using AllocBaseType = memory::AllocBase;
+struct SP_PUBLIC StandartInterface final {
+	struct SP_PUBLIC AllocBaseType {
+		static void * operator new (size_t size) noexcept { return ::operator new(size); }
+		static void * operator new (size_t size, const std::nothrow_t& tag) noexcept { return ::operator new(size); }
+		static void * operator new (size_t size, void* ptr) noexcept { return ::operator new(size, ptr); }
+
+		static void * operator new (size_t size, memory::pool_t* ptr) noexcept = delete;
+
+		static void operator delete(void *ptr) noexcept { return ::operator delete(ptr); }
+	};
+
 	using StringType = std::string;
 	using WideStringType = std::u16string;
 	using BytesType = std::vector<uint8_t>;

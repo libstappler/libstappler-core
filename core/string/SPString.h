@@ -146,7 +146,7 @@ void apply_toupper_c(Container &c) {
 }
 
 template <typename Interface>
-struct StringTraits : public Interface {
+struct StringTraits final {
 	using String = typename Interface::StringType;
 	using WideString = typename Interface::WideStringType;
 	using StringStream = typename Interface::StringStreamType;

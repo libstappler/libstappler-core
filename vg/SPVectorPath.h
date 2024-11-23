@@ -38,9 +38,9 @@ struct PathXRef {
 	Color4F color = Color4F::WHITE;
 };
 
-class SP_PUBLIC VectorPath : public RefBase<Interface> {
+class SP_PUBLIC VectorPath : public Ref {
 public:
-	using DrawStyle = geom::DrawStyle;
+	using DrawStyle = geom::DrawFlags;
 	using Winding = geom::Winding;
 	using LineCup = geom::LineCup;
 	using LineJoin = geom::LineJoin;

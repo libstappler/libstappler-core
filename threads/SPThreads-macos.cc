@@ -40,9 +40,9 @@ using NSThread_currentThread_type = id(*)(Class, SEL);
 using NSString_stringWithUTF8String_type = id(*)(Class, SEL, const char *);
 using NSThread_setName_type = id(*)(id, SEL, id);
 
-static void ThreadCallbacks_init(const ThreadCallbacks &, void *tm);
-static bool ThreadCallbacks_worker(const ThreadCallbacks &, void *tm);
-static void ThreadCallbacks_dispose(const ThreadCallbacks &, void *tm);
+static void ThreadCallbacks_init(const ThreadCallbacks &, ThreadInterface *tm);
+static bool ThreadCallbacks_worker(const ThreadCallbacks &, ThreadInterface *tm);
+static void ThreadCallbacks_dispose(const ThreadCallbacks &, ThreadInterface *tm);
 
 template <typename Callback>
 static void ThreadCallbacks_performInAutorelease(Callback &&cb) {
@@ -51,14 +51,14 @@ static void ThreadCallbacks_performInAutorelease(Callback &&cb) {
 	((AutoreleasePool_drain_type)&objc_msgSend)(pool, sel_getUid("drain"));
 }
 
-SP_LOCAL void _setThreadName(StringView name) {
+SP_LOCAL static void _setThreadName(StringView name) {
 	id thread = ((NSThread_currentThread_type)&objc_msgSend)(objc_getClass("NSThread"), sel_getUid("currentThread"));
 	id string = ((NSString_stringWithUTF8String_type)&objc_msgSend)(objc_getClass("NSString"), sel_getUid("stringWithUTF8String:"), name.terminated() ? name.data() : name.str<memory::StandartInterface>().data());
 
 	((NSThread_setName_type)&objc_msgSend)(thread, sel_getUid("setName:"), string);
 }
 
-SP_LOCAL void _workerThread(const ThreadCallbacks &cb, void *tm) {
+SP_LOCAL static void _workerThread(const ThreadCallbacks &cb, ThreadInterface *tm) {
 	ThreadCallbacks_performInAutorelease([&] {
 		ThreadCallbacks_init(cb, tm);
 	});

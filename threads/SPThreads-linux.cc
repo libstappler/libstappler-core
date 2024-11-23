@@ -30,15 +30,15 @@ namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadCallbacks;
 
-static void ThreadCallbacks_init(const ThreadCallbacks &, void *tm);
-static bool ThreadCallbacks_worker(const ThreadCallbacks &, void *tm);
-static void ThreadCallbacks_dispose(const ThreadCallbacks &, void *tm);
+static void ThreadCallbacks_init(const ThreadCallbacks &, ThreadInterface *tm);
+static bool ThreadCallbacks_worker(const ThreadCallbacks &, ThreadInterface *tm);
+static void ThreadCallbacks_dispose(const ThreadCallbacks &, ThreadInterface *tm);
 
-SP_LOCAL void _setThreadName(StringView name) {
+static void _setThreadName(StringView name) {
 	pthread_setname_np(pthread_self(), name.data());
 }
 
-SP_LOCAL void _workerThread(const ThreadCallbacks &cb, void *tm) {
+static void _workerThread(const ThreadCallbacks &cb, ThreadInterface *tm) {
 	ThreadCallbacks_init(cb, tm);
     while (ThreadCallbacks_worker(cb, tm)) { }
     ThreadCallbacks_dispose(cb, tm);

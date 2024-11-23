@@ -138,18 +138,20 @@ static uint8_t parse_hexpair(const char *s) {
 	return (uint8_t)result;
 }
 
-bool uuid::parse(uuid_t &d, const char *uuid_str) {
-	int i;
+bool uuid::parse(uuid_t &d, StringView str) {
+	size_t i;
 
-	for (i = 0; i < 36; ++i) {
+	if (str.size() < FormattedLength) {
+		return false;
+	}
+
+	auto uuid_str = str.data();
+
+	for (i = 0; i < FormattedLength; ++i) {
 		char c = uuid_str[i];
 		if (!isxdigit(c) && !(c == '-' && (i == 8 || i == 13 || i == 18 || i == 23))) {
 			return false;
 		}
-	}
-
-	if (uuid_str[36] != '\0') {
-		return false;
 	}
 
 	d[0] = base16::hexToChar(uuid_str[0], uuid_str[1]);
