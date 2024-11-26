@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,12 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPFilesystem.h"
-
-#if WIN32
-#include "SPLog.h"
-#else
-#include <unistd.h>
-#endif
+#include "SPPlatformUnistd.h"
 
 namespace STAPPLER_VERSIONIZED stappler::filepath {
 

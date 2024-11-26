@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,9 @@ THE SOFTWARE.
 **/
 
 #include "SPFilesystem.h"
+#include "SPPlatformUnistd.h"
 
 #ifndef WIN32
-
-#include <sys/time.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <dirent.h>
-#include <utime.h>
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem::native {
 
@@ -123,11 +116,11 @@ bool stat_fn(StringView path, Stat &stat) {
 }
 
 bool touch_fn(StringView path) {
-	return utime(SP_TERMINATED_DATA(path), NULL) == 0;
+	return ::utime(SP_TERMINATED_DATA(path), NULL) == 0;
 }
 
 void ftw_fn(StringView path, const Callback<void(StringView path, bool isFile)> &callback, int depth, bool dirFirst) {
-	auto dp = opendir(SP_TERMINATED_DATA(path));
+	auto dp = ::opendir(SP_TERMINATED_DATA(path));
 	if (dp == NULL) {
 		if (access(SP_TERMINATED_DATA(path), F_OK) != -1) {
 			callback(path, true);
@@ -138,7 +131,7 @@ void ftw_fn(StringView path, const Callback<void(StringView path, bool isFile)> 
 		}
 		if (depth < 0 || depth > 0) {
 			struct dirent *entry;
-			while ((entry = readdir(dp))) {
+			while ((entry = ::readdir(dp))) {
 				if (strcmp(entry->d_name, "..") != 0 && strcmp(entry->d_name, ".") != 0) {
 					auto newPath = filepath::merge<memory::StandartInterface>(path, entry->d_name);
 					ftw_fn(newPath, callback, depth - 1, dirFirst);
@@ -148,11 +141,11 @@ void ftw_fn(StringView path, const Callback<void(StringView path, bool isFile)> 
 		if (!dirFirst) {
 			callback(path, false);
 		}
-		closedir(dp);
+		::closedir(dp);
 	}
 }
 bool ftw_b_fn(StringView path, const Callback<bool(StringView path, bool isFile)> &callback, int depth, bool dirFirst) {
-	auto dp = opendir(SP_TERMINATED_DATA(path));
+	auto dp = ::opendir(SP_TERMINATED_DATA(path));
 	if (dp == NULL) {
 		if (access(SP_TERMINATED_DATA(path), F_OK) != -1) {
 			return callback(path, true);
@@ -160,17 +153,17 @@ bool ftw_b_fn(StringView path, const Callback<bool(StringView path, bool isFile)
 	} else {
 		if (dirFirst) {
 			if (!callback(path, false)) {
-				closedir(dp);
+				::closedir(dp);
 				return false;
 			}
 		}
 		if (depth < 0 || depth > 0) {
 			struct dirent *entry;
-			while ((entry = readdir(dp))) {
+			while ((entry = ::readdir(dp))) {
 				if (strcmp(entry->d_name, "..") != 0 && strcmp(entry->d_name, ".") != 0) {
 					auto newPath = filepath::merge<memory::StandartInterface>(path, entry->d_name);
 					if (!ftw_b_fn(newPath, callback, depth - 1, dirFirst)) {
-						closedir(dp);
+						::closedir(dp);
 						return false;
 					}
 				}
@@ -178,21 +171,21 @@ bool ftw_b_fn(StringView path, const Callback<bool(StringView path, bool isFile)
 		}
 		if (!dirFirst) {
 			if (!callback(path, false)) {
-				closedir(dp);
+				::closedir(dp);
 				return false;
 			}
 		}
-		closedir(dp);
+		::closedir(dp);
 	}
 	return true;
 }
 
 bool rename_fn(StringView source, StringView dest) {
-	return rename(SP_TERMINATED_DATA(source), SP_TERMINATED_DATA(dest)) == 0;
+	return ::rename(SP_TERMINATED_DATA(source), SP_TERMINATED_DATA(dest)) == 0;
 }
 
 FILE *fopen_fn(StringView path, StringView mode) {
-	return fopen(SP_TERMINATED_DATA(path), SP_TERMINATED_DATA(mode));
+	return ::fopen(SP_TERMINATED_DATA(path), SP_TERMINATED_DATA(mode));
 }
 
 bool write_fn(StringView path, const unsigned char *data, size_t len) {

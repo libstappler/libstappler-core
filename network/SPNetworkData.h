@@ -28,7 +28,6 @@ THE SOFTWARE.
 #include "SPTime.h"
 #include "SPCrypto.h"
 #include "SPData.h"
-#include <variant>
 
 namespace STAPPLER_VERSIONIZED stappler::network {
 

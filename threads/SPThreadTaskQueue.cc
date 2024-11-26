@@ -23,7 +23,6 @@ THE SOFTWARE.
 
 #include "SPThreadTaskQueue.h"
 #include "SPThread.h"
-#include <chrono>
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 

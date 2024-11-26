@@ -26,8 +26,6 @@
 #include "SPMemory.h"
 #include "SPRef.h"
 
-#include <typeindex>
-
 #ifdef SP_STATIC_DEPS
 #define WASM_RUNTIME_API_EXTERN
 #endif

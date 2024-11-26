@@ -25,7 +25,6 @@ THE SOFTWARE.
 #define STAPPLER_CORE_UTILS_SPPRIORITYLIST_H_
 
 #include "SPHashTable.h"
-#include <bit>
 
 namespace STAPPLER_VERSIONIZED stappler {
 

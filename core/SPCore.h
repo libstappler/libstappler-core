@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ THE SOFTWARE.
 
 // From C++ standard library:
 #include <type_traits>
+#include <typeindex>
 #include <iterator>
 #include <limits>
 #include <utility>
@@ -52,25 +53,29 @@ THE SOFTWARE.
 #include <fstream>
 #include <map>
 #include <set>
-#include <bit>
-
-#include <istream>
-#include <ostream>
-#include <array>
-#include <iostream>
-#include <istream>
-#include <ostream>
-#include <iomanip>
-#include <mutex>
-#include <atomic>
-#include <deque>
-#include <thread>
-#include <condition_variable>
-#include <initializer_list>
 #include <unordered_map>
 #include <unordered_set>
 #include <bitset>
 #include <forward_list>
+#include <array>
+#include <deque>
+#include <bit>
+#include <bitset>
+
+#include <istream>
+#include <ostream>
+#include <iostream>
+#include <iomanip>
+#include <mutex>
+#include <shared_mutex>
+#include <atomic>
+#include <future>
+#include <thread>
+#include <condition_variable>
+#include <initializer_list>
+#include <optional>
+#include <variant>
+#include <chrono>
 
 // From C standard library:
 #include <stdint.h> // uint32_t, int32_t, etc

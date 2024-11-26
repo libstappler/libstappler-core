@@ -76,8 +76,12 @@ using pid_t = DWORD;
 #define PATH_MAX MAX_PATH
 
 #else
+
+#include <dirent.h>
+#include <utime.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 
 #if LINUX
 #include <sys/mman.h>
