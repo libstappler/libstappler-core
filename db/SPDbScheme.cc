@@ -65,7 +65,7 @@ Scheme::Scheme(const StringView &ns, Options f, uint32_t v)
 Scheme::Scheme(const StringView &name, std::initializer_list<Field> il, Options f, uint32_t v) : Scheme(name, f, v) {
 	for (auto &it : il) {
 		auto fname = it.getName();
-		_fields.emplace(fname.str<Interface>(), std::move(const_cast<Field &>(it)));
+		_fields.emplace(fname.str<Interface>(), sp::move(const_cast<Field &>(it)));
 	}
 
 	updateLimits();
@@ -107,7 +107,7 @@ const Scheme & Scheme::define(std::initializer_list<Field> il) {
 		if (it.isFile()) {
 			_hasFiles = true;
 		}
-		_fields.emplace(fname.str<Interface>(), std::move(const_cast<Field &>(it)));
+		_fields.emplace(fname.str<Interface>(), sp::move(const_cast<Field &>(it)));
 	}
 
 	updateLimits();
@@ -134,7 +134,7 @@ const Scheme & Scheme::define(Vector<Field> &&il) {
 		if (it.isFile()) {
 			_hasFiles = true;
 		}
-		_fields.emplace(fname.str<Interface>(), std::move(const_cast<Field &>(it)));
+		_fields.emplace(fname.str<Interface>(), sp::move(const_cast<Field &>(it)));
 	}
 
 	updateLimits();
@@ -145,7 +145,7 @@ const Scheme & Scheme::define(AccessRole &&role) {
 	if (role.users.count() == 1) {
 		for (size_t i = 0; i < role.users.size(); ++ i) {
 			if (role.users.test(i)) {
-				setAccessRole(AccessRoleId(i), std::move(role));
+				setAccessRole(AccessRoleId(i), sp::move(role));
 				break;
 			}
 		}
@@ -175,12 +175,12 @@ const Scheme & Scheme::define(UniqueConstraintDef &&def) {
 	}
 
 	_unique.emplace_back(StringView(
-			toString(_name, "_", string::tolower<Interface>(def.name), "_unique")).pdup(_unique.get_allocator()), std::move(fields));
+			toString(_name, "_", string::tolower<Interface>(def.name), "_unique")).pdup(_unique.get_allocator()), sp::move(fields));
 	return *this;
 }
 
 const Scheme & Scheme::define(Bytes &&dict) {
-	_compressDict = std::move(dict);
+	_compressDict = sp::move(dict);
 	return *this;
 }
 
@@ -426,7 +426,7 @@ const AccessRole *Scheme::getAccessRole(AccessRoleId id) const {
 
 void Scheme::setAccessRole(AccessRoleId id, AccessRole &&r) {
 	if (stappler::toInt(id) < stappler::toInt(AccessRoleId::Max)) {
-		_roles[stappler::toInt(id)] = new AccessRole(std::move(r));
+		_roles[stappler::toInt(id)] = new AccessRole(sp::move(r));
 		_hasAccessControl = true;
 	}
 }
@@ -507,7 +507,7 @@ Value Scheme::createWithWorker(Worker &w, const Value &data, bool isProtected) c
 			for (auto &it : _views) {
 				updateView(t, ret, it, Vector<uint64_t>());
 			}
-			retVal = std::move(ret);
+			retVal = sp::move(ret);
 			return true;
 		} else {
 			if (patch.isDictionary() || patch.isArray()) {
@@ -736,13 +736,13 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, uint64_t oid, const Field &f,
 	switch (a) {
 	case Action::Get:
 	case Action::Count:
-		return w.transaction().field(a, w, oid, f, std::move(patch));
+		return w.transaction().field(a, w, oid, f, sp::move(patch));
 		break;
 	case Action::Set:
 		if (f.transform(*this, oid, patch)) {
 			Value ret;
 			w.perform([&] (const Transaction &t) -> bool {
-				ret = t.field(a, w, oid, f, std::move(patch));
+				ret = t.field(a, w, oid, f, sp::move(patch));
 				return !ret.isNull();
 			});
 			return ret;
@@ -750,14 +750,14 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, uint64_t oid, const Field &f,
 		break;
 	case Action::Remove:
 		return Value(w.perform([&] (const Transaction &t) -> bool {
-			return t.field(a, w, oid, f, std::move(patch)) ? true : false;
+			return t.field(a, w, oid, f, sp::move(patch)) ? true : false;
 		}));
 		break;
 	case Action::Append:
 		if (f.transform(*this, oid, patch)) {
 			Value ret;
 			w.perform([&] (const Transaction &t) -> bool {
-				ret = t.field(a, w, oid, f, std::move(patch));
+				ret = t.field(a, w, oid, f, sp::move(patch));
 				return !ret.isNull();
 			});
 			return ret;
@@ -771,13 +771,13 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, const Value &obj, const Field
 	switch (a) {
 	case Action::Get:
 	case Action::Count:
-		return w.transaction().field(a, w, obj, f, std::move(patch));
+		return w.transaction().field(a, w, obj, f, sp::move(patch));
 		break;
 	case Action::Set:
 		if (f.transform(*this, obj, patch)) {
 			Value ret;
 			w.perform([&] (const Transaction &t) -> bool {
-				ret = t.field(a, w, obj, f, std::move(patch));
+				ret = t.field(a, w, obj, f, sp::move(patch));
 				return !ret.isNull();
 			});
 			return ret;
@@ -785,14 +785,14 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, const Value &obj, const Field
 		break;
 	case Action::Remove:
 		return Value(w.perform([&] (const Transaction &t) -> bool {
-			return t.field(a, w, obj, f, std::move(patch)).asBool();
+			return t.field(a, w, obj, f, sp::move(patch)).asBool();
 		}));
 		break;
 	case Action::Append:
 		if (f.transform(*this, obj, patch)) {
 			Value ret;
 			w.perform([&] (const Transaction &t) -> bool {
-				ret = t.field(a, w, obj, f, std::move(patch));
+				ret = t.field(a, w, obj, f, sp::move(patch));
 				return !ret.isNull();
 			});
 			return ret;
@@ -811,7 +811,7 @@ Value Scheme::setFileWithWorker(Worker &w, uint64_t oid, const Field &f, InputFi
 		if (d.isInteger()) {
 			patch.setValue(d, f.getName().str<Interface>());
 		} else {
-			patch.setValue(std::move(d));
+			patch.setValue(sp::move(d));
 		}
 		if (patchOrUpdate(w, oid, patch)) {
 			// resolve files
@@ -989,7 +989,7 @@ Value &Scheme::transform(Value &d, TransformAction a) const {
 				d.setInteger(stappler::Time::now().toMicroseconds(), it.first);
 			} else if (field.hasDefault() && !d.hasValue(it.first)) {
 				if (auto def = field.getDefault(d)) {
-					d.setValue(std::move(def), it.first);
+					d.setValue(sp::move(def), it.first);
 				}
 			}
 		} else if ((a == TransformAction::Update || a == TransformAction::ProtectedUpdate || a == TransformAction::Touch)
@@ -1208,7 +1208,7 @@ Value Scheme::createFilePatch(const Transaction &t, const Value &ival, Value &iC
 							patch.setValue(d, f->getName().str<Interface>());
 						} else if (d.isDictionary()) {
 							for (auto & it : d.asDict()) {
-								patch.setValue(std::move(it.second), it.first);
+								patch.setValue(sp::move(it.second), it.first);
 							}
 						}
 					}
@@ -1226,7 +1226,7 @@ Value Scheme::createFilePatch(const Transaction &t, const Value &ival, Value &iC
 							patch.setValue(d, f->getName().str<Interface>());
 						} else if (d.isDictionary()) {
 							for (auto & it : d.asDict()) {
-								patch.setValue(std::move(it.second), it.first);
+								patch.setValue(sp::move(it.second), it.first);
 							}
 						}
 					}
@@ -1250,7 +1250,7 @@ Value Scheme::createFilePatch(const Transaction &t, const Value &ival, Value &iC
 			auto &changeSet = iChangeSet.getValue(i);
 			if (!changeSet.isNull()) {
 				if (auto vl = createPatch(it, changeSet)) {
-					ret.addValue(std::move(vl));
+					ret.addValue(sp::move(vl));
 				}
 			}
 			++ i;

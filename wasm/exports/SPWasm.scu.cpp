@@ -165,7 +165,7 @@ bool Module::init(StringView name, Bytes &&data) {
 
 	_runtime = Runtime::getInstance();
 
-	_data = move(data);
+	_data = sp::move(data);
 
 	auto mod = wasm_runtime_load(const_cast<uint8_t *>(_data.data()), static_cast<uint32_t>(_data.size()), errorBuf, sizeof(errorBuf));
 	if (!mod) {
@@ -377,8 +377,8 @@ uint32_t ModuleInstance::addHandleObject(void *obj, std::type_index &&idx, Funct
 	}
 
 	slot->object = obj;
-	slot->type = move(idx);
-	slot->destructor = move(cb);
+	slot->type = sp::move(idx);
+	slot->destructor = sp::move(cb);
 
 	_objects.emplace(obj, slot->index);
 	return slot->index;

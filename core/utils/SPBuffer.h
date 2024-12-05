@@ -48,7 +48,7 @@ public:
 	}
 	BufferTemplate(BufferTemplate && rhs) {
 		auto size = rhs._ptr - rhs._buffer.data();
-		_buffer = std::move(rhs._buffer);
+		_buffer = sp::move(rhs._buffer);
 		_ptr = (byte_type *)(_buffer.data() + size);
 		_end = (byte_type *)(_buffer.data() + _buffer.size());
 		_input = rhs._input;
@@ -64,7 +64,7 @@ public:
 	}
 	BufferTemplate & operator=(BufferTemplate && rhs) {
 		auto size = rhs._ptr - rhs._buffer.data();
-		_buffer = std::move(rhs._buffer);
+		_buffer = sp::move(rhs._buffer);
 		_ptr = (byte_type *)(_buffer.data() + size);
 		_end = (byte_type *)(_buffer.data() + _buffer.size());
 		_input = rhs._input;

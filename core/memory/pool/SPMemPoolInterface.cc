@@ -809,7 +809,7 @@ bool debug_begin(pool_t *pool) {
 std::map<pool_t *, const char **, std::less<void>> debug_end() {
 	std::map<pool_t *, const char **, std::less<void>> ret;
 	s_poolDebugMutex.lock();
-	ret = std::move(s_poolDebugInfo);
+	ret = sp::move(s_poolDebugInfo);
 	s_poolDebugInfo.clear();
 	s_poolDebugTarget = nullptr;
 	s_poolDebugMutex.unlock();

@@ -55,8 +55,8 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db {
 
 InputFile::InputFile(String &&name, String && type, String && enc, String && orig, size_t s, int64_t id)
-: name(std::move(name)), type(std::move(type)), encoding(std::move(enc))
-, original(std::move(orig)), writeSize(0), headerSize(s), id(id) {
+: name(sp::move(name)), type(sp::move(type)), encoding(sp::move(enc))
+, original(sp::move(orig)), writeSize(0), headerSize(s), id(id) {
 	file = filesystem::File::open_tmp(config::UPLOAD_TMP_FILE_PREFIX, false);
 	path = file.path();
 }

@@ -94,8 +94,8 @@ public:
 		}
 	}
 
-	basic_string (basic_string&& str) noexcept : _mem(std::move(str._mem)) { }
-	basic_string (basic_string&& str, const allocator_type& alloc) noexcept : _mem(std::move(str._mem), alloc) { }
+	basic_string (basic_string&& str) noexcept : _mem(sp::move_unsafe(str._mem)) { }
+	basic_string (basic_string&& str, const allocator_type& alloc) noexcept : _mem(sp::move_unsafe(str._mem), alloc) { }
 
 	basic_string& operator=( const basic_string& str ) noexcept {
 		_mem = str._mem;
@@ -103,7 +103,7 @@ public:
 	}
 
 	basic_string& operator=( basic_string&& str ) noexcept {
-		_mem = std::move(str._mem);
+		_mem = sp::move_unsafe(str._mem);
 		return *this;
 	}
 
@@ -259,7 +259,7 @@ public:
 		return *this;
 	}
 	basic_string& assign (basic_string&& str) noexcept {
-		_mem = std::move(str._mem);
+		_mem = sp::move_unsafe(str._mem);
 		return *this;
 	}
 
@@ -679,37 +679,37 @@ operator+( const basic_string<CharT>& lhs, CharT rhs ) {
 
 template< class CharT > basic_string<CharT>
 operator+( basic_string<CharT>&& lhs, const basic_string<CharT>& rhs ) {
-	return std::move(lhs.append(rhs));
+	return sp::move_unsafe(lhs.append(rhs));
 }
 
 template< class CharT > basic_string<CharT>
 operator+( const basic_string<CharT>& lhs, basic_string<CharT>&& rhs ) {
-	return std::move(rhs.insert(0, lhs));
+	return sp::move_unsafe(rhs.insert(0, lhs));
 }
 
 template< class CharT > basic_string<CharT>
 operator+( basic_string<CharT>&& lhs, basic_string<CharT>&& rhs ) {
-	return std::move(lhs.append(rhs));
+	return sp::move_unsafe(lhs.append(rhs));
 }
 
 template< class CharT > basic_string<CharT>
 operator+(const CharT* lhs, basic_string<CharT>&& rhs ) {
-	return std::move(rhs.insert(0, lhs));
+	return sp::move_unsafe(rhs.insert(0, lhs));
 }
 
 template< class CharT > basic_string<CharT>
 operator+( CharT lhs, basic_string<CharT>&& rhs ) {
-	return std::move(rhs.insert(0, 1, lhs));
+	return sp::move_unsafe(rhs.insert(0, 1, lhs));
 }
 
 template< class CharT > basic_string<CharT>
 operator+( basic_string<CharT>&& lhs, const CharT* rhs ) {
-	return std::move(lhs.append(rhs));
+	return sp::move_unsafe(lhs.append(rhs));
 }
 
 template< class CharT > basic_string<CharT>
 operator+( basic_string<CharT>&& lhs, CharT rhs ) {
-	return std::move(lhs.append(1, rhs));
+	return sp::move_unsafe(lhs.append(1, rhs));
 }
 
 template< class CharT > bool operator== ( const basic_string<CharT>& lhs, const basic_string<CharT>& rhs ) {

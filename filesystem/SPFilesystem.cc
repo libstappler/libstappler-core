@@ -365,25 +365,25 @@ bool mkdir_recursive(StringView ipath, bool appWide) {
 		do {
 			auto testPath = cachesPath<memory::StandartInterface>();
 			if (path.compare(0, std::min(path.size(), testPath.size()), testPath) == 0) {
-				appWideLimit = std::move(testPath);
+				appWideLimit = sp::move(testPath);
 				break;
 			}
 
 			testPath = writablePath<memory::StandartInterface>();
 			if (path.compare(0, std::min(path.size(), testPath.size()), testPath) == 0) {
-				appWideLimit = std::move(testPath);
+				appWideLimit = sp::move(testPath);
 				break;
 			}
 
 			testPath = documentsPath<memory::StandartInterface>();
 			if (path.compare(0, std::min(path.size(), testPath.size()), testPath) == 0) {
-				appWideLimit = std::move(testPath);
+				appWideLimit = sp::move(testPath);
 				break;
 			}
 
 			testPath = currentDir<memory::StandartInterface>();
 			if (path.compare(0, std::min(path.size(), testPath.size()), testPath) == 0) {
-				appWideLimit = std::move(testPath);
+				appWideLimit = sp::move(testPath);
 				break;
 			}
 		} while (0);

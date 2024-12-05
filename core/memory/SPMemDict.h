@@ -93,20 +93,20 @@ public:
 	dict(const dict& x) noexcept : _data(x._data), _comp(x._comp)  { }
 	dict(const dict& x, const allocator_type& alloc) noexcept : _data(x._data, alloc), _comp(x._comp) { }
 
-	dict(dict&& x) noexcept : _data(std::move(x._data)), _comp(std::move(x._comp)) { }
-	dict(dict&& x, const allocator_type& alloc) noexcept : _data(std::move(x._data), alloc), _comp(std::move(x._comp)) { }
+	dict(dict&& x) noexcept : _data(sp::move_unsafe(x._data)), _comp(sp::move_unsafe(x._comp)) { }
+	dict(dict&& x, const allocator_type& alloc) noexcept : _data(sp::move_unsafe(x._data), alloc), _comp(sp::move_unsafe(x._comp)) { }
 
 	dict(InitializerList<value_type> il,
 	     const Comp& comp = Comp(), const allocator_type& alloc = allocator_type()) noexcept
 	: _data(alloc), _comp(comp) {
 		for (auto &it : il) {
-			do_insert(std::move(const_cast<reference>(it)));
+			do_insert(sp::move_unsafe(const_cast<reference>(it)));
 		}
 	}
 	dict(InitializerList<value_type> il, const allocator_type& alloc) noexcept
 	: _data(alloc), _comp(key_compare()) {
 		for (auto &it : il) {
-			do_insert(std::move(const_cast<reference>(it)));
+			do_insert(sp::move_unsafe(const_cast<reference>(it)));
 		}
 	}
 
@@ -116,14 +116,14 @@ public:
 		return *this;
 	}
 	dict& operator= (dict&& other) noexcept {
-		_data = std::move(other._data);
-		_comp = std::move(other._comp);
+		_data = sp::move_unsafe(other._data);
+		_comp = sp::move_unsafe(other._comp);
 		return *this;
 	}
 	dict& operator= (InitializerList<value_type> ilist) noexcept {
 		_data.clear();
 		for (auto &it : ilist) {
-			do_insert(std::move(const_cast<reference>(it)));
+			do_insert(sp::move_unsafe(const_cast<reference>(it)));
 		}
 		return *this;
 	}
@@ -172,7 +172,7 @@ public:
 
 	void insert( InitializerList<value_type> ilist ) {
 		for (auto &it : ilist) {
-			do_insert(std::move(it));
+			do_insert(sp::move_unsafe(it));
 		}
 	}
 
@@ -184,7 +184,7 @@ public:
 
 	template <class M>
 	Pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj) {
-		return do_insert_or_assign(std::move(k), obj);
+		return do_insert_or_assign(sp::move_unsafe(k), obj);
 	}
 
 	template <class M>
@@ -194,7 +194,7 @@ public:
 
 	template <class M>
 	iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj) {
-		return do_insert_or_assign(hint, std::move(k), obj);
+		return do_insert_or_assign(hint, sp::move_unsafe(k), obj);
 	}
 
 
@@ -223,7 +223,7 @@ public:
 
 	template <class... Args>
 	Pair<iterator, bool> try_emplace(key_type&& k, Args&&... args) {
-		return do_try_emplace(std::move(k), std::forward<Args>(args)...);
+		return do_try_emplace(sp::move_unsafe(k), std::forward<Args>(args)...);
 	}
 
 	template <class... Args>
@@ -233,7 +233,7 @@ public:
 
 	template <class... Args>
 	iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args) {
-		return do_try_emplace(hint, std::move(k), std::forward<Args>(args)...).first;
+		return do_try_emplace(hint, sp::move_unsafe(k), std::forward<Args>(args)...).first;
 	}
 
 	iterator erase( iterator pos ) { return _data.erase(pos); }
@@ -326,7 +326,7 @@ protected:
 
 	template <class A, class B>
 	Pair<iterator,bool> do_insert( Pair<A, B> && value ) {
-		return emplace(std::move(value.first), std::move(value.second));
+		return emplace(sp::move_unsafe(value.first), sp::move_unsafe(value.second));
 	}
 
 	template <class A, class B>
@@ -336,7 +336,7 @@ protected:
 
 	template <class A, class B>
 	iterator do_insert( const_iterator hint, Pair<A, B> && value ) {
-		return emplace_hint(hint, std::move(value.first), std::move(value.second));
+		return emplace_hint(hint, sp::move_unsafe(value.first), sp::move_unsafe(value.second));
 	}
 
 	template <class T, class ... Args>

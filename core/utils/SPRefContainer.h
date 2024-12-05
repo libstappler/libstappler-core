@@ -120,7 +120,7 @@ auto RefContainer<Item, Interface>::addItem(Item *item) -> Item * {
 		item->retain();
 		acts.emplace_back(item);
 
-		new (_container.data()) Vector<Item *>(move(acts));
+		new (_container.data()) Vector<Item *>(sp::move(acts));
 		++ _nitems;
 	}
 	return item;

@@ -35,10 +35,10 @@ Conflict Conflict::update(StringView f) {
 Conflict::Conflict(Conflict::Flags f): flags(f) { }
 
 Conflict::Conflict(StringView field, Query::Select &&cond, Flags f)
-: field(field.str<Interface>()), condition(std::move(cond)), flags(f) { }
+: field(field.str<Interface>()), condition(sp::move(cond)), flags(f) { }
 
 Conflict::Conflict(StringView field, Query::Select &&cond, Vector<String> &&mask)
-: field(field.str<Interface>()), condition(std::move(cond)), mask(std::move(mask)) { }
+: field(field.str<Interface>()), condition(sp::move(cond)), mask(sp::move(mask)) { }
 
 Conflict &Conflict::setFlags(Flags f) {
 	flags = f;
@@ -129,15 +129,15 @@ Worker::ConditionData::ConditionData(const Query::Select &sel, const Field *f) {
 
 Worker::ConditionData::ConditionData(Query::Select &&sel, const Field *f) {
 	compare = sel.compare;
-	value1 = std::move(sel.value1);
-	value2 = std::move(sel.value2);
+	value1 = sp::move(sel.value1);
+	value2 = sp::move(sel.value2);
 	field = f;
 }
 
 void Worker::ConditionData::set(Query::Select &&sel, const Field *f) {
 	compare = sel.compare;
-	value1 = std::move(sel.value1);
-	value2 = std::move(sel.value2);
+	value1 = sp::move(sel.value1);
+	value2 = sp::move(sel.value2);
 	field = f;
 }
 
@@ -276,18 +276,18 @@ Value Worker::get(const StringView &alias, std::initializer_list<StringView> &&f
 Value Worker::get(const Value &id, std::initializer_list<StringView> &&fields, UpdateFlags flags) {
 	if (id.isDictionary()) {
 		if (auto oid = id.getInteger("__oid")) {
-			return get(oid, move(fields), flags);
+			return get(oid, sp::move(fields), flags);
 		}
 	} else {
 		if ((id.isString() && stappler::valid::validateNumber(id.getString())) || id.isInteger()) {
 			if (auto oid = id.getInteger()) {
-				return get(oid, move(fields), flags);
+				return get(oid, sp::move(fields), flags);
 			}
 		}
 
 		auto &str = id.getString();
 		if (!str.empty()) {
-			return get(str, move(fields), flags);
+			return get(str, sp::move(fields), flags);
 		}
 	}
 	return Value();
@@ -318,18 +318,18 @@ Value Worker::get(const StringView &alias, std::initializer_list<const char *> &
 Value Worker::get(const Value &id, std::initializer_list<const char *> &&fields, UpdateFlags flags) {
 	if (id.isDictionary()) {
 		if (auto oid = id.getInteger("__oid")) {
-			return get(oid, move(fields), flags);
+			return get(oid, sp::move(fields), flags);
 		}
 	} else {
 		if ((id.isString() && stappler::valid::validateNumber(id.getString())) || id.isInteger()) {
 			if (auto oid = id.getInteger()) {
-				return get(oid, move(fields), flags);
+				return get(oid, sp::move(fields), flags);
 			}
 		}
 
 		auto &str = id.getString();
 		if (!str.empty()) {
-			return get(str, move(fields), flags);
+			return get(str, sp::move(fields), flags);
 		}
 	}
 	return Value();
@@ -356,18 +356,18 @@ Value Worker::get(const StringView &alias, std::initializer_list<const Field *> 
 Value Worker::get(const Value &id, std::initializer_list<const Field *> &&fields, UpdateFlags flags) {
 	if (id.isDictionary()) {
 		if (auto oid = id.getInteger("__oid")) {
-			return get(oid, move(fields), flags);
+			return get(oid, sp::move(fields), flags);
 		}
 	} else {
 		if ((id.isString() && stappler::valid::validateNumber(id.getString())) || id.isInteger()) {
 			if (auto oid = id.getInteger()) {
-				return get(oid, move(fields), flags);
+				return get(oid, sp::move(fields), flags);
 			}
 		}
 
 		auto &str = id.getString();
 		if (!str.empty()) {
-			return get(str, move(fields), flags);
+			return get(str, sp::move(fields), flags);
 		}
 	}
 	return Value();
@@ -631,13 +631,13 @@ Value Worker::getField(const Value &obj, const StringView &s, const Set<const Fi
 
 Value Worker::setField(uint64_t oid, const StringView &s, Value &&v) {
 	if (auto f = _scheme->getField(s)) {
-		return setField(oid, *f, std::move(v));
+		return setField(oid, *f, sp::move(v));
 	}
 	return Value();
 }
 Value Worker::setField(const Value &obj, const StringView &s, Value &&v) {
 	if (auto f = _scheme->getField(s)) {
-		return setField(obj, *f, std::move(v));
+		return setField(obj, *f, sp::move(v));
 	}
 	return Value();
 }
@@ -653,13 +653,13 @@ Value Worker::setField(const Value &obj, const StringView &s, InputFile &file) {
 
 bool Worker::clearField(uint64_t oid, const StringView &s, Value && objs) {
 	if (auto f = _scheme->getField(s)) {
-		return clearField(oid, *f, std::move(objs));
+		return clearField(oid, *f, sp::move(objs));
 	}
 	return false;
 }
 bool Worker::clearField(const Value &obj, const StringView &s, Value && objs) {
 	if (auto f = _scheme->getField(s)) {
-		return clearField(obj, *f, std::move(objs));
+		return clearField(obj, *f, sp::move(objs));
 	}
 	return false;
 }
@@ -667,14 +667,14 @@ bool Worker::clearField(const Value &obj, const StringView &s, Value && objs) {
 Value Worker::appendField(uint64_t oid, const StringView &s, Value &&v) {
 	auto f = _scheme->getField(s);
 	if (f) {
-		return appendField(oid, *f, std::move(v));
+		return appendField(oid, *f, sp::move(v));
 	}
 	return Value();
 }
 Value Worker::appendField(const Value &obj, const StringView &s, Value &&v) {
 	auto f = _scheme->getField(s);
 	if (f) {
-		return appendField(obj, *f, std::move(v));
+		return appendField(obj, *f, sp::move(v));
 	}
 	return Value();
 }
@@ -745,14 +745,14 @@ Value Worker::setField(uint64_t oid, const Field &f, Value &&v) {
 		clearField(oid, f);
 		return Value();
 	}
-	return _scheme->fieldWithWorker(Action::Set, *this, oid, f, std::move(v));
+	return _scheme->fieldWithWorker(Action::Set, *this, oid, f, sp::move(v));
 }
 Value Worker::setField(const Value &obj, const Field &f, Value &&v) {
 	if (v.isNull()) {
 		clearField(obj, f);
 		return Value();
 	}
-	return _scheme->fieldWithWorker(Action::Set, *this, obj, f, std::move(v));
+	return _scheme->fieldWithWorker(Action::Set, *this, obj, f, sp::move(v));
 }
 Value Worker::setField(uint64_t oid, const Field &f, InputFile &file) {
 	if (f.isFile()) {
@@ -766,26 +766,26 @@ Value Worker::setField(const Value &obj, const Field &f, InputFile &file) {
 
 bool Worker::clearField(uint64_t oid, const Field &f, Value &&objs) {
 	if (!f.hasFlag(Flags::Required)) {
-		return _scheme->fieldWithWorker(Action::Remove, *this, oid, f, std::move(objs)).asBool();
+		return _scheme->fieldWithWorker(Action::Remove, *this, oid, f, sp::move(objs)).asBool();
 	}
 	return false;
 }
 bool Worker::clearField(const Value &obj, const Field &f, Value &&objs) {
 	if (!f.hasFlag(Flags::Required)) {
-		return _scheme->fieldWithWorker(Action::Remove, *this, obj, f, std::move(objs)).asBool();
+		return _scheme->fieldWithWorker(Action::Remove, *this, obj, f, sp::move(objs)).asBool();
 	}
 	return false;
 }
 
 Value Worker::appendField(uint64_t oid, const Field &f, Value &&v) {
 	if (f.getType() == Type::Array || (f.getType() == Type::Set && f.isReference())) {
-		return _scheme->fieldWithWorker(Action::Append, *this, oid, f, std::move(v));
+		return _scheme->fieldWithWorker(Action::Append, *this, oid, f, sp::move(v));
 	}
 	return Value();
 }
 Value Worker::appendField(const Value &obj, const Field &f, Value &&v) {
 	if (f.getType() == Type::Array || (f.getType() == Type::Set && f.isReference())) {
-		return _scheme->fieldWithWorker(Action::Append, *this, obj, f, std::move(v));
+		return _scheme->fieldWithWorker(Action::Append, *this, obj, f, sp::move(v));
 	}
 	return Value();
 }
@@ -849,7 +849,7 @@ bool Worker::addConflict(const Conflict &c) {
 
 		d.field = f;
 		if (selField) {
-			d.condition.set(std::move(c.condition), selField);
+			d.condition.set(sp::move(c.condition), selField);
 		}
 
 		for (auto &it : c.mask) {
@@ -860,7 +860,7 @@ bool Worker::addConflict(const Conflict &c) {
 
 		d.flags |= c.flags;
 
-		_conflict.emplace(f, std::move(d));
+		_conflict.emplace(f, sp::move(d));
 		return true;
 	}
 }

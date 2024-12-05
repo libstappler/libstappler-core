@@ -355,7 +355,7 @@ bool QueryList::selectByName(const Scheme *scheme, const StringView &f) {
 bool QueryList::selectByQuery(const Scheme *scheme, Query::Select &&f) {
 	Item &b = queries.back();
 	if (b.scheme == scheme && (b.query.empty() || !b.query.getSelectList().empty())) {
-		b.query.select(std::move(f));
+		b.query.select(sp::move(f));
 		return true;
 	}
 	return false;
@@ -412,7 +412,7 @@ bool QueryList::offset(const Scheme *scheme, size_t offset) {
 bool QueryList::setFullTextQuery(const Field *field, FullTextQuery &&data) {
 	if (queries.size() > 0 && field->getType() == Type::FullTextView) {
 		Item &b = queries.back();
-		b.query.select(field->getName(), std::move(data));
+		b.query.select(field->getName(), sp::move(data));
 		b.field = field;
 		return true;
 	}
@@ -695,7 +695,7 @@ static void QueryList_decodeMeta(Vector<Query::Field> &dec, const Value &val) {
 		for (auto &it : val.asArray()) {
 			auto str = it.asString();
 			if (!str.empty()) {
-				dec.emplace_back(std::move(str));
+				dec.emplace_back(sp::move(str));
 			}
 		}
 	} else if (val.isDictionary()) {
@@ -812,19 +812,19 @@ bool QueryList::apply(const Value &val) {
 			Vector<Query::Field> dec;
 			q.depth(std::min(QueryList_decodeInclude(_application, scheme, nullptr, dec, it.second), config::RESOURCE_RESOLVE_MAX_DEPTH));
 			for (auto &it : dec) {
-				q.include(std::move(it));
+				q.include(sp::move(it));
 			}
 		} else if (it.first == "include") {
 			Vector<Query::Field> dec;
 			q.depth(std::min(QueryList_decodeInclude(_application, scheme, nullptr, dec, it.second), config::RESOURCE_RESOLVE_MAX_DEPTH));
 			for (auto &it : dec) {
-				q.include(std::move(it));
+				q.include(sp::move(it));
 			}
 		} else if (it.first == "exclude") {
 			Vector<Query::Field> dec;
 			q.depth(std::min(QueryList_decodeInclude(_application, scheme, nullptr, dec, it.second), config::RESOURCE_RESOLVE_MAX_DEPTH));
 			for (auto &it : dec) {
-				q.exclude(std::move(it));
+				q.exclude(sp::move(it));
 			}
 		} else if (it.first == "delta") {
 			if (it.second.isString()) {

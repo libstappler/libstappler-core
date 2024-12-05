@@ -40,7 +40,7 @@ bool Task::init(const CompleteCallback &c, Ref *t) {
 bool Task::init(CompleteCallback &&c, Ref *t) {
 	addRef(t);
 	if (c) {
-		_complete.emplace_back(move(c));
+		_complete.emplace_back(sp::move(c));
 	}
 	return true;
 }
@@ -60,10 +60,10 @@ bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t) {
 bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t) {
 	addRef(t);
 	if (e) {
-		_execute.emplace_back(move(e));
+		_execute.emplace_back(sp::move(e));
 	}
 	if (c) {
-		_complete.emplace_back(move(c));
+		_complete.emplace_back(sp::move(c));
 	}
 	return true;
 }
@@ -86,13 +86,13 @@ bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const Comple
 bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, Ref *t) {
 	addRef(t);
 	if (p) {
-		_prepare.emplace_back(move(p));
+		_prepare.emplace_back(sp::move(p));
 	}
 	if (e) {
-		_execute.emplace_back(move(e));
+		_execute.emplace_back(sp::move(e));
 	}
 	if (c) {
-		_complete.emplace_back(move(c));
+		_complete.emplace_back(sp::move(c));
 	}
 	return true;
 }
@@ -106,7 +106,7 @@ void Task::addPrepareCallback(const PrepareCallback &cb) {
 
 void Task::addPrepareCallback(PrepareCallback &&cb) {
 	if (cb) {
-		_prepare.emplace_back(move(cb));
+		_prepare.emplace_back(sp::move(cb));
 	}
 }
 
@@ -119,7 +119,7 @@ void Task::addExecuteCallback(const ExecuteCallback &cb) {
 
 void Task::addExecuteCallback(ExecuteCallback &&cb) {
 	if (cb) {
-		_execute.emplace_back(move(cb));
+		_execute.emplace_back(sp::move(cb));
 	}
 }
 
@@ -132,7 +132,7 @@ void Task::addCompleteCallback(const CompleteCallback &cb) {
 
 void Task::addCompleteCallback(CompleteCallback &&cb) {
 	if (cb) {
-		_complete.emplace_back(move(cb));
+		_complete.emplace_back(sp::move(cb));
 	}
 }
 

@@ -325,7 +325,7 @@ public:
 
 protected:
 	void perform_move(mem_soo_iface &&other) {
-		*(static_cast<base *>(this)) = std::move(other);
+		*(static_cast<base *>(this)) = sp::move_unsafe(other);
 	}
 
 	using base::clear_dealloc;
@@ -378,9 +378,9 @@ public:
 				large_mem new_large;
 				new_large.assign(_allocator, ptr, size);
 				set_large_flag_force();
-				_large = std::move(new_large);
+				_large = sp::move_unsafe(new_large);
 			} else {
-				large_mem old_large(std::move(_large));
+				large_mem old_large(sp::move_unsafe(_large));
 				_small.force_clear();
 				set_small_flag();
 				_small.assign(_allocator, ptr, size);
@@ -438,7 +438,7 @@ public:
 					new_large.reserve(_allocator, newmem);
 					new_large.move_assign(_allocator, _small.data(), _small.size());
 					set_large_flag();
-					_large = std::move(new_large);
+					_large = sp::move_unsafe(new_large);
 				} else {
 					_large.reserve(_allocator, newmem);
 				}
@@ -508,7 +508,7 @@ protected:
 			other._small.force_clear();
 		} else {
 			set_large_flag();
-			_large = std::move(other._large);
+			_large = sp::move_unsafe(other._large);
 		}
 	}
 

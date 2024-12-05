@@ -178,7 +178,7 @@ private:
 					return new (buf) BaseType(*static_cast<const BaseType *>(arg));
 				},
 				[] (void *arg, allocator_type &alloc, uint8_t *buf) -> void * {
-					return new (buf) BaseType(std::move(*static_cast<BaseType *>(arg)));
+					return new (buf) BaseType(sp::move_unsafe(*static_cast<BaseType *>(arg)));
 				},
 			};
 

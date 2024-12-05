@@ -25,13 +25,13 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-Query::Field::Field(Field &&f) : name(std::move(f.name)), fields(std::move(f.fields)) { }
+Query::Field::Field(Field &&f) : name(sp::move(f.name)), fields(sp::move(f.fields)) { }
 
 Query::Field::Field(const Field &f) : name(f.name), fields(f.fields) { }
 
 Query::Field &Query::Field::operator=(Field &&f) {
-	name = std::move(f.name);
-	fields = std::move(f.fields);
+	name = sp::move(f.name);
+	fields = sp::move(f.fields);
 	return *this;
 }
 Query::Field &Query::Field::operator=(const Field &f) {
@@ -50,19 +50,19 @@ void Query::Field::setName(const String &n) {
 	name = n;
 }
 void Query::Field::setName(String &&n) {
-	name = std::move(n);
+	name = sp::move(n);
 }
 void Query::Field::setName(const Field &f) {
 	name = f.name;
 	fields = f.fields;
 }
 void Query::Field::setName(Field &&f) {
-	name = std::move(f.name);
-	fields = std::move(f.fields);
+	name = sp::move(f.name);
+	fields = sp::move(f.fields);
 }
 
 Query::Select::Select(const StringView & f, Comparation c, Value && v1, Value && v2)
-: compare(c), value1(std::move(v1)), value2(std::move(v2)), field(f.str<Interface>()) { }
+: compare(c), value1(sp::move(v1)), value2(sp::move(v2)), field(f.str<Interface>()) { }
 
 Query::Select::Select(const StringView & f, Comparation c, int64_t v1, int64_t v2)
 : compare(c), value1(v1), value2(v2), field(f.str<Interface>()) { }
@@ -74,7 +74,7 @@ Query::Select::Select(const StringView & f, Comparation c, const StringView & v)
 : compare(Comparation::Equal), value1(v), value2(0), field(f.str<Interface>()) { }
 
 Query::Select::Select(const StringView & f, Comparation c, FullTextQuery && v)
-: compare(Comparation::Equal), field(f.str<Interface>()), textQuery(std::move(v)) { }
+: compare(Comparation::Equal), field(f.str<Interface>()), textQuery(sp::move(v)) { }
 
 Resolve Query::decodeResolve(const StringView &str) {
 	if (str == "$all") {
@@ -180,7 +180,7 @@ Query & Query::select(const Value &val) {
 
 Query & Query::select(Vector<int64_t> &&id) {
 	if (!id.empty()) {
-		selectIds = std::move(id);
+		selectIds = sp::move(id);
 	} else {
 		selectIds = Vector<int64_t>{-1};
 	}
@@ -204,7 +204,7 @@ Query & Query::select(SpanView<int64_t> id) {
 
 Query & Query::select(std::initializer_list<int64_t> &&id) {
 	if (id.size() > 0) {
-		selectIds = std::move(id);
+		selectIds = sp::move(id);
 	} else {
 		selectIds = Vector<int64_t>{-1};
 	}
@@ -234,7 +234,7 @@ Query & Query::select(const StringView &f, const String & v) {
 	return *this;
 }
 Query & Query::select(const StringView &f, String && v) {
-	selectList.emplace_back(f, Comparation::Equal, Value(std::move(v)), Value());
+	selectList.emplace_back(f, Comparation::Equal, Value(sp::move(v)), Value());
 	return *this;
 }
 Query & Query::select(const StringView &f, const Bytes & v) {
@@ -242,17 +242,17 @@ Query & Query::select(const StringView &f, const Bytes & v) {
 	return *this;
 }
 Query & Query::select(const StringView &f, Bytes && v) {
-	selectList.emplace_back(f, Comparation::Equal, Value(std::move(v)), Value());
+	selectList.emplace_back(f, Comparation::Equal, Value(sp::move(v)), Value());
 	return *this;
 }
 Query & Query::select(const StringView &f, FullTextQuery && v) {
-	selectList.emplace_back(f, Comparation::Equal, std::move(v));
+	selectList.emplace_back(f, Comparation::Equal, sp::move(v));
 	order(f, Ordering::Descending);
 	return *this;
 }
 
 Query & Query::select(Select &&q) {
-	selectList.emplace_back(std::move(q));
+	selectList.emplace_back(sp::move(q));
 	return *this;
 }
 
@@ -272,7 +272,7 @@ Query & Query::softLimit(const StringView &field, Ordering ord, size_t limit, Va
 	orderField = field.str<Interface>();
 	ordering = ord;
 	limitValue = limit;
-	softLimitValue = std::move(val);
+	softLimitValue = sp::move(val);
 	_softLimit = true;
 	return *this;
 }
@@ -333,11 +333,11 @@ Query & Query::delta(const StringView &str) {
 }
 
 Query & Query::include(Field &&f) {
-	fieldsInclude.emplace_back(std::move(f));
+	fieldsInclude.emplace_back(sp::move(f));
 	return *this;
 }
 Query & Query::exclude(Field &&f) {
-	fieldsExclude.emplace_back(std::move(f));
+	fieldsExclude.emplace_back(sp::move(f));
 	return *this;
 }
 

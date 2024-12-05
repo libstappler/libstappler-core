@@ -127,7 +127,7 @@ public:
 	void clear();
 
 	const Interface::VectorType<PathXRef> &getDrawOrder() const { return _order; }
-	void setDrawOrder(Interface::VectorType<PathXRef> &&order) { _order = move(order); }
+	void setDrawOrder(Interface::VectorType<PathXRef> &&order) { _order = sp::move(order); }
 	void resetDrawOrder();
 
 	void setViewBoxTransform(const Mat4 &m) { _viewBoxTransform = m; }

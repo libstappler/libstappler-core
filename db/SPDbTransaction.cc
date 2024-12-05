@@ -111,7 +111,7 @@ AccessRoleId Transaction::getRole() const {
 }
 
 const Value & Transaction::setValue(const StringView &key, Value &&val) {
-	return _data->data.emplace(key.str<Interface>(), std::move(val)).first->second;
+	return _data->data.emplace(key.str<Interface>(), sp::move(val)).first->second;
 }
 
 const Value &Transaction::getValue(const StringView &key) const {
@@ -125,7 +125,7 @@ const Value &Transaction::getValue(const StringView &key) const {
 Value Transaction::setObject(int64_t id, Value &&val) const {
 	Value ret;
 	pool::perform_conditional([&] {
-		ret = _data->objects.emplace(id, std::move(val)).first->second;
+		ret = _data->objects.emplace(id, sp::move(val)).first->second;
 	}, _data->objects.get_allocator());
 	return ret;
 }
@@ -327,7 +327,7 @@ Value Transaction::create(Worker &w, Value &data) const {
 					}
 				}
 
-				ret =  !arr.empty() ? std::move(val) : Value(true);
+				ret =  !arr.empty() ? sp::move(val) : Value(true);
 				return true; // if user can not see result - return success but with no object
 			}
 		} else {
@@ -336,7 +336,7 @@ Value Transaction::create(Worker &w, Value &data) const {
 			}
 
 			if (auto val = _data->adapter.create(w, data)) {
-				ret =  processReturnObject(w.scheme(), val) ? std::move(val) : Value(true);
+				ret =  processReturnObject(w.scheme(), val) ? sp::move(val) : Value(true);
 				return true; // if user can not see result - return success but with no object
 			}
 		}
@@ -372,14 +372,14 @@ Value Transaction::save(Worker &w, uint64_t oid, Value &obj, Value &patch, Set<c
 			}
 
 			if (auto val = _data->adapter.save(w, oid, obj, patch, fields)) {
-				ret = processReturnObject(w.scheme(), val) ? std::move(val) : Value(true);
+				ret = processReturnObject(w.scheme(), val) ? sp::move(val) : Value(true);
 				return true;
 			}
 			return false;
 		}
 
 		if (auto val = _data->adapter.save(w, oid, obj, patch, fields)) {
-			ret = processReturnObject(w.scheme(), val) ? std::move(val) : Value(true);
+			ret = processReturnObject(w.scheme(), val) ? sp::move(val) : Value(true);
 			return true;
 		}
 		return false;
@@ -410,7 +410,7 @@ Value Transaction::patch(Worker &w, uint64_t oid, Value &data) const {
 		}
 
 		if (auto val = _data->adapter.save(w, oid, tmp, data, Set<const Field *>())) {
-			ret = processReturnObject(w.scheme(), val) ? std::move(val) : Value(true);
+			ret = processReturnObject(w.scheme(), val) ? sp::move(val) : Value(true);
 			return true;
 		}
 		return false;
@@ -422,7 +422,7 @@ Value Transaction::patch(Worker &w, uint64_t oid, Value &data) const {
 
 Value Transaction::field(Action a, Worker &w, uint64_t oid, const Field &f, Value &&patch) const {
 	if (!w.scheme().hasAccessControl()) {
-		return _data->adapter.field(a, w, oid, f, std::move(patch));
+		return _data->adapter.field(a, w, oid, f, sp::move(patch));
 	}
 
 	DataHolder h(_data, w);
@@ -436,14 +436,14 @@ Value Transaction::field(Action a, Worker &w, uint64_t oid, const Field &f, Valu
 
 	if ((r && r->onField) || (d && d->onField) || f.getSlot()->readFilterFn) {
 		if (auto obj = acquireObject(w.scheme(), oid)) {
-			return field(a, w, obj, f, std::move(patch));
+			return field(a, w, obj, f, sp::move(patch));
 		}
 		return Value();
 	}
 
 	Value ret;
 	if (perform([&, this] {
-		ret = _data->adapter.field(a, w, oid, f, std::move(patch));
+		ret = _data->adapter.field(a, w, oid, f, sp::move(patch));
 		return true;
 	})) {
 		if (a != Action::Remove) {
@@ -458,7 +458,7 @@ Value Transaction::field(Action a, Worker &w, uint64_t oid, const Field &f, Valu
 }
 Value Transaction::field(Action a, Worker &w, const Value &obj, const Field &f, Value &&patch) const {
 	if (!w.scheme().hasAccessControl()) {
-		return _data->adapter.field(a, w, obj, f, std::move(patch));
+		return _data->adapter.field(a, w, obj, f, sp::move(patch));
 	}
 
 	DataHolder h(_data, w);
@@ -476,7 +476,7 @@ Value Transaction::field(Action a, Worker &w, const Value &obj, const Field &f, 
 			return false;
 		}
 
-		ret = _data->adapter.field(a, w, obj, f, std::move(patch));
+		ret = _data->adapter.field(a, w, obj, f, sp::move(patch));
 		return true;
 	})) {
 		if (a != Action::Remove) {
@@ -800,7 +800,7 @@ Value Transaction::acquireObject(const Scheme &scheme, uint64_t oid) const {
 		auto it = _data->objects.find(oid);
 		if (it == _data->objects.end()) {
 			if (auto obj = Worker(scheme, *this).asSystem().get(oid)) {
-				ret = _data->objects.emplace(oid, std::move(obj)).first->second;
+				ret = _data->objects.emplace(oid, sp::move(obj)).first->second;
 			}
 		} else {
 			ret = it->second;
@@ -824,54 +824,54 @@ AccessRole &AccessRole::define(OnSelect &&val) {
 	if (val.get()) {
 		operations.set(Transaction::Select);
 	}
-	onSelect = std::move(val.get());
+	onSelect = sp::move(val.get());
 	return *this;
 }
 AccessRole &AccessRole::define(OnCount &&val) {
 	if (val.get()) {
 		operations.set(Transaction::Count);
 	}
-	onCount = std::move(val.get());
+	onCount = sp::move(val.get());
 	return *this;
 }
 AccessRole &AccessRole::define(OnCreate &&val) {
 	if (val.get()) {
 		operations.set(Transaction::Create);
 	}
-	onCreate = std::move(val.get());
+	onCreate = sp::move(val.get());
 	return *this;
 }
 AccessRole &AccessRole::define(OnPatch &&val) {
 	if (val.get()) {
 		operations.set(Transaction::Patch);
 	}
-	onPatch = std::move(val.get());
+	onPatch = sp::move(val.get());
 	return *this;
 }
 AccessRole &AccessRole::define(OnSave &&val) {
 	if (val.get()) {
 		operations.set(Transaction::Save);
 	}
-	onSave = std::move(val.get());
+	onSave = sp::move(val.get());
 	return *this;
 }
 AccessRole &AccessRole::define(OnRemove &&val) {
 	if (val.get()) {
 		operations.set(Transaction::Remove);
 	}
-	onRemove = std::move(val.get());
+	onRemove = sp::move(val.get());
 	return *this;
 }
 AccessRole &AccessRole::define(OnField &&val) {
-	onField = std::move(val.get());
+	onField = sp::move(val.get());
 	return *this;
 }
 AccessRole &AccessRole::define(OnReturn &&val) {
-	onReturn = std::move(val.get());
+	onReturn = sp::move(val.get());
 	return *this;
 }
 AccessRole &AccessRole::define(OnReturnField &&val) {
-	onReturnField = std::move(val.get());
+	onReturnField = sp::move(val.get());
 	return *this;
 }
 

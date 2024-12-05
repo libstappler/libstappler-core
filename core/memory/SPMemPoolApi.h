@@ -154,7 +154,7 @@ auto context<_Pool>::operator=(context && u) noexcept -> context & {
 		pop();
 	}
 
-	context(std::move(u)).swap(*this);
+	context(sp::move(u)).swap(*this);
 
 	u._pool = 0;
 	u._owns = false;

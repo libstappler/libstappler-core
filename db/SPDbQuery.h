@@ -219,7 +219,7 @@ template <typename Str>
 inline Query::Field::Field(Str &&str, Vector<String> &&l) {
 	setName(std::forward<Str>(str));
 	for (auto &it : l) {
-		fields.emplace_back(std::move(it));
+		fields.emplace_back(sp::move(it));
 	}
 }
 
@@ -227,12 +227,12 @@ template <typename Str>
 inline Query::Field::Field(Str &&str, std::initializer_list<String> &&l) {
 	setName(std::forward<Str>(str));
 	for (auto &it : l) {
-		fields.emplace_back(String(std::move(it)));
+		fields.emplace_back(String(sp::move(it)));
 	}
 }
 
 template <typename Str>
-inline Query::Field::Field(Str &&str, Vector<Field> &&l) : fields(std::move(l)) {
+inline Query::Field::Field(Str &&str, Vector<Field> &&l) : fields(sp::move(l)) {
 	setName(std::forward<Str>(str));
 }
 
@@ -240,13 +240,13 @@ template <typename Str>
 inline Query::Field::Field(Str &&str, std::initializer_list<Field> &&l) {
 	setName(std::forward<Str>(str));
 	for (auto &it : l) {
-		fields.emplace_back(std::move(it));
+		fields.emplace_back(sp::move(it));
 	}
 }
 
 template <typename ... Args>
 Query & Query::include(Field &&f, Args && ... args) {
-	include(std::move(f));
+	include(sp::move(f));
 	include(std::forward<Args>(args)...);
 	return *this;
 }

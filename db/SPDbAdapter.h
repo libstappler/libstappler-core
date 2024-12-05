@@ -59,7 +59,7 @@ public:
 		pushErrorMessage(Value{
 			std::make_pair("source", Value(std::forward<Source>(source))),
 			std::make_pair("text", Value(std::forward<Text>(text))),
-			std::make_pair("data", std::move(d))
+			std::make_pair("data", sp::move(d))
 		});
 	}
 
@@ -76,7 +76,7 @@ public:
 		pushDebugMessage(Value{
 			std::make_pair("source", Value(std::forward<Source>(source))),
 			std::make_pair("text", Value(std::forward<Text>(text))),
-			std::make_pair("data", std::move(d))
+			std::make_pair("data", sp::move(d))
 		});
 	}
 

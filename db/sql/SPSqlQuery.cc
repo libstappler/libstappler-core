@@ -750,7 +750,7 @@ StringView SqlQuery::getFullTextQuery(const Scheme &scheme, const db::Field &f, 
 	if (!it.textQuery.empty()) {
 		StringStream queryFrom;
 		binder.writeBind(queryFrom, Binder::FullTextQueryRef{scheme.getName(), &f, it.textQuery});
-		return _fulltextQueries.emplace(std::move(key), queryFrom.str()).first->second;
+		return _fulltextQueries.emplace(sp::move(key), queryFrom.str()).first->second;
 	} else if (it.value1) {
 		auto d = f.getSlot<db::FieldFullTextView>();
 		auto q = d->parseQuery(it.value1);
@@ -758,7 +758,7 @@ StringView SqlQuery::getFullTextQuery(const Scheme &scheme, const db::Field &f, 
 			auto &it = _parsedQueries.emplace_front(move(q));
 			StringStream queryFrom;
 			binder.writeBind(queryFrom, Binder::FullTextQueryRef{scheme.getName(), &f, it});
-			return _fulltextQueries.emplace(std::move(key), queryFrom.str()).first->second;
+			return _fulltextQueries.emplace(sp::move(key), queryFrom.str()).first->second;
 		}
 	}
 

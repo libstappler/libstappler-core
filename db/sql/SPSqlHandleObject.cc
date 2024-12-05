@@ -70,12 +70,12 @@ static Value Handle_preparePostUpdate(const Vector<InputField> &inputFields, Inp
 		case db::Type::Array:
 		case db::Type::Set:
 			if (row.values[i].hasValue()) {
-				postUpdate.setValue(std::move(row.values[i].value), field.field->getName());
+				postUpdate.setValue(sp::move(row.values[i].value), field.field->getName());
 			}
 			break;
 		case db::Type::Object:
 			if (row.values[i].hasValue() && !row.values[i].value.isBasicType()) {
-				postUpdate.setValue(std::move(row.values[i].value), field.field->getName());
+				postUpdate.setValue(sp::move(row.values[i].value), field.field->getName());
 			}
 			break;
 		default:
@@ -427,12 +427,12 @@ Value SqlHandle::save(Worker &worker, uint64_t oid, const Value &data, const Vec
 
 		auto retVal = selectValueQuery(worker.scheme(), query, resv.getVirtuals());
 		if (retVal.isArray() && retVal.size() == 1) {
-			Value obj = std::move(retVal.getValue(0));
+			Value obj = sp::move(retVal.getValue(0));
 			int64_t id = obj.getInteger("__oid");
 			if (id > 0) {
 				performPostUpdate(worker.transaction(), query, scheme, obj, id, postUpdate, false);
 			}
-			ret = std::move(obj);
+			ret = sp::move(obj);
 		} else if (!cond.empty() && isSuccess()) {
 			ret = Value({ stappler::pair("__oid", Value(oid)) });
 		} else {
@@ -512,7 +512,7 @@ void SqlHandle::performPostUpdate(const db::Transaction &t, SqlQuery &query, con
 	auto makeObject = [&] (const Field &field, const Value &obj) {
 		int64_t targetId = 0;
 		if (obj.isDictionary()) {
-			Value val(std::move(obj));
+			Value val(sp::move(obj));
 			if (auto scheme = field.getForeignScheme()) {
 				if (auto link = s.getForeignLink(field)) {
 					val.setInteger(id, link->getName().str<Interface>());
@@ -547,13 +547,13 @@ void SqlHandle::performPostUpdate(const db::Transaction &t, SqlQuery &query, con
 
 			for (auto &arr_it : obj.asArray()) {
 				if (arr_it.isDictionary()) {
-					Value val(std::move(arr_it));
+					Value val(sp::move(arr_it));
 					if (auto link = s.getForeignLink(field)) {
 						val.setInteger(id, link->getName().str<Interface>());
 					}
 					val = Worker(*scheme, t).create(val);
 					if (val) {
-						ret.addValue(std::move(val));
+						ret.addValue(sp::move(val));
 					}
 				} else {
 					if (auto tmp = arr_it.asInteger()) {
@@ -561,7 +561,7 @@ void SqlHandle::performPostUpdate(const db::Transaction &t, SqlQuery &query, con
 							toAdd.emplace_back(tmp);
 						} else if (auto link = s.getForeignLink(field)) {
 							if (auto val = Worker(*scheme, t).update(tmp, Value{stappler::pair(link->getName().str<Interface>(), Value(id))})) {
-								ret.addValue(std::move(val));
+								ret.addValue(sp::move(val));
 							}
 						}
 					}
@@ -578,7 +578,7 @@ void SqlHandle::performPostUpdate(const db::Transaction &t, SqlQuery &query, con
 					}
 				}
 			}
-			data.setValue(std::move(ret), field.getName().str<Interface>());
+			data.setValue(sp::move(ret), field.getName().str<Interface>());
 		}
 	};
 

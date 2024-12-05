@@ -73,7 +73,7 @@ Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, c
 Driver::~Driver() { }
 
 void Driver::setDbCtrl(Function<void(bool)> &&fn) {
-	_dbCtrl = std::move(fn);
+	_dbCtrl = sp::move(fn);
 }
 
 const CustomFieldInfo *Driver::getCustomFieldInfo(StringView key) const {

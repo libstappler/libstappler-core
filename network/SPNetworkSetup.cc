@@ -87,7 +87,7 @@ static size_t _writeHeaders(char *data, size_t size, size_t nmemb, void *userptr
 				if (task->receive.headerCallback) {
 					task->receive.headerCallback(nameStr, valueStr);
 				}
-				task->receive.parsed.emplace(std::move(nameStr), std::move(valueStr));
+				task->receive.parsed.emplace(sp::move(nameStr), sp::move(valueStr));
 			} else {
 				reader.skipUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				reader.skipUntil<StringView::CharGroup<CharGroupId::Numbers>>();

@@ -203,7 +203,7 @@ struct TreeKeyExtractor<Key, Key> {
 
 	template <typename A, typename ... Args>
 	static inline void construct(A &alloc, Node<Key> *node, Key &&key, Args && ... args) noexcept {
-		alloc.construct(node->value.ptr(), std::move(key));
+		alloc.construct(node->value.ptr(), sp::move_unsafe(key));
 	}
 };
 
@@ -223,7 +223,7 @@ struct TreeKeyExtractor<Key, Pair<Key, Value>> {
 	static inline void construct(A &alloc, Node<Pair<Key, Value>> *node, Key &&k, Args && ... args) noexcept {
 		alloc.construct(node->value.ptr(),
 				std::piecewise_construct,
-				std::forward_as_tuple(std::move(k)),
+				std::forward_as_tuple(sp::move_unsafe(k)),
 				std::forward_as_tuple(std::forward<Args>(args)...));
 	}
 };
@@ -244,7 +244,7 @@ struct TreeKeyExtractor<Key, Pair<const Key, Value>> {
 	static inline void construct(A &alloc, Node<Pair<const Key, Value>> *node, Key &&k, Args && ... args) noexcept {
 		alloc.construct(node->value.ptr(),
 				std::piecewise_construct,
-				std::forward_as_tuple(std::move(k)),
+				std::forward_as_tuple(sp::move_unsafe(k)),
 				std::forward_as_tuple(std::forward<Args>(args)...));
 	}
 };
@@ -305,7 +305,7 @@ public:
 		if (other.get_allocator() == _allocator) {
 			_header = other._header;
 			_size = other._size;
-			_comp = std::move(other._comp);
+			_comp = sp::move_unsafe(other._comp);
 			if (_header.left != nullptr) {
 				_header.left->parent = &_header;
 			}
@@ -326,7 +326,7 @@ public:
 			clear();
 			_header = other._header;
 			_size = other._size;
-			_comp = std::move(other._comp);
+			_comp = sp::move_unsafe(other._comp);
 			if (_header.left != nullptr) {
 				_header.left->parent = &_header;
 			}
@@ -625,7 +625,7 @@ protected:
 
 	template <typename M>
 	void constructAssign(Node<Value> *n, M &&m) {
-		n->value.ref() = std::move(m);
+		n->value.ref() = sp::move_unsafe(m);
 	}
 
 	bool getInsertPositionUnique_search(InsertData &d) {

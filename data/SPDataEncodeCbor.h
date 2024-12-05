@@ -165,7 +165,7 @@ struct Encoder : public Interface::AllocBaseType {
 			memcpy(ret.data(), buffer->data(), buffer->size());
 			return ret;
 		} else if (type == Vector) {
-			typename ValueType::BytesType ret(std::move(*buffer));
+			typename ValueType::BytesType ret(sp::move(*buffer));
 			return ret;
 		}
 		return typename ValueType::BytesType();

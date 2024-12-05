@@ -59,7 +59,7 @@ public:
 	    streambuf_type::setp(base, base + _buf.size() - 1); // -1 to make overflow() easier
 	}
 	basic_ostringbuf(basic_ostringbuf &&other, const allocator_type &alloc = allocator_type()) noexcept
-	: _buf(std::move(other._buf), alloc)  {
+	: _buf(sp::move(other._buf), alloc)  {
 	    char *base = &_buf.front();
 		auto diff = (_buf.size() - 1) - (other.epptr() - other.pptr());
 		streambuf_type::setp(base + diff, base + _buf.size() - 1);
@@ -178,13 +178,13 @@ public:
 	}
 
 	basic_ostringstream(basic_ostringstream && rhs) noexcept
-	: ostream_type(std::move(rhs)), _buf(std::move(rhs._buf)) {
+	: ostream_type(sp::move(rhs)), _buf(sp::move(rhs._buf)) {
 		ostream_type::set_rdbuf(&_buf);
 	}
 
 	basic_ostringstream & operator=(basic_ostringstream && rhs) noexcept {
-		ostream_type::operator=(std::move(rhs));
-		_buf = std::move(rhs._buf);
+		ostream_type::operator=(sp::move(rhs));
+		_buf = sp::move(rhs._buf);
 		return *this;
 	}
 

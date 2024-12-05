@@ -60,7 +60,7 @@ public:
 		StringView name;
 		Vector<const Field *> fields;
 
-		UniqueConstraint(StringView n, Vector<const Field *> &&f) : name(n), fields(std::move(f)) { }
+		UniqueConstraint(StringView n, Vector<const Field *> &&f) : name(n), fields(sp::move(f)) { }
 	};
 
 	enum class TransformAction {
@@ -317,17 +317,17 @@ inline auto Scheme::get(Storage &&s, _Value &&v, StringView it, UpdateFlags flag
 
 template <typename Storage, typename _Value>
 inline auto Scheme::get(Storage &&s, _Value &&v, std::initializer_list<StringView> &&fields, UpdateFlags flags) const -> Value {
-	return Worker(*this, std::forward<Storage>(s)).get(std::forward<_Value>(v), std::move(fields), flags);
+	return Worker(*this, std::forward<Storage>(s)).get(std::forward<_Value>(v), sp::move(fields), flags);
 }
 
 template <typename Storage, typename _Value>
 inline auto Scheme::get(Storage &&s, _Value &&v, std::initializer_list<const char *> &&fields, UpdateFlags flags) const -> Value {
-	return Worker(*this, std::forward<Storage>(s)).get(std::forward<_Value>(v), std::move(fields), flags);
+	return Worker(*this, std::forward<Storage>(s)).get(std::forward<_Value>(v), sp::move(fields), flags);
 }
 
 template <typename Storage, typename _Value>
 inline auto Scheme::get(Storage &&s, _Value &&v, std::initializer_list<const Field *> &&fields, UpdateFlags flags) const -> Value {
-	return Worker(*this, std::forward<Storage>(s)).get(std::forward<_Value>(v), std::move(fields), flags);
+	return Worker(*this, std::forward<Storage>(s)).get(std::forward<_Value>(v), sp::move(fields), flags);
 }
 
 template <typename Storage, typename _Value>

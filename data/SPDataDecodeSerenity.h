@@ -179,12 +179,12 @@ inline void Decoder<Interface>::transformToDict(ValueType &current) {
 	for (auto &it : *current.arrayVal) {
 		auto str = it.asString();
 		if (!str.empty()) {
-			dict.emplace(move(str), ValueType(true));
+			dict.emplace(sp::move(str), ValueType(true));
 		} else {
 			log::error("DataSerenityDecoder", "Invalid token within SubArray");
 		}
 	}
-	current = ValueType(move(dict));
+	current = ValueType(sp::move(dict));
 }
 
 using TokenSpecials = StringView::Chars<'/', '?', '@', '-', '.', '_', '!', '$', '\'', '*', '+', '%'>;
@@ -204,8 +204,8 @@ void Decoder<Interface>::parse(ValueType &val) {
 				pop();
 			} else if (r.is(',')) {
 				typename ValueType::ArrayType arr;
-				arr.emplace_back(move(back));
-				*back = ValueType(move(arr));
+				arr.emplace_back(move(*back));
+				*back = ValueType(sp::move(arr));
 				backType = stack.back().first = BackIsPlainList;
 			} else if (r.is('(') || r.is("~(")) {
 				backType = stack.back().first = BackIsPlainStop;
@@ -315,8 +315,8 @@ void Decoder<Interface>::parse(ValueType &val) {
 				continue;
 			} else if (r.is(',') || r.is("~(")) {
 				typename ValueType::ArrayType arr;
-				arr.emplace_back(move(*back));
-				*back = ValueType(move(arr));
+				arr.emplace_back(sp::move(*back));
+				*back = ValueType(sp::move(arr));
 				backType = stack.back().first = BackIsPlainList;
 			} else if (r.is<TokenSpecials>() || r.is<CharGroupId::Alphanumeric>()) {
 				pop();

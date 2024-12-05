@@ -127,7 +127,7 @@ public:
 		return ConstIterator<Scheme>(scheme, scheme->getData().asDict().end());
 	}
 
-	WrapperTemplate(Value &&data) noexcept : _data(std::move(data)) {
+	WrapperTemplate(Value &&data) noexcept : _data(sp::move(data)) {
 		if (!_data.isDictionary()) {
 			_data = Value(Type::DICTIONARY);
 		}
@@ -156,15 +156,15 @@ public:
 	template <class Key> void setInteger(int64_t value, Key && key) { _modified = true; _data.template setInteger<Key>(value, std::forward<Key>(key)); }
 	template <class Key> void setDouble(double value, Key && key) { _modified = true; _data.template setDouble<Key>(value, std::forward<Key>(key)); }
 	template <class Key> void setString(const String &v, Key &&key) { _modified = true; _data.template setString<Key>(v, std::forward<Key>(key)); }
-	template <class Key> void setString(String &&v, Key &&key) { _modified = true; _data.template setString<Key>(std::move(v), std::forward<Key>(key)); }
+	template <class Key> void setString(String &&v, Key &&key) { _modified = true; _data.template setString<Key>(sp::move(v), std::forward<Key>(key)); }
 	template <class Key> void setString(StringView v, Key &&key) { _modified = true; _data.template setString<Key>(v, std::forward<Key>(key)); }
 	template <class Key> void setBytes(const Bytes &v, Key &&key) { _modified = true; _data.template setBytes<Key>(v, std::forward<Key>(key)); }
-	template <class Key> void setBytes(Bytes &&v, Key &&key) { _modified = true; _data.template setBytes<Key>(std::move(v), std::forward<Key>(key)); }
-	template <class Key> void setBytes(BytesView v, Key &&key) { _modified = true; _data.template setBytes<Key>(std::move(v), std::forward<Key>(key)); }
+	template <class Key> void setBytes(Bytes &&v, Key &&key) { _modified = true; _data.template setBytes<Key>(sp::move(v), std::forward<Key>(key)); }
+	template <class Key> void setBytes(BytesView v, Key &&key) { _modified = true; _data.template setBytes<Key>(sp::move(v), std::forward<Key>(key)); }
 	template <class Key> void setArray(const Array &v, Key &&key) { _modified = true; _data.template setArray<Key>(v, std::forward<Key>(key)); }
-	template <class Key> void setArray(Array &&v, Key &&key) { _modified = true; _data.template setArray<Key>(std::move(v), std::forward<Key>(key)); }
+	template <class Key> void setArray(Array &&v, Key &&key) { _modified = true; _data.template setArray<Key>(sp::move(v), std::forward<Key>(key)); }
 	template <class Key> void setDict(const Dictionary &v, Key &&key) { _modified = true; _data.template setDict<Key>(v, std::forward<Key>(key)); }
-	template <class Key> void setDict(Dictionary &&v, Key &&key) { _modified = true; _data.template setDict<Key>(std::move(v), std::forward<Key>(key)); }
+	template <class Key> void setDict(Dictionary &&v, Key &&key) { _modified = true; _data.template setDict<Key>(sp::move(v), std::forward<Key>(key)); }
 
 	template <class Key> bool getBool(Key &&key) const { return _data.template getBool<Key>(std::forward<Key>(key)); }
 	template <class Key> int64_t getInteger(Key &&key, int64_t def = 0) const { return _data.template getInteger<Key>(std::forward<Key>(key), def); }

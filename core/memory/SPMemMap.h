@@ -76,20 +76,20 @@ public:
 	map(const map& x) noexcept : _tree(x._tree) { }
 	map(const map& x, const allocator_type& alloc) noexcept : _tree(x._tree, alloc) { }
 
-	map(map&& x) noexcept : _tree(std::move(x._tree)) { }
-	map(map&& x, const allocator_type& alloc) noexcept : _tree(std::move(x._tree), alloc) { }
+	map(map&& x) noexcept : _tree(sp::move_unsafe(x._tree)) { }
+	map(map&& x, const allocator_type& alloc) noexcept : _tree(sp::move_unsafe(x._tree), alloc) { }
 
 	map(InitializerList<value_type> il,
 	     const Comp& comp = Comp(), const allocator_type& alloc = allocator_type()) noexcept
 	: _tree(comp, alloc) {
 		for (auto &it : il) {
-			do_insert(std::move(const_cast<reference>(it)));
+			do_insert(sp::move_unsafe(const_cast<reference>(it)));
 		}
 	}
 	map(InitializerList<value_type> il, const allocator_type& alloc) noexcept
 	: _tree(key_compare(), alloc) {
 		for (auto &it : il) {
-			do_insert(std::move(const_cast<reference>(it)));
+			do_insert(sp::move_unsafe(const_cast<reference>(it)));
 		}
 	}
 
@@ -98,13 +98,13 @@ public:
 		return *this;
 	}
 	map& operator= (map&& other) noexcept {
-		_tree = std::move(other._tree);
+		_tree = sp::move_unsafe(other._tree);
 		return *this;
 	}
 	map& operator= (InitializerList<value_type> ilist) noexcept {
 		_tree.clear();
 		for (auto &it : ilist) {
-			do_insert(std::move(const_cast<reference>(it)));
+			do_insert(sp::move_unsafe(const_cast<reference>(it)));
 		}
 		return *this;
 	}
@@ -138,7 +138,7 @@ public:
 		return this->try_emplace(key).first->second;
 	}
 	Value& operator[] ( Key&& key ) {
-		return this->try_emplace(std::move(key)).first->second;
+		return this->try_emplace(sp::move_unsafe(key)).first->second;
 	}
 
 	iterator begin() noexcept { return _tree.begin(); }
@@ -180,7 +180,7 @@ public:
 
 	void insert( InitializerList<value_type> ilist ) {
 		for (auto &it : ilist) {
-			do_insert(std::move(it));
+			do_insert(sp::move_unsafe(it));
 		}
 	}
 
@@ -192,7 +192,7 @@ public:
 
 	template <class M>
 	Pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj) {
-		return _tree.insert_or_assign(std::move(k), obj);
+		return _tree.insert_or_assign(sp::move_unsafe(k), obj);
 	}
 
 	template <class M>
@@ -202,7 +202,7 @@ public:
 
 	template <class M>
 	iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj) {
-		return _tree.insert_or_assign(hint, std::move(k), obj);
+		return _tree.insert_or_assign(hint, sp::move_unsafe(k), obj);
 	}
 
 
@@ -232,7 +232,7 @@ public:
 
 	template <class... Args>
 	Pair<iterator, bool> try_emplace(key_type&& k, Args&&... args) {
-		return _tree.try_emplace(std::move(k), std::forward<Args>(args)...);
+		return _tree.try_emplace(sp::move_unsafe(k), std::forward<Args>(args)...);
 	}
 
 	template <class... Args>
@@ -242,7 +242,7 @@ public:
 
 	template <class... Args>
 	iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args) {
-		return _tree.try_emplace(hint, std::move(k), std::forward<Args>(args)...);
+		return _tree.try_emplace(hint, sp::move_unsafe(k), std::forward<Args>(args)...);
 	}
 
 	iterator erase( const_iterator pos ) { return _tree.erase(pos); }
@@ -274,7 +274,7 @@ protected:
 
 	template <class A, class B>
 	Pair<iterator,bool> do_insert( Pair<A, B> && value ) {
-		return emplace(std::move(value.first), std::move(value.second));
+		return emplace(sp::move_unsafe(value.first), sp::move_unsafe(value.second));
 	}
 
 	template <class A, class B>
@@ -284,7 +284,7 @@ protected:
 
 	template <class A, class B>
 	iterator do_insert( const_iterator hint, Pair<A, B> && value ) {
-		return emplace_hint(hint, std::move(value.first), std::move(value.second));
+		return emplace_hint(hint, sp::move_unsafe(value.first), sp::move_unsafe(value.second));
 	}
 
 	template <class T, class ... Args>

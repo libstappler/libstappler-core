@@ -415,12 +415,12 @@ inline void Allocator<T>::move(T *dest, T *source, size_t count) noexcept {
 			return;
 		} else if (uintptr_t(dest) > uintptr_t(source)) {
 			for (size_t i = count; i > 0; i--) {
-				construct(dest + i - 1, std::move(*(source + i - 1)));
+				construct(dest + i - 1, sp::move_unsafe(*(source + i - 1)));
 				destroy(source + i - 1);
 			}
 		} else {
 			for (size_t i = 0; i < count; i++) {
-				construct(dest + i, std::move(*(source + i)));
+				construct(dest + i, sp::move_unsafe(*(source + i)));
 				destroy(source + i);
 			}
 		}
@@ -438,12 +438,12 @@ inline void Allocator<T>::move_rewrite(T *dest, size_t dcount, T *source, size_t
 			size_t i = count;
 			size_t m = std::min(count, dcount);
 			for (; i > m; i--) {
-				construct(dest + i - 1, std::move(*(source + i - 1)));
+				construct(dest + i - 1, sp::move_unsafe(*(source + i - 1)));
 				destroy(source + i - 1);
 			}
 			for (; i > 0; i--) {
 				destroy(dest + i - 1);
-				construct(dest + i - 1, std::move(*(source + i - 1)));
+				construct(dest + i - 1, sp::move_unsafe(*(source + i - 1)));
 				destroy(source + i - 1);
 			}
 		} else {
@@ -451,11 +451,11 @@ inline void Allocator<T>::move_rewrite(T *dest, size_t dcount, T *source, size_t
 			size_t m = std::min(count, dcount);
 			for (; i < m; ++ i) {
 				destroy(dest + i);
-				construct(dest + i, std::move(*(source + i)));
+				construct(dest + i, sp::move_unsafe(*(source + i)));
 				destroy(source + i);
 			}
 			for (; i < count; ++ i) {
-				construct(dest + i, std::move(*(source + i)));
+				construct(dest + i, sp::move_unsafe(*(source + i)));
 				destroy(source + i);
 			}
 		}

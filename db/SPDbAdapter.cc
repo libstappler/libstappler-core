@@ -211,7 +211,7 @@ void Adapter::broadcast(StringView url, Value &&val, bool exclusive) const {
 	broadcast(Value({
 		stappler::pair("url", Value(url)),
 		stappler::pair("exclusive", Value(exclusive)),
-		stappler::pair("data", std::move(val)),
+		stappler::pair("data", sp::move(val)),
 	}));
 }
 
@@ -387,7 +387,7 @@ static void Adapter_mergeValues(const Scheme &scheme, const Field &f, const Valu
 							if (val) {
 								Adapter_mergeValues(scheme, f_it->second, obj, val, it.second);
 							} else {
-								original.setValue(std::move(it.second), it.first);
+								original.setValue(sp::move(it.second), it.first);
 							}
 						} else {
 							original.erase(it.first);
@@ -396,10 +396,10 @@ static void Adapter_mergeValues(const Scheme &scheme, const Field &f, const Valu
 				}
 			}
 		} else if (newVal.isArray() && f.getTransform() == Transform::Array) {
-			original.setValue(std::move(newVal));
+			original.setValue(sp::move(newVal));
 		}
 	} else {
-		original.setValue(std::move(newVal));
+		original.setValue(sp::move(newVal));
 	}
 }
 
@@ -420,7 +420,7 @@ Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch, const Set
 					inputRow.values.emplace_back(Value(val));
 					Adapter_mergeValues(w.scheme(), *it, obj, inputRow.values.back().value, patchValue);
 				} else {
-					inputRow.values.emplace_back(Value(std::move(patchValue)));
+					inputRow.values.emplace_back(Value(sp::move(patchValue)));
 				}
 				obj.setValue(inputRow.values.back().value, it->getName());
 			} else {
@@ -437,7 +437,7 @@ Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch, const Set
 			auto f = w.scheme().getField(it.first);
 			if (f) {
 				inputFields.emplace_back(InputField{f});
-				inputRow.values.emplace_back(Value(std::move(it.second)));
+				inputRow.values.emplace_back(Value(sp::move(it.second)));
 			}
 		}
 		processFullTextFields(w.scheme(), patch, inputFields, inputRows);
@@ -466,7 +466,7 @@ Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch, const Set
 		for (auto &it : virtualWrites) {
 			if (it.first->writeFn) {
 				if (it.first->writeFn(w.scheme(), obj, it.second)) {
-					ret.setValue(std::move(it.second), it.first->getName());
+					ret.setValue(sp::move(it.second), it.first->getName());
 				} else {
 					_interface->cancelTransaction();
 					return Value();
@@ -523,11 +523,11 @@ void Adapter::scheduleAutoField(const Scheme &scheme, const Field &field, uint64
 }
 
 Value Adapter::field(Action a, Worker &w, uint64_t oid, const Field &f, Value &&data) const {
-	return _interface->field(a, w, oid, f, std::move(data));
+	return _interface->field(a, w, oid, f, sp::move(data));
 }
 
 Value Adapter::field(Action a, Worker &w, const Value &obj, const Field &f, Value &&data) const {
-	return _interface->field(a, w, obj, f, std::move(data));
+	return _interface->field(a, w, obj, f, sp::move(data));
 }
 
 bool Adapter::addToView(const FieldView &v, const Scheme *s, uint64_t oid, const Value &data) const {
@@ -579,7 +579,7 @@ void Adapter::runAutoFields(const Transaction &t, const Vector<uint64_t> &vec, c
 				auto newValue = defs.defaultFn(obj);
 				if (newValue != obj.getValue(field.getName())) {
 					Value patch;
-					patch.setValue(std::move(newValue), field.getName().str<Interface>());
+					patch.setValue(sp::move(newValue), field.getName().str<Interface>());
 					scheme.update(t, obj, patch, UpdateFlags::Protected | UpdateFlags::NoReturn);
 				}
 			}
@@ -653,7 +653,7 @@ void Binder::writeBind(StringStream &query, const String &val) {
 	_iface->bindString(*this, query, val);
 }
 void Binder::writeBind(StringStream &query, String &&val) {
-	_iface->bindMoveString(*this, query, std::move(val));
+	_iface->bindMoveString(*this, query, sp::move(val));
 }
 void Binder::writeBind(StringStream &query, const StringView &val) {
 	_iface->bindStringView(*this, query, val);
@@ -662,7 +662,7 @@ void Binder::writeBind(StringStream &query, const Bytes &val) {
 	_iface->bindBytes(*this, query, val);
 }
 void Binder::writeBind(StringStream &query, Bytes &&val) {
-	_iface->bindMoveBytes(*this, query, std::move(val));
+	_iface->bindMoveBytes(*this, query, sp::move(val));
 }
 void Binder::writeBind(StringStream &query, const stappler::CoderSource &val) {
 	_iface->bindCoderSource(*this, query, val);
@@ -695,14 +695,14 @@ void Binder::writeBind(StringStream &query, const stappler::sql::PatternComparat
 			String str; str.reserve(cmp.value->getString().size() + 1);
 			str.append(cmp.value->getString());
 			str.append("%");
-			_iface->bindMoveString(*this, query, std::move(str));
+			_iface->bindMoveString(*this, query, sp::move(str));
 			break;
 		}
 		case Comparation::Suffix: {
 			String str; str.reserve(cmp.value->getString().size() + 1);
 			str.append("%");
 			str.append(cmp.value->getString());
-			_iface->bindMoveString(*this, query, std::move(str));
+			_iface->bindMoveString(*this, query, sp::move(str));
 			break;
 		}
 		case Comparation::WordPart: {
@@ -710,7 +710,7 @@ void Binder::writeBind(StringStream &query, const stappler::sql::PatternComparat
 			str.append("%");
 			str.append(cmp.value->getString());
 			str.append("%");
-			_iface->bindMoveString(*this, query, std::move(str));
+			_iface->bindMoveString(*this, query, sp::move(str));
 			break;
 		}
 		default:
@@ -727,14 +727,14 @@ void Binder::writeBind(StringStream &query, const stappler::sql::PatternComparat
 		String str; str.reserve(cmp.value->size() + 1);
 		str.append(cmp.value->data(), cmp.value->size());
 		str.append("%");
-		_iface->bindMoveString(*this, query, std::move(str));
+		_iface->bindMoveString(*this, query, sp::move(str));
 		break;
 	}
 	case Comparation::Suffix: {
 		String str; str.reserve(cmp.value->size() + 1);
 		str.append("%");
 		str.append(cmp.value->data(), cmp.value->size());
-		_iface->bindMoveString(*this, query, std::move(str));
+		_iface->bindMoveString(*this, query, sp::move(str));
 		break;
 	}
 	case Comparation::WordPart: {
@@ -742,7 +742,7 @@ void Binder::writeBind(StringStream &query, const stappler::sql::PatternComparat
 		str.append("%");
 		str.append(cmp.value->data(), cmp.value->size());
 		str.append("%");
-		_iface->bindMoveString(*this, query, std::move(str));
+		_iface->bindMoveString(*this, query, sp::move(str));
 		break;
 	}
 	default:
@@ -875,7 +875,7 @@ Value ResultRow::toData(const db::Scheme &scheme, const Map<String, db::Field> &
 			auto slot = it->getSlot<FieldVirtual>();
 			if (slot->readFn) {
 				if (auto v = slot->readFn(scheme, row)) {
-					row.setValue(std::move(v), it->getName());
+					row.setValue(sp::move(v), it->getName());
 				}
 			}
 		}

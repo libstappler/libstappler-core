@@ -164,7 +164,7 @@ size_t PgQueryInterface::push(const StringView &val) {
 }
 
 size_t PgQueryInterface::push(Bytes &&val) {
-	params.emplace_back(std::move(val));
+	params.emplace_back(sp::move(val));
 	binary.emplace_back(true);
 	return params.size();
 }
@@ -243,7 +243,7 @@ void PgQueryInterface::bindString(db::Binder &, StringStream &query, const Strin
 }
 
 void PgQueryInterface::bindMoveString(db::Binder &, StringStream &query, String &&val) {
-	if (auto num = push(std::move(val))) {
+	if (auto num = push(sp::move(val))) {
 		query << "$" << num << "::text";
 	}
 }
@@ -261,7 +261,7 @@ void PgQueryInterface::bindBytes(db::Binder &, StringStream &query, const Bytes 
 }
 
 void PgQueryInterface::bindMoveBytes(db::Binder &, StringStream &query, Bytes &&val) {
-	if (auto num = push(std::move(val))) {
+	if (auto num = push(sp::move(val))) {
 		query << "$" << num << "::bytea";
 	}
 }
@@ -418,7 +418,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction_pg();
 	}
@@ -445,7 +445,7 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction_pg();
 	}
@@ -474,7 +474,7 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction_pg();
 	}

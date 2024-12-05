@@ -33,17 +33,17 @@ struct SP_PUBLIC SubscriptionFlags : public ValueWrapper<uint64_t, class Subscri
 	using Super = ValueWrapper<uint64_t, class SubscriptionFlagsClassFlag>;
 
 	inline constexpr explicit SubscriptionFlags(const Type &val) : Super(val) { }
-	inline constexpr explicit SubscriptionFlags(Type &&val) : Super(std::move(val)) { }
+	inline constexpr explicit SubscriptionFlags(Type &&val) : Super(sp::move(val)) { }
 
 	inline constexpr SubscriptionFlags(const SubscriptionFlags &other) { value = other.value; }
 	inline constexpr SubscriptionFlags &operator=(const SubscriptionFlags &other) { value = other.value; return *this; }
-	inline constexpr SubscriptionFlags(SubscriptionFlags &&other) { value = std::move(other.value); }
-	inline constexpr SubscriptionFlags &operator=(SubscriptionFlags &&other) { value = std::move(other.value); return *this; }
+	inline constexpr SubscriptionFlags(SubscriptionFlags &&other) { value = sp::move(other.value); }
+	inline constexpr SubscriptionFlags &operator=(SubscriptionFlags &&other) { value = sp::move(other.value); return *this; }
 
 	inline constexpr SubscriptionFlags(const Super &other) { value = other.value; }
 	inline constexpr SubscriptionFlags &operator=(const Super &other) { value = other.value; return *this; }
-	inline constexpr SubscriptionFlags(Super &&other) { value = std::move(other.value); }
-	inline constexpr SubscriptionFlags &operator=(Super &&other) { value = std::move(other.value); return *this; }
+	inline constexpr SubscriptionFlags(Super &&other) { value = sp::move(other.value); }
+	inline constexpr SubscriptionFlags &operator=(Super &&other) { value = sp::move(other.value); return *this; }
 
 	template <typename T>
 	inline constexpr bool hasFlag(T f) const {
@@ -284,7 +284,7 @@ Binding<T>& Binding<T>::operator= (const Binding<T> &other) {
 template <class T>
 Binding<T>::Binding(Binding &&other) {
 	_id = other._id;
-	_subscription = std::move(other._subscription);
+	_subscription = sp::move(other._subscription);
 }
 
 template <class T>
@@ -292,7 +292,7 @@ Binding<T> &Binding<T>::operator= (Binding<T> &&other) {
 	if (_subscription) {
 		_subscription->unsubscribe(_id);
 	}
-	_subscription = std::move(other._subscription);
+	_subscription = sp::move(other._subscription);
 	_id = other._id;
 	return *this;
 }

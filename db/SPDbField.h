@@ -241,7 +241,7 @@ struct SP_PUBLIC Thumbnail {
 	String name;
 
 	Thumbnail(String && name, size_t w, size_t h)
-	: width(w), height(h), name(std::move(name)) { }
+	: width(w), height(h), name(sp::move(name)) { }
 };
 
 // what to do if object is removed
@@ -469,7 +469,7 @@ struct SP_PUBLIC FieldText : Field::Slot {
 	virtual ~FieldText() { }
 
 	template <typename ... Args>
-	FieldText(String && n, Type t, Args && ... args) : Field::Slot(std::move(n), t) {
+	FieldText(String && n, Type t, Args && ... args) : Field::Slot(sp::move(n), t) {
 		init<FieldText, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -483,7 +483,7 @@ struct SP_PUBLIC FieldPassword : Field::Slot {
 	virtual ~FieldPassword() { }
 
 	template <typename ... Args>
-	FieldPassword(String && n, Args && ... args) : Field::Slot(std::move(n), Type::Bytes) {
+	FieldPassword(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::Bytes) {
 		init<FieldPassword, Args...>(*this, std::forward<Args>(args)...);
 		transform = Transform::Password;
 	}
@@ -499,7 +499,7 @@ struct SP_PUBLIC FieldExtra : Field::Slot {
 	virtual ~FieldExtra() { }
 
 	template <typename ... Args>
-	FieldExtra(String && n, Args && ... args) : Field::Slot(std::move(n), Type::Extra) {
+	FieldExtra(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::Extra) {
 		init<FieldExtra, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -516,7 +516,7 @@ struct SP_PUBLIC FieldFile : Field::Slot {
 	virtual ~FieldFile() { }
 
 	template <typename ... Args>
-	FieldFile(String && n, Args && ... args) : Field::Slot(std::move(n), Type::File) {
+	FieldFile(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::File) {
 		init<FieldFile, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -530,7 +530,7 @@ struct SP_PUBLIC FieldImage : Field::Slot {
 	virtual ~FieldImage() { }
 
 	template <typename ... Args>
-	FieldImage(String && n, Args && ... args) : Field::Slot(std::move(n), Type::Image) {
+	FieldImage(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::Image) {
 		init<FieldImage, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -548,7 +548,7 @@ struct SP_PUBLIC FieldObject : Field::Slot {
 	virtual ~FieldObject() { }
 
 	template <typename ... Args>
-	FieldObject(String && n, Type t, Args && ... args) : Field::Slot(std::move(n), t) {
+	FieldObject(String && n, Type t, Args && ... args) : Field::Slot(sp::move(n), t) {
 		init<FieldObject, Args...>(*this, std::forward<Args>(args)...);
 		if (t == Type::Set && (stappler::toInt(flags) & stappler::toInt(Flags::Reference))) {
 			if (onRemove != RemovePolicy::Reference && onRemove != RemovePolicy::StrongReference) {
@@ -573,7 +573,7 @@ struct SP_PUBLIC FieldArray : Field::Slot {
 	virtual ~FieldArray() { }
 
 	template <typename ... Args>
-	FieldArray(String && n, Args && ... args) : Field::Slot(std::move(n), Type::Array), tfield(new FieldText("", Type::Text)) {
+	FieldArray(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::Array), tfield(new FieldText("", Type::Text)) {
 		init<FieldArray, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -591,7 +591,7 @@ struct SP_PUBLIC FieldView : Field::Slot {
 	virtual ~FieldView() { }
 
 	template <typename ... Args>
-	FieldView(String && n, Args && ... args) : Field::Slot(std::move(n), Type::View) {
+	FieldView(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::View) {
 		init<FieldView, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -608,7 +608,7 @@ struct SP_PUBLIC FieldFullTextView : Field::Slot {
 	virtual ~FieldFullTextView() { }
 
 	template <typename ... Args>
-	FieldFullTextView(String && n, Args && ... args) : Field::Slot(std::move(n), Type::FullTextView) {
+	FieldFullTextView(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::FullTextView) {
 		init<FieldFullTextView, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -628,7 +628,7 @@ struct SP_PUBLIC FieldCustom : Field::Slot {
 	virtual ~FieldCustom() { }
 
 	template <typename ... Args>
-	FieldCustom(String && n, Args && ... args) : Field::Slot(std::move(n), Type::Custom) {
+	FieldCustom(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::Custom) {
 		init<FieldCustom, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -639,7 +639,7 @@ struct SP_PUBLIC FieldVirtual : Field::Slot {
 	virtual ~FieldVirtual() { }
 
 	template <typename ... Args>
-	FieldVirtual(String && n, Args && ... args) : Field::Slot(std::move(n), Type::Virtual) {
+	FieldVirtual(String && n, Args && ... args) : Field::Slot(sp::move(n), Type::Virtual) {
 		init<FieldVirtual, Args...>(*this, std::forward<Args>(args)...);
 	}
 
@@ -652,84 +652,84 @@ struct SP_PUBLIC FieldVirtual : Field::Slot {
 };
 
 template <typename ... Args> Field Field::Data(String && name, Args && ... args) {
-	auto newSlot = new Field::Slot(std::move(name), Type::Data);
+	auto newSlot = new Field::Slot(sp::move(name), Type::Data);
 	Slot::init<Field::Slot>(*newSlot, std::forward<Args>(args)...);
 	newSlot->inputSizeHint = config::FIELD_EXTRA_DEFAULT_HINT_SIZE;
 	return Field(newSlot);
 }
 
 template <typename ... Args> Field Field::Integer(String && name, Args && ... args) {
-	auto newSlot = new Field::Slot(std::move(name), Type::Integer);
+	auto newSlot = new Field::Slot(sp::move(name), Type::Integer);
 	Slot::init<Field::Slot>(*newSlot, std::forward<Args>(args)...);
 	return Field(newSlot);
 }
 
 template <typename ... Args> Field Field::Float(String && name, Args && ... args) {
-	auto newSlot = new Field::Slot(std::move(name), Type::Float);
+	auto newSlot = new Field::Slot(sp::move(name), Type::Float);
 	Slot::init<Field::Slot>(*newSlot, std::forward<Args>(args)...);
 	return Field(newSlot);
 }
 
 template <typename ... Args> Field Field::Boolean(String && name, Args && ... args) {
-	auto newSlot = new Field::Slot(std::move(name), Type::Boolean);
+	auto newSlot = new Field::Slot(sp::move(name), Type::Boolean);
 	Slot::init<Field::Slot>(*newSlot, std::forward<Args>(args)...);
 	return Field(newSlot);
 }
 
 template <typename ... Args> Field Field::Text(String && name, Args && ... args) {
-	return Field(new FieldText(std::move(name), Type::Text, std::forward<Args>(args)...));
+	return Field(new FieldText(sp::move(name), Type::Text, std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Bytes(String &&name, Args && ... args) {
-	return Field(new FieldText(std::move(name), Type::Bytes, std::forward<Args>(args)...));
+	return Field(new FieldText(sp::move(name), Type::Bytes, std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Password(String && name, Args && ... args) {
-	return Field(new FieldPassword(std::move(name), std::forward<Args>(args)...));
+	return Field(new FieldPassword(sp::move(name), std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Extra(String &&name, Args && ... args) {
-	auto newSlot = new FieldExtra(std::move(name), std::forward<Args>(args)...);
+	auto newSlot = new FieldExtra(sp::move(name), std::forward<Args>(args)...);
 	newSlot->inputSizeHint = config::FIELD_EXTRA_DEFAULT_HINT_SIZE;
 	return Field(newSlot);
 }
 
 template <typename ... Args> Field Field::Extra(String &&name, stappler::InitializerList<Field> &&f, Args && ... args) {
-	auto newSlot = new FieldExtra(std::move(name), move(f), std::forward<Args>(args)...);
+	auto newSlot = new FieldExtra(sp::move(name), sp::move(f), std::forward<Args>(args)...);
 	newSlot->inputSizeHint = config::FIELD_EXTRA_DEFAULT_HINT_SIZE;
 	return Field(newSlot);
 }
 
 template <typename ... Args> Field Field::File(String &&name, Args && ... args) {
-	return Field(new FieldFile(std::move(name), std::forward<Args>(args)...));
+	return Field(new FieldFile(sp::move(name), std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Image(String &&name, Args && ... args) {
-	return Field(new FieldImage(std::move(name), std::forward<Args>(args)...));
+	return Field(new FieldImage(sp::move(name), std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Object(String &&name, Args && ... args) {
-	return Field(new FieldObject(std::move(name), Type::Object, std::forward<Args>(args)...));
+	return Field(new FieldObject(sp::move(name), Type::Object, std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Set(String && name, Args && ... args) {
-	return Field(new FieldObject(std::move(name), Type::Set, std::forward<Args>(args)...));
+	return Field(new FieldObject(sp::move(name), Type::Set, std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Array(String && name, Args && ... args) {
-	return Field(new FieldArray(std::move(name), std::forward<Args>(args)...));
+	return Field(new FieldArray(sp::move(name), std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::View(String && name, Args && ... args) {
-	return Field(new FieldView(std::move(name), std::forward<Args>(args)...));
+	return Field(new FieldView(sp::move(name), std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::FullTextView(String && name, Args && ... args) {
-	return Field(new FieldFullTextView(std::move(name), std::forward<Args>(args)...));
+	return Field(new FieldFullTextView(sp::move(name), std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Virtual(String && name, Args && ... args) {
-	return Field(new FieldVirtual(std::move(name), std::forward<Args>(args)...));
+	return Field(new FieldVirtual(sp::move(name), std::forward<Args>(args)...));
 }
 
 template <typename ... Args> Field Field::Custom(FieldCustom *custom) {
@@ -787,7 +787,7 @@ template <typename F> struct FieldOption<F, MaxLength> {
 };
 
 template <typename F> struct FieldOption<F, Value> {
-	static inline void assign(F & f, Value && v) { f.def = std::move(v); }
+	static inline void assign(F & f, Value && v) { f.def = sp::move(v); }
 };
 
 template <typename F> struct FieldOption<F, PasswordSalt> {
@@ -809,7 +809,7 @@ template <typename F> struct FieldOption<F, Vector<Field>> {
 
 template <typename F> struct FieldOption<F, AutoFieldDef> {
 	static inline void assign(F & f, AutoFieldDef &&def) {
-		f.autoField = std::move(def);
+		f.autoField = sp::move(def);
 	}
 };
 
@@ -827,19 +827,19 @@ template <typename F> struct FieldOption<F, MaxFileSize> {
 };
 
 template <typename F> struct FieldOption<F, Vector<String>> {
-	static inline void assign(F & f, Vector<String> && l) { f.allowedTypes = std::move(l); }
+	static inline void assign(F & f, Vector<String> && l) { f.allowedTypes = sp::move(l); }
 };
 
 template <typename F> struct FieldOption<F, MaxImageSize> {
-	static inline void assign(F & f, MaxImageSize && s) { f.maxImageSize = std::move(s); }
+	static inline void assign(F & f, MaxImageSize && s) { f.maxImageSize = sp::move(s); }
 };
 
 template <typename F> struct FieldOption<F, MinImageSize> {
-	static inline void assign(F & f, MinImageSize && s) { f.minImageSize = std::move(s); }
+	static inline void assign(F & f, MinImageSize && s) { f.minImageSize = sp::move(s); }
 };
 
 template <typename F> struct FieldOption<F, Vector<Thumbnail>> {
-	static inline void assign(F & f, Vector<Thumbnail> && s) { f.thumbnails = std::move(s); }
+	static inline void assign(F & f, Vector<Thumbnail> && s) { f.thumbnails = sp::move(s); }
 };
 
 template <typename F> struct FieldOption<F, RemovePolicy> {
@@ -888,13 +888,13 @@ template <> struct FieldOption<FieldArray, Type> {
 
 template <> struct FieldOption<FieldView, Vector<String>> {
 	static inline void assign(FieldView & f, Vector<String> && s) {
-		f.requireFields = std::move(s);
+		f.requireFields = sp::move(s);
 	}
 };
 
 template <> struct FieldOption<FieldFullTextView, Vector<String>> {
 	static inline void assign(FieldFullTextView & f, Vector<String> && s) {
-		f.requireFields = std::move(s);
+		f.requireFields = sp::move(s);
 	}
 };
 
@@ -912,25 +912,25 @@ template <> struct FieldOption<FieldFullTextView, search::Configuration> {
 
 template <typename F> struct FieldOption<F, ViewLinkageFn> {
 	static inline void assign(F & f, ViewLinkageFn && s) {
-		f.linkage = std::move(s);
+		f.linkage = sp::move(s);
 	}
 };
 
 template <typename F> struct FieldOption<F, ViewFn> {
 	static inline void assign(F & f, ViewFn && s) {
-		f.viewFn = std::move(s);
+		f.viewFn = sp::move(s);
 	}
 };
 
 template <typename F> struct FieldOption<F, FullTextViewFn> {
 	static inline void assign(F & f, FullTextViewFn && s) {
-		f.viewFn = std::move(s);
+		f.viewFn = sp::move(s);
 	}
 };
 
 template <typename F> struct FieldOption<F, FullTextQueryFn> {
 	static inline void assign(F & f, FullTextQueryFn && s) {
-		f.queryFn = std::move(s);
+		f.queryFn = sp::move(s);
 	}
 };
 
@@ -944,19 +944,19 @@ template <typename F> struct FieldOption<F, FieldView::DeltaOptions> {
 
 template <> struct FieldOption<FieldVirtual, Vector<String>> {
 	static inline void assign(FieldVirtual & f, Vector<String> && s) {
-		f.requireFields = std::move(s);
+		f.requireFields = sp::move(s);
 	}
 };
 
 template <> struct FieldOption<FieldVirtual, VirtualReadFn> {
 	static inline void assign(FieldVirtual & f, VirtualReadFn && r) {
-		f.readFn = std::move(r);
+		f.readFn = sp::move(r);
 	}
 };
 
 template <> struct FieldOption<FieldVirtual, VirtualWriteFn> {
 	static inline void assign(FieldVirtual & f, VirtualWriteFn && r) {
-		f.writeFn = std::move(r);
+		f.writeFn = sp::move(r);
 	}
 };
 

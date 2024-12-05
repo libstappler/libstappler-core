@@ -51,7 +51,7 @@ void store(pool_t *pool, void *ptr, const StringView &key, memory::function<void
 		auto h = (Pool_StoreHandle *)ret;
 		h->pointer = ptr;
 		if (cb) {
-			h->callback = std::move(cb);
+			h->callback = sp::move(cb);
 		} else {
 			h->callback = nullptr;
 		}
@@ -59,7 +59,7 @@ void store(pool_t *pool, void *ptr, const StringView &key, memory::function<void
 		auto h = new (pool) Pool_StoreHandle();
 		h->pointer = ptr;
 		if (cb) {
-			h->callback = std::move(cb);
+			h->callback = sp::move(cb);
 		}
 
 		if (key.terminated()) {

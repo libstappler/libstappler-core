@@ -185,7 +185,7 @@ template <typename Interface>
 BitmapTemplate<Interface>::BitmapTemplate(typename Interface::BytesType &&d, uint32_t width, uint32_t height,
 		PixelFormat c, AlphaFormat a, uint32_t stride)
 : _color(c), _alpha(a), _width(width), _height(height)
-, _stride(max(stride, width * getBytesPerPixel(c))), _data(std::move(d)) {
+, _stride(max(stride, width * getBytesPerPixel(c))), _data(sp::move(d)) {
 	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
 }
 
@@ -193,7 +193,7 @@ template <typename Interface>
 BitmapTemplate<Interface>::BitmapTemplate(BitmapTemplate &&other)
 : _color(other._color), _alpha(other._alpha)
 , _width(other._width), _height(other._height), _stride(other._stride)
-, _data(std::move(other._data))
+, _data(sp::move(other._data))
 , _originalFormat(other._originalFormat)
 , _originalFormatName(move(other._originalFormatName)) {
 	other._data.clear();
@@ -206,7 +206,7 @@ auto BitmapTemplate<Interface>::operator =(BitmapTemplate &&other) -> BitmapTemp
 	_width = other._width;
 	_height = other._height;
 	_stride = other._stride;
-	_data = std::move(other._data);
+	_data = sp::move(other._data);
 	_originalFormat = other._originalFormat;
 	_originalFormatName = move(other._originalFormatName);
 	other._data.clear();
@@ -237,7 +237,7 @@ template <typename Interface>
 void BitmapTemplate<Interface>::loadBitmap(typename Interface::BytesType &&d, uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
 	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
-	_data = std::move(d);
+	_data = sp::move(d);
 	_originalFormat = FileFormat::Custom;
 	_originalFormatName.clear();
 }
@@ -272,7 +272,7 @@ bool BitmapTemplate<Interface>::updateStride(const StrideFn &strideFn) {
 		for (size_t j = 0; j < _height; j ++) {
 			memcpy(out.data() + j * outStride, _data.data() + j * _stride, minStride);
 		}
-		_data = std::move(out);
+		_data = sp::move(out);
 		_stride = outStride;
 		return true;
 	}
@@ -297,7 +297,7 @@ bool BitmapTemplate<Interface>::convert(PixelFormat color, const StrideFn &strid
 
 	if (ret) {
 		_color = color;
-		_data = std::move(out);
+		_data = sp::move(out);
 		_stride = outStride;
 	}
 
@@ -344,7 +344,7 @@ bool BitmapTemplate<Interface>::truncate(PixelFormat color, const StrideFn &stri
 	}
 
 	_color = color;
-	_data = std::move(out);
+	_data = sp::move(out);
 	_stride = outStride;
 
 	return true;

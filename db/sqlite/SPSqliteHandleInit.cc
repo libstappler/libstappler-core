@@ -74,7 +74,7 @@ struct IndexRec {
 	bool unique = false;
 
 	IndexRec(StringView str, bool unique = false) : fields(Vector<String>({str.str<Interface>()})), unique(unique) { }
-	IndexRec(Vector<String> &&fields, bool unique = false) : fields(std::move(fields)), unique(unique) { }
+	IndexRec(Vector<String> &&fields, bool unique = false) : fields(sp::move(fields)), unique(unique) { }
 };
 
 struct TriggerRec {
@@ -622,14 +622,14 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					table.indexes.emplace(toString(name, "_idx_", source), toString(source, "_id"));
 					table.indexes.emplace(toString(name, "_idx_", target), toString(target, "_id"));
 
-					auto extraTable = &tables.emplace(StringView(name).pdup(), std::move(table)).first->second;
+					auto extraTable = &tables.emplace(StringView(name).pdup(), sp::move(table)).first->second;
 
 					do {
 						TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, source, "__oid",
 								name, toString(source, "_id"));
 						trigger.rootField = &fit.second;
 						auto triggerName = trigger.makeName();
-						schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+						schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 					} while (0);
 
 					do {
@@ -640,7 +640,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 							trigger.rootField = &fit.second;
 							trigger.rootScheme = scheme;
 							auto triggerName = trigger.makeName();
-							targetIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
+							targetIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
 						}
 
 						if (ref->onRemove == db::RemovePolicy::StrongReference && targetIt != tables.end()) {
@@ -649,7 +649,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 							trigger.rootField = &fit.second;
 							trigger.rootScheme = scheme;
 							auto triggerName = trigger.makeName();
-							extraTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+							extraTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 						}
 					} while (0);
 				}
@@ -669,7 +669,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					}
 
 					auto triggerName = trigger.makeName();
-					targetIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
+					targetIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
 
 					if (ref->onRemove == RemovePolicy::StrongReference) {
 						// make reverse-trigger to remove object with strong reference
@@ -681,7 +681,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 							trigger.onRemove = ref->onRemove;
 
 							auto triggerName = trigger.makeName();
-							schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+							schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 						} while (0);
 
 						do {
@@ -692,7 +692,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 							trigger.onRemove = ref->onRemove;
 
 							auto triggerName = trigger.makeName();
-							schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+							schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 						} while (0);
 					}
 				}
@@ -730,13 +730,13 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 						table.indexes.emplace(toString(name, "_uidx_data"), IndexRec(toString("data"), true));
 					}
 
-					tables.emplace(StringView(name).pdup(), std::move(table));
+					tables.emplace(StringView(name).pdup(), sp::move(table));
 
 					TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, scheme->getName(), f.getName(), name, sourceFieldName);
 					trigger.rootField = &f;
 					auto triggerName = trigger.makeName();
 
-					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+					schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 				}
 				break;
 			}
@@ -759,7 +759,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 							viewName, toString(source, "_id"));
 					trigger.rootField = &fit.second;
 					auto triggerName = trigger.makeName();
-					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+					schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 				} while (0);
 
 				do {
@@ -770,14 +770,14 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 						trigger.rootField = &fit.second;
 						trigger.rootScheme = scheme;
 						auto triggerName = trigger.makeName();
-						targetIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
+						targetIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
 					}
 				} while (0);
 
 				table.indexes.emplace(toString(viewName, "_idx_", source), toString(source, "_id"));
 				table.indexes.emplace(toString(viewName, "_idx_", target), toString(target, "_id"));
 
-				auto tblIt = tables.emplace(StringView(viewName).pdup(), std::move(table)).first;
+				auto tblIt = tables.emplace(StringView(viewName).pdup(), sp::move(table)).first;
 
 				if (slot->delta) {
 					String deltaName = toString(it.first, "_f_", fit.first, "_delta");
@@ -795,24 +795,24 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 						TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
-						tblIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
+						tblIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
 					} while (0);
 
 					do {
 						TriggerRec trigger(TriggerRec::Update, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
-						tblIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
+						tblIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
 					} while (0);
 
 					do {
 						TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
-						tblIt->second.triggers.emplace(std::move(triggerName), std::move(trigger));
+						tblIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
 					} while (0);
 
-					tables.emplace(StringView(deltaName).pdup(), std::move(table));
+					tables.emplace(StringView(deltaName).pdup(), sp::move(table));
 				}
 				break;
 			}
@@ -827,27 +827,27 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				table.cols.emplace("word", ColRec(ColRec::Type::Int8));
 
 				table.indexes.emplace(toString(name, "_idx_word"), "word");
-				tables.emplace(StringView(name).pdup(), std::move(table));
+				tables.emplace(StringView(name).pdup(), sp::move(table));
 
 				do {
 					TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
 					trigger.tagField = toString(source, "_id");
 					auto triggerName = trigger.makeName();
-					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+					schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 				} while (0);
 
 				do {
 					TriggerRec trigger(TriggerRec::Update, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
 					trigger.tagField = toString(source, "_id");
 					auto triggerName = trigger.makeName();
-					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+					schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 				} while (0);
 
 				do {
 					TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
 					trigger.tagField = toString(source, "_id");
 					auto triggerName = trigger.makeName();
-					schemeTable->triggers.emplace(std::move(triggerName), std::move(trigger));
+					schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 				} while (0);
 
 				break;
@@ -866,7 +866,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 
 				table.indexes.emplace(name + "_idx_object", "object");
 				table.indexes.emplace(name + "_idx_time", "time");
-				tables.emplace(StringView(name).pdup(), std::move(table));
+				tables.emplace(StringView(name).pdup(), sp::move(table));
 			}
 		}
 	}
@@ -943,7 +943,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 								}
 							}
 						}
-						table.indexes.emplace(it.at(1).str<Interface>(), IndexRec(std::move(fields), unique));
+						table.indexes.emplace(it.at(1).str<Interface>(), IndexRec(sp::move(fields), unique));
 					}
 				}
 			}
@@ -964,7 +964,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 				triggerName += "ST_TRIGGER:"_len;
 
 				TriggerRec trigger(triggerName);
-				f->second.triggers.emplace(it.at(1).str<Interface>(), std::move(trigger));
+				f->second.triggers.emplace(it.at(1).str<Interface>(), sp::move(trigger));
 			}
 		}
 	});
@@ -1086,12 +1086,12 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 				TriggerRec updateTrigger(TriggerRec::Update, TriggerRec::After, name, it.second.getName(),
 						cfg.fileScheme->getName(), "__oid", &it.second);
 				auto updateTriggerName = updateTrigger.makeName();
-				triggers.emplace(std::move(updateTriggerName), std::move(updateTrigger));
+				triggers.emplace(sp::move(updateTriggerName), sp::move(updateTrigger));
 
 				TriggerRec removeTrigger(TriggerRec::Delete, TriggerRec::After, name, it.second.getName(),
 						cfg.fileScheme->getName(), "__oid", &it.second);
 				auto removeTriggerName = removeTrigger.makeName();
-				triggers.emplace(std::move(removeTriggerName), std::move(removeTrigger));
+				triggers.emplace(sp::move(removeTriggerName), sp::move(removeTrigger));
 			}
 
 			if ((type == db::Type::Text && f.getTransform() == db::Transform::Alias) || (f.hasFlag(db::Flags::Indexed))) {
@@ -1130,7 +1130,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 			values.emplace_back(f->getName().str<Interface>());
 			nameStream << "_" << f->getName();
 		}
-		indexes.emplace(nameStream.str(), IndexRec(std::move(values), true));
+		indexes.emplace(nameStream.str(), IndexRec(sp::move(values), true));
 	}
 
 	if (scheme->hasDelta()) {
@@ -1139,7 +1139,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 									Handle::getNameForDelta(*scheme), "object");
 			trigger.rootScheme = scheme;
 			auto triggerName = trigger.makeName();
-			triggers.emplace(std::move(triggerName), std::move(trigger));
+			triggers.emplace(sp::move(triggerName), sp::move(trigger));
 		} while (0);
 
 		do {
@@ -1147,7 +1147,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 									Handle::getNameForDelta(*scheme), "object");
 			trigger.rootScheme = scheme;
 			auto triggerName = trigger.makeName();
-			triggers.emplace(std::move(triggerName), std::move(trigger));
+			triggers.emplace(sp::move(triggerName), sp::move(trigger));
 		} while (0);
 
 		do {
@@ -1155,7 +1155,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 									Handle::getNameForDelta(*scheme), "object");
 			trigger.rootScheme = scheme;
 			auto triggerName = trigger.makeName();
-			triggers.emplace(std::move(triggerName), std::move(trigger));
+			triggers.emplace(sp::move(triggerName), sp::move(trigger));
 		} while (0);
 	}
 

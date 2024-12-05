@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-Object::Object(Value &&data, const Scheme &scheme) : WrapperTemplate(std::move(data)), _scheme(scheme) {
+Object::Object(Value &&data, const Scheme &scheme) : WrapperTemplate(sp::move(data)), _scheme(scheme) {
 	if (!_data.isDictionary()) {
 		_data = Value(Value::Type::DICTIONARY);
 		_oid = 0;

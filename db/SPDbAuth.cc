@@ -89,7 +89,7 @@ stappler::Pair<const Field *, String> Auth::getNameField(const StringView &value
 		if (email) {
 			String str = value.str<Interface>();
 			if (stappler::valid::validateEmail(str)) {
-				return stappler::pair(email, std::move(str));
+				return stappler::pair(email, sp::move(str));
 			}
 		}
 		if (name) {

@@ -213,7 +213,7 @@ CustomLog& CustomLog::operator=(CustomLog && other) {
 }
 
 void setLogFilterMask(std::bitset<6> &&mask) {
-	s_logMask = move(mask);
+	s_logMask = sp::move(mask);
 }
 
 std::bitset<6> getlogFilterMask() {

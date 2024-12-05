@@ -134,15 +134,15 @@ public:
 	explicit ValueTemplate(const char *v) : _type(Type::CHARSTRING) { strVal = (v ?  new StringType(v) : new StringType()); }
 	explicit ValueTemplate(const StringView &v) : _type(Type::CHARSTRING) { strVal = new StringType(v.data(), v.size()); }
 	explicit ValueTemplate(const StringType &v): _type(Type::CHARSTRING) { strVal = new StringType(v); }
-	explicit ValueTemplate(StringType &&v) : _type(Type::CHARSTRING) { strVal = new StringType(std::move(v)); }
+	explicit ValueTemplate(StringType &&v) : _type(Type::CHARSTRING) { strVal = new StringType(sp::move(v)); }
 	explicit ValueTemplate(const BytesType &v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(v); }
-	explicit ValueTemplate(BytesType &&v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(std::move(v)); }
+	explicit ValueTemplate(BytesType &&v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(sp::move(v)); }
 	explicit ValueTemplate(const BytesViewTemplate<Endian::Big> &v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(v.data(), v.data() + v.size()); }
 	explicit ValueTemplate(const BytesViewTemplate<Endian::Little> &v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(v.data(), v.data() + v.size()); }
 	explicit ValueTemplate(const ArrayType &v) : _type(Type::ARRAY) { arrayVal = new ArrayType(v); }
-	explicit ValueTemplate(ArrayType &&v) : _type(Type::ARRAY) { arrayVal = new ArrayType(std::move(v)); }
+	explicit ValueTemplate(ArrayType &&v) : _type(Type::ARRAY) { arrayVal = new ArrayType(sp::move(v)); }
 	explicit ValueTemplate(const DictionaryType &v) : _type(Type::DICTIONARY) { dictVal = new DictionaryType(v); }
-	explicit ValueTemplate(DictionaryType &&v) : _type(Type::DICTIONARY) { dictVal = new DictionaryType(std::move(v)); }
+	explicit ValueTemplate(DictionaryType &&v) : _type(Type::DICTIONARY) { dictVal = new DictionaryType(sp::move(v)); }
 
 	Self& operator= (const Self& other) noexcept;
 	Self& operator= (Self&& other) noexcept;
@@ -160,14 +160,14 @@ public:
 	Self& operator= (const char *v) { return (*this = Self(v)); }
 	Self& operator= (const StringView &v) { return (*this = Self(v)); }
 	Self& operator= (const StringType &v) { return (*this = Self(v)); }
-	Self& operator= (StringType &&v) { return (*this = Self(std::move(v))); }
+	Self& operator= (StringType &&v) { return (*this = Self(sp::move(v))); }
 	Self& operator= (const BytesView &v) { return (*this = Self(v)); }
 	Self& operator= (const BytesType &v) { return (*this = Self(v)); }
-	Self& operator= (BytesType &&v) { return (*this = Self(std::move(v))); }
+	Self& operator= (BytesType &&v) { return (*this = Self(sp::move(v))); }
 	Self& operator= (const ArrayType &v) { return (*this = Self(v)); }
-	Self& operator= (ArrayType &&v) { return (*this = Self(std::move(v))); }
+	Self& operator= (ArrayType &&v) { return (*this = Self(sp::move(v))); }
 	Self& operator= (const DictionaryType &v) { return (*this = Self(v)); }
-	Self& operator= (DictionaryType &&v) { return (*this = Self(std::move(v))); }
+	Self& operator= (DictionaryType &&v) { return (*this = Self(sp::move(v))); }
 
 	bool operator== (const Self& v) const;
 
@@ -213,17 +213,17 @@ public:
 	template <class Key> void setInteger(int64_t value, Key && key) { setValue(Self(value), std::forward<Key>(key)); }
 	template <class Key> void setDouble(double value, Key && key) { setValue(Self(value), std::forward<Key>(key)); }
 	template <class Key> void setString(const StringType &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setString(StringType &&v, Key &&key) { setValue(Self(std::move(v)), std::forward<Key>(key)); }
+	template <class Key> void setString(StringType &&v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
 	template <class Key> void setString(const char *v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setString(const StringView &v, Key &&key) { setValue(Self(std::move(v)), std::forward<Key>(key)); }
+	template <class Key> void setString(const StringView &v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
 	template <class Key> void setBytes(const BytesType &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setBytes(BytesType &&v, Key &&key) { setValue(Self(std::move(v)), std::forward<Key>(key)); }
+	template <class Key> void setBytes(BytesType &&v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
 	template <class Key> void setBytes(const BytesViewTemplate<Endian::Big> &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
 	template <class Key> void setBytes(const BytesViewTemplate<Endian::Little> &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
 	template <class Key> void setArray(const ArrayType &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setArray(ArrayType &&v, Key &&key) { setValue(Self(std::move(v)), std::forward<Key>(key)); }
+	template <class Key> void setArray(ArrayType &&v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
 	template <class Key> void setDict(const DictionaryType &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setDict(DictionaryType &&v, Key &&key) { setValue(Self(std::move(v)), std::forward<Key>(key)); }
+	template <class Key> void setDict(DictionaryType &&v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
 
 	void setNull() { clear(); _type = Type::EMPTY; }
 	void setBool(bool value) { *this = value; }
@@ -235,14 +235,14 @@ public:
 	void setString(const char *value) { *this = value; }
 	void setString(const StringView &value) { *this = value; }
 	void setString(const StringType &value) { *this = value; }
-	void setString(StringType &&value) { *this = std::move(value); }
+	void setString(StringType &&value) { *this = sp::move(value); }
 	void setBytes(const BytesType &value) { *this = value; }
-	void setBytes(BytesType &&value) { *this = std::move(value); }
+	void setBytes(BytesType &&value) { *this = sp::move(value); }
 	void setBytes(const BytesView &value) { *this = value; }
 	void setArray(const ArrayType &value) { *this = value; }
-	void setArray(ArrayType &&value) { *this = std::move(value); }
+	void setArray(ArrayType &&value) { *this = sp::move(value); }
 	void setDict(const DictionaryType &value) { *this = value; }
-	void setDict(DictionaryType &&value) { *this = std::move(value); }
+	void setDict(DictionaryType &&value) { *this = sp::move(value); }
 
 	void addBool(bool value) { addValue(Self(value)); }
 	void addInteger(int64_t value) { addValue(Self(value)); }
@@ -250,14 +250,14 @@ public:
 	void addString(const char *value) { addValue(Self(value)); }
 	void addString(const StringView &value) { addValue(Self(value)); }
 	void addString(const StringType &value) { addValue(Self(value)); }
-	void addString(StringType &&value) { addValue(Self(std::move(value))); }
+	void addString(StringType &&value) { addValue(Self(sp::move(value))); }
 	void addBytes(const BytesView &value) { addValue(Self(value)); }
 	void addBytes(const BytesType &value) { addValue(Self(value)); }
-	void addBytes(BytesType &&value) { addValue(Self(std::move(value))); }
+	void addBytes(BytesType &&value) { addValue(Self(sp::move(value))); }
 	void addArray(const ArrayType &value) { addValue(Self(value)); }
-	void addArray(ArrayType &&value) { addValue(Self(std::move(value))); }
+	void addArray(ArrayType &&value) { addValue(Self(sp::move(value))); }
 	void addDict(const DictionaryType &value) { addValue(Self(value)); }
-	void addDict(DictionaryType &&value) { addValue(Self(std::move(value))); }
+	void addDict(DictionaryType &&value) { addValue(Self(sp::move(value))); }
 
 	bool getBool() const { return isBasicType() ? asBool() : false; }
 	int64_t getInteger(int64_t def = 0) const { return isBasicType() ? asInteger() : def; }
@@ -425,7 +425,7 @@ template <typename Interface>
 ValueTemplate<Interface>::ValueTemplate(const Self &other) noexcept { *this = other; }
 
 template <typename Interface>
-ValueTemplate<Interface>::ValueTemplate(Self &&other) noexcept { *this = std::move(other); }
+ValueTemplate<Interface>::ValueTemplate(Self &&other) noexcept { *this = sp::move(other); }
 
 template <typename Interface>
 template <typename OtherInterface>
@@ -475,14 +475,14 @@ template <typename Interface>
 ValueTemplate<Interface>::ValueTemplate(InitializerList<Self> il) : ValueTemplate(Type::ARRAY) {
 	arrayVal->reserve(il.size());
 	for (auto &it : il) {
-		arrayVal->emplace_back(std::move(const_cast<Self &>(it)));
+		arrayVal->emplace_back(sp::move(const_cast<Self &>(it)));
 	}
 }
 
 template <typename Interface>
 ValueTemplate<Interface>::ValueTemplate(InitializerList<Pair<StringType, Self>> il) : ValueTemplate(Type::DICTIONARY) {
 	for (auto &it : il) {
-		dictVal->emplace(std::move(const_cast<StringType &>(it.first)), std::move(const_cast<Self &>(it.second)));
+		dictVal->emplace(sp::move(const_cast<StringType &>(it.first)), sp::move(const_cast<Self &>(it.second)));
 	}
 }
 
@@ -578,7 +578,7 @@ auto ValueTemplate<Interface>::slice(int start, int count) -> Self {
 
 	Self ret;
 	for (auto it = arrayVal->begin() + start; it != arrayVal->begin() + start + count; it ++) {
-		ret.addValue(std::move(*it));
+		ret.addValue(sp::move(*it));
 	}
 
 	arrayVal->erase(arrayVal->begin() + start, arrayVal->begin() + start + count);

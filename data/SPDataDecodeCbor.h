@@ -107,7 +107,7 @@ void Decoder<Interface>::decodeByteString(uint8_t type, ValueType &v) {
 		BytesType ret;
 		decodeUndefinedLength(ret, MajorTypeEncoded::ByteString);
 		v._type = ValueType::Type::BYTESTRING;
-		v.bytesVal = new BytesType(std::move(ret));
+		v.bytesVal = new BytesType(sp::move(ret));
 	}
 }
 
@@ -125,7 +125,7 @@ void Decoder<Interface>::decodeCharString(uint8_t type, ValueType &v) {
 		decodeUndefinedLength(ret, MajorTypeEncoded::CharString);
 		ret[ret.length()] = 0;
 		v._type = ValueType::Type::CHARSTRING;
-		v.strVal = new StringType(std::move(ret));
+		v.strVal = new StringType(sp::move(ret));
 	}
 }
 

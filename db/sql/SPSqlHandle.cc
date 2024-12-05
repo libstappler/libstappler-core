@@ -94,7 +94,7 @@ db::User * SqlHandle::authorizeUser(const db::Auth &auth, const StringView &inam
 	makeQuery([&, this] (SqlQuery &query) {
 		query.with("u", [&] (SqlQuery::GenericQuery &q) {
 			q.select().from(auth.getScheme().getName())
-				.where(namePair.first->getName(), Comparation::Equal, std::move(namePair.second));
+				.where(namePair.first->getName(), Comparation::Equal, sp::move(namePair.second));
 		}).with("l", [&] (SqlQuery::GenericQuery &q) {
 			q.select().count("failed_count").from("__login").innerJoinOn("u", [&] (SqlQuery::WhereBegin &w) {
 				w.where(SqlQuery::Field( "__login", "user"), Comparation::Equal, SqlQuery::Field("u", "__oid"))
@@ -118,7 +118,7 @@ db::User * SqlHandle::authorizeUser(const db::Auth &auth, const StringView &inam
 
 			auto dv = res.decode(auth.getScheme(), Vector<const Field *>());
 			if (dv.size() == 1) {
-				ud = std::move(dv.getValue(0));
+				ud = sp::move(dv.getValue(0));
 			}
 			return true;
 		});
@@ -133,7 +133,7 @@ db::User * SqlHandle::authorizeUser(const db::Auth &auth, const StringView &inam
 
 		auto userId = ud.getInteger("__oid");
 		if (auth.authorizeWithPassword(password, passwd, count)) {
-			ret = new db::User(std::move(ud), auth.getScheme());
+			ret = new db::User(sp::move(ud), auth.getScheme());
 			success = true;
 		}
 
@@ -141,7 +141,7 @@ db::User * SqlHandle::authorizeUser(const db::Auth &auth, const StringView &inam
 
 		query.with("u", [&] (SqlQuery::GenericQuery &q) {
 			q.select().from(auth.getScheme().getName())
-				.where(namePair.first->getName(), Comparation::Equal, std::move(namePair.second));
+				.where(namePair.first->getName(), Comparation::Equal, sp::move(namePair.second));
 		}).with("l", [&] (SqlQuery::GenericQuery &q) {
 			q.select().aggregate("MAX", SqlQuery::Field("id").as("maxId")).from("__login").innerJoinOn("u", [&] (SqlQuery::WhereBegin &w) {
 				w.where(SqlQuery::Field( "__login", "user"), Comparation::Equal, SqlQuery::Field("u", "__oid"))
@@ -244,7 +244,7 @@ void SqlHandle::finalizeBroadcast() {
 		makeQuery([&, this] (SqlQuery &query) {
 			auto vals = query.insert("__broadcasts").fields("date", "msg").values();
 			for (auto &it : _bcasts) {
-				vals.values(it.first, std::move(it.second));
+				vals.values(it.first, sp::move(it.second));
 			}
 			query.finalize();
 			performQuery(query);
@@ -338,9 +338,9 @@ static void Handle_mergeViews(Value &objs, Value &vals) {
 				if (objId == oid) {
 					v_it->erase("__oid");
 					if (it.hasValue("__views")) {
-						it.getValue("__views").addValue(std::move(*v_it));
+						it.getValue("__views").addValue(sp::move(*v_it));
 					} else {
-						it.emplace("__views").addValue(std::move(*v_it));
+						it.emplace("__views").addValue(sp::move(*v_it));
 					}
 					v_it->setInteger(oid);
 				}
@@ -521,7 +521,7 @@ Value SqlHandle::getDeltaData(const Scheme &scheme, const db::FieldView &view, c
 				Field f(&view);
 				Handle_writeSelectViewDataQuery(q, scheme, tag, view, r);
 				selectValueQuery(r, view, q);
-				ret = std::move(r);
+				ret = sp::move(r);
 			}
 		}, nullptr);
 	}

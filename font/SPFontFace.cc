@@ -74,7 +74,7 @@ bool FontFaceData::init(StringView name, BytesView data, bool persistent) {
 
 bool FontFaceData::init(StringView name, Bytes &&data) {
 	_persistent = false;
-	_data = move(data);
+	_data = sp::move(data);
 	_view = _data;
 	_name = name.str<Interface>();
 	return true;
@@ -540,9 +540,9 @@ auto FontFaceSet::constructName(StringView family, const FontSpecializationVecto
 }
 
 bool FontFaceSet::init(String &&name, StringView family, FontSpecializationVector &&spec, Rc<FontFaceData> &&data, FontLibrary *c) {
-	_name = move(name);
+	_name = sp::move(name);
 	_family = family.str<Interface>();
-	_spec = move(spec);
+	_spec = sp::move(spec);
 	_sources.emplace_back(move(data));
 	_library = c;
 	_faces.resize(_sources.size(), nullptr);
@@ -554,10 +554,10 @@ bool FontFaceSet::init(String &&name, StringView family, FontSpecializationVecto
 }
 
 bool FontFaceSet::init(String &&name, StringView family, FontSpecializationVector &&spec, Vector<Rc<FontFaceData>> &&data, FontLibrary *c) {
-	_name = move(name);
+	_name = sp::move(name);
 	_family = family.str<Interface>();
-	_spec = move(spec);
-	_sources = move(data);
+	_spec = sp::move(spec);
+	_sources = sp::move(data);
 	_faces.resize(_sources.size(), nullptr);
 	_library = c;
 	if (auto face = _library->openFontFace(_sources.front(), _spec)) {
@@ -595,7 +595,7 @@ bool FontFaceSet::addString(const CharVector &str, Vector<char32_t> &failed) {
 				break;
 			}
 
-			auto tmp = move(failed);
+			auto tmp = sp::move(failed);
 			failed.clear();
 
 			if (it->addChars(tmp, i == 0, &failed)) {
@@ -619,7 +619,7 @@ bool FontFaceSet::addString(const CharVector &str, Vector<char32_t> &failed) {
 				_faces[i] = _library->openFontFace(_sources[i], _spec);
 			}
 
-			auto tmp = move(failed);
+			auto tmp = sp::move(failed);
 			failed.clear();
 
 			if (_faces[i]->addChars(tmp, i == 0, &failed)) {

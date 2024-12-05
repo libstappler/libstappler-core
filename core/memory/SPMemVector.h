@@ -69,8 +69,8 @@ public:
 
 	vector( const vector& other ) noexcept : _mem(other._mem) { }
 	vector( const vector& other, const allocator_type& alloc ) noexcept : _mem(other._mem, alloc) { }
-	vector( vector&& other ) noexcept : _mem(std::move(other._mem)) { }
-	vector( vector&& other, const allocator_type& alloc ) noexcept : _mem(std::move(other._mem), alloc) { }
+	vector( vector&& other ) noexcept : _mem(sp::move_unsafe(other._mem)) { }
+	vector( vector&& other, const allocator_type& alloc ) noexcept : _mem(sp::move_unsafe(other._mem), alloc) { }
 	vector( InitializerList<Type> init, const allocator_type& alloc = allocator_type() ) noexcept : _mem(alloc) {
 		_mem.reserve(init.size());
 		for (auto & it : init) {
@@ -83,7 +83,7 @@ public:
 		return *this;
 	}
 	vector& operator=( vector&& other ) noexcept {
-		_mem = std::move(other._mem);
+		_mem = sp::move_unsafe(other._mem);
 		return *this;
 	}
 	vector& operator=( InitializerList<Type> init ) noexcept {
@@ -174,7 +174,7 @@ public:
 		return emplace(pos, value);
 	}
 	iterator insert( const_iterator pos, Type&& value ) {
-		return emplace(pos, std::move(value));
+		return emplace(pos, sp::move_unsafe(value));
 	}
 	iterator insert( const_iterator pos, size_type count, const Type& value ) {
 		return _mem.insert(pos, count, value);
@@ -206,7 +206,7 @@ public:
 		emplace_back(value);
 	}
 	void push_back( Type&& value ) {
-		emplace_back(std::move(value));
+		emplace_back(sp::move_unsafe(value));
 	}
 
 	void pop_back() {

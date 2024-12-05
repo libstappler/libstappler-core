@@ -279,7 +279,7 @@ static bool _validateEmail(typename Interface::StringType &istr) {
 
 	typename Interface::StringType ret; ret.reserve(str.size());
 	if (_validateEmailData<Interface>(str, &ret)) {
-		istr = std::move(ret);
+		istr = sp::move(ret);
 		return true;
 	}
 	return false;

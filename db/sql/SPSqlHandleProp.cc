@@ -53,7 +53,7 @@ Value SqlHandle::getFileField(Worker &w, SqlQuery &query, uint64_t oid, uint64_t
 
 		auto ret = selectValueQuery(*fs, query, resv.getVirtuals());
 		if (ret.isArray()) {
-			ret = std::move(ret.getValue(0));
+			ret = sp::move(ret.getValue(0));
 		}
 		return ret;
 	}
@@ -133,7 +133,7 @@ Value SqlHandle::getObjectField(Worker &w, SqlQuery &query, uint64_t oid, uint64
 
 		auto ret = selectValueQuery(*fs, query, resv.getVirtuals());
 		if (ret.isArray()) {
-			ret = std::move(ret.getValue(0));
+			ret = sp::move(ret.getValue(0));
 		}
 		return ret;
 	}
@@ -291,7 +291,7 @@ Value SqlHandle::getSimpleField(Worker &w, SqlQuery &query, uint64_t oid, const 
 		sel.from(w.scheme().getName()).where("__oid", Comparation::Equal, oid).finalize();
 		auto ret = selectValueQuery(w.scheme(), query, Vector<const Field *>({&f}));
 		if (ret.isArray()) {
-			ret = std::move(ret.getValue(0));
+			ret = sp::move(ret.getValue(0));
 		}
 		if (ret.isDictionary()) {
 			ret = ret.getValue(f.getName());
@@ -301,7 +301,7 @@ Value SqlHandle::getSimpleField(Worker &w, SqlQuery &query, uint64_t oid, const 
 		query.select(f.getName()).from(w.scheme().getName()).where("__oid", Comparation::Equal, oid).finalize();
 		auto ret = selectValueQuery(w.scheme(), query, Vector<const Field *>());
 		if (ret.isArray()) {
-			ret = std::move(ret.getValue(0));
+			ret = sp::move(ret.getValue(0));
 		}
 		if (ret.isDictionary()) {
 			ret = ret.getValue(f.getName());
@@ -485,7 +485,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 					success = insertIntoArray(query, w.scheme(), oid, f, val);
 				}, &queryStorage);
 				if (success) {
-					ret = std::move(val);
+					ret = sp::move(val);
 				}
 			}
 			break;
@@ -513,7 +513,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 						performQuery(query);
 					}, &queryStorage);
 				}
-				ret = field(db::Action::Append, w, oid, f, std::move(val));
+				ret = field(db::Action::Append, w, oid, f, sp::move(val));
 			}
 			// not implemented
 			break;
@@ -536,7 +536,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 					success = insertIntoArray(query, w.scheme(), oid, f, val);
 				}, &queryStorage);
 				if (success) {
-					ret = std::move(val);
+					ret = sp::move(val);
 				}
 			}
 			break;
@@ -558,7 +558,7 @@ Value SqlHandle::field(db::Action a, Worker &w, uint64_t oid, const Field &f, Va
 					success = insertIntoRefSet(query, w.scheme(), oid, f, toAdd);
 				}, &queryStorage);
 				if (success) {
-					ret = std::move(val);
+					ret = sp::move(val);
 				}
 			}
 			break;
@@ -680,7 +680,7 @@ Value SqlHandle::field(db::Action a, Worker &w, const Value &obj, const Field &f
 			}
 			default:
 				if (auto val = obj.getValue(f.getName())) {
-					ret = std::move(val);
+					ret = sp::move(val);
 				} else {
 					ret = getSimpleField(w, query, oid, f);
 				}
@@ -710,7 +710,7 @@ Value SqlHandle::field(db::Action a, Worker &w, const Value &obj, const Field &f
 	case db::Action::Set:
 	case db::Action::Remove:
 	case db::Action::Append:
-		ret = field(a, w, oid, f, std::move(val));
+		ret = field(a, w, oid, f, sp::move(val));
 		break;
 	}
 	return ret;

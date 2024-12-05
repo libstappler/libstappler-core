@@ -52,7 +52,7 @@ User *User::create(const Transaction &a, Value &&val) {
 	auto s = a.getAdapter().getApplicationInterface()->getUserScheme();
 
 	auto d = Worker(*s, a).asSystem().create(val);
-	return new User(std::move(d), *s);
+	return new User(sp::move(d), *s);
 }
 
 User *User::get(const Adapter &a, const StringView &name, const StringView &password) {
@@ -69,7 +69,7 @@ User *User::get(const Adapter &a, const Scheme &scheme, const BytesView &key) {
 		if (it.second.getType() == db::Type::Bytes && it.second.getTransform() == db::Transform::PublicKey && it.second.isIndexed()) {
 			auto d = Worker(scheme, a).asSystem().select(db::Query().select(it.second.getName(), Value(key)));
 			if (d.isArray() && d.size() == 1) {
-				return new User(std::move(d.getValue(0)), scheme);
+				return new User(sp::move(d.getValue(0)), scheme);
 			}
 			break;
 		}
@@ -85,7 +85,7 @@ User *User::get(const Adapter &a, uint64_t oid) {
 User *User::get(const Adapter &a, const Scheme &s, uint64_t oid) {
 	auto d = Worker(s, a).asSystem().get(oid);
 	if (d.isDictionary()) {
-		return new User(std::move(d), s);
+		return new User(sp::move(d), s);
 	}
 	return nullptr;
 }
@@ -104,7 +104,7 @@ User *User::get(const Transaction &a, const Scheme &scheme, const BytesView &key
 		if (it.second.getType() == db::Type::Bytes && it.second.getTransform() == db::Transform::PublicKey && it.second.isIndexed()) {
 			auto d = Worker(scheme, a).asSystem().select(db::Query().select(it.second.getName(), Value(key)));
 			if (d.isArray() && d.size() == 1) {
-				return new User(std::move(d.getValue(0)), scheme);
+				return new User(sp::move(d.getValue(0)), scheme);
 			}
 			break;
 		}
@@ -120,12 +120,12 @@ User *User::get(const Transaction &a, uint64_t oid) {
 User *User::get(const Transaction &a, const Scheme &s, uint64_t oid) {
 	auto d = Worker(s, a).asSystem().get(oid);
 	if (d.isDictionary()) {
-		return new User(std::move(d), s);
+		return new User(sp::move(d), s);
 	}
 	return nullptr;
 }
 
-User::User(Value &&d, const Scheme &s) : Object(std::move(d), s) { }
+User::User(Value &&d, const Scheme &s) : Object(sp::move(d), s) { }
 
 bool User::validatePassword(const StringView &passwd) const {
 	auto & fields = _scheme.getFields();

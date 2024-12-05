@@ -85,7 +85,7 @@ public:
 	: storage_mem_soo(alloc) {
 		if (other._allocator == _allocator) {
 			// lifetime is same, steal allocated memory
-			perform_move(std::move(other));
+			perform_move(sp::move_unsafe(other));
 		} else {
 			assign(other);
 		}
@@ -101,7 +101,7 @@ public:
 		if (other._allocator == _allocator) {
 			// clear and deallocate our memory, self-move-assignment is UB
 			clear_dealloc(_allocator);
-			perform_move(std::move(other));
+			perform_move(sp::move_unsafe(other));
 		} else {
 			assign(other);
 		}

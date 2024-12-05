@@ -36,10 +36,10 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db {
 
 AutoFieldScheme::AutoFieldScheme(const Scheme &s, ReqVec &&vec, ViewLinkageFn &&fn, ReqVec &&lvec)
-: scheme(s), requiresForAuto(std::move(vec)), linkage(std::move(fn)), requiresForLinking(std::move(lvec)) { }
+: scheme(s), requiresForAuto(sp::move(vec)), linkage(sp::move(fn)), requiresForLinking(sp::move(lvec)) { }
 
 AutoFieldScheme::AutoFieldScheme(const Scheme &s, ReqVec &&vec, ReqVec &&lvec)
-: scheme(s), requiresForAuto(std::move(vec)), linkage(nullptr), requiresForLinking(std::move(lvec)) { }
+: scheme(s), requiresForAuto(sp::move(vec)), linkage(nullptr), requiresForLinking(sp::move(lvec)) { }
 
 bool Field::Slot::isProtected() const {
 	return hasFlag(Flags::Protected) || hasFlag(Flags::Admin);
@@ -445,7 +445,7 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 					return false;
 				}
 
-				val.setBytes(std::move(b));
+				val.setBytes(sp::move(b));
 			} else if (transform == Transform::PublicKey) {
 				if (StringView(str).starts_with("ssh-")) {
 					crypto::PublicKey key;

@@ -114,7 +114,7 @@ public:
 		Function<void(const crypto::HashCoderCallback &)> cb;
 
 		Fingerprint(crypto::HashFunction fn, BytesView v) : func(fn), fpb(v) { }
-		Fingerprint(crypto::HashFunction fn, Function<void(const crypto::HashCoderCallback &)> &&cb) : func(fn), cb(move(cb)) { }
+		Fingerprint(crypto::HashFunction fn, Function<void(const crypto::HashCoderCallback &)> &&cb) : func(fn), cb(sp::move(cb)) { }
 	};
 
 	// parse from JsonWebToken source
@@ -609,7 +609,7 @@ template <typename Interface>
 AesToken<Interface>::AesToken(Keys keys) : _keys(keys) { }
 
 template <typename Interface>
-AesToken<Interface>::AesToken(Value &&v, Keys keys) : data::WrapperTemplate<Interface>(std::move(v)), _keys(keys) { }
+AesToken<Interface>::AesToken(Value &&v, Keys keys) : data::WrapperTemplate<Interface>(sp::move(v)), _keys(keys) { }
 
 }
 

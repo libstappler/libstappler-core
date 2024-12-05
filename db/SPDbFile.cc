@@ -388,7 +388,7 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 		    if (needResize) {
 		    	auto fpath = resizeImage(bmp, targetWidth, targetHeight);
 		    	if (!fpath.empty()) {
-		    		ret.emplace(f.getName().str<Interface>(), std::move(fpath));
+		    		ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
 		    	}
 		    } else {
 		    	ret.emplace(f.getName().str<Interface>(), file.file.path());
@@ -401,7 +401,7 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 
 			    	auto fpath = resizeImage(bmp, targetWidth, targetHeight);
 			    	if (!fpath.empty()) {
-			    		ret.emplace(it.name, std::move(fpath));
+			    		ret.emplace(it.name, sp::move(fpath));
 			    	}
 		    	}
 		    }
@@ -434,12 +434,12 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 		    if (needResize) {
 		    	auto fpath = resizeImage(bmp, targetWidth, targetHeight);
 		    	if (!fpath.empty()) {
-		    		ret.emplace(f.getName().str<Interface>(), std::move(fpath));
+		    		ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
 		    	}
 		    } else {
 		    	auto fpath = saveImage(bmp);
 		    	if (!fpath.empty()) {
-		    		ret.emplace(f.getName().str<Interface>(), std::move(fpath));
+		    		ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
 		    	}
 		    }
 
@@ -450,7 +450,7 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 
 			    	auto fpath = resizeImage(bmp, targetWidth, targetHeight);
 			    	if (!fpath.empty()) {
-			    		ret.emplace(it.name, std::move(fpath));
+			    		ret.emplace(it.name, sp::move(fpath));
 			    	}
 		    	}
 		    }
@@ -475,7 +475,7 @@ Value File::createImage(const Transaction &t, const Field &f, InputFile &file) {
 		if (it.first == f.getName() && it.second == file.path) {
 			auto val = createFile(t, f, file);
 			if (val.isInteger()) {
-				ret.setValue(std::move(val), it.first);
+				ret.setValue(sp::move(val), it.first);
 			}
 		} else {
 			auto &field = it.first;
@@ -483,7 +483,7 @@ Value File::createImage(const Transaction &t, const Field &f, InputFile &file) {
 
 			auto val = createFile(t, file.type, filePath);
 			if (val.isInteger()) {
-				ret.setValue(std::move(val), field);
+				ret.setValue(sp::move(val), field);
 			}
 		}
 	}
@@ -502,7 +502,7 @@ Value File::createImage(const Transaction &t, const Field &f, const StringView &
 
 		auto val = createFile(t, type, filePath, mtime);
 		if (val.isInteger()) {
-			ret.setValue(std::move(val), field);
+			ret.setValue(sp::move(val), field);
 		}
 	}
 #endif

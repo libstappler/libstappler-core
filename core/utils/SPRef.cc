@@ -319,7 +319,7 @@ uint64_t retainBacktrace(const Ref *ptr) {
 
 	auto iit = it->second.find(id);
 	if (iit == it->second.end()) {
-		it->second.emplace(id, BackraceInfo{Time::now(), move(bt)});
+		it->second.emplace(id, BackraceInfo{Time::now(), sp::move(bt)});
 	}
 
 	s_mutex.unlock();

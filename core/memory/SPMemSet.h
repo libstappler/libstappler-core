@@ -76,20 +76,20 @@ public:
 	set (const set& x) noexcept : _tree(x._tree) { }
 	set (const set& x, const allocator_type& alloc) noexcept : _tree(x._tree, alloc) { }
 
-	set (set&& x) noexcept : _tree(std::move(x._tree)) { }
-	set (set&& x, const allocator_type& alloc) noexcept : _tree(std::move(x._tree), alloc) { }
+	set (set&& x) noexcept : _tree(sp::move_unsafe(x._tree)) { }
+	set (set&& x, const allocator_type& alloc) noexcept : _tree(sp::move_unsafe(x._tree), alloc) { }
 
 	set (InitializerList<value_type> il,
 			const key_compare& comp = key_compare(), const allocator_type& alloc = allocator_type()) noexcept
 	: _tree(comp, alloc) {
 		for (auto &it : il) {
-			emplace(std::move(it));
+			emplace(sp::move_unsafe(it));
 		}
 	}
 	set (InitializerList<value_type> il, const allocator_type& alloc) noexcept
 	: _tree(key_compare(), alloc) {
 		for (auto &it : il) {
-			emplace(std::move(it));
+			emplace(sp::move_unsafe(it));
 		}
 	}
 
@@ -98,13 +98,13 @@ public:
 		return *this;
 	}
 	set& operator= (set&& other) noexcept {
-		_tree = std::move(other._tree);
+		_tree = sp::move_unsafe(other._tree);
 		return *this;
 	}
 	set& operator= (InitializerList<value_type> ilist) noexcept {
 		_tree.clear();
 		for (auto &it : ilist) {
-			emplace(std::move(it));
+			emplace(sp::move_unsafe(it));
 		}
 		return *this;
 	}
@@ -124,7 +124,7 @@ public:
 	}
 
 	Pair<iterator,bool> insert( value_type&& value ) {
-		return emplace(std::move(value));
+		return emplace(sp::move_unsafe(value));
 	}
 
 	iterator insert( const_iterator hint, const value_type& value ) {
@@ -132,7 +132,7 @@ public:
 	}
 
 	iterator insert( const_iterator hint, value_type&& value ) {
-		return emplace_hint(hint, std::move(value));
+		return emplace_hint(hint, sp::move_unsafe(value));
 	}
 
 	template< class InputIt > void insert( InputIt first, InputIt last ) {
@@ -143,7 +143,7 @@ public:
 
 	void insert( InitializerList<value_type> ilist ) {
 		for (auto &it : ilist) {
-			emplace(std::move(it));
+			emplace(sp::move_unsafe(it));
 		}
 	}
 

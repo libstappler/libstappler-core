@@ -105,8 +105,26 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
+// Use sp::move instead of std::move to enable additional diagnostics
+template<typename T, typename std::enable_if_t<
+		// Attempt to move pointer is most likely an reference count error
+		// Use move_unsafe if it's not an error (like, in template context)
+		!std::is_pointer_v<std::remove_reference_t<T>>
+	, bool> = true>
+[[nodiscard]] constexpr typename std::remove_reference<T>::type &&
+move(T &&value) noexcept {
+	return static_cast<typename std::remove_reference<T>::type &&>(value);
+}
+
+// Behaves like std::move
+template<typename T>
+[[nodiscard]] constexpr typename std::remove_reference<T>::type &&
+move_unsafe(T &&value) noexcept {
+	return static_cast<typename std::remove_reference<T>::type &&>(value);
+}
+
+
 using std::forward;
-using std::move;
 using std::min;
 using std::max;
 
@@ -377,7 +395,7 @@ struct ValueWrapper {
 
 	inline constexpr ValueWrapper() noexcept = default;
 	inline explicit constexpr ValueWrapper(const T &val) noexcept : value(val) { }
-	inline explicit constexpr ValueWrapper(T &&val) noexcept : value(std::move(val)) { }
+	inline explicit constexpr ValueWrapper(T &&val) noexcept : value(stappler::move_unsafe(val)) { }
 
 	inline ValueWrapper(const ValueWrapper<T, Flag> &other) noexcept = default;
 	inline ValueWrapper<T, Flag> &operator=(const ValueWrapper<T, Flag> &other) noexcept = default;
@@ -386,7 +404,7 @@ struct ValueWrapper {
 	inline ValueWrapper<T, Flag> &operator=(ValueWrapper<T, Flag> &&other) noexcept = default;
 
 	inline void set(const T &val) { value = val; }
-	inline void set(T &&val) { value = std::move(val); }
+	inline void set(T &&val) { value = stappler::move_unsafe(val); }
 	inline constexpr T & get() { return value; }
 	inline constexpr const T & get() const { return value; }
 	inline constexpr bool empty() const { return value == 0; }
@@ -629,5 +647,7 @@ struct hash<STAPPLER_VERSIONIZED_NAMESPACE::ValueWrapper<Value, Flag>> {
 };
 
 }
+
+namespace STAPPLER_VERSIONIZED sp = STAPPLER_VERSIONIZED_NAMESPACE;
 
 #endif /* STAPPLER_CORE_SPCORE_H_ */

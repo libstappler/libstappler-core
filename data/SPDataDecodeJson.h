@@ -164,7 +164,7 @@ inline void Decoder<Interface>::parseValue(ValueType &current) {
 	case '"':
 		current._type = ValueType::Type::CHARSTRING;
 		parseBufferString(buf);
-		current.strVal = new StringType(std::move(buf));
+		current.strVal = new StringType(sp::move(buf));
 		break;
 	case 't':
 		current._type = ValueType::Type::BOOLEAN;
@@ -234,7 +234,7 @@ void Decoder<Interface>::parseJson(ValueType &val) {
 				} else {
 					r.skipChars<StringView::Chars<':', ' ', '\n', '\r', '\t'>>();
 				}
-				parseValue(back->dictVal->emplace(std::move(buf), ValueType::Type::EMPTY).first->second);
+				parseValue(back->dictVal->emplace(sp::move(buf), ValueType::Type::EMPTY).first->second);
 			} else {
 				pop();
 			}

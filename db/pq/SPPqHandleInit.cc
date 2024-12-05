@@ -594,7 +594,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 
 					table.pkey.emplace_back(toString(source, "_id"));
 					table.pkey.emplace_back(toString(target, "_id"));
-					tables.emplace(StringView(stappler::string::tolower<Interface>(name)).pdup(), std::move(table));
+					tables.emplace(StringView(stappler::string::tolower<Interface>(name)).pdup(), sp::move(table));
 				}
 			} else if (type == db::Type::Array) {
 				auto slot = static_cast<const db::FieldArray *>(f.getSlot());
@@ -640,7 +640,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					}
 
 					table.indexes.emplace(toString(name, "_idx_", source), toString(source, "_id"));
-					tables.emplace(StringView(name).pdup(), std::move(table));
+					tables.emplace(StringView(name).pdup(), sp::move(table));
 				}
 			} else if (type == db::Type::View) {
 				auto slot = static_cast<const db::FieldView *>(f.getSlot());
@@ -665,7 +665,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				table.indexes.emplace(toString(name, "_idx_", target), toString(target, "_id"));
 
 				table.pkey.emplace_back("__vid");
-				auto tblIt = tables.emplace(StringView(name).pdup(), std::move(table)).first;
+				auto tblIt = tables.emplace(StringView(name).pdup(), sp::move(table)).first;
 
 				if (slot->delta) {
 					StringStream hashStream;
@@ -687,7 +687,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					table.indexes.emplace(name + "_idx_tag", "tag");
 					table.indexes.emplace(name + "_idx_object", "object");
 					table.indexes.emplace(name + "_idx_time", "time");
-					tables.emplace(StringView(name).pdup(), std::move(table));
+					tables.emplace(StringView(name).pdup(), sp::move(table));
 				}
 			}
 
@@ -703,7 +703,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				table.pkey.emplace_back("id");
 				table.indexes.emplace(name + "_idx_object", "object");
 				table.indexes.emplace(name + "_idx_time", "time");
-				tables.emplace(StringView(name).pdup(), std::move(table));
+				tables.emplace(StringView(name).pdup(), sp::move(table));
 			}
 		}
 	}

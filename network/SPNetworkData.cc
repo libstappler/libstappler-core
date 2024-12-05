@@ -62,7 +62,7 @@ static void Handle_addHeader(HandleData<Interface> &data, StringView name, Strin
 	if (it != data.send.headers.end()) {
 		it->second = value.str<Interface>();
 	} else {
-		data.send.headers.emplace(move(nameStr), value.str<Interface>());
+		data.send.headers.emplace(sp::move(nameStr), value.str<Interface>());
 	}
 }
 
@@ -76,9 +76,9 @@ static void Handle_addMailTo(HandleData<Interface> &data, StringView name) {
 
 	auto lb = std::lower_bound(data.send.recipients.begin(), data.send.recipients.end(), nameStr);
 	if (lb != data.send.recipients.end() && *lb != name) {
-		data.send.recipients.emplace(lb, move(nameStr));
+		data.send.recipients.emplace(lb, sp::move(nameStr));
 	} else if (lb != data.send.recipients.end()) {
-		data.send.recipients.emplace_back(move(nameStr));
+		data.send.recipients.emplace_back(sp::move(nameStr));
 	}
 }
 
@@ -199,7 +199,7 @@ static void Handle_setSendFile(HandleData<Interface> &iface, StringView str, Str
 
 template <typename Interface>
 static void Handle_setSendCallback(HandleData<Interface> &iface, typename HandleData<Interface>::IOCallback &&cb, size_t size, StringView type) {
-	iface.send.data = move(cb);
+	iface.send.data = sp::move(cb);
 	iface.send.size = size;
 	if (!type.empty()) {
 		iface.addHeader("Content-Type", type);
@@ -227,7 +227,7 @@ static void Handle_setSendData(HandleData<Interface> &iface, BytesView data, Str
 template <typename Interface>
 static void Handle_setSendData(HandleData<Interface> &iface, typename HandleData<Interface>::Bytes &&data, StringView type) {
 	iface.send.size = data.size();
-	iface.send.data = move(data);
+	iface.send.data = sp::move(data);
 	if (!type.empty()) {
 		iface.addHeader("Content-Type", type);
 	}
@@ -246,7 +246,7 @@ template <typename Interface>
 static void Handle_setSendData(HandleData<Interface> &iface, const data::ValueTemplate<Interface> &data, data::EncodeFormat fmt) {
 	auto d = data::write<Interface>(data, fmt);
 	iface.send.size = d.size();
-	iface.send.data = move(d);
+	iface.send.data = sp::move(d);
 	if (fmt.format == data::EncodeFormat::Cbor || fmt.format == data::EncodeFormat::DefaultFormat) {
 		iface.addHeader("Content-Type", "application/cbor");
 	} else if (fmt.format == data::EncodeFormat::Json
@@ -375,15 +375,15 @@ HANDLE_NAME(void, setReceiveFile, StringView filename, bool resumeDownload) {
 	receive.data = filename.str<HANDLE_INTERFACE>();
 	receive.resumeDownload = resumeDownload;
 }
-HANDLE_NAME(void, setReceiveCallback, IOCallback &&cb) { receive.data = move(cb); }
+HANDLE_NAME(void, setReceiveCallback, IOCallback &&cb) { receive.data = sp::move(cb); }
 HANDLE_NAME(void, setResumeDownload, bool resumeDownload) { receive.resumeDownload = resumeDownload; }
 HANDLE_NAME(void, setResumeOffset, uint64_t offset) { receive.offset = offset; }
 HANDLE_NAME(void, setSendSize, size_t size) { send.size = size; }
 HANDLE_NAME(void, setSendFile, StringView filename, StringView type) { Handle_setSendFile(*this, filename, type); }
-HANDLE_NAME(void, setSendCallback, IOCallback &&cb, size_t outSize, StringView type) { Handle_setSendCallback(*this, move(cb), outSize, type); }
+HANDLE_NAME(void, setSendCallback, IOCallback &&cb, size_t outSize, StringView type) { Handle_setSendCallback(*this, sp::move(cb), outSize, type); }
 HANDLE_NAME(void, setSendData, StringView data, StringView type) { Handle_setSendData(*this, data, type); }
 HANDLE_NAME(void, setSendData, BytesView data, StringView type) { Handle_setSendData(*this, data, type); }
-HANDLE_NAME(void, setSendData, Bytes &&data, StringView type) { Handle_setSendData(*this, move(data), type); }
+HANDLE_NAME(void, setSendData, Bytes &&data, StringView type) { Handle_setSendData(*this, sp::move(data), type); }
 HANDLE_NAME(void, setSendData, const uint8_t *data, size_t size, StringView type) { Handle_setSendData(*this, data, size, type); }
 HANDLE_NAME(void, setSendData, const Value &value, data::EncodeFormat fmt) { Handle_setSendData(*this, value, fmt); }
 HANDLE_NAME_CONST(StringView, getReceivedHeaderString, StringView name) { return Handle_getReceivedHeaderString(*this, name); }
@@ -402,8 +402,8 @@ HANDLE_NAME(void, setShared, bool value) { process.shared = value; }
 HANDLE_NAME(void, setSilent, bool value) { process.silent = value; }
 HANDLE_NAME_CONST(const StringStream &, getDebugData) { return process.debugData; }
 
-HANDLE_NAME(void, setDownloadProgress, ProgressCallback &&cb) { process.downloadProgress = move(cb); }
-HANDLE_NAME(void, setUploadProgress, ProgressCallback &&cb) { process.uploadProgress = move(cb); }
+HANDLE_NAME(void, setDownloadProgress, ProgressCallback &&cb) { process.downloadProgress = sp::move(cb); }
+HANDLE_NAME(void, setUploadProgress, ProgressCallback &&cb) { process.uploadProgress = sp::move(cb); }
 
 HANDLE_NAME(void, setConnectTimeout, int time) { process.connectTimeout = time; }
 HANDLE_NAME(void, setLowSpeedLimit, int time, size_t limit) { process.lowSpeedTime = time; process.lowSpeedLimit = int(limit); }
@@ -434,7 +434,7 @@ HandleData<memory::PoolInterface>::getSendDataSource() const {
 
 template <> void
 HandleData<memory::StandartInterface>::setHeaderCallback(HeaderCallback &&cb) {
-	receive.headerCallback = move(cb);
+	receive.headerCallback = sp::move(cb);
 }
 
 template <> void

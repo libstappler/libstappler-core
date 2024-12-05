@@ -28,17 +28,17 @@ namespace STAPPLER_VERSIONIZED stappler::font {
 Formatter::Formatter() { }
 
 Formatter::Formatter(FontCallback &&cb, TextLayoutData<memory::StandartInterface> *d)
-: fontCallback(move(cb)) {
+: fontCallback(sp::move(cb)) {
 	reset(d);
 }
 
 Formatter::Formatter(FontCallback &&cb, TextLayoutData<memory::PoolInterface> *d)
-: fontCallback(move(cb)) {
+: fontCallback(sp::move(cb)) {
 	reset(d);
 }
 
 void Formatter::setFontCallback(FontCallback &&cb) {
-	fontCallback = move(cb);
+	fontCallback = sp::move(cb);
 }
 
 void Formatter::reset(TextLayoutData<memory::StandartInterface> *d) {
@@ -377,7 +377,7 @@ bool Formatter::pushChar(char16_t ch) {
 		}
 	}
 	charNum ++;
-	_output.chars.emplace_back(std::move(spec));
+	_output.chars.emplace_back(sp::move(spec));
 
 	return true;
 }
@@ -926,7 +926,7 @@ bool Formatter::readWithRange(RangeLayoutData && range, const TextParameters &s,
 
 	range.count = uint32_t(_output.chars.size() - range.start);
 	if (range.count > 0) {
-		_output.ranges.emplace_back(std::move(range));
+		_output.ranges.emplace_back(sp::move(range));
 	}
 	lineX += backOffset;
 
@@ -976,7 +976,7 @@ bool Formatter::readWithRange(RangeLayoutData &&range, const TextParameters &s, 
 	CharLayoutData spec{char16_t(0xFFFF), lineX, blockWidth, 0};
 	lineX += spec.advance;
 	charNum ++;
-	_output.chars.emplace_back(std::move(spec));
+	_output.chars.emplace_back(sp::move(spec));
 
 	switch (request) {
 	case ContentRequest::Minimize:
@@ -998,7 +998,7 @@ bool Formatter::readWithRange(RangeLayoutData &&range, const TextParameters &s, 
 
 
 	range.count = uint32_t(_output.chars.size() - range.start);
-	_output.ranges.emplace_back(std::move(range));
+	_output.ranges.emplace_back(sp::move(range));
 
 	return true;
 }

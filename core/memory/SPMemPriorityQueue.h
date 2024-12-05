@@ -230,10 +230,10 @@ public:
 		if (auto node = popNode(lock)) {
 			auto p = node->priority;
 			Value * val = (Value *)(node->storage.buffer);
-			Value tmp(move(*val));
+			Value tmp(sp::move_unsafe(*val));
 			val->~Value();
 			freeNode(node);
-			cb(p, move(tmp));
+			cb(p, sp::move_unsafe(tmp));
 			return true;
 		}
 		return false;
@@ -243,10 +243,10 @@ public:
 		if (auto node = popNode()) {
 			auto p = node->priority;
 			Value * val = (Value *)(node->storage.buffer);
-			Value tmp(move(*val));
+			Value tmp(sp::move_unsafe(*val));
 			val->~Value();
 			freeNode(node);
-			cb(p, move(tmp));
+			cb(p, sp::move_unsafe(tmp));
 			return true;
 		}
 		return false;
@@ -257,7 +257,7 @@ public:
 	bool pop_direct(std::unique_lock<LockInterface> &lock, const callback<void(PriorityType, Value &&)> &cb) {
 		if (auto node = popNode(lock)) {
 			Value * val = (Value *)(node->storage.buffer);
-			cb(node->priority, move(*val));
+			cb(node->priority, sp::move_unsafe(*val));
 			val->~Value();
 			freeNode(node);
 			return true;
@@ -268,7 +268,7 @@ public:
 	bool pop_direct(const callback<void(PriorityType, Value &&)> &cb) {
 		if (auto node = popNode()) {
 			Value * val = (Value *)(node->storage.buffer);
-			cb(node->priority, move(*val));
+			cb(node->priority, sp::move_unsafe(*val));
 			val->~Value();
 			freeNode(node);
 			return true;

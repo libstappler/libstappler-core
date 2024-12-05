@@ -346,7 +346,7 @@ struct Parser {
 				onEndTag(tag, !tag.isClosable());
 				if (tag.isClosable()) {
 					onPushTag(tag);
-					tagStack.emplace_back(std::move(tag));
+					tagStack.emplace_back(sp::move(tag));
 					if (!shouldParseTag(tag)) {
 						auto start = current;
 						while (!current.empty()) {

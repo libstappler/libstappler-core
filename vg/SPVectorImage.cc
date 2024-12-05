@@ -341,7 +341,7 @@ bool VectorImageData::init(VectorImage *image, Size2 size, Rect viewBox, Interfa
 	}
 
 	_nextId = ids;
-	_order = move(order);
+	_order = sp::move(order);
 
 	for (auto &it : paths) {
 		_paths.emplace(it.first, Rc<VectorPath>::alloc(move(it.second)));
@@ -492,7 +492,7 @@ bool VectorImage::init(Size2 size, StringView data) {
 	if (!path.init(data)) {
 		return false;
 	}
-	return init(size, std::move(path));
+	return init(size, sp::move(path));
 }
 
 bool VectorImage::init(Size2 size, VectorPath && path) {
@@ -513,7 +513,7 @@ bool VectorImage::init(StringView data) {
 
 	if (!reader._paths.empty()) {
 		_data = Rc<VectorImageData>::create(this, Size2(reader._width, reader._height), reader._viewBox,
-				move(reader._drawOrder), move(reader._paths), reader._nextId);
+				sp::move(reader._drawOrder), sp::move(reader._paths), reader._nextId);
 		for (auto &it : _data->getPaths()) {
 			_paths.emplace(it.first, Rc<VectorPathRef>::create(this, it.first, it.second));
 		}
@@ -538,7 +538,7 @@ bool VectorImage::init(BytesView data) {
 
 	if (!reader._paths.empty()) {
 		_data = Rc<VectorImageData>::create(this, Size2(reader._width, reader._height), reader._viewBox,
-				move(reader._drawOrder), move(reader._paths), reader._nextId);
+				sp::move(reader._drawOrder), sp::move(reader._paths), reader._nextId);
 		for (auto &it : _data->getPaths()) {
 			_paths.emplace(it.first, Rc<VectorPathRef>::create(this, it.first, it.second));
 		}
@@ -605,7 +605,7 @@ Rc<VectorPathRef> VectorImage::addPath(VectorPath &&path, StringView tag, String
 	auto it = _paths.find(tag);
 	if (it == _paths.end()) {
 		auto obj = Rc<VectorPathRef>::create(this, tag.str<Interface>(), move(pathObj));
-		return _paths.emplace(idStr.empty() ? tag.str<Interface>() : move(idStr), move(obj)).first->second;
+		return _paths.emplace(idStr.empty() ? tag.str<Interface>() : sp::move(idStr), sp::move(obj)).first->second;
 	} else {
 		it->second->setPath(move(pathObj));
 		return it->second;
@@ -674,7 +674,7 @@ void VectorImage::setDrawOrder(Interface::VectorType<PathXRef> &&vec) {
 		copy();
 	}
 
-	_data->setDrawOrder(move(vec));
+	_data->setDrawOrder(sp::move(vec));
 	setDirty();
 }
 

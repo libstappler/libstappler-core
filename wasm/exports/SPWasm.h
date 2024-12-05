@@ -271,7 +271,7 @@ void ListOutput::setData(ModuleInstance *inst, const T *data, size_t count) {
 template <typename T>
 uint32_t ModuleInstance::addHandle(T *obj, Function<void()> &&dtor) {
 	using Type = typename std::remove_reference<typename std::remove_cv<T>::type>::type;
-	return addHandleObject((Type *)obj, std::type_index(typeid(Type)), move(dtor));
+	return addHandleObject((Type *)obj, std::type_index(typeid(Type)), sp::move(dtor));
 }
 
 template <typename T>

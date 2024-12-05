@@ -69,10 +69,10 @@ public:
 				view = bytes;
 			}
 		}
-		FontData(Bytes &&b) : persistent(false), bytes(move(b)) {
+		FontData(Bytes &&b) : persistent(false), bytes(sp::move(b)) {
 			view = bytes;
 		}
-		FontData(Function<Bytes()> &&cb) : persistent(true), callback(move(cb)) { }
+		FontData(Function<Bytes()> &&cb) : persistent(true), callback(sp::move(cb)) { }
 	};
 
 	static BytesView getFont(DefaultFontName);

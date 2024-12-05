@@ -35,7 +35,7 @@ struct SP_PUBLIC FieldIntArray : db::FieldCustom {
 	static bool registerForSqlite(CustomFieldInfo &);
 
 	template <typename ... Args>
-	FieldIntArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
+	FieldIntArray(String && n, Args && ... args) : FieldCustom(sp::move(n), std::forward<Args>(args)...) { }
 
 	virtual StringView getDriverTypeName() const override { return FIELD_NAME; }
 
@@ -49,7 +49,7 @@ struct SP_PUBLIC FieldBigIntArray : db::FieldCustom {
 	static bool registerForSqlite(CustomFieldInfo &);
 
 	template <typename ... Args>
-	FieldBigIntArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
+	FieldBigIntArray(String && n, Args && ... args) : FieldCustom(sp::move(n), std::forward<Args>(args)...) { }
 
 	virtual StringView getDriverTypeName() const override { return FIELD_NAME; }
 
@@ -63,7 +63,7 @@ struct SP_PUBLIC FieldPoint : db::FieldCustom {
 	static bool registerForSqlite(CustomFieldInfo &);
 
 	template <typename ... Args>
-	FieldPoint(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
+	FieldPoint(String && n, Args && ... args) : FieldCustom(sp::move(n), std::forward<Args>(args)...) { }
 
 	virtual StringView getDriverTypeName() const override { return FIELD_NAME; }
 
@@ -77,7 +77,7 @@ struct SP_PUBLIC FieldTextArray : db::FieldCustom {
 	static bool registerForSqlite(CustomFieldInfo &);
 
 	template <typename ... Args>
-	FieldTextArray(String && n, Args && ... args) : FieldCustom(std::move(n), std::forward<Args>(args)...) { }
+	FieldTextArray(String && n, Args && ... args) : FieldCustom(sp::move(n), std::forward<Args>(args)...) { }
 
 	virtual StringView getDriverTypeName() const override { return FIELD_NAME; }
 

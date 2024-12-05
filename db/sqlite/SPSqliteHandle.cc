@@ -65,7 +65,7 @@ size_t SqliteQueryInterface::push(const StringView &val) {
 
 size_t SqliteQueryInterface::push(Bytes &&val) {
 	auto &it = params.emplace_back(BindingData());
-	it.data = std::move(val);
+	it.data = sp::move(val);
 	it.idx = uint32_t(params.size());
 	it.type = Type::Bytes;
 	return it.idx;
@@ -123,7 +123,7 @@ void SqliteQueryInterface::bindString(db::Binder &, StringStream &query, const S
 	}
 }
 void SqliteQueryInterface::bindMoveString(db::Binder &, StringStream &query, String &&val) {
-	if (auto num = push(std::move(val))) {
+	if (auto num = push(sp::move(val))) {
 		query << "?" << num;
 	}
 }
@@ -138,7 +138,7 @@ void SqliteQueryInterface::bindBytes(db::Binder &, StringStream &query, const By
 	}
 }
 void SqliteQueryInterface::bindMoveBytes(db::Binder &, StringStream &query, Bytes &&val) {
-	if (auto num = push(std::move(val))) {
+	if (auto num = push(sp::move(val))) {
 		query << "?" << num;
 	}
 }
@@ -317,7 +317,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction();
 		return false;
@@ -347,7 +347,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		driver->getHandle()->finalize(stmt);
 		cancelTransaction();
@@ -390,7 +390,7 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 			if (errCb) {
 				errCb(info);
 			}
-			driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
+			driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
 			driver->getApplicationInterface()->error("Database", "Fail to perform query");
 			cancelTransaction();
 			return false;
@@ -407,7 +407,7 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 			if (errCb) {
 				errCb(info);
 			}
-			driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
+			driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
 			driver->getApplicationInterface()->error("Database", "Fail to perform query");
 			driver->getHandle()->finalize(stmt);
 			cancelTransaction();
@@ -437,7 +437,7 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", std::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction();
 		return false;

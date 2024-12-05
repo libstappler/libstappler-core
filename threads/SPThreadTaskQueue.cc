@@ -70,7 +70,7 @@ struct TaskQueue::WorkerContext {
 	std::atomic<size_t> tasksCounter = 0;
 	std::function<void()> wakeup;
 
-	WorkerContext(TaskQueue *q, std::function<void()> &&w) : queue(q), wakeup(move(w)) {
+	WorkerContext(TaskQueue *q, std::function<void()> &&w) : queue(q), wakeup(sp::move(w)) {
 		pool = memory::pool::create(memory::app_root_pool);
 
 		finalized = false;
@@ -189,14 +189,14 @@ struct TaskQueue::WorkerContext {
 	void perform(Rc<Task> &&task, bool first) {
 		if (!task->prepare()) {
 			task->setSuccessful(false);
-			onMainThread(std::move(task));
+			onMainThread(sp::move(task));
 			return;
 		}
 
 		task->addRef(queue);
 
 		++ tasksCounter;
-		inputQueue.push(task->getPriority().get(), first, std::move(task));
+		inputQueue.push(task->getPriority().get(), first, sp::move(task));
 		notifyInput();
 	}
 
@@ -204,7 +204,7 @@ struct TaskQueue::WorkerContext {
 		task->addRef(queue);
 
 		outputMutex.lock();
-		outputQueue.push_back(std::move(task));
+		outputQueue.push_back(sp::move(task));
 		++ outputCounter;
 		outputMutex.unlock();
 
@@ -217,7 +217,7 @@ struct TaskQueue::WorkerContext {
 
 	void onMainThread(std::function<void()> &&func, Ref *target) {
 	    outputMutex.lock();
-	    outputCallbacks.emplace_back(std::move(func), target);
+	    outputCallbacks.emplace_back(sp::move(func), target);
 	    ++ outputCounter;
 		outputMutex.unlock();
 
@@ -235,7 +235,7 @@ struct TaskQueue::WorkerContext {
 
 		if (!task->getCompleteTasks().empty()) {
 			outputMutex.lock();
-			outputQueue.push_back(std::move(task));
+			outputQueue.push_back(sp::move(task));
 		    ++ outputCounter;
 			outputMutex.unlock();
 
@@ -259,8 +259,8 @@ struct TaskQueue::WorkerContext {
 	void update(uint32_t *count) {
 		outputMutex.lock();
 
-		auto stack = std::move(outputQueue);
-		auto callbacks = std::move(outputCallbacks);
+		auto stack = sp::move(outputQueue);
+		auto callbacks = sp::move(outputCallbacks);
 
 		outputQueue.clear();
 		outputCallbacks.clear();
@@ -292,7 +292,7 @@ struct TaskQueue::WorkerContext {
 class _SingleTaskWorker : public Thread {
 public:
 	_SingleTaskWorker(const Rc<TaskQueue> &q, Rc<Task> &&task)
-	: _queue(q), _task(std::move(task)), _managerId(getNextThreadId()) { }
+	: _queue(q), _task(sp::move(task)), _managerId(getNextThreadId()) { }
 
 	virtual ~_SingleTaskWorker() { }
 
@@ -316,7 +316,7 @@ public:
 
 			_task->setSuccessful(ret);
 			if (!_task->getCompleteTasks().empty()) {
-				_queue->onMainThread(std::move(_task));
+				_queue->onMainThread(sp::move(_task));
 			}
 		}
 
@@ -331,7 +331,7 @@ protected:
 
 TaskQueue::TaskQueue(StringView name, std::function<void()> &&wakeup) {
 	memory::pool::initialize();
-	_context = new WorkerContext(this, move(wakeup));
+	_context = new WorkerContext(this, sp::move(wakeup));
 
 	if (!name.empty()) {
 		_name = name;
@@ -354,7 +354,7 @@ void TaskQueue::finalize() {
 
 void TaskQueue::performAsync(Rc<Task> &&task) {
 	if (task) {
-		_SingleTaskWorker *worker = new _SingleTaskWorker(this, std::move(task));
+		_SingleTaskWorker *worker = new _SingleTaskWorker(this, sp::move(task));
 		worker->run();
 	}
 }
@@ -370,7 +370,7 @@ void TaskQueue::perform(Rc<Task> &&task, bool first) {
 }
 
 void TaskQueue::perform(std::function<void()> &&cb, Ref *ref, bool first) {
-	perform(Rc<Task>::create([fn = move(cb)] (const Task &) -> bool {
+	perform(Rc<Task>::create([fn = sp::move(cb)] (const Task &) -> bool {
 		fn();
 		return true;
 	}, nullptr, ref), first);
@@ -389,7 +389,7 @@ void TaskQueue::onMainThread(Rc<Task> &&task) {
 }
 
 void TaskQueue::onMainThread(std::function<void()> &&func, Ref *target) {
-    _context->onMainThread(move(func), target);
+    _context->onMainThread(sp::move(func), target);
 }
 
 std::vector<std::thread::id> TaskQueue::getThreadIds() const {
@@ -533,7 +533,7 @@ bool Worker::worker() {
 	}
 
 	task->setSuccessful(execute(task));
-	_queue->onMainThreadWorker(std::move(task));
+	_queue->onMainThreadWorker(sp::move(task));
 
 	return true;
 }

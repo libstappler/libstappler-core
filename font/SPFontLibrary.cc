@@ -50,7 +50,7 @@ FontFaceObjectHandle::~FontFaceObjectHandle() {
 bool FontFaceObjectHandle::init(const Rc<FontLibrary> &lib, Rc<FontFaceObject> &&obj, Function<void(const FontFaceObjectHandle *)> &&onDestroy) {
 	_face = move(obj);
 	_library = lib;
-	_onDestroy = move(onDestroy);
+	_onDestroy = sp::move(onDestroy);
 	return true;
 }
 
@@ -120,11 +120,11 @@ Rc<FontFaceData> FontLibrary::openFontData(StringView dataName, FontLayoutParame
 
 	Rc<FontFaceData> dataObject;
 	if (fontData.callback) {
-		dataObject = Rc<FontFaceData>::create(dataName, move(fontData.callback));
+		dataObject = Rc<FontFaceData>::create(dataName, sp::move(fontData.callback));
 	} else if (fontData.persistent) {
-		dataObject = Rc<FontFaceData>::create(dataName, move(fontData.view), true);
+		dataObject = Rc<FontFaceData>::create(dataName, sp::move(fontData.view), true);
 	} else {
-		dataObject = Rc<FontFaceData>::create(dataName, move(fontData.bytes));
+		dataObject = Rc<FontFaceData>::create(dataName, sp::move(fontData.bytes));
 	}
 	if (dataObject) {
 		lock.lock();
@@ -176,9 +176,9 @@ Rc<FontFaceObject> FontLibrary::openFontFace(StringView dataName, const FontSpec
 
 	Rc<FontFaceData> dataObject;
 	if (fontData.persistent) {
-		dataObject = Rc<FontFaceData>::create(dataName, move(fontData.view), true);
+		dataObject = Rc<FontFaceData>::create(dataName, sp::move(fontData.view), true);
 	} else {
-		dataObject = Rc<FontFaceData>::create(dataName, move(fontData.bytes));
+		dataObject = Rc<FontFaceData>::create(dataName, sp::move(fontData.bytes));
 	}
 
 	if (dataObject) {
