@@ -123,6 +123,23 @@ move_unsafe(T &&value) noexcept {
 	return static_cast<typename std::remove_reference<T>::type &&>(value);
 }
 
+// Stappler requires only C++17, backport for std::bit_cast
+// Previously referenced as as `reinterpretValue`;
+template<class To, class From>
+std::enable_if_t<
+    sizeof(To) == sizeof(From) &&
+    std::is_trivially_copyable_v<From> &&
+    std::is_trivially_copyable_v<To>,
+    To>
+bit_cast(const From& src) noexcept {
+    static_assert(std::is_trivially_constructible_v<To>,
+        "This implementation additionally requires "
+        "destination type to be trivially constructible");
+
+    To dst;
+    ::memcpy(&dst, &src, sizeof(To));
+    return dst;
+}
 
 using std::forward;
 using std::min;
@@ -260,21 +277,6 @@ struct HasMultiplication {
 template <class T>
 constexpr inline T progress(const T &a, const T &b, float p) { return (a * (1.0f - p) + b * p); }
 
-template <class T, class V>
-struct _ValueReinterpretator {
-	inline static T reinterpret(V v) { T ret; memcpy(&ret, &v, sizeof(V)); return ret; } // follow strict aliasing rules
-};
-
-template <class T>
-struct _ValueReinterpretator<T, T> {
-	inline static T reinterpret(T v) { return v; }
-};
-
-template <class T, class V, typename std::enable_if<sizeof(T) == sizeof(V)>::type* = nullptr>
-inline T reinterpretValue(V v) {
-	return _ValueReinterpretator<T, V>::reinterpret(v);
-}
-
 template <typename E>
 constexpr typename std::underlying_type<E>::type toInt(const E &e) {
     return static_cast<typename std::underlying_type<E>::type>(e);
@@ -362,6 +364,12 @@ StringToNumber<double>(const char *ptr, char ** tail, int base) -> double {
 	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) != r; } \
 	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const std::underlying_type<Type>::type &l, const Type &r) { return l != stappler::toInt(r); } \
 	SP_COVERAGE_TRIVIAL constexpr inline Type operator~(const Type &t) { return Type(~stappler::toInt(t)); }
+
+/** Functions for enum flags */
+template <typename T>
+bool hasFlag(T mask, T flag) {
+	return (mask & flag) != T(0);
+}
 
 
 /** Value wrapper is a syntactic sugar struct, that allow you to create

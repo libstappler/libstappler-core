@@ -153,21 +153,21 @@ struct Converter<T, ShouldSwap::DoSwap, Bit8Size> {
 template <class T>
 struct Converter<T, ShouldSwap::DoSwap, Bit16Size> {
 	static inline T Swap(T value) {
-		return reinterpretValue<T>(bswap16(reinterpretValue<uint16_t>(value)));
+		return bit_cast<T>(bswap16(bit_cast<uint16_t>(value)));
 	}
 };
 
 template <class T>
 struct Converter<T, ShouldSwap::DoSwap, Bit32Size> {
 	static inline T Swap(T value) {
-		return reinterpretValue<T>(bswap32(reinterpretValue<uint32_t>(value)));
+		return bit_cast<T>(bswap32(bit_cast<uint32_t>(value)));
 	}
 };
 
 template <class T>
 struct Converter<T, ShouldSwap::DoSwap, Bit64Size> {
 	static inline T Swap(T value) {
-		return reinterpretValue<T>(bswap64(reinterpretValue<uint64_t>(value)));
+		return bit_cast<T>(bswap64(bit_cast<uint64_t>(value)));
 	}
 };
 

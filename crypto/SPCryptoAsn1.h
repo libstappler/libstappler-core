@@ -251,8 +251,8 @@ struct SP_PUBLIC Asn1Decoder {
 
 		if constexpr (Traits::onInteger) {
 			switch(size) {
-			case 1: reader.onInteger(*this, reinterpretValue<int8_t>(r.readUnsigned())); break;
-			case 2: reader.onInteger(*this, reinterpretValue<int16_t>(r.readUnsigned16())); break;
+			case 1: reader.onInteger(*this, bit_cast<int8_t>(r.readUnsigned())); break;
+			case 2: reader.onInteger(*this, bit_cast<int16_t>(r.readUnsigned16())); break;
 			case 3: {
 				auto val = r.readUnsigned24();
 				if (val <= 0x7FFFFF) {
@@ -262,8 +262,8 @@ struct SP_PUBLIC Asn1Decoder {
 				}
 			}
 				break;
-			case 4: reader.onInteger(*this, reinterpretValue<int32_t>(r.readUnsigned32())); break;
-			case 8: reader.onInteger(*this, reinterpretValue<int64_t>(r.readUnsigned64())); break;
+			case 4: reader.onInteger(*this, bit_cast<int32_t>(r.readUnsigned32())); break;
+			case 8: reader.onInteger(*this, bit_cast<int64_t>(r.readUnsigned64())); break;
 			default:
 				if (size >= 8) {
 					if constexpr (Traits::onBigInteger) {
