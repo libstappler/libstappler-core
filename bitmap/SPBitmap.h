@@ -96,7 +96,7 @@ public:
 	bool truncate(PixelFormat, const StrideFn &strideFn = nullptr);
 
 	// target should be large enough
-	bool convertWithTarget(uint8_t *target, PixelFormat, const StrideFn &strideFn = nullptr) const;
+	size_t convertWithTarget(uint8_t *target, PixelFormat, const StrideFn &strideFn = nullptr) const;
 
 	// init with jpeg or png data
 	bool loadData(const uint8_t * data, size_t dataLen, const StrideFn &strideFn = nullptr);
@@ -351,66 +351,65 @@ bool BitmapTemplate<Interface>::truncate(PixelFormat color, const StrideFn &stri
 }
 
 template <typename Interface>
-bool BitmapTemplate<Interface>::convertWithTarget(uint8_t *target, PixelFormat color, const StrideFn &strideFn) const {
-	bool ret = false;
+size_t BitmapTemplate<Interface>::convertWithTarget(uint8_t *target, PixelFormat color, const StrideFn &strideFn) const {
 	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
 	BytesView out(target, _height * outStride);
 
 	switch (_color) {
 	case PixelFormat::A8:
 		switch (color) {
-		case PixelFormat::A8: return true; break;
-		case PixelFormat::I8: return true; break;
-		case PixelFormat::IA88: ret = convertData<PixelFormat::A8, PixelFormat::IA88>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGB888: ret = convertData<PixelFormat::A8, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGBA8888: ret = convertData<PixelFormat::A8, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
-		case PixelFormat::Auto: return false; break;
+		case PixelFormat::A8: memcpy(target, _data.data(), out.size()); return out.size(); break;
+		case PixelFormat::I8: memcpy(target, _data.data(), out.size()); return out.size(); break;
+		case PixelFormat::IA88: return convertData<PixelFormat::A8, PixelFormat::IA88>(_data, out, _stride, outStride); break;
+		case PixelFormat::RGB888: return convertData<PixelFormat::A8, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
+		case PixelFormat::RGBA8888: return convertData<PixelFormat::A8, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
+		case PixelFormat::Auto: return 0; break;
 		}
 		break;
 	case PixelFormat::I8:
 		switch (color) {
-		case PixelFormat::A8: return true; break;
-		case PixelFormat::I8: return true; break;
-		case PixelFormat::IA88: ret = convertData<PixelFormat::I8, PixelFormat::IA88>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGB888: ret = convertData<PixelFormat::I8, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGBA8888: ret = convertData<PixelFormat::I8, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
-		case PixelFormat::Auto: return false; break;
+		case PixelFormat::A8: memcpy(target, _data.data(), out.size()); return out.size(); break;
+		case PixelFormat::I8: memcpy(target, _data.data(), out.size()); return out.size(); break;
+		case PixelFormat::IA88: return convertData<PixelFormat::I8, PixelFormat::IA88>(_data, out, _stride, outStride); break;
+		case PixelFormat::RGB888: return convertData<PixelFormat::I8, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
+		case PixelFormat::RGBA8888: return convertData<PixelFormat::I8, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
+		case PixelFormat::Auto: return 0; break;
 		}
 		break;
 	case PixelFormat::IA88:
 		switch (color) {
-		case PixelFormat::A8: ret = convertData<PixelFormat::IA88, PixelFormat::A8>(_data, out, _stride, outStride); break;
-		case PixelFormat::I8: ret = convertData<PixelFormat::IA88, PixelFormat::I8>(_data, out, _stride, outStride); break;
-		case PixelFormat::IA88: return true; break;
-		case PixelFormat::RGB888: ret = convertData<PixelFormat::IA88, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGBA8888: ret = convertData<PixelFormat::IA88, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
-		case PixelFormat::Auto: return false; break;
+		case PixelFormat::A8: return convertData<PixelFormat::IA88, PixelFormat::A8>(_data, out, _stride, outStride); break;
+		case PixelFormat::I8: return convertData<PixelFormat::IA88, PixelFormat::I8>(_data, out, _stride, outStride); break;
+		case PixelFormat::IA88: memcpy(target, _data.data(), out.size()); return out.size(); break;
+		case PixelFormat::RGB888: return convertData<PixelFormat::IA88, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
+		case PixelFormat::RGBA8888: return convertData<PixelFormat::IA88, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
+		case PixelFormat::Auto: return 0; break;
 		}
 		break;
 	case PixelFormat::RGB888:
 		switch (color) {
-		case PixelFormat::A8: ret = convertData<PixelFormat::RGB888, PixelFormat::A8>(_data, out, _stride, outStride); break;
-		case PixelFormat::I8: ret = convertData<PixelFormat::RGB888, PixelFormat::I8>(_data, out, _stride, outStride); break;
-		case PixelFormat::IA88: ret = convertData<PixelFormat::RGB888, PixelFormat::IA88>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGB888: return true; break;
-		case PixelFormat::RGBA8888: ret = convertData<PixelFormat::RGB888, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
-		case PixelFormat::Auto: return false; break;
+		case PixelFormat::A8: return convertData<PixelFormat::RGB888, PixelFormat::A8>(_data, out, _stride, outStride); break;
+		case PixelFormat::I8: return convertData<PixelFormat::RGB888, PixelFormat::I8>(_data, out, _stride, outStride); break;
+		case PixelFormat::IA88: return convertData<PixelFormat::RGB888, PixelFormat::IA88>(_data, out, _stride, outStride); break;
+		case PixelFormat::RGB888: memcpy(target, _data.data(), out.size()); return out.size(); break;
+		case PixelFormat::RGBA8888: return convertData<PixelFormat::RGB888, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
+		case PixelFormat::Auto: return 0; break;
 		}
 		break;
 	case PixelFormat::RGBA8888:
 		switch (color) {
-		case PixelFormat::A8: ret = convertData<PixelFormat::RGBA8888, PixelFormat::A8>(_data, out, _stride, outStride); break;
-		case PixelFormat::I8: ret = convertData<PixelFormat::RGBA8888, PixelFormat::I8>(_data, out, _stride, outStride); break;
-		case PixelFormat::IA88: ret = convertData<PixelFormat::RGBA8888, PixelFormat::IA88>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGB888: ret = convertData<PixelFormat::RGBA8888, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGBA8888: return true; break;
-		case PixelFormat::Auto: return false; break;
+		case PixelFormat::A8: return convertData<PixelFormat::RGBA8888, PixelFormat::A8>(_data, out, _stride, outStride); break;
+		case PixelFormat::I8: return convertData<PixelFormat::RGBA8888, PixelFormat::I8>(_data, out, _stride, outStride); break;
+		case PixelFormat::IA88: return convertData<PixelFormat::RGBA8888, PixelFormat::IA88>(_data, out, _stride, outStride); break;
+		case PixelFormat::RGB888: return convertData<PixelFormat::RGBA8888, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
+		case PixelFormat::RGBA8888: memcpy(target, _data.data(), out.size()); return out.size(); break;
+		case PixelFormat::Auto: return 0; break;
 		}
 		break;
-	case PixelFormat::Auto: return false; break;
+	case PixelFormat::Auto: return 0; break;
 	}
 
-	return ret;
+	return 0;
 }
 
 template <typename Interface>

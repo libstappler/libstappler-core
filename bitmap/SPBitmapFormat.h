@@ -104,7 +104,7 @@ template<PixelFormat Source, PixelFormat Target>
 SP_PUBLIC void convertLine(const uint8_t *in, uint8_t *out, uint32_t ins, uint32_t outs);
 
 template<PixelFormat Source, PixelFormat Target>
-bool convertData(BytesView dataVec, BytesView out, uint32_t inStride, uint32_t outStride) {
+size_t convertData(BytesView dataVec, BytesView out, uint32_t inStride, uint32_t outStride) {
 	auto dataLen = dataVec.size();
 	auto height = dataLen / inStride;
 	auto data = dataVec.data();
@@ -113,7 +113,7 @@ bool convertData(BytesView dataVec, BytesView out, uint32_t inStride, uint32_t o
 	for (size_t j = 0; j < height; j ++) {
 		convertLine<Source, Target>(data + inStride * j, outData + outStride * j, inStride, outStride);
 	}
-	return true;
+	return out.size();
 }
 
 struct BitmapWriter : ImageInfo {
