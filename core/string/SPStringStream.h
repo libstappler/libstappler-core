@@ -553,7 +553,7 @@ static auto toString(Args && ... args) -> typename Interface::StringType {
 
 		auto s = detail::writeBuffer(ret.data(), std::forward<Args>(args)...);
 		if (s != size) {
-			std::cout << "Invalid buffer size for toString<fast>\n";
+			std::cout << "[core]: Invalid buffer size for toString<fast>\n";
 			abort();
 		}
 		ret.resize(size);

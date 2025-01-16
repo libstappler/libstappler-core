@@ -354,7 +354,7 @@ struct debug_bt_info {
 };
 
 static void debug_backtrace_error(void *data, const char *msg, int errnum) {
-	std::cout << "Backtrace error: " << msg << "\n";
+	log::error("Backtrace", msg);
 }
 
 static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *filename, int lineno, const char *function) {

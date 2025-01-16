@@ -237,6 +237,11 @@ void SvgReader::onBeginTag(Parser &p, Tag &tag) {
 	} else if (tag.name.equals("use")) {
 		tag.shape = SvgTag::Use;
 		tag.mat = Mat4::IDENTITY;
+	} else if (tag.name.equals("g")) {
+		tag.shape = SvgTag::None;
+		tag.mat = Mat4::IDENTITY;
+	} else if (tag.name.equals("path")) {
+		tag.shape = SvgTag::Path;
 	}
 }
 
@@ -366,12 +371,23 @@ void SvgReader::onStyleParameter(Tag &tag, StringReader &name, StringReader &val
 				tag.getPath().setMiterLimit(op);
 			}
 		});
+	} else if (name.equals("width") && tag.name.equals("svg")) {
+		auto val = svg_readCoordValue(value, 0.0f);
+		if (!isnan(val)) {
+			_width = val;
+		}
+	} else if (name.equals("height") && tag.name.equals("svg")) {
+		auto val = svg_readCoordValue(value, 0.0f);
+		if (!isnan(val)) {
+			_height = val;
+		}
 	}
 }
 
 void SvgReader::onStyle(Tag &tag, StringReader &value) {
 	while (!value.empty()) {
 		auto n = value.readUntil<StringReader::Chars<':'>>();
+		n.trimChars<StringReader::WhiteSpace>();
 		if (value.is(':')) {
 			++ value;
 			auto v = value.readUntil<StringReader::Chars<';'>>();
@@ -399,7 +415,10 @@ void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringRe
 			}
 		} else if (string::caseCompare_c(name, StringView("viewbox")) == 0) {
 			_viewBox = svg_readViewBox(value);
+		} else if (string::caseCompare_c(name, StringView("style")) == 0) {
+			onStyle(tag, value);
 		}
+		return;
 	} else if (tag.name.equals("path")) {
 		if (name.equals("d")) {
 			tag.getPath().init(value);
@@ -410,7 +429,7 @@ void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringRe
 			|| name.equals("stroke-opacity") || name.equals("stroke-width") || name.equals("stroke-linecap")
 			|| name.equals("stroke-linejoin") || name.equals("stroke-miterlimit") || name.equals("opacity")) {
 		onStyleParameter(tag, name, value);
-	} else if (name.equals("transform") && tag.shape != SvgTag::Use) {
+	} else if (name.equals("transform") && tag.shape != SvgTag::Use && tag.shape != SvgTag::None) {
 		tag.getPath().applyTransform(svg_parseTransform(value));
 	} else if (name.equals("style")) {
 		onStyle(tag, value);
@@ -475,6 +494,7 @@ void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringRe
 			}
 			break;
 		case SvgTag::Use:
+		case SvgTag::None:
 			if (name.equals("x")) {
 				tag.mat.translate(svg_readCoordValue(value, _width), 0.0f, 0.0f);
 			} else if (name.equals("y")) {
@@ -501,10 +521,16 @@ void SvgReader::onPushTag(Parser &p, Tag &tag) {
 void SvgReader::onPopTag(Parser &p, Tag &tag) {
 	if (tag.name == "defs") {
 		_defs = false;
+	} else if (tag.shape != Tag::Shape::None) {
+		emplacePath(tag);
 	}
 }
 
 void SvgReader::onInlineTag(Parser &p, Tag &tag) {
+	emplacePath(tag);
+}
+
+void SvgReader::emplacePath(Tag &tag) {
 	if (tag.shape == Tag::Shape::Use) {
 		StringView ref(tag.ref);
 		if (ref.is('#')) { ++ ref; }

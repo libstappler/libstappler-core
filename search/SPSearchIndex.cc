@@ -78,7 +78,6 @@ SearchIndex::Result SearchIndex::performSearch(const StringView &v, size_t minMa
 	uint32_t wordIndex = 0;
 
 	auto tokenFn = [&, this] (const StringView &str) {
-		//std::cout << "Token: " << str << "\n";
 		auto lb = std::lower_bound(_tokens.begin(), _tokens.end(), str, [&, this] (const Token &l, const StringView &r) {
 			return string::compare_c(makeStringView(l.index, l.slice), r) < 0;
 		});
@@ -86,7 +85,6 @@ SearchIndex::Result SearchIndex::performSearch(const StringView &v, size_t minMa
 		if (lb != _tokens.end()) {
 			auto node = &_nodes.at(lb->index);
 			StringView value = makeStringView(*lb);
-			//std::cout << "Found: '" << value << "' from '" << _nodes.at(lb->index).canonical << "'\n";
 
 			while (lb != _tokens.end() && value.size() >= str.size() && String::traits_type::compare(value.data(), str.data(), str.size()) == 0) {
 				if (!filter || filter(node)) {
@@ -104,7 +102,6 @@ SearchIndex::Result SearchIndex::performSearch(const StringView &v, size_t minMa
 				if (lb != _tokens.end()) {
 					value = makeStringView(*lb);
 					node = &_nodes.at(lb->index);
-					//std::cout << "Next: '" << value << "' from '" << _nodes.at(lb->index).canonical << "'\n";
 				}
 			}
 		}

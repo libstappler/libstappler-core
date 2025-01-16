@@ -411,7 +411,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 				values.emplace_back(it.second.data());
 			} else if (it.first != "driver" && it.first == "nmin" && it.first == "nkeep"
 					&& it.first == "nmax" && it.first == "exptime" && it.first == "persistent") {
-				std::cout << "[pq::Driver] unknown connection parameter: " << it.first << "=" << it.second << "\n";
+				log::error("pq::Driver", "unknown connection parameter: ", it.first, "=", it.second);
 			}
 		}
 
@@ -471,12 +471,12 @@ int Driver::listenForNotifications(Handle handle) const {
 	auto query = toString("LISTEN ", config::BROADCAST_CHANNEL_NAME, ";");
 	int querySent = _handle->PQsendQuery(conn, query.data());
 	if (querySent == 0) {
-		std::cout << "[Postgres]: " << _handle->PQerrorMessage(conn) << "\n";
+		log::error("Postgres", _handle->PQerrorMessage(conn));
 		return -1;
 	}
 
 	if (_handle->PQsetnonblocking(conn, 1) == -1) {
-		std::cout << "[Postgres]: " << _handle->PQerrorMessage(conn) << "\n";
+		log::error("Postgres", _handle->PQerrorMessage(conn));
 		return -1;
 	} else {
 		return _handle->PQsocket(conn);
@@ -493,7 +493,7 @@ bool Driver::consumeNotifications(Handle handle, const Callback<void(StringView)
 
 	int rc = _handle->PQconsumeInput(conn);
 	if (rc == 0) {
-		std::cout << "[Postgres]: " << _handle->PQerrorMessage(conn) << "\n";
+		log::error("Postgres", _handle->PQerrorMessage(conn));
 		return false;
 	}
 	pgNotify *notify;

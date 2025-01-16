@@ -881,7 +881,6 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 		for (auto it : tables) {
 			ret.emplace(it.at(0).pdup(), TableRec());
 			stream << "TABLE " << it.at(0) << "\n";
-			// std::cout << "TABLE " << it.at(0) << "\n";
 		}
 	});
 

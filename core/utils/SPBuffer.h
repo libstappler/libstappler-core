@@ -134,7 +134,7 @@ public:
 		char *start = (char *)_ptr;
 		auto s = string::detail::writeBuffer(start, std::forward<Args>(args)...);
 		if (s != size) {
-			std::cout << "Invalid buffer size for toString<fast>\n";
+			std::cout << "[core]: Invalid buffer size for toString<fast>\n";
 			abort();
 		}
 		_ptr += s;

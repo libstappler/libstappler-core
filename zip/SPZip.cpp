@@ -137,7 +137,7 @@ static bool addFileToArchive(zip_t *_handle, StringView name, BytesView data, bo
 		if (idx < 0) {
 			auto err = zip_get_error(_handle);
 			if (err) {
-				std::cout << "ZIP error: " << zip_error_strerror(err) << "\n";
+				log::error("ZIP", zip_error_strerror(err));
 			}
 
 			zip_source_free(source);

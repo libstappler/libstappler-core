@@ -163,7 +163,7 @@ SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView 
 namespace STAPPLER_VERSIONIZED stappler {
 
 static void debug_backtrace_error(void *data, const char *msg, int errnum) {
-	std::cout << "[Backtrace] error: " << msg << "\n";
+	log::error("Backtrace", msg);
 }
 
 static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *filename, int lineno, const char *function) {

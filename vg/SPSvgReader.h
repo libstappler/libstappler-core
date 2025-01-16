@@ -46,6 +46,7 @@ struct SP_PUBLIC SvgTag : public html::Tag<StringView> {
 		Line,
 		Polyline,
 		Polygon,
+		Path,
 		Use,
 	} shape = None;
 
@@ -82,6 +83,8 @@ struct SP_PUBLIC SvgReader {
 	void onPushTag(Parser &p, Tag &tag);
 	void onPopTag(Parser &p, Tag &tag);
 	void onInlineTag(Parser &p, Tag &tag);
+
+	void emplacePath(Tag &tag);
 
 	bool _defs = false;
 	float _squareLength = 0.0f;

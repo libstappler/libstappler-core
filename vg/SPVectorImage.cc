@@ -558,8 +558,15 @@ bool VectorImage::init(BytesView data) {
 }
 
 #if MODULE_STAPPLER_FILESYSTEM
-bool VectorImage::init(FilePath path) {
-	return init(filesystem::readTextFile<Interface>(path.get()));
+bool VectorImage::init(FilePath ipath) {
+	auto path = filesystem::loadableResourcePath<Interface>(ipath);
+	auto data = filesystem::readTextFile<Interface>(path);
+
+	if (!data.empty()) {
+		return init(sp::move(data));
+	}
+
+	return false;
 }
 #endif
 

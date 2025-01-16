@@ -184,7 +184,7 @@ static bool network_setUserAttributes(FILE *file, const StringView &str, Time mt
 		if (err != 0) {
 			err = fsetxattr(fd, "user.mime_type", str.data(), str.size(), XATTR_REPLACE);
 			if (err != 0) {
-				std::cout << "Fail to set mime type attribute (" << err << ")\n";
+				log::error("network", "Fail to set mime type attribute (", err, ")");
 				return false;
 			}
 		}

@@ -118,7 +118,7 @@ Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path) {
 		if (l->_initialize() == SQLITE_OK) {
 			return new Driver(pool, app, path, l);
 		} else {
-			std::cout << "[sqlite::Driver] sqlite3_initialize failed\n";
+			log::error("sqlite::Driver", "sqlite3_initialize failed");
 			DriverLibStorage::getInstance()->closeLib(l);
 		}
 	}
@@ -225,7 +225,7 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 				auto query = toString("PRAGMA journal_mode = ", m);
 				auto cmode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, query));
 				if (mode.empty() || cmode != m) {
-					std::cout << "[sqlite::Driver] fail to enable journal_mode '" << m << "'\n";
+					log::error("sqlite::Driver", "fail to enable journal_mode '", m, "'");
 					_handle->close(db);
 					return Driver::Handle(nullptr);
 				}
@@ -384,7 +384,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 				}
 			} else if (it.first != "driver" && it.first == "nmin" && it.first == "nkeep"
 					&& it.first == "nmax" && it.first == "exptime" && it.first == "persistent") {
-				std::cout << "[sqlite::Driver] unknown connection parameter: " << it.first << "=" << it.second << "\n";
+				log::error("sqlite::Driver", "unknown connection parameter: ", it.first, "=", it.second);
 			}
 		}
 
@@ -398,7 +398,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 			} else if (mode == "memory") {
 				flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY;
 			} else {
-				std::cout << "[sqlite::Driver] unknown mode parameter: " << mode << "\n";
+				log::error("sqlite::Driver", "unknown mode parameter: ", mode);
 			}
 		} else {
 			flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;

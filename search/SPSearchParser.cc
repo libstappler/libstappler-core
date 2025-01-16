@@ -825,7 +825,7 @@ bool parsePhrase(StringView str, const Callback<ParserStatus(StringView, ParserT
 				return false;
 			}
 			if (r.data() == control) {
-				std::cout << "Parsing is stalled\n";
+				log::error("search", "Parsing is stalled");
 			}
 		}
 	}

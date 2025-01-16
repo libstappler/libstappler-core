@@ -681,7 +681,7 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callb
 	        std::visit([&] (auto &&arg) {
 				using T = std::decay_t<decltype(arg)>;
 				if constexpr (std::is_same_v<T, typename HandleData<Interface>::String>) {
-					std::cout << "Input file: " << arg << "\n";
+					log::debug("CURL", "Input file: ", arg);
 				}
 			}, iface.receive.data);
 		}

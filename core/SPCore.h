@@ -348,23 +348,6 @@ StringToNumber<double>(const char *ptr, char ** tail, int base) -> double {
 	return 0.0;
 }
 
-/** SP_DEFINE_ENUM_AS_MASK is utility to make a bitwise-mask from typed enum
- * It defines a set of overloaded operators, that allow some bitwise operations
- * on this enum class
- */
-#define SP_DEFINE_ENUM_AS_MASK(Type) \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator | (const Type &l, const Type &r) { return Type(stappler::toInt(l) | stappler::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator & (const Type &l, const Type &r) { return Type(stappler::toInt(l) & stappler::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator ^ (const Type &l, const Type &r) { return Type(stappler::toInt(l) ^ stappler::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator |= (Type &l, const Type &r) { l = Type(stappler::toInt(l) | stappler::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator &= (Type &l, const Type &r) { l = Type(stappler::toInt(l) & stappler::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator ^= (Type &l, const Type &r) { l = Type(stappler::toInt(l) ^ stappler::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) == r; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const std::underlying_type<Type>::type &l, const Type &r) { return l == stappler::toInt(r); } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) != r; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const std::underlying_type<Type>::type &l, const Type &r) { return l != stappler::toInt(r); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator~(const Type &t) { return Type(~stappler::toInt(t)); }
-
 /** Functions for enum flags */
 template <typename T>
 bool hasFlag(T mask, T flag) {
@@ -562,8 +545,8 @@ T lerp(const T &a, const T &b, const V &alpha) {
 	return (a * (- alpha + 1.0f) + b * alpha);
 }
 
-template<class T, class Compare> constexpr inline
-const T& clamp(const T& v, const T& lo, const T& hi, Compare comp) {
+template <typename T, typename Compare> constexpr inline
+const T& clamp(const T &v, const T &lo, const T &hi, Compare comp) {
 	if (comp(hi, lo)) {
 	    return comp(v, hi) ? hi : comp(lo, v) ? lo : v;
 	} else {
@@ -571,30 +554,53 @@ const T& clamp(const T& v, const T& lo, const T& hi, Compare comp) {
 	}
 }
 
-template<class T> constexpr inline
-const T& clamp(const T& v, const T& lo, const T& hi) {
+template <typename T> constexpr inline
+const T& clamp(const T &v, const T &lo, const T &hi) {
     return math::clamp( v, lo, hi, std::less<T>() );
 }
 
-template<class T, class Compare> constexpr inline
-T clamp_distance(const T& v, const T& lo, const T& hi, Compare comp, const T &z) {
+template <typename T, typename Compare> constexpr inline
+T clamp_distance(const T &v, const T &lo, const T &hi, Compare comp, const T &z) {
 	assert( !comp(hi, lo) );
 	return comp(v, lo) ? (lo - v) : comp(hi, v) ? (v - hi) : z;
 }
 
-template<class T, class Compare> constexpr inline
-T clamp_distance(const T& v, const T& lo, const T& hi, Compare comp) {
+template <typename T, typename Compare> constexpr inline
+T clamp_distance(const T &v, const T &lo, const T &hi, Compare comp) {
 	return clamp_distance(v, lo, hi, comp, T(0));
 }
 
-template<class T> constexpr inline
-T clamp_distance(const T& v, const T& lo, const T& hi, const T &z) {
+template <typename T> constexpr inline
+T clamp_distance(const T &v, const T &lo, const T &hi, const T &z) {
 	return clamp_distance(v, lo, hi, std::less<T>(), z);
 }
 
-template<class T> constexpr inline
-T clamp_distance(const T& v, const T& lo, const T& hi) {
+template <typename T> constexpr inline
+T clamp_distance(const T &v, const T &lo, const T &hi) {
 	return clamp_distance(v, lo, hi, std::less<T>(), T(0));
+}
+
+template <typename T> constexpr inline
+T add_cyclic(const T &value, const T &increment,  const T &lo,  const T &hi) {
+	auto cycle = (hi - lo + T(1));
+	auto incr = increment % cycle;
+	auto tmp = value + incr;
+	if (tmp > hi) {
+		return tmp - cycle;
+	} else {
+		return tmp;
+	}
+}
+
+template <typename T> constexpr inline
+T sub_cyclic(const T &value, const T &decrement,  const T &lo,  const T &hi) {
+	auto cycle = (hi - lo + T(1));
+	auto decr = decrement % cycle;
+	if (value < lo + decr) {
+		return value + cycle - decr;
+	} else {
+		return value - decr;
+	}
 }
 
 // next power of two
@@ -642,6 +648,150 @@ constexpr auto to_deg(T val) -> T {
 }
 
 }
+
+namespace stappler {
+
+namespace detail {
+
+template <typename E>
+struct enum_iterator_end { };
+
+template <typename E, E Last>
+struct enum_iterator {
+	using iterator_category = std::random_access_iterator_tag;
+	using size_type = size_t;
+	using pointer = E *;
+	using reference = E;
+	using difference_type = std::ptrdiff_t;
+	using value_type = E;
+
+	using iterator = enum_iterator<E, Last>;
+
+	constexpr enum_iterator() noexcept : value(E(0)) {}
+	constexpr enum_iterator(const enum_iterator & other) noexcept = default;
+
+	explicit constexpr enum_iterator(E e) : value(toInt(e)) { }
+	explicit constexpr enum_iterator(typename std::underlying_type<E>::type e) : value(e) { }
+
+	constexpr iterator& operator=(const iterator &other) noexcept { value = other.value; return *this; }
+	constexpr bool operator==(const iterator &other) const { return value == other.value; }
+	constexpr bool operator!=(const iterator &other) const { return value != other.value; }
+	constexpr bool operator<(const iterator &other) const { return value < other.value; }
+	constexpr bool operator>(const iterator &other) const { return value > other.value; }
+	constexpr bool operator<=(const iterator &other) const { return value <= other.value; }
+	constexpr bool operator>=(const iterator &other) const { return value >= other.value; }
+
+	constexpr bool operator==(const enum_iterator_end<E> &other) const { return value > toInt(Last); }
+	constexpr bool operator!=(const enum_iterator_end<E> &other) const { return value <= toInt(Last); }
+
+	constexpr iterator& operator++() { ++ value; return *this; }
+	constexpr iterator operator++(int) { auto tmp = *this; ++ value; return tmp; }
+	constexpr iterator& operator--() { --value; return *this; }
+	constexpr iterator operator--(int) { auto tmp = *this; --value; return tmp; }
+	constexpr iterator& operator+= (size_type n) { value += n; return *this; }
+	constexpr iterator& operator-=(size_type n) { value -= n; return *this; }
+	constexpr difference_type operator-(const iterator &other) const { return value - other.value; }
+
+	constexpr reference operator*() const { return E(value); }
+	constexpr pointer operator->() const { return &value; }
+	constexpr reference operator[](size_type n) const { return *(value + n); }
+
+	constexpr size_type operator-(pointer p) const { return value - p; }
+
+	friend constexpr auto operator+(size_type n, const iterator &it) -> iterator {
+		return iterator(it.value + n);
+	}
+
+	friend constexpr auto operator+(const iterator &it, size_type n) -> iterator {
+		return iterator(it.value + n);
+	}
+
+	friend constexpr auto operator-(const iterator &it, size_type n) -> iterator {
+		return iterator(it.value - n);
+	}
+
+	typename std::underlying_type<E>::type value;
+};
+
+template <typename E, E First, E Last>
+struct enum_wrapper {
+	constexpr enum_iterator<E, Last> begin() const { return enum_iterator<E, Last>(First); }
+	constexpr enum_iterator_end<E> end() const { return enum_iterator_end<E>(); }
+};
+
+}
+
+template <typename E, E First, E Last>
+auto each() -> detail::enum_wrapper<E, First, Last> {
+	return detail::enum_wrapper<E, First, Last>();
+}
+
+template <typename E>
+auto each() -> detail::enum_wrapper<E, E(0), E(toInt(E::Max) - 1)> {
+	return detail::enum_wrapper<E, E(0), E(toInt(E::Max) - 1)>();
+}
+
+}
+
+/** SP_DEFINE_ENUM_AS_MASK is utility to make a bitwise-mask from typed enum
+ * It defines a set of overloaded operators, that allow some bitwise operations
+ * on this enum class
+ */
+#define SP_DEFINE_ENUM_AS_MASK(Type) \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator | (const Type &l, const Type &r) { return Type(stappler::toInt(l) | stappler::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator & (const Type &l, const Type &r) { return Type(stappler::toInt(l) & stappler::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator ^ (const Type &l, const Type &r) { return Type(stappler::toInt(l) ^ stappler::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator |= (Type &l, const Type &r) { l = Type(stappler::toInt(l) | stappler::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator &= (Type &l, const Type &r) { l = Type(stappler::toInt(l) & stappler::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator ^= (Type &l, const Type &r) { l = Type(stappler::toInt(l) ^ stappler::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) == r; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const std::underlying_type<Type>::type &l, const Type &r) { return l == stappler::toInt(r); } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) != r; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const std::underlying_type<Type>::type &l, const Type &r) { return l != stappler::toInt(r); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator~(const Type &t) { return Type(~stappler::toInt(t)); }
+
+/** SP_DEFINE_ENUM_AS_INCREMENTABLE adds operator++/operator-- for enumerations */
+#define SP_DEFINE_ENUM_AS_INCREMENTABLE(Type, First, Last) \
+	SP_COVERAGE_TRIVIAL inline constexpr Type& operator++(Type& a) { \
+		auto value = stappler::toInt(a); \
+		if (value >= stappler::toInt(Type::Last)) { value = stappler::toInt(Type::First); } else { ++ value; } \
+		::memcpy(&a, &value, sizeof(Type)); \
+		return a; \
+	} \
+	SP_COVERAGE_TRIVIAL inline constexpr Type& operator--(Type& a) { \
+		auto value = stappler::toInt(a); \
+		if (value <= stappler::toInt(Type::First)) { value = stappler::toInt(Type::Last); } else { -- value; } \
+		::memcpy(&a, &value, sizeof(Type)); \
+		return a; \
+	} \
+	SP_COVERAGE_TRIVIAL inline constexpr Type operator++(Type& a, int) { \
+		auto value = stappler::toInt(a); auto result = value; \
+		if (value >= stappler::toInt(Type::Last)) { value = stappler::toInt(Type::First); } else { ++ value; } \
+		::memcpy(&a, &value, sizeof(Type)); \
+		return static_cast<Type>(result); \
+	} \
+	SP_COVERAGE_TRIVIAL inline constexpr Type operator--(Type& a, int) { \
+		auto value = stappler::toInt(a); auto result = value; \
+		if (value <= stappler::toInt(Type::First)) { value = stappler::toInt(Type::Last); } else { -- value; } \
+		::memcpy(&a, &value, sizeof(Type)); \
+		return static_cast<Type>(result); \
+	} \
+	SP_COVERAGE_TRIVIAL inline constexpr Type operator+(const Type &a, const typename std::underlying_type<Type>::type &b) { \
+		return Type(stappler::math::add_cyclic(stappler::toInt(a), b, stappler::toInt(Type::First), stappler::toInt(Type::Last))); \
+	} \
+	SP_COVERAGE_TRIVIAL inline constexpr Type operator+=(Type &a, const typename std::underlying_type<Type>::type &b) { \
+		auto value = stappler::math::add_cyclic(stappler::toInt(a), b, stappler::toInt(Type::First), stappler::toInt(Type::Last)); \
+		::memcpy(&a, &value, sizeof(Type)); \
+		return a; \
+	} \
+	SP_COVERAGE_TRIVIAL inline constexpr Type operator-(const Type &a, const typename std::underlying_type<Type>::type &b) { \
+		return Type(stappler::math::sub_cyclic(stappler::toInt(a), b, stappler::toInt(Type::First), stappler::toInt(Type::Last))); \
+	} \
+	SP_COVERAGE_TRIVIAL inline constexpr Type operator-=(Type &a, const typename std::underlying_type<Type>::type &b) { \
+		auto value = stappler::math::sub_cyclic(stappler::toInt(a), b, stappler::toInt(Type::First), stappler::toInt(Type::Last)); \
+		::memcpy(&a, &value, sizeof(Type)); \
+		return a; \
+	}
 
 namespace std {
 
