@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -410,6 +410,8 @@ template <typename T>
 inline void Allocator<T>::move(T *dest, T *source, size_t count) noexcept {
 	if constexpr (std::is_trivially_copyable<T>::value) {
 		memmove(dest, source, count * sizeof(T));
+	} else if constexpr(std::is_trivially_move_constructible<T>::value) {
+		memmove(dest, source, count * sizeof(T));
 	} else {
 		if (dest == source) {
 			return;
@@ -430,6 +432,8 @@ inline void Allocator<T>::move(T *dest, T *source, size_t count) noexcept {
 template <typename T>
 inline void Allocator<T>::move_rewrite(T *dest, size_t dcount, T *source, size_t count) noexcept {
 	if constexpr (std::is_trivially_copyable<T>::value) {
+		memmove(dest, source, count * sizeof(T));
+	} else if constexpr(std::is_trivially_move_constructible<T>::value) {
 		memmove(dest, source, count * sizeof(T));
 	} else {
 		if (dest == source) {

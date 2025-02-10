@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,10 @@ public:
 		return Self(mem, count);
 	}
 
-	template< class InputIt >
+	template <size_t N>
+	SpanView(const _Type value[N]) : ptr(&value[0]), len(N) { }
+
+	template< typename InputIt, typename = std::enable_if_t<std::is_convertible<_Type *, InputIt>::value> >
 	SpanView( InputIt first, InputIt last) : ptr(&(*first)), len(std::distance(first, last)) { }
 
 	SpanView(InitializerList<Type> il) : ptr(il.begin()), len(il.size()) { }

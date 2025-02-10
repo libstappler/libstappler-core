@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,20 @@ enum Access {
 	Execute
 };
 
+enum class ProtectionFlags : uint32_t {
+	None,
+	Read = 1 << 0,
+	Write = 1 << 1,
+	Exec = 1 << 2,
+};
+
+SP_DEFINE_ENUM_AS_MASK(ProtectionFlags)
+
+enum class MappingType {
+	Private,
+	Shared
+};
+
 struct Stat {
 	size_t size = 0;
 	Time atime;
@@ -46,7 +60,7 @@ struct Stat {
 	bool isDir = false;
 };
 
-class SP_PUBLIC File {
+class SP_PUBLIC File final {
 public:
 	enum class Flags {
 		None,
@@ -106,6 +120,40 @@ protected:
 		FILE *_nativeFile;
 		void *_platformFile;
 	};
+};
+
+class MemoryMappedRegion final {
+public:
+	using PlatformStorage = std::array<uint8_t, 16>;
+
+	static MemoryMappedRegion mapFile(StringView, MappingType, ProtectionFlags,
+			size_t offset = 0, size_t len = maxOf<size_t>());
+
+	~MemoryMappedRegion();
+
+	MemoryMappedRegion(MemoryMappedRegion &&);
+	MemoryMappedRegion & operator=(MemoryMappedRegion &&);
+
+	MemoryMappedRegion(const MemoryMappedRegion &) = delete;
+	MemoryMappedRegion & operator=(const MemoryMappedRegion &) = delete;
+
+	MappingType getType() const { return _type; }
+	ProtectionFlags getProtectionFlags() const { return _prot; }
+
+	uint8_t * getRegion() const { return _region; }
+
+	operator bool() const { return _region != nullptr; }
+
+	void sync();
+
+protected:
+	MemoryMappedRegion();
+	MemoryMappedRegion(PlatformStorage &&, uint8_t *, MappingType, ProtectionFlags);
+
+	PlatformStorage _storage;
+	uint8_t *_region;
+	MappingType _type;
+	ProtectionFlags _prot;
 };
 
 // Check if file at path exists
@@ -279,6 +327,11 @@ SP_PUBLIC void _close(void *);
 SP_PUBLIC void _ftw(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
 
 SP_PUBLIC bool _ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
+
+SP_PUBLIC uint32_t _getMemoryPageSize();
+SP_PUBLIC uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtectionFlags prot, size_t offset, size_t len);
+SP_PUBLIC bool _unmapFile(uint8_t *region, uint8_t storage[16]);
+SP_PUBLIC bool _syncMappedRegion(uint8_t *region, uint8_t storage[16]);
 
 }
 

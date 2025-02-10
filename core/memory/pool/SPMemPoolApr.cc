@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -85,8 +85,6 @@ SP_APR_EXPORT apr_allocator_t *apr_pool_allocator_get(apr_pool_t *pool) __attrib
 
 SP_APR_EXPORT void * apr_pmemdup(apr_pool_t *p, const void *m, apr_size_t n) __attribute__((alloc_size(3)));
 SP_APR_EXPORT char * apr_pstrdup(apr_pool_t *p, const char *s);
-
-SP_APR_EXPORT apr_thread_mutex_t *apr_allocator_mutex_get(apr_allocator_t *allocator) __attribute__((nonnull(1)));
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::apr {
 
@@ -233,7 +231,7 @@ SPUNUSED static void cleanup_kill(pool_t *p, void *ptr, status_t(*cb)(void *)) {
 	apr_pool_cleanup_kill(p, ptr, cb);
 }
 
-struct __CleaupData {
+struct SP_PUBLIC __CleaupData {
 	void *data;
 	pool_t *pool;
 	status_t(*callback)(void *);
@@ -290,7 +288,7 @@ SPUNUSED static allocator_t *get_allocator(pool_t *p) {
 SPUNUSED static void *pmemdup(pool_t *a, const void *m, size_t n) { return apr_pmemdup(a, m, n); }
 SPUNUSED static char *pstrdup(pool_t *a, const char *s) { return apr_pstrdup(a, s); }
 
-SPUNUSED static void setPoolInfo(pool_t *p, uint32_t tag, const void *ptr) {
+SPUNUSED static void set_pool_info(pool_t *p, uint32_t tag, const void *ptr) {
 	if (auto mngr = allocmngr_get(p)) {
 		if (tag > mngr->tag) {
 			mngr->tag = tag;
@@ -299,17 +297,8 @@ SPUNUSED static void setPoolInfo(pool_t *p, uint32_t tag, const void *ptr) {
 	}
 }
 
-SPUNUSED static bool isThreadSafeAsParent(pool_t *pool) {
-	if (auto a = apr_pool_allocator_get(pool)) {
-		return apr_allocator_mutex_get(a) != nullptr;
-	}
-	return false;
-}
-
 static custom::AllocManager *allocmngr_get(pool_t *pool) {
-	return nullptr;
-
-	/*wrapper_pool_t *p = (wrapper_pool_t *)pool;
+	wrapper_pool_t *p = (wrapper_pool_t *)pool;
 	if (p->tag) {
 		auto m = (custom::AllocManager *)p->tag;
 		if (m->pool == pool) {
@@ -317,11 +306,12 @@ static custom::AllocManager *allocmngr_get(pool_t *pool) {
 		}
 	}
 
-	auto m = (custom::AllocManager *)apr_palloc(pool, sizeof(custom::AllocManager *));
+	auto mem = apr_palloc(pool, sizeof(custom::AllocManager));
+	auto m = new (mem) custom::AllocManager;
 	m->pool = pool;
 	m->name = p->tag;
 
-	cleanup_register(pool, m, [] (void *ptr) {
+	pre_cleanup_register(pool, m, [] (void *ptr) {
 		auto m = (custom::AllocManager *)ptr;
 
 		wrapper_pool_t *p = (wrapper_pool_t *)m->pool;
@@ -330,7 +320,7 @@ static custom::AllocManager *allocmngr_get(pool_t *pool) {
 	});
 
 	p->tag = (const char *)m;
-	return m;*/
+	return m;
 }
 
 SPUNUSED static const char *get_tag(pool_t *pool) {
@@ -393,7 +383,5 @@ SP_APR_EXPORT apr_allocator_t *apr_pool_allocator_get(apr_pool_t *pool) { return
 
 SP_APR_EXPORT void * apr_pmemdup(apr_pool_t *p, const void *m, apr_size_t n) { return nullptr; }
 SP_APR_EXPORT char * apr_pstrdup(apr_pool_t *p, const char *s) { return nullptr; }
-
-SP_APR_EXPORT apr_thread_mutex_t *apr_allocator_mutex_get(apr_allocator_t *allocator) { return nullptr; }
 
 #endif

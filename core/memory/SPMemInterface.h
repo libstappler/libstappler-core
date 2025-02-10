@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -101,6 +101,8 @@ template <typename InterfaceType>
 struct InterfaceObject {
 	using Interface = InterfaceType;
 
+	using AllocBase = typename Interface::AllocBaseType;
+
 	using String = typename Interface::StringType;
 	using WideString = typename Interface::WideStringType;
 	using Bytes = typename Interface::BytesType;
@@ -121,6 +123,27 @@ struct InterfaceObject {
 	using Function = typename Interface::template FunctionType<T>;
 
 	using StringStream = typename Interface::StringStreamType;
+};
+
+}
+
+namespace STAPPLER_VERSIONIZED stappler::memory {
+
+class PoolObject : public memory::PoolInterface::AllocBaseType, public InterfaceObject<memory::PoolInterface> {
+public:
+	virtual ~PoolObject() = default;
+
+	PoolObject(memory::pool_t *p) : _pool(p) { }
+
+	memory::pool_t *getPool() const { return _pool; }
+
+	template <typename Callback>
+	auto perform(Callback &&cb) {
+		return memory::pool::perform(std::forward<Callback>(cb), _pool);
+	}
+
+protected:
+	memory::pool_t *_pool = nullptr;
 };
 
 }

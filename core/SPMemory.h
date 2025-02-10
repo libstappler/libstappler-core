@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2019-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -139,11 +139,11 @@ using memory::pool::perform;
 using memory::pool::perform_clear;
 using memory::pool::perform_temporary;
 
-template <typename T>
-bool emplace_ordered(Vector<T> &vec, T val);
+template <typename Container, typename T>
+bool emplace_ordered(Container &vec, T val);
 
-template <typename T>
-bool exists_ordered(Vector<T> &vec, const T & val);
+template <typename Container, typename T>
+bool exists_ordered(const Container &vec, const T & val);
 
 }
 
@@ -204,11 +204,11 @@ using memory::pool::perform;
 using memory::pool::perform_clear;
 using memory::pool::perform_temporary;
 
-template <typename T>
-bool emplace_ordered(Vector<T> &vec, T val);
+template <typename Container, typename T>
+bool emplace_ordered(Container &vec, T val);
 
-template <typename T>
-bool exists_ordered(Vector<T> &vec, const T & val);
+template <typename Container, typename T>
+bool exists_ordered(const Container &vec, const T & val);
 
 }
 
@@ -275,8 +275,8 @@ inline bool emplace_ordered(Vector<Value> &vec, const Value &val) {
 
 namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
-template <typename T>
-inline bool emplace_ordered(Vector<T> &vec, T val) {
+template <typename Container, typename T>
+inline bool emplace_ordered(Container &vec, T val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
 	if (lb == vec.end()) {
 		vec.emplace_back(val);
@@ -288,8 +288,8 @@ inline bool emplace_ordered(Vector<T> &vec, T val) {
 	return false;
 }
 
-template <typename T>
-inline bool exists_ordered(Vector<T> &vec, const T & val) {
+template <typename Container, typename T>
+inline bool exists_ordered(const Container &vec, const T & val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
 	if (lb == vec.end() || *lb != val) {
 		return false;
@@ -302,8 +302,8 @@ inline bool exists_ordered(Vector<T> &vec, const T & val) {
 
 namespace STAPPLER_VERSIONIZED stappler::mem_std {
 
-template <typename T>
-inline bool emplace_ordered(Vector<T> &vec, T val) {
+template <typename Container, typename T>
+inline bool emplace_ordered(Container &vec, T val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
 	if (lb == vec.end()) {
 		vec.emplace_back(val);
@@ -315,8 +315,8 @@ inline bool emplace_ordered(Vector<T> &vec, T val) {
 	return false;
 }
 
-template <typename T>
-inline bool exists_ordered(Vector<T> &vec, const T & val) {
+template <typename Container, typename T>
+inline bool exists_ordered(const Container &vec, const T & val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
 	if (lb == vec.end() || *lb != val) {
 		return false;

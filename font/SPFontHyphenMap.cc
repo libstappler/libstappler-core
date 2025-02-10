@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 
 #include "SPFontHyphenMap.h"
 #include "thirdparty/hyphen/hyphen.h"
+#include "SPFilesystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 

@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -69,17 +69,6 @@ static constexpr size_t ALLOCATOR_MMAP_RESERVED = size_t(64_GiB);
 static constexpr Status SUCCESS = 0;
 
 static constexpr uint64_t POOL_MAGIC = 0xDEAD7fffDEADBEEF;
-
-enum class PoolFlags {
-	None = 0,
-	ThreadSafePool = 1 | 2,
-	ThreadSafeAllocator = 2,
-	Custom = apr::SP_APR_COMPATIBLE ? 4 : 0,
-
-	Default = ThreadSafeAllocator,
-};
-
-SP_DEFINE_ENUM_AS_MASK(PoolFlags)
 
 }
 

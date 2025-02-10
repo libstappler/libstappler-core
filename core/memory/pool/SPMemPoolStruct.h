@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,6 @@ struct SP_LOCAL AllocManager {
 	size_t alloc_buffer = 0;
 	size_t allocated = 0;
 	size_t returned = 0;
-	size_t opts = 0; // deprecated/unused
 
 	void reset(void *);
 
@@ -91,9 +90,7 @@ struct SP_LOCAL Cleanup {
 struct SP_LOCAL Allocator {
 	using AllocMutex = std::recursive_mutex;
 
-#if MODULE_STAPPLER_APR
-	uintptr_t magic = POOL_MAGIC; // used to detect stappler allocators
-#endif
+	uintptr_t magic = POOL_MAGIC; // used to detect stappler allocators vs. APR allocators
 	uint32_t last = 0; // largest used index into free
 	uint32_t max = ALLOCATOR_MAX_FREE_UNLIMITED; // Total size (in BOUNDARY_SIZE multiples) of unused memory before blocks are given back
 	uint32_t current = 0; // current allocated size in BOUNDARY_SIZE
@@ -105,7 +102,7 @@ struct SP_LOCAL Allocator {
 
 	static size_t getAllocatorsCount();
 
-	Allocator(bool threadSafe = true);
+	Allocator();
 	~Allocator();
 
 	void set_max(size_t);
@@ -115,17 +112,6 @@ struct SP_LOCAL Allocator {
 
 	void lock();
 	void unlock();
-
-#if LINUX
-	int mmapdes = -1;
-	void *mmapPtr = nullptr;
-	uint32_t mmapCurrent = 0;
-	uint32_t mmapMax = 0;
-
-	bool run_mmap(uint64_t);
-#endif
-
-	AllocManager::AllocFn allocationTracker = nullptr;
 };
 
 struct SP_LOCAL Pool {
@@ -136,9 +122,7 @@ struct SP_LOCAL Pool {
 	Cleanup *cleanups = nullptr;
 	Cleanup *free_cleanups = nullptr;
 	Allocator *allocator = nullptr;
-#if MODULE_STAPPLER_APR
-	uint64_t magic = POOL_MAGIC; // used to detect stappler pools
-#endif
+	uint64_t magic = POOL_MAGIC; // used to detect stappler pools vs. APR pools
 	MemNode *active = nullptr;
 	MemNode *self = nullptr; /* The node containing the pool itself */
 	uint8_t *self_first_avail = nullptr;
@@ -146,15 +130,14 @@ struct SP_LOCAL Pool {
     HashTable *user_data = nullptr;
 
 	AllocManager allocmngr;
-	bool threadSafe = false;
 
-	static Pool *create(Allocator *alloc = nullptr, PoolFlags flags = PoolFlags::Default);
+	static Pool *create(Allocator *alloc = nullptr);
 	static void destroy(Pool *);
 	static size_t getPoolsCount();
 
 	Pool();
-	Pool(Allocator *alloc, MemNode *node, bool threadSafe = false);
-	Pool(Pool *parent, Allocator *alloc, MemNode *node, bool threadSafe = false);
+	Pool(Allocator *alloc, MemNode *node);
+	Pool(Pool *parent, Allocator *alloc, MemNode *node);
 	~Pool();
 
 	void *alloc(size_t &sizeInBytes);
@@ -182,9 +165,6 @@ struct SP_LOCAL Pool {
 	Status userdata_setn(const void *data, const char *key, Cleanup::Callback cb);
 	Status userdata_get(void **data, const char *key);
 	Status userdata_get(void **data, const char *key, size_t);
-
-	void lock();
-	void unlock();
 };
 
 using HashFunc = uint32_t (*)(const char *key, size_t *klen);

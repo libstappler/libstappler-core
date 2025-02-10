@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -127,7 +127,7 @@ size_t File::read(uint8_t *buf, size_t nbytes) {
 			if (nbytes > remains) {
 				nbytes = remains;
 			}
-			if (fread(buf, nbytes, 1, _nativeFile) == 1) {
+			if (fread(buf, 1, nbytes, _nativeFile) == nbytes) {
 				return nbytes;
 			}
 		} else {
@@ -299,6 +299,76 @@ const char *File::path() const {
 void File::set_tmp_path(const char *buf) {
 	memcpy(_buf, buf, 256);
 }
+
+MemoryMappedRegion MemoryMappedRegion::mapFile(StringView path, MappingType type, ProtectionFlags prot, size_t offset, size_t len) {
+	if (math::align(offset, size_t(platform::_getMemoryPageSize())) != offset) {
+		log::error("filesystem", "offset for MemoryMappedRegion::mapFile should be aligned as platform::_getMemoryPageSize");
+		return MemoryMappedRegion();
+	}
+
+	Stat stat;
+	if (!native::stat_fn(path, stat)) {
+		log::error("filesystem", "Fail to get stat for a file: ", path);
+		return MemoryMappedRegion();
+	}
+
+	len = std::min(len, stat.size);
+
+	if (offset > 0) {
+		if (offset > stat.size) {
+			log::error("filesystem", "Offset (", offset, ") for a file ", path, " is larger then file itself");
+			return MemoryMappedRegion();
+		} else {
+			auto remains = stat.size - offset;
+			len = std::min(len, remains);
+		}
+	}
+
+	PlatformStorage storage;
+	auto region = platform::_mapFile(storage.data(), path, type, prot, offset, len);
+	if (region) {
+		return MemoryMappedRegion(move(storage), region, type, prot);
+	}
+
+	return MemoryMappedRegion();
+}
+
+MemoryMappedRegion::~MemoryMappedRegion() {
+	if (_region) {
+		platform::_unmapFile(_region, _storage.data());
+		_region = nullptr;
+	}
+}
+
+MemoryMappedRegion::MemoryMappedRegion(MemoryMappedRegion &&other) {
+	_region = other._region;
+	_storage = sp::move(other._storage);
+	_type = other._type;
+	_prot = other._prot;
+
+	other._region = nullptr;
+	memset(other._storage.data(), 0, other._storage.size());
+}
+
+MemoryMappedRegion & MemoryMappedRegion::operator=(MemoryMappedRegion &&other) {
+	_region = other._region;
+	_storage = sp::move(other._storage);
+	_type = other._type;
+	_prot = other._prot;
+
+	other._region = nullptr;
+	memset(other._storage.data(), 0, other._storage.size());
+	return *this;
+}
+
+void MemoryMappedRegion::sync() {
+	platform::_syncMappedRegion(_region, _storage.data());
+}
+
+MemoryMappedRegion::MemoryMappedRegion() : _region(nullptr), _type(MappingType::Private), _prot(ProtectionFlags::None) { }
+
+MemoryMappedRegion::MemoryMappedRegion(PlatformStorage &&storage, uint8_t *ptr, MappingType t, ProtectionFlags p)
+: _storage(move(storage)), _region(ptr), _type(t), _prot(p) { }
 
 bool exists(StringView ipath) {
 	if (filepath::isAbsolute(ipath)) {

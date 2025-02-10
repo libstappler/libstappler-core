@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -40,14 +40,8 @@ using status_t = custom::Status;
 
 using cleanup_fn = status_t(*)(void *);
 
-using PoolFlags = mempool::custom::PoolFlags;
-
 // use when you need to create pool from application root pool
 constexpr pool_t *app_root_pool = nullptr;
-
-SP_PUBLIC size_t get_mapped_regions_count();
-SP_PUBLIC void *sp_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
-SP_PUBLIC int sp_munmap(void *addr, size_t length);
 
 }
 
@@ -68,11 +62,11 @@ SP_PUBLIC void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const vo
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::allocator {
 
-SP_PUBLIC allocator_t *create(bool custom = false);
-SP_PUBLIC allocator_t *create(void *mutex);
+SP_PUBLIC allocator_t *create();
 
-// always custom
-SP_PUBLIC allocator_t *createWithMmap(uint32_t initialPages = 0);
+#if MODULE_STAPPLER_APR
+SP_PUBLIC allocator_t *create_apr(void *mutex = nullptr);
+#endif
 
 SP_PUBLIC void owner_set(allocator_t *alloc, pool_t *pool);
 SP_PUBLIC pool_t * owner_get(allocator_t *alloc);
@@ -85,23 +79,26 @@ SP_PUBLIC void destroy(allocator_t *);
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
-using PoolFlags = custom::PoolFlags;
-
 SP_PUBLIC void initialize();
 SP_PUBLIC void terminate();
 
 // creates unmanaged pool
-SP_PUBLIC pool_t *create(PoolFlags = PoolFlags::Default);
-SP_PUBLIC pool_t *create(allocator_t *, PoolFlags = PoolFlags::Default);
+SP_PUBLIC pool_t *create();
+SP_PUBLIC pool_t *create(allocator_t *);
 
 // creates managed pool (managed by root, if parent in mullptr)
 SP_PUBLIC pool_t *create(pool_t *);
 
 // creates unmanaged pool
-SP_PUBLIC pool_t *createTagged(const char *, PoolFlags = PoolFlags::Default);
+SP_PUBLIC pool_t *create_tagged(const char *);
 
 // creates managed pool (managed by root, if parent in mullptr)
-SP_PUBLIC pool_t *createTagged(pool_t *, const char *);
+SP_PUBLIC pool_t *create_tagged(pool_t *, const char *);
+
+#if MODULE_STAPPLER_APR
+SP_PUBLIC pool_t *create_apr(allocator_t * = nullptr);
+SP_PUBLIC pool_t *create_apr_tagged(const char *);
+#endif
 
 SP_PUBLIC void destroy(pool_t *);
 SP_PUBLIC void clear(pool_t *);
@@ -128,9 +125,6 @@ SP_PUBLIC allocator_t *get_allocator(pool_t *);
 
 SP_PUBLIC void *pmemdup(pool_t *a, const void *m, size_t n);
 SP_PUBLIC char *pstrdup(pool_t *a, const char *s);
-
-SP_PUBLIC bool isThreadSafeForAllocations(pool_t *pool);
-SP_PUBLIC bool isThreadSafeAsParent(pool_t *pool);
 
 SP_PUBLIC const char *get_tag(pool_t *);
 

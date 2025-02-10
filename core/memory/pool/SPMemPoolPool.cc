@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,6 @@ static void Pool_performCleanup(Pool *pool) {
 }
 
 void *Pool::alloc(size_t &sizeInBytes) {
-	std::unique_lock<Pool> lock(*this);
 	if (sizeInBytes >= BlockThreshold) {
 		return allocmngr.alloc(sizeInBytes, [] (void *p, size_t s) { return((Pool *)p)->palloc(s); });
 	}
@@ -73,7 +72,6 @@ void *Pool::alloc(size_t &sizeInBytes) {
 
 void Pool::free(void *ptr, size_t sizeInBytes) {
 	if (sizeInBytes >= BlockThreshold) {
-		std::unique_lock<Pool> lock(*this);
 		allocmngr.free(ptr, sizeInBytes, [] (void *p, size_t s) { return((Pool *)p)->palloc_self(s); });
 	}
 }
@@ -197,17 +195,17 @@ void Pool::clear() {
 	this->allocmngr.reset(this);
 }
 
-Pool *Pool::create(Allocator *alloc, PoolFlags flags) {
+Pool *Pool::create(Allocator *alloc) {
 	Allocator *allocator = alloc;
 	if (allocator == nullptr) {
-		allocator = new Allocator((flags & PoolFlags::ThreadSafeAllocator) != PoolFlags::None);
+		allocator = new Allocator();
 	}
 
 	auto node = allocator->alloc(MIN_ALLOC - SIZEOF_MEMNODE);
 	node->next = node;
 	node->ref = &node->next;
 
-	Pool *pool = new (node->first_avail) Pool(allocator, node, (flags & PoolFlags::ThreadSafePool) == PoolFlags::ThreadSafePool);
+	Pool *pool = new (node->first_avail) Pool(allocator, node);
 	node->first_avail = pool->self_first_avail = (uint8_t *)pool + SIZEOF_POOL;
 
 	if (!alloc) {
@@ -228,13 +226,13 @@ size_t Pool::getPoolsCount() {
 
 Pool::Pool() : allocmngr{this} { ++ s_nPools; }
 
-Pool::Pool(Allocator *alloc, MemNode *node, bool threadSafe)
-: allocator(alloc), active(node), self(node), allocmngr{this}, threadSafe(threadSafe) {
+Pool::Pool(Allocator *alloc, MemNode *node)
+: allocator(alloc), active(node), self(node), allocmngr{this} {
 	++ s_nPools;
 }
 
-Pool::Pool(Pool *p, Allocator *alloc, MemNode *node, bool threadSafe)
-: allocator(alloc), active(node), self(node), allocmngr{this}, threadSafe(threadSafe) {
+Pool::Pool(Pool *p, Allocator *alloc, MemNode *node)
+: allocator(alloc), active(node), self(node), allocmngr{this} {
 	if ((parent = p) != nullptr) {
 		std::unique_lock<Allocator> lock(*allocator);
 		sibling = parent->child;
@@ -294,7 +292,7 @@ Pool *Pool::make_child(Allocator *allocator) {
 	node->next = node;
 	node->ref = &node->next;
 
-	Pool *pool = new (node->first_avail) Pool(parent, allocator, node, threadSafe);
+	Pool *pool = new (node->first_avail) Pool(parent, allocator, node);
 	node->first_avail = pool->self_first_avail = (uint8_t *)pool + SIZEOF_POOL;
 	return pool;
 }
@@ -419,18 +417,6 @@ Status Pool::userdata_get(void **data, const char *key, size_t klen) {
         *data = user_data->get(key, klen);
     }
     return SUCCESS;
-}
-
-void Pool::lock() {
-	if (threadSafe && allocator->mutex) {
-		allocator->mutex->lock();
-	}
-}
-
-void Pool::unlock() {
-	if (threadSafe && allocator->mutex) {
-		allocator->mutex->unlock();
-	}
 }
 
 struct StaticHolder {

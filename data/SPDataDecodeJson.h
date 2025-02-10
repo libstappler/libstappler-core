@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -199,6 +199,14 @@ inline void Decoder<Interface>::parseValue(ValueType &current) {
 		} else {
 			r += 4;
 		}
+		break;
+	case ']':
+	case '}':
+	case ':':
+	case ',':
+		log::error("json::Decoder", "Invalid token: ", r.sub(0, 1), "; expected value");
+		r.skipUntil<StringView::Chars<'"', 't', 'f', 'n', '+', '-', '[', '{', ']', '}'>, StringView::Range<'0', '9'>>();
+		++ r;
 		break;
 	default:
 		r.skipUntil<StringView::Chars<'"', 't', 'f', 'n', '+', '-', '[', '{', ']', '}'>, StringView::Range<'0', '9'>>();

@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -108,6 +108,9 @@ SP_PUBLIC void writeCompressionMark(uint8_t *data, size_t sourceSize, EncodeForm
 
 template <typename Interface>
 SP_PUBLIC auto compress(const uint8_t *, size_t, EncodeFormat::Compression, bool conditional) -> typename Interface::BytesType;
+
+template <typename Interface>
+SP_PUBLIC auto compress(BytesView, EncodeFormat::Compression, bool conditional) -> typename Interface::BytesType;
 
 SP_PUBLIC size_t getCompressBounds(size_t, EncodeFormat::Compression);
 

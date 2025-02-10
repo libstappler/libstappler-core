@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -324,6 +324,16 @@ auto compress<memory::PoolInterface>(const uint8_t *src, size_t size, EncodeForm
 template <>
 auto compress<memory::StandartInterface>(const uint8_t *src, size_t size, EncodeFormat::Compression c, bool conditional) -> memory::StandartInterface::BytesType {
 	return doCompress<memory::StandartInterface>(src, size, c, conditional);
+}
+
+template <>
+auto compress<memory::PoolInterface>(BytesView src, EncodeFormat::Compression c, bool conditional) -> memory::PoolInterface::BytesType {
+	return doCompress<memory::PoolInterface>(src.data(), src.size(), c, conditional);
+}
+
+template <>
+auto compress<memory::StandartInterface>(BytesView src, EncodeFormat::Compression c, bool conditional) -> memory::StandartInterface::BytesType {
+	return doCompress<memory::StandartInterface>(src.data(), src.size(), c, conditional);
 }
 
 using decompress_ptr = const uint8_t *;

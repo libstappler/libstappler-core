@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -125,6 +125,8 @@ public:
 	template <typename ...Args>
 	static SharedRef *create(SharedRefMode, Args && ...);
 
+	static int invaldate(void *);
+
 	virtual ~SharedRef();
 
 	template <typename Callback>
@@ -145,6 +147,7 @@ protected:
 
 	memory::allocator_t *_allocator = nullptr;
 	memory::pool_t *_pool = nullptr;
+	memory::pool_t *_parent = nullptr;
 	T *_shared = nullptr;
 	SharedRefMode _mode = SharedRefMode::Pool;
 };
@@ -365,6 +368,11 @@ auto SharedRef<T>::create(memory::pool_t *p, Args && ... args) -> SharedRef * {
 	memory::pool::perform([&] {
 		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool,
 			new (pool) T(pool, std::forward<Args>(args)...));
+
+		if (p) {
+			shared->_parent = p;
+			memory::pool::pre_cleanup_register(shared->_parent, shared, &invaldate);
+		}
 	}, pool);
 	return shared;
 }
@@ -394,6 +402,17 @@ auto SharedRef<T>::create(SharedRefMode mode, Args && ... args) -> SharedRef * {
 }
 
 template <typename T>
+memory::status_t SharedRef<T>::invaldate(void *ptr) {
+	auto shared = (SharedRef *)ptr;
+
+	shared->_shared = nullptr;
+	shared->_pool = nullptr;
+	shared->_parent = nullptr;
+
+	return 0;
+}
+
+template <typename T>
 SharedRef<T>::~SharedRef() {
 	if (_shared) {
 		memory::pool::perform([&, this] {
@@ -404,7 +423,14 @@ SharedRef<T>::~SharedRef() {
 
 	auto pool = _pool;
 	auto allocator = _allocator;
+	auto parent = _parent;
 
+	if (parent) {
+		memory::pool::cleanup_kill(parent, this, &invaldate);
+		parent = nullptr;
+	}
+
+	_parent = nullptr;
 	_pool = nullptr;
 	_allocator = nullptr;
 

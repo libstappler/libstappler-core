@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,159 +23,18 @@ THE SOFTWARE.
 
 #include "SPMemPoolStruct.h"
 
-#if LINUX
-#include "SPPlatformUnistd.h"
-
-namespace STAPPLER_VERSIONIZED stappler::mempool::base {
-
-static std::atomic<size_t> s_mappedRegions = 0;
-
-size_t get_mapped_regions_count() {
-	return s_mappedRegions.load();
-}
-
-void *sp_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-	auto ret = ::mmap(addr, length, prot, flags, fd, offset);
-	if (ret && ret != MAP_FAILED) {
-		++ s_mappedRegions;
-		return ret;
-	}
-	return ret;
-}
-
-int sp_munmap(void *addr, size_t length) {
-	auto ret = ::munmap(addr, length);
-	if (ret == 0) {
-		-- s_mappedRegions;
-	}
-	return ret;
-}
-
-}
-#else
-
-namespace STAPPLER_VERSIONIZED stappler::mempool::base {
-
-size_t get_mapped_regions_count() {
-	return 0;
-}
-
-void *sp_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-	return nullptr;
-}
-
-int sp_munmap(void *addr, size_t length) {
-	return -1;
-}
-
-}
-
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
 static std::atomic<size_t> s_nAllocators = 0;
-
-#if LINUX
-static uint64_t allocator_mmap_realloc(int filedes, void *ptr, uint64_t idx, uint64_t required) {
-	auto oldSize = idx * BOUNDARY_SIZE;
-	auto newSize = idx * 2 * BOUNDARY_SIZE;
-	if (newSize / BOUNDARY_SIZE < required) {
-		newSize = required * BOUNDARY_SIZE;
-	}
-
-	if (newSize > ALLOCATOR_MMAP_RESERVED) {
-		perror("ALLOCATOR_MMAP_RESERVED exceeded");
-		return 0;
-	}
-
-	if (lseek(filedes, newSize - 1, SEEK_SET) == -1) {
-		close(filedes);
-		perror("Error calling lseek() to 'stretch' the file");
-		return 0;
-	}
-
-	if (write(filedes, "", 1) == -1) {
-		close(filedes);
-		perror("Error writing last byte of the file");
-		return 0;
-	}
-
-	base::sp_munmap((char *)ptr + oldSize, newSize - oldSize);
-	auto err = mremap(ptr, oldSize, newSize, 0);
-	if (err != MAP_FAILED) {
-		return newSize / BOUNDARY_SIZE;
-	}
-	auto memerr = errno;
-	switch (memerr) {
-	case EAGAIN: perror("EAGAIN"); break;
-	case EFAULT: perror("EFAULT"); break;
-	case EINVAL: perror("EINVAL"); break;
-	case ENOMEM: perror("ENOMEM"); break;
-	default: break;
-	}
-	return 0;
-}
-
-bool Allocator::run_mmap(uint64_t idx) {
-	if (idx == 0) {
-		idx = 1_KiB;
-	}
-
-	std::unique_lock<Allocator> lock(*this);
-
-	if (mmapdes != -1) {
-		return true;
-	}
-
-	char nameBuff[256] = { 0 };
-	snprintf(nameBuff, 255, "/tmp/stappler.mmap.%d.%p.XXXXXX", getpid(), (void *)this);
-
-	mmapdes = mkstemp(nameBuff);
-	unlink(nameBuff);
-
-	size_t size = BOUNDARY_SIZE * idx;
-
-	if (lseek(mmapdes, size - 1, SEEK_SET) == -1) {
-		close(mmapdes);
-		perror("Error calling lseek() to 'stretch' the file");
-		return false;
-	}
-
-	if (write(mmapdes, "", 1) == -1) {
-		close(mmapdes);
-		perror("Error writing last byte of the file");
-		return false;
-	}
-
-	void *reserveMem = base::sp_mmap(NULL, ALLOCATOR_MMAP_RESERVED, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-
-	// Now the file is ready to be mmapped.
-	void *map = base::sp_mmap(reserveMem, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED | MAP_NORESERVE, mmapdes, 0);
-	if (map == MAP_FAILED) {
-		close(mmapdes);
-		perror("Error mmapping the file");
-		return false;
-	}
-
-	mmapPtr = map;
-	mmapMax = idx;
-	return true;
-}
-
-#endif
 
 size_t Allocator::getAllocatorsCount() {
 	return s_nAllocators.load();
 }
 
-Allocator::Allocator(bool threadSafe) {
+Allocator::Allocator() {
 	++ s_nAllocators;
 	buf.fill(nullptr);
-
-	if (threadSafe) {
-		mutex = new AllocMutex;
-	}
+	mutex = new AllocMutex;
 }
 
 Allocator::~Allocator() {
@@ -184,14 +43,6 @@ Allocator::~Allocator() {
 	if (mutex) {
 		delete mutex;
 	}
-
-#if LINUX
-	if (mmapPtr) {
-		base::sp_munmap(mmapPtr, mmapMax * BOUNDARY_SIZE);
-		close(mmapdes);
-		return;
-	}
-#endif
 
 	for (uint32_t index = 0; index < MAX_INDEX; index++) {
 		ref = &buf[index];
@@ -233,6 +84,9 @@ MemNode *Allocator::alloc(size_t in_size) {
 		return nullptr;
 	}
 
+	MemNode *node = nullptr;
+	MemNode **ref = nullptr;
+
 	/* First see if there are any nodes in the area we know
 	 * our node will fit into.
 	 */
@@ -242,14 +96,13 @@ MemNode *Allocator::alloc(size_t in_size) {
 		 * any nodes on it of the requested size
 		 */
 		uint32_t max_index = last;
-		MemNode **ref = &buf[index];
+		ref = &buf[index];
 		uint32_t i = index;
 		while (*ref == nullptr && i < max_index) {
 			ref++;
 			i++;
 		}
 
-		MemNode *node = nullptr;
 		if ((node = *ref) != nullptr) {
 			/* If we have found a node and it doesn't have any
 			 * nodes waiting in line behind it _and_ we are on
@@ -284,8 +137,7 @@ MemNode *Allocator::alloc(size_t in_size) {
 		/* Walk the free list to see if there are
 		 * any nodes on it of the requested size
 		 */
-		MemNode *node = nullptr;
-		MemNode **ref = &buf[0];
+		ref = &buf[0];
 		while ((node = *ref) != nullptr && index > node->index) {
 			ref = &node->next;
 		}
@@ -308,39 +160,8 @@ MemNode *Allocator::alloc(size_t in_size) {
 	/* If we haven't got a suitable node, malloc a new one
 	 * and initialize it.
 	 */
-	MemNode *node = nullptr;
+	node = nullptr;
 
-#if LINUX
-	if (mmapPtr) {
-		if (mmapCurrent + (index + 1) > mmapMax) {
-			auto newMax = allocator_mmap_realloc(mmapdes, mmapPtr, mmapMax, mmapCurrent + index + 1);
-			if (!newMax) {
-				return nullptr;
-			} else {
-				mmapMax = newMax;
-			}
-		}
-
-		node = (MemNode *) ((char *)mmapPtr + mmapCurrent * BOUNDARY_SIZE);
-		mmapCurrent += index + 1;
-
-		if (lock.owns_lock()) {
-			lock.unlock();
-		}
-	} else {
-		if (lock.owns_lock()) {
-			lock.unlock();
-		}
-
-		if ((node = (MemNode *)malloc(size)) == nullptr) {
-			return nullptr;
-		}
-		allocated += size;
-		if (allocationTracker) {
-			allocationTracker(node, size);
-		}
-	}
-#else
 	if (lock.owns_lock()) {
 		lock.unlock();
 	}
@@ -348,11 +169,8 @@ MemNode *Allocator::alloc(size_t in_size) {
 	if ((node = (MemNode *)malloc(size)) == nullptr) {
 		return nullptr;
 	}
+
 	allocated += size;
-	if (allocationTracker) {
-		allocationTracker(node, size);
-	}
-#endif
 
 	node->next = nullptr;
 	node->index = (uint32_t)index;
@@ -428,12 +246,6 @@ void Allocator::free(MemNode *node) {
 	if (lock.owns_lock()) {
 		lock.unlock();
 	}
-
-#if LINUX
-	if (mmapPtr) {
-		return;
-	}
-#endif
 
 	while (freelist != NULL) {
 		node = freelist;
