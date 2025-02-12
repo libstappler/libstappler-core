@@ -63,6 +63,7 @@
 #include <windowsx.h>
 #include <wincrypt.h>
 
+// suppress common macro leak
 #ifdef interface
 #undef interface
 #endif
@@ -75,6 +76,8 @@ using pid_t = DWORD;
 
 #define PATH_MAX MAX_PATH
 
+#define SP_POSIX_MAPPED_FILES 0
+
 #else
 
 #include <dirent.h>
@@ -83,9 +86,7 @@ using pid_t = DWORD;
 #include <sys/time.h>
 #include <sys/stat.h>
 
-#if LINUX
-#include <sys/mman.h>
-#endif
+#define SP_POSIX_MAPPED_FILES _POSIX_MAPPED_FILES
 
 #endif
 

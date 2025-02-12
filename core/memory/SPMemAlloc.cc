@@ -26,8 +26,8 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
-bool AllocPool::isCustomPool(pool_t *p) {
-	if (p && *((uint64_t *)p) == stappler::mempool::custom::POOL_MAGIC) {
+bool AllocPool::isStapplerPool(pool_t *p) {
+	if (p && ((mempool::custom::Pool *)p)->magic == static_cast<uintptr_t>(mempool::custom::POOL_MAGIC)) {
 		return true;
 	} else {
 		return false;

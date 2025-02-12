@@ -478,7 +478,7 @@ SP_PUBLIC inline auto loadableResourcePath(StringView path) -> typename Interfac
 	} else if (!filepath::isAboveRoot(path)) {
 		if (filesystem::platform::_exists(path)) {
 			// path can be found within bundle
-			return path.str<Interface>();
+			return "%PLATFORM%:" + path.str<Interface>();
 		} else {
 			typename Interface::StringType npath;
 

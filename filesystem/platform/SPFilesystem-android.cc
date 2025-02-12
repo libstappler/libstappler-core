@@ -30,7 +30,6 @@ THE SOFTWARE.
 #include <dirent.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/mman.h>
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
@@ -423,7 +422,13 @@ struct PathSource {
 	void ftw(StringView ipath, const Callback<void(StringView path, bool isFile)> &cb, int depth, bool dirFirst, bool assetsRoot) {
 		auto path = _getPlatformPath(ipath);
 		if (assetsRoot) {
-			_archive.ftw(string::toString<Interface>("assets/", path), cb, depth, dirFirst);
+			StringView prefix = "assets/";
+			_archive.ftw(string::toString<Interface>(prefix, path), [&] (StringView path, bool isFile) {
+				if (path.starts_with(prefix)) {
+					path = path.sub(prefix.size());
+				}
+				cb(string::toString<Interface>("%PLATFORM%:", path), isFile);
+			}, depth, dirFirst);
 		} else {
 			_archive.ftw(path, cb, depth, dirFirst);
 		}
@@ -432,7 +437,13 @@ struct PathSource {
 	bool ftw_b(StringView ipath, const Callback<bool(StringView path, bool isFile)> &cb, int depth, bool dirFirst, bool assetsRoot) {
 		auto path = _getPlatformPath(ipath);
 		if (assetsRoot) {
-			return _archive.ftw_b(string::toString<Interface>("assets/", path), cb, depth, dirFirst);
+			StringView prefix = "assets/";
+			_archive.ftw_b(string::toString<Interface>(prefix, path), [&] (StringView path, bool isFile) {
+				if (path.starts_with(prefix)) {
+					path = path.sub(prefix.size());
+				}
+				return cb(string::toString<Interface>("%PLATFORM%:", path), isFile);
+			}, depth, dirFirst);
 		} else {
 			return _archive.ftw_b(path, cb, depth, dirFirst);
 		}

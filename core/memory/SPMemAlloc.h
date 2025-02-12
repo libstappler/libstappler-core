@@ -39,7 +39,7 @@ struct SP_PUBLIC AllocPool {
 
 	static pool_t *getCurrentPool();
 
-	static bool isCustomPool(pool_t *);
+	static bool isStapplerPool(pool_t *);
 
 	template <typename T>
 	static status_t cleanupObjectFromPool(void *data);

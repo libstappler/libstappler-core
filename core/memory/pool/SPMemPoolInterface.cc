@@ -173,7 +173,7 @@ void foreach_info(void *data, bool(*cb)(void *, pool_t *, uint32_t, const void *
 
 static inline bool isStappler(allocator_t *alloc) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
-		if (alloc && *((uintptr_t *)alloc) == custom::POOL_MAGIC) {
+		if (alloc && *((uintptr_t *)alloc) == static_cast<uintptr_t>(custom::POOL_MAGIC)) {
 			return true;
 		} else {
 			return false;
@@ -184,7 +184,7 @@ static inline bool isStappler(allocator_t *alloc) {
 
 static inline bool isStappler(pool_t *p) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
-		if (p && ((custom::Pool *)p)->magic == custom::POOL_MAGIC) {
+		if (p && ((custom::Pool *)p)->magic == static_cast<uintptr_t>(custom::POOL_MAGIC)) {
 			return true;
 		} else {
 			return false;

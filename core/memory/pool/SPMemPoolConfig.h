@@ -68,7 +68,8 @@ static constexpr size_t ALLOCATOR_MMAP_RESERVED = size_t(64_GiB);
 
 static constexpr Status SUCCESS = 0;
 
-static constexpr uint64_t POOL_MAGIC = 0xDEAD7fffDEADBEEF;
+// Can be 64-bit or stripped to 32-bit
+static constexpr uint64_t POOL_MAGIC = 0xDEAD7fffDEAD7fff;
 
 }
 

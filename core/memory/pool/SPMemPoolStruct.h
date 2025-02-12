@@ -90,7 +90,7 @@ struct SP_LOCAL Cleanup {
 struct SP_LOCAL Allocator {
 	using AllocMutex = std::recursive_mutex;
 
-	uintptr_t magic = POOL_MAGIC; // used to detect stappler allocators vs. APR allocators
+	uintptr_t magic = static_cast<uintptr_t>(POOL_MAGIC); // used to detect stappler allocators vs. APR allocators
 	uint32_t last = 0; // largest used index into free
 	uint32_t max = ALLOCATOR_MAX_FREE_UNLIMITED; // Total size (in BOUNDARY_SIZE multiples) of unused memory before blocks are given back
 	uint32_t current = 0; // current allocated size in BOUNDARY_SIZE
@@ -122,7 +122,7 @@ struct SP_LOCAL Pool {
 	Cleanup *cleanups = nullptr;
 	Cleanup *free_cleanups = nullptr;
 	Allocator *allocator = nullptr;
-	uint64_t magic = POOL_MAGIC; // used to detect stappler pools vs. APR pools
+	uintptr_t magic = static_cast<uintptr_t>(POOL_MAGIC); // used to detect stappler pools vs. APR pools
 	MemNode *active = nullptr;
 	MemNode *self = nullptr; /* The node containing the pool itself */
 	uint8_t *self_first_avail = nullptr;

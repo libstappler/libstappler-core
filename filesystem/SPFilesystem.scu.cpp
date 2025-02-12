@@ -32,3 +32,5 @@ THE SOFTWARE.
 #include "platform/SPFilesystem-android.cc"
 #include "platform/SPFilesystem-linux.cc"
 #include "platform/SPFilesystem-win32.cc"
+
+#include "platform/SPFilesystemMmap-posix.cc"
