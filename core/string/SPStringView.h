@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -344,88 +344,7 @@ using WideStringView = StringViewBase<char16_t>;
 
 }
 
-namespace STAPPLER_VERSIONIZED stappler::platform {
-
-template <typename Interface>
-SP_PUBLIC auto tolower(StringView) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto toupper(StringView) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto totitle(StringView) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto tolower(WideStringView) -> typename Interface::WideStringType;
-
-template <typename Interface>
-SP_PUBLIC auto toupper(WideStringView) -> typename Interface::WideStringType;
-
-template <typename Interface>
-SP_PUBLIC auto totitle(WideStringView) -> typename Interface::WideStringType;
-
-SP_PUBLIC int compare_u(StringView l, StringView r);
-SP_PUBLIC int compare_u(WideStringView l, WideStringView r);
-
-SP_PUBLIC int caseCompare_u(StringView l, StringView r);
-SP_PUBLIC int caseCompare_u(WideStringView l, WideStringView r);
-
-}
-
-namespace STAPPLER_VERSIONIZED stappler::string {
-
-template <typename L, typename R, typename CharType
-	= typename std::enable_if<
-		std::is_same< typename L::value_type, typename R::value_type >::value,
-		typename L::value_type>::type>
-inline int compare_c(const L &l, const R &r);
-
-template <typename L, typename R, typename CharType
-	= typename std::enable_if<
-		std::is_same< typename L::value_type, typename R::value_type >::value,
-		typename L::value_type>::type>
-inline int compare_u(const L &l, const R &r);
-
-template <typename L, typename R, typename CharType
-	= typename std::enable_if<
-		std::is_same< typename L::value_type, typename R::value_type >::value,
-		typename L::value_type>::type>
-inline int caseCompare_c(const L &l, const R &r);
-
-template <typename L, typename R, typename CharType
-	= typename std::enable_if<
-		std::is_same< typename L::value_type, typename R::value_type >::value,
-		typename L::value_type>::type>
-inline int caseCompare_u(const L &l, const R &r);
-
-template<typename _CharT>
-constexpr size_t length(const _CharT *__p) {
-	if (!__p) {
-		return 0;
-	}
-
-	return std::char_traits<_CharT>::length(__p);
-}
-
-template<typename _CharT>
-constexpr size_t length(const _CharT *__p, size_t max) {
-	if (!__p) {
-		return 0;
-	}
-
-	if (max == maxOf<size_t>()) {
-		return std::char_traits<_CharT>::length(__p);
-	} else {
-		size_t __i = 0;
-		while (__i < max && __p[__i] != _CharT()) {
-			++__i;
-		}
-		return __i;
-	}
-}
-
-}
-
+#include "SPStringDetail.h"
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -440,20 +359,20 @@ operator << (std::basic_ostream<char> & os, const StringViewUtf8 & str) {
 }
 
 #define SP_STRINGVIEW_COMPARE_OP(Type1, Type2) \
-	template <typename C> inline bool operator == (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) == 0; } \
-	template <typename C> inline bool operator != (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) != 0; } \
-	template <typename C> inline bool operator > (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) > 0; } \
-	template <typename C> inline bool operator >= (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) >= 0; } \
-	template <typename C> inline bool operator < (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) < 0; } \
-	template <typename C> inline bool operator <= (const Type1 &l, const Type2 &r) { return string::compare_c(l, r) <= 0; }
+	template <typename C> inline bool operator == (const Type1 &l, const Type2 &r) { return string::detail::compare_c(l, r) == 0; } \
+	template <typename C> inline bool operator != (const Type1 &l, const Type2 &r) { return string::detail::compare_c(l, r) != 0; } \
+	template <typename C> inline bool operator > (const Type1 &l, const Type2 &r) { return string::detail::compare_c(l, r) > 0; } \
+	template <typename C> inline bool operator >= (const Type1 &l, const Type2 &r) { return string::detail::compare_c(l, r) >= 0; } \
+	template <typename C> inline bool operator < (const Type1 &l, const Type2 &r) { return string::detail::compare_c(l, r) < 0; } \
+	template <typename C> inline bool operator <= (const Type1 &l, const Type2 &r) { return string::detail::compare_c(l, r) <= 0; }
 
 #define SP_STRINGVIEW_COMPARE_OP_UTF8(Type1, Type2) \
-	inline bool operator == (const Type1 &l, const Type2 &r) { return string::compare_c /* not an error! It's faster */ (l, r) == 0; } \
-	inline bool operator != (const Type1 &l, const Type2 &r) { return string::compare_c /* not an error! It's faster */ (l, r) != 0; } \
-	inline bool operator > (const Type1 &l, const Type2 &r) { return string::compare_u(l, r) > 0; } \
-	inline bool operator >= (const Type1 &l, const Type2 &r) { return string::compare_u(l, r) >= 0; } \
-	inline bool operator < (const Type1 &l, const Type2 &r) { return string::compare_u(l, r) < 0; } \
-	inline bool operator <= (const Type1 &l, const Type2 &r) { return string::compare_u(l, r) <= 0; }
+	inline bool operator == (const Type1 &l, const Type2 &r) { return string::detail::compare_c /* not an error! It's faster */ (l, r) == 0; } \
+	inline bool operator != (const Type1 &l, const Type2 &r) { return string::detail::compare_c /* not an error! It's faster */ (l, r) != 0; } \
+	inline bool operator > (const Type1 &l, const Type2 &r) { return string::detail::compare_u(l, r) > 0; } \
+	inline bool operator >= (const Type1 &l, const Type2 &r) { return string::detail::compare_u(l, r) >= 0; } \
+	inline bool operator < (const Type1 &l, const Type2 &r) { return string::detail::compare_u(l, r) < 0; } \
+	inline bool operator <= (const Type1 &l, const Type2 &r) { return string::detail::compare_u(l, r) <= 0; }
 
 SP_STRINGVIEW_COMPARE_OP(StringViewBase<C>, StringViewBase<C>)
 
@@ -471,17 +390,17 @@ SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, memory::StandartInterface::BasicSt
 SP_STRINGVIEW_COMPARE_OP_UTF8(memory::PoolInterface::BasicStringType<char>, StringViewUtf8)
 SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, memory::PoolInterface::BasicStringType<char>)
 
-template <typename C> inline bool operator == (const StringViewBase<C> &l, const C *r) { return string::compare_c(l, StringViewBase<C>(r)) == 0; }
-template <typename C> inline bool operator != (const StringViewBase<C> &l, const C *r) { return string::compare_c(l, StringViewBase<C>(r)) != 0; }
+template <typename C> inline bool operator == (const StringViewBase<C> &l, const C *r) { return string::detail::compare_c(l, StringViewBase<C>(r)) == 0; }
+template <typename C> inline bool operator != (const StringViewBase<C> &l, const C *r) { return string::detail::compare_c(l, StringViewBase<C>(r)) != 0; }
 
-template <typename C> inline bool operator == (const C *l, const StringViewBase<C> &r) { return string::compare_c(StringViewBase<C>(l), r) == 0; }
-template <typename C> inline bool operator != (const C *l, const StringViewBase<C> &r) { return string::compare_c(StringViewBase<C>(l), r) != 0; }
+template <typename C> inline bool operator == (const C *l, const StringViewBase<C> &r) { return string::detail::compare_c(StringViewBase<C>(l), r) == 0; }
+template <typename C> inline bool operator != (const C *l, const StringViewBase<C> &r) { return string::detail::compare_c(StringViewBase<C>(l), r) != 0; }
 
-inline bool operator == (const StringViewUtf8 &l, const char *r) { return string::compare_c(l, StringViewUtf8(r)) == 0; }
-inline bool operator != (const StringViewUtf8 &l, const char *r) { return string::compare_c(l, StringViewUtf8(r)) != 0; }
+inline bool operator == (const StringViewUtf8 &l, const char *r) { return string::detail::compare_c(l, StringViewUtf8(r)) == 0; }
+inline bool operator != (const StringViewUtf8 &l, const char *r) { return string::detail::compare_c(l, StringViewUtf8(r)) != 0; }
 
-inline bool operator == (const char *l, const StringViewUtf8 &r) { return string::compare_c(StringViewUtf8(l), r) == 0; }
-inline bool operator != (const char *l, const StringViewUtf8 &r) { return string::compare_c(StringViewUtf8(l), r) != 0; }
+inline bool operator == (const char *l, const StringViewUtf8 &r) { return string::detail::compare_c(StringViewUtf8(l), r) == 0; }
+inline bool operator != (const char *l, const StringViewUtf8 &r) { return string::detail::compare_c(StringViewUtf8(l), r) != 0; }
 
 #undef SP_STRINGVIEW_COMPARE_OP
 #undef SP_STRINGVIEW_COMPARE_OP_UTF8
@@ -602,11 +521,11 @@ inline constexpr StringViewBase<_CharType>::StringViewBase() : BytesReader<_Char
 
 template <typename _CharType>
 inline constexpr StringViewBase<_CharType>::StringViewBase(const CharType *ptr, size_t len)
-: BytesReader<_CharType>(ptr, string::length(ptr, len)) { }
+: BytesReader<_CharType>(ptr, string::detail::length(ptr, len)) { }
 
 template <typename _CharType>
 inline constexpr StringViewBase<_CharType>::StringViewBase(const CharType *ptr, size_t pos, size_t len)
-: BytesReader<_CharType>(ptr + pos, string::length(ptr + pos, len)) { }
+: BytesReader<_CharType>(ptr + pos, string::detail::length(ptr + pos, len)) { }
 
 template <typename _CharType>
 inline constexpr StringViewBase<_CharType>::StringViewBase(const Self &ptr, size_t pos, size_t len)
@@ -804,7 +723,7 @@ auto StringViewBase<_CharType>::readFloat() -> Result<float> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
-	auto ret = string::readNumber<float>(tmp.ptr, tmp.len, 0, offset);
+	auto ret = string::detail::readNumber<float>(tmp.ptr, tmp.len, 0, offset);
 	this->ptr += offset; this->len -= offset;
 	return ret;
 }
@@ -814,7 +733,7 @@ auto StringViewBase<_CharType>::readDouble() -> Result<double> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
-	auto ret = string::readNumber<double>(tmp.ptr, tmp.len, 0, offset);
+	auto ret = string::detail::readNumber<double>(tmp.ptr, tmp.len, 0, offset);
 	this->ptr += offset; this->len -= offset;
 	return ret;
 }
@@ -824,7 +743,7 @@ auto StringViewBase<_CharType>::readInteger(int base) -> Result<int64_t> {
 	Self tmp = *this;
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
-	auto ret = string::readNumber<int64_t>(tmp.ptr, tmp.len, 0, offset);
+	auto ret = string::detail::readNumber<int64_t>(tmp.ptr, tmp.len, 0, offset);
 	this->ptr += offset; this->len -= offset;
 	return ret;
 }
@@ -980,10 +899,10 @@ auto StringViewBase<_CharType>::match (CharType c) -> bool {
 inline StringViewUtf8::StringViewUtf8() : BytesReader(nullptr, 0) { }
 
 inline StringViewUtf8::StringViewUtf8(const char *ptr, size_t len)
-: BytesReader(ptr, string::length(ptr, len)) { }
+: BytesReader(ptr, string::detail::length(ptr, len)) { }
 
 inline StringViewUtf8::StringViewUtf8(const char *ptr, size_t pos, size_t len)
-: BytesReader(ptr + pos, string::length(ptr + pos, len)) { }
+: BytesReader(ptr + pos, string::detail::length(ptr + pos, len)) { }
 
 inline StringViewUtf8::StringViewUtf8(const StringViewUtf8 &ptr, size_t len)
 : StringViewUtf8(ptr, 0, len) { }
@@ -1167,7 +1086,7 @@ inline Result<float> StringViewUtf8::readFloat() {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
-	auto ret = string::readNumber<float>(tmp.ptr, tmp.len, 0, offset);
+	auto ret = string::detail::readNumber<float>(tmp.ptr, tmp.len, 0, offset);
 	this->ptr += offset; this->len -= offset;
 	return ret;
 }
@@ -1175,7 +1094,7 @@ inline Result<double> StringViewUtf8::readDouble() {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
-	auto ret = string::readNumber<double>(tmp.ptr, tmp.len, 0, offset);
+	auto ret = string::detail::readNumber<double>(tmp.ptr, tmp.len, 0, offset);
 	this->ptr += offset; this->len -= offset;
 	return ret;
 }
@@ -1183,7 +1102,7 @@ inline Result<int64_t> StringViewUtf8::readInteger(int base) {
 	Self tmp = *this;
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
-	auto ret = string::readNumber<int64_t>(tmp.ptr, tmp.len, 0, offset);
+	auto ret = string::detail::readNumber<int64_t>(tmp.ptr, tmp.len, 0, offset);
 	this->ptr += offset; this->len -= offset;
 	return ret;
 }
@@ -1345,74 +1264,6 @@ inline bool StringViewUtf8::match (MatchCharType c) {
 }
 
 }
-
-
-namespace STAPPLER_VERSIONIZED stappler::string {
-
-template <typename L, typename R, typename CharType>
-inline int compare_c(const L &l, const R &r) {
-	auto __lsize = l.size();
-	auto __rsize = r.size();
-	auto __len = std::min(__lsize, __rsize);
-	auto ret = std::char_traits<CharType>::compare(l.data(), r.data(), __len);
-	if (!ret) {
-		if (__lsize < __rsize) {
-			return -1;
-		} else if (__lsize == __rsize) {
-			return 0;
-		} else {
-			return 1;
-		}
-	}
-	return ret;
-}
-
-template <typename L, typename R, typename CharType>
-inline int compare_u(const L &l, const R &r) {
-	return platform::compare_u(l, r);
-}
-
-inline int _strncasecmp(const char *l, const char *r, size_t len) {
-	return ::strncasecmp(l, r, len);
-}
-
-inline int _strncasecmp(const char16_t *l, const char16_t *r, size_t len) {
-	while (len > 0) {
-		auto lc = std::tolower(*l ++);
-		auto rc = std::tolower(*r ++);
-		if (lc != rc) {
-			return (lc < rc)?-1:1;
-		}
-		-- len;
-	}
-	return 0;
-}
-
-template <typename L, typename R, typename CharType>
-inline int caseCompare_c(const L &l, const R &r) {
-	auto __lsize = l.size();
-	auto __rsize = r.size();
-	auto __len = std::min(__lsize, __rsize);
-	auto ret = _strncasecmp(l.data(), r.data(), __len);
-	if (!ret) {
-		if (__lsize < __rsize) {
-			return -1;
-		} else if (__lsize == __rsize) {
-			return 0;
-		} else {
-			return 1;
-		}
-	}
-	return ret;
-}
-
-template <typename L, typename R, typename CharType>
-inline int caseCompare_u(const L &l, const R &r) {
-	return platform::caseCompare_u(l, r);
-}
-
-}
-
 
 namespace std {
 

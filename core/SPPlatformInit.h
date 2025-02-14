@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -160,10 +160,19 @@
 #endif
 
 #if WIN32
+#ifndef __cdecl
 #define __cdecl
+#endif
+
+#define __pragma(...)
+#define _Pragma(...)
 
 using LPCWSTR = const wchar_t *;
-#define __int64 long long;
+
+typedef long long __int64;
+typedef unsigned long long size_t;
+
+#include <intsafe.h>
 
 #endif
 
@@ -268,8 +277,6 @@ using iter_reference_t = typename T::reference;
 
 #define NOMINMAX 1
 #define _USE_MATH_DEFINES 1
-#define strncasecmp _strnicmp
-#define strcasecmp _stricmp
 
 #define WIN32_LEAN_AND_MEAN
 #define UNICODE

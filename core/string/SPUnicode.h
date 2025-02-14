@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -270,85 +270,6 @@ inline uint8_t utf16Encode(std::basic_ostream<char16_t> &out, char32_t ch) {
 	return utf16EncodeCb([&] (char16_t c) {
 		out << c;
 	}, ch);
-}
-
-}
-
-
-// A part of SPString.h header placed here, to be available in utilities,
-// that included by SPString.h (like StringView)
-
-namespace STAPPLER_VERSIONIZED stappler::platform {
-
-SP_PUBLIC char32_t tolower(char32_t c);
-SP_PUBLIC char32_t toupper(char32_t c);
-SP_PUBLIC char32_t totitle(char32_t c);
-
-}
-
-namespace STAPPLER_VERSIONIZED stappler::string {
-
-static constexpr size_t DOUBLE_MAX_DIGITS = 27;
-
-inline char32_t tolower(char32_t c) { return platform::tolower(c); }
-inline char32_t toupper(char32_t c) { return platform::toupper(c); }
-inline char32_t totitle(char32_t c) { return platform::totitle(c); }
-
-
-// fast itoa implementation
-// data will be written at the end of buffer, no trailing zero (do not try to use strlen on it!)
-// designed to be used with StringView: StringView(buf + bufSize - ret, ret)
-
-SP_PUBLIC size_t _itoa(int64_t number, char* buffer, size_t bufSize);
-SP_PUBLIC size_t _itoa(uint64_t number, char* buffer, size_t bufSize);
-
-SP_PUBLIC size_t _itoa(int64_t number, char16_t* buffer, size_t bufSize);
-SP_PUBLIC size_t _itoa(uint64_t number, char16_t* buffer, size_t bufSize);
-
-SP_PUBLIC size_t _itoa_len(int64_t number);
-SP_PUBLIC size_t _itoa_len(uint64_t number);
-
-// fast dtoa implementation
-// data will be written from beginning, no trailing zero (do not try to use strlen on it!)
-// designed to be used with StringView: StringView(buf, ret)
-
-SP_PUBLIC size_t _dtoa(double number, char* buffer, size_t bufSize);
-SP_PUBLIC size_t _dtoa(double number, char16_t* buffer, size_t bufSize);
-
-SP_PUBLIC size_t _dtoa_len(double number);
-
-// read number from string and offset pointers
-
-template <typename T, typename Char>
-inline auto readNumber(const Char *ptr, size_t len, int base, uint8_t &offset) -> Result<T> {
-	// prevent to read out of bounds, copy symbols to stack buffer
-	char buf[32] = { 0 }; // int64_t/scientific double character length max
-	size_t m = min(size_t(31), len);
-	size_t i = 0;
-	for (; i < m; i++) {
-		auto c = ptr[i];
-		if (c < 127) {
-			buf[i] = c;
-		} else {
-			break;
-		}
-	}
-
-	// read number from internal buffer
-	char * ret = nullptr;
-	auto val = StringToNumber<T>(buf, &ret, base);
-	if (*ret == 0) {
-		// while string was used
-		offset = i;
-	} else if (ret && ret != buf) {
-		// part of string was used
-		offset = ret - buf;
-	} else {
-		// fail to read number
-		offset = 0;
-		return Result<T>();
-	}
-	return Result<T>(val);
 }
 
 }

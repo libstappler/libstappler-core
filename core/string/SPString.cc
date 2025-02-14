@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include "SPString.h"
 #include "SPUnicode.h"
 
-namespace STAPPLER_VERSIONIZED stappler::string {
+namespace STAPPLER_VERSIONIZED stappler::string::detail {
 
 // Copies two characters from src to dst.
 template<typename Char>
@@ -96,7 +96,7 @@ inline size_t unsigned_to_decimal_len(IntType value) {
 	return ret + 2;
 }
 
-namespace dtoa {
+namespace dtoa_impl {
 
 #if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) && defined(__x86_64__)
 namespace gcc_ints {
@@ -658,38 +658,6 @@ inline size_t dtoa_milo_len(double value) {
 
 }
 
-size_t _itoa(int64_t number, char* buffer, size_t bufSize) {
-	if (number < 0) {
-		auto ret = unsigned_to_decimal( buffer, uint64_t(-number), bufSize );
-		buffer[bufSize - ret - 1] = '-';
-		return ret + 1;
-	} else {
-		return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
-	}
-}
-
-size_t _itoa(uint64_t number, char* buffer, size_t bufSize) {
-	return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
-}
-
-size_t _dtoa(double number, char* buffer, size_t bufSize) {
-	return dtoa::dtoa_milo(number, buffer);
-}
-
-size_t _itoa(int64_t number, char16_t* buffer, size_t bufSize) {
-	if (number < 0) {
-		auto ret = unsigned_to_decimal( buffer, uint64_t(-number), bufSize );
-		buffer[bufSize - ret - 1] = '-';
-		return ret + 1;
-	} else {
-		return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
-	}
-}
-
-size_t _itoa(uint64_t number, char16_t* buffer, size_t bufSize) {
-	return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
-}
-
 size_t _itoa_len(int64_t number) {
 	if (number < 0) {
 		auto ret = unsigned_to_decimal_len( uint64_t(-number) );
@@ -703,12 +671,68 @@ size_t _itoa_len(uint64_t number) {
 	return unsigned_to_decimal_len( uint64_t(number) );
 }
 
-size_t _dtoa(double number, char16_t* buffer, size_t bufSize) {
-	return dtoa::dtoa_milo(number, buffer);
+size_t _dtoa_len(double number) {
+	return dtoa_impl::dtoa_milo_len(number);
 }
 
-size_t _dtoa_len(double number) {
-	return dtoa::dtoa_milo_len(number);
+size_t itoa(int64_t number, char* buffer, size_t bufSize) {
+	if (buffer == nullptr) {
+		return _itoa_len(number);
+	}
+
+	if (number < 0) {
+		auto ret = unsigned_to_decimal( buffer, uint64_t(-number), bufSize );
+		buffer[bufSize - ret - 1] = '-';
+		return ret + 1;
+	} else {
+		return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
+	}
+}
+
+size_t itoa(uint64_t number, char* buffer, size_t bufSize) {
+	if (buffer == nullptr) {
+		return _itoa_len(number);
+	}
+
+	return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
+}
+
+size_t itoa(int64_t number, char16_t* buffer, size_t bufSize) {
+	if (buffer == nullptr) {
+		return _itoa_len(number);
+	}
+
+	if (number < 0) {
+		auto ret = unsigned_to_decimal( buffer, uint64_t(-number), bufSize );
+		buffer[bufSize - ret - 1] = '-';
+		return ret + 1;
+	} else {
+		return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
+	}
+}
+
+size_t itoa(uint64_t number, char16_t* buffer, size_t bufSize) {
+	if (buffer == nullptr) {
+		return _itoa_len(number);
+	}
+
+	return unsigned_to_decimal( buffer, uint64_t(number), bufSize );
+}
+
+size_t dtoa(double number, char* buffer, size_t bufSize) {
+	if (buffer == nullptr) {
+		return _dtoa_len(number);
+	}
+
+	return dtoa_impl::dtoa_milo(number, buffer);
+}
+
+size_t dtoa(double number, char16_t* buffer, size_t bufSize) {
+	if (buffer == nullptr) {
+		return _dtoa_len(number);
+	}
+
+	return dtoa_impl::dtoa_milo(number, buffer);
 }
 
 }

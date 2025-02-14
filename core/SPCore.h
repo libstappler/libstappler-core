@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -81,6 +81,7 @@ THE SOFTWARE.
 #include <stdint.h> // uint32_t, int32_t, etc
 #include <string.h> // memset, memcpy, memmove
 #include <stdarg.h> // va_arg
+#include <stdlib.h> // strto*
 #include <assert.h> // assert macro
 
 #if SP_HAVE_THREE_WAY_COMPARISON
@@ -93,8 +94,8 @@ THE SOFTWARE.
  *   User Defined literals
  *
  *   Functions:
- *   - _hash / _tag       - FNV-1 32-bit compile-time hashing
- *   - _hash64 / _tag64   - FNV-1 64-bit compile-time hashing
+ *   - _hash / _tag       - XXHash 32-bit compile-time hashing
+ *   - _hash64 / _tag64   - XXHash 64-bit compile-time hashing
  *   - _len / _length     - string literal length
  *   - _to_rad            - convert degrees to radians
  *   - _GiB / _MiB / _KiB - binary size numbers
@@ -287,7 +288,7 @@ template <typename T> auto StringToNumber(const char *ptr, char ** tail, int bas
 template <> inline auto
 StringToNumber<unsigned int>(const char *ptr, char ** tail, int base) -> unsigned int {
 	if (ptr) {
-		return (unsigned int)strtoul(ptr, tail, base);
+		return (unsigned int)::strtoul(ptr, tail, base);
 	}
 	return 0;
 }
@@ -295,7 +296,7 @@ StringToNumber<unsigned int>(const char *ptr, char ** tail, int base) -> unsigne
 template <> inline auto
 StringToNumber<unsigned long>(const char *ptr, char ** tail, int base) -> unsigned long {
 	if (ptr) {
-		return strtoul(ptr, tail, base);
+		return ::strtoul(ptr, tail, base);
 	}
 	return 0;
 }
@@ -303,7 +304,7 @@ StringToNumber<unsigned long>(const char *ptr, char ** tail, int base) -> unsign
 template <> inline auto
 StringToNumber<unsigned long long>(const char *ptr, char ** tail, int base) -> unsigned long long {
 	if (ptr) {
-		return strtoull(ptr, tail, base);
+		return ::strtoull(ptr, tail, base);
 	}
 	return 0;
 }
@@ -311,7 +312,7 @@ StringToNumber<unsigned long long>(const char *ptr, char ** tail, int base) -> u
 template <> inline auto
 StringToNumber<int>(const char *ptr, char ** tail, int base) -> int {
 	if (ptr) {
-		return (int)strtol(ptr, tail, base);
+		return (int)::strtol(ptr, tail, base);
 	}
 	return 0;
 }
@@ -319,7 +320,7 @@ StringToNumber<int>(const char *ptr, char ** tail, int base) -> int {
 template <> inline auto
 StringToNumber<long>(const char *ptr, char ** tail, int base) -> long {
 	if (ptr) {
-		return strtol(ptr, tail, base);
+		return ::strtol(ptr, tail, base);
 	}
 	return 0;
 }
@@ -327,7 +328,7 @@ StringToNumber<long>(const char *ptr, char ** tail, int base) -> long {
 template <> inline auto
 StringToNumber<long long>(const char *ptr, char ** tail, int base) -> long long {
 	if (ptr) {
-		return strtoll(ptr, tail, base);
+		return ::strtoll(ptr, tail, base);
 	}
 	return 0;
 }
@@ -335,7 +336,7 @@ StringToNumber<long long>(const char *ptr, char ** tail, int base) -> long long 
 template <> inline auto
 StringToNumber<float>(const char *ptr, char ** tail, int base) -> float {
 	if (ptr) {
-		return strtof(ptr, tail);
+		return ::strtof(ptr, tail);
 	}
 	return 0.0f;
 }
@@ -343,7 +344,7 @@ StringToNumber<float>(const char *ptr, char ** tail, int base) -> float {
 template <> inline auto
 StringToNumber<double>(const char *ptr, char ** tail, int base) -> double {
 	if (ptr) {
-		return strtod(ptr, tail);
+		return ::strtod(ptr, tail);
 	}
 	return 0.0;
 }

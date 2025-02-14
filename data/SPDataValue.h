@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -178,7 +178,7 @@ public:
 	bool operator== (float v) const { return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false; }
 	bool operator== (double v) const { return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false; }
 	bool operator== (const char *v) const { return isString() ? strVal->compare(v) == 0 : false; }
-	bool operator== (const StringView &v) const { return isString() ? string::compare_c(*strVal, v) == 0 : false; }
+	bool operator== (const StringView &v) const { return isString() ? string::detail::compare_c(*strVal, v) == 0 : false; }
 	bool operator== (const BytesView &v) const { return isBytes() ? (*bytesVal) == v : false; }
 	bool operator== (const ArrayType &v) const { return isArray() ? compare(*arrayVal, v) : false; }
 	bool operator== (const DictionaryType &v) const { return isDictionary() ? compare(*dictVal, v) : false; }
