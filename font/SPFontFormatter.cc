@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -320,9 +320,9 @@ void Formatter::pushLineFiller(bool replaceLastChar) {
 
 bool Formatter::pushChar(char16_t ch) {
 	if (_textStyle.textTransform == TextTransform::Uppercase) {
-		ch = string::toupper(ch);
+		ch = string::detail::toupper(ch);
 	} else if (_textStyle.textTransform == TextTransform::Lowercase) {
-		ch = string::tolower(ch);
+		ch = string::detail::tolower(ch);
 	}
 
 	CharShape charDef = _primaryFontSet->getChar(ch, faceId);
@@ -744,12 +744,12 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 		for (size_t i = 0; i < len; ++ i) {
 			char16_t ch = str[i];
 			if (s.textTransform == TextTransform::Uppercase) {
-				ch = string::toupper(ch);
+				ch = string::detail::toupper(ch);
 			} else if (s.textTransform == TextTransform::Lowercase) {
-				ch = string::tolower(ch);
+				ch = string::detail::tolower(ch);
 			}
-			if (ch != string::toupper(ch)) {
-				secondaryStr.addChar(string::toupper(ch));
+			if (ch != string::detail::toupper(ch)) {
+				secondaryStr.addChar(string::detail::toupper(ch));
 			} else {
 				primaryStr.addChar(ch);
 			}
@@ -783,9 +783,9 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 			for (size_t i = 0; i < len; ++ i) {
 				char16_t ch = str[i];
 				if (s.textTransform == TextTransform::Uppercase) {
-					ch = string::toupper(ch);
+					ch = string::detail::toupper(ch);
 				} else if (s.textTransform == TextTransform::Lowercase) {
-					ch = string::tolower(ch);
+					ch = string::detail::tolower(ch);
 				}
 				primaryStr.addChar(ch);
 			}
@@ -816,8 +816,8 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 		TextParameters capsParams = s;
 		capsParams.textTransform = TextTransform::Uppercase;
 		for (size_t idx = 0; idx < len; ++idx) {
-			const char16_t c = (s.textTransform == TextTransform::None)?str[idx]:string::tolower(str[idx]);
-			if (string::toupper(c) != c) { // char can be uppercased - use caps
+			const char16_t c = (s.textTransform == TextTransform::None)?str[idx]:string::detail::tolower(str[idx]);
+			if (string::detail::toupper(c) != c) { // char can be uppercased - use caps
 				if (caps != true) {
 					caps = true;
 					if (blockSize > 0) {

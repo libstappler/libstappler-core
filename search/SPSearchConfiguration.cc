@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -720,7 +720,7 @@ String Configuration::makeHeadlines(const HeadlineConfig &cfg, const Callback<vo
 				}
 				stemWord(word, tok, [&] (StringView word, StringView stem, ParserToken tok) {
 					auto it = std::lower_bound(stemList.begin(), stemList.end(), stem);
-					if (it != stemList.end() && string::caseCompare_u(*it, stem) == 0) {
+					if (it != stemList.end() && string::detail::caseCompare_u(*it, stem) == 0) {
 						if (isComplexWord(tok)) {
 							enabledComplex = true;
 						} else {

@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -403,19 +403,19 @@ void SvgReader::onStyle(Tag &tag, StringReader &value) {
 
 void SvgReader::onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringReader &value) {
 	if (tag.name.equals("svg")) {
-		if (string::caseCompare_c(name, StringView("height")) == 0) {
+		if (string::detail::caseCompare_c(name, StringView("height")) == 0) {
 			auto val = svg_readCoordValue(value, 0.0f);
 			if (!isnan(val)) {
 				_height = val;
 			}
-		} else if (string::caseCompare_c(name, StringView("width")) == 0) {
+		} else if (string::detail::caseCompare_c(name, StringView("width")) == 0) {
 			auto val = svg_readCoordValue(value, 0.0f);
 			if (!isnan(val)) {
 				_width = val;
 			}
-		} else if (string::caseCompare_c(name, StringView("viewbox")) == 0) {
+		} else if (string::detail::caseCompare_c(name, StringView("viewbox")) == 0) {
 			_viewBox = svg_readViewBox(value);
-		} else if (string::caseCompare_c(name, StringView("style")) == 0) {
+		} else if (string::detail::caseCompare_c(name, StringView("style")) == 0) {
 			onStyle(tag, value);
 		}
 		return;

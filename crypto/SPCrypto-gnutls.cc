@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2021 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -90,7 +90,7 @@ static bool hook_gnutls_sign_gost(gnutls_privkey_t key, BytesView hash, const Ca
 
 	struct ecc_scalar priv;
 	struct dsa_signature sig;
-	const struct ecc_curve *curve;
+	const struct ecc_curve *curve = nullptr;
 
 	switch (c) {
 	case GNUTLS_ECC_CURVE_GOST256CPA:

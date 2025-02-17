@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -390,7 +390,7 @@ struct i18n {
 			auto rStr = string::toUtf16<memory::StandartInterface>(r);
 			return icu.u_strCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(), 1);
 		}
-		return string::compare_c(l, r);
+		return string::detail::compare_c(l, r);
 	}
 
 	int compare(WideStringView l, WideStringView r) {
@@ -399,7 +399,7 @@ struct i18n {
 		} else if (icu.u_strCompare) {
 			return icu.u_strCompare(l.data(), l.size(), r.data(), r.size(), 1);
 		}
-		return string::compare_c(l, r);
+		return string::detail::compare_c(l, r);
 	}
 	int caseCompare(StringView l, StringView r) {
 		if (unistring.u8_casecoll) {
@@ -413,7 +413,7 @@ struct i18n {
 			auto rStr = string::toUtf16<memory::StandartInterface>(r);
 			return icu.u_strCaseCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(), U_COMPARE_CODE_POINT_ORDER, &status);
 		}
-		return string::caseCompare_c(l, r);
+		return string::detail::caseCompare_c(l, r);
 	}
 
 	int caseCompare(WideStringView l, WideStringView r) {
@@ -426,7 +426,7 @@ struct i18n {
 			int status = 0;
 			return icu.u_strCaseCompare(l.data(), l.size(), r.data(), r.size(), U_COMPARE_CODE_POINT_ORDER, &status);
 		}
-		return string::caseCompare_c(l, r);
+		return string::detail::caseCompare_c(l, r);
 	}
 
 	icu_iface icu;

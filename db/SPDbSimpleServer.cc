@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -114,10 +114,9 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 
 			db::Scheme::initSchemes(predefinedSchemes);
 
-			BackendInterface::Config interfaceConfig;
-			interfaceConfig.name = adapter.getDatabaseName();
-			interfaceConfig.fileScheme = getFileScheme();
-			adapter.init(interfaceConfig, predefinedSchemes);
+			_data->interfaceConfig.name = adapter.getDatabaseName().pdup(_data->staticPool);
+			_data->interfaceConfig.fileScheme = getFileScheme();
+			adapter.init(_data->interfaceConfig, predefinedSchemes);
 		});
 	}, _data->contextPool);
 	memory::pool::clear(_data->contextPool);
@@ -152,6 +151,10 @@ void SimpleServer::pushErrorMessage(Value &&value) const {
 
 void SimpleServer::pushDebugMessage(Value &&value) const {
 	log::debug("db::SimpleServer", data::EncodeFormat::Pretty, value);
+}
+
+StringView SimpleServer::getDatabaseName() const {
+	return _data->interfaceConfig.name;
 }
 
 void SimpleServer::initTransaction(Transaction &t) const {

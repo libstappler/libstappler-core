@@ -473,6 +473,8 @@ struct Result {
 
 	bool valid() const { return status == Ok; }
 
+	explicit operator bool() const { return valid(); }
+
 	template <typename Callback>
 	bool unwrap(const Callback &cb) const {
 		if (status == Ok) {

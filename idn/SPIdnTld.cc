@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -1509,7 +1509,7 @@ struct TldList {
 static TldList s_tldList;
 
 bool isKnownTld(StringView data) {
-	if (string::caseCompare_c(StringView("XN--"), data.sub(0, 4)) == 0) {
+	if (string::detail::caseCompare_c(StringView("XN--"), data.sub(0, 4)) == 0) {
 		std::string d = data.str<memory::StandartInterface>();
 		return s_tldList.has(d);
 	} else {

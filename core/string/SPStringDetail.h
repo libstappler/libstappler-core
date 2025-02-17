@@ -205,7 +205,7 @@ inline int caseCompare_c(const L &l, const R &r) {
 	auto __lsize = l.size();
 	auto __rsize = r.size();
 	auto __len = std::min(__lsize, __rsize);
-	auto ret = _strncasecmp(l.data(), r.data(), __len);
+	auto ret = compare(l.data(), r.data(), __len);
 	if (!ret) {
 		if (__lsize < __rsize) {
 			return -1;

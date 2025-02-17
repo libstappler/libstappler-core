@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,27 +26,27 @@
 namespace stappler::wasm {
 
 static uint32_t StapplerCoreItoaU8(wasm_exec_env_t exec_env, int64_t val, char *buf, uint32_t bufLen) {
-	return uint32_t(string::_itoa(val, buf, bufLen));
+	return uint32_t(string::detail::itoa(val, buf, bufLen));
 }
 
 static uint32_t StapplerCoreItoaU16(wasm_exec_env_t exec_env, int64_t val, char16_t *buf, uint32_t bufLen) {
-	return uint32_t(string::_itoa(val, buf, bufLen));
+	return uint32_t(string::detail::itoa(val, buf, bufLen));
 }
 
 static uint32_t StapplerCoreItoaLen(wasm_exec_env_t exec_env, int64_t val) {
-	return uint32_t(string::_itoa_len(val));
+	return uint32_t(string::detail::itoa(val, (char *)nullptr, 0));
 }
 
 static uint32_t StapplerCoreDtoaU8(wasm_exec_env_t exec_env, double val, char *buf, uint32_t bufLen) {
-	return uint32_t(string::_dtoa(val, buf, bufLen));
+	return uint32_t(string::detail::dtoa(val, buf, bufLen));
 }
 
 static uint32_t StapplerCoreDtoaU16(wasm_exec_env_t exec_env, double val, char16_t *buf, uint32_t bufLen) {
-	return uint32_t(string::_dtoa(val, buf, bufLen));
+	return uint32_t(string::detail::dtoa(val, buf, bufLen));
 }
 
 static uint32_t StapplerCoreDtoaLen(wasm_exec_env_t exec_env, double val) {
-	return uint32_t(string::_dtoa_len(val));
+	return uint32_t(string::detail::dtoa(val, (char *)nullptr, 0));
 }
 
 static void StapplerCoreToUtf16(wasm_exec_env_t exec_env, char *ptr, uint32_t size, ListOutput *outputData) {

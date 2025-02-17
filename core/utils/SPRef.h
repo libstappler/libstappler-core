@@ -43,10 +43,8 @@ class SP_PUBLIC RefAlloc :  public memory::StandartInterface::AllocBaseType {
 public:
 	static constexpr uint32_t PoolAllocBit = 0x8000'0000;
 
-	static void * operator new (size_t size) noexcept { return AllocBaseType::operator new(size); }
-	static void * operator new (size_t size, const std::nothrow_t& tag) noexcept { return AllocBaseType::operator new(size); }
-	static void * operator new (size_t size, void* ptr) noexcept { return AllocBaseType::operator new(size, ptr); }
-
+	static void * operator new (size_t size, const std::nothrow_t& tag) noexcept { return ::operator new(size, tag); }
+	static void * operator new (size_t size, void* ptr) noexcept { return ::operator new(size, ptr); }
 	static void * operator new (size_t size, memory::pool_t* ptr) noexcept;
 
 	static void operator delete(void *ptr) noexcept;
@@ -653,7 +651,7 @@ inline RcBase<_Base, _Pointer>::RcBase(Pointer value, bool v) noexcept
 template <typename _Base>
 template <class... Args>
 inline auto Rc<_Base>::create(Args && ... args) -> Self {
-	auto pRet = new Type();
+	auto pRet = new (std::nothrow_t()) Type();
     if (pRet->init(std::forward<Args>(args)...)) {
     	return Self(pRet, true); // unsafe assignment
 	} else {
@@ -664,13 +662,13 @@ inline auto Rc<_Base>::create(Args && ... args) -> Self {
 
 template <typename _Base>
 inline auto Rc<_Base>::alloc() -> Self {
-	return Self(new Type(), true);
+	return Self(new (std::nothrow_t()) Type(), true);
 }
 
 template <typename _Base>
 template <class... Args>
 inline auto Rc<_Base>::alloc(Args && ... args) -> Self{
-	return Self(new Type(std::forward<Args>(args)...), true);
+	return Self(new (std::nothrow_t()) Type(std::forward<Args>(args)...), true);
 }
 
 template <typename _Base>

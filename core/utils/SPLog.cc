@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -35,10 +35,22 @@ namespace STAPPLER_VERSIONIZED stappler::log {
 
 static const constexpr int MAX_LOG_FUNC = 16;
 
+#ifndef STAPPLER_LOG_LEVEL
 #if DEBUG
 static std::bitset<6> s_logMask;
 #else
 static std::bitset<6> s_logMask = (1 | 2 | 4 | 8);
+#endif
+#else
+#if STAPPLER_LOG_LEVEL == 0
+// restrict all
+static std::bitset<6> s_logMask = (1 | 2 | 4 | 8 | 16 | 32);
+#elif STAPPLER_LOG_LEVEL == 1
+static std::bitset<6> s_logMask = (1 | 2 | 4 | 8);
+#else
+// allow all
+static std::bitset<6> s_logMask = (0);
+#endif
 #endif
 
 static void DefaultLog2(LogType type, const StringView &tag, const StringView &text) {
@@ -46,12 +58,12 @@ static void DefaultLog2(LogType type, const StringView &tag, const StringView &t
 
 #if !ANDROID
 	switch (type) {
-	case LogType::Verbose: stream << "Verbose: "; break;
-	case LogType::Debug: break;
-	case LogType::Info: stream << "Info: "; break;
-	case LogType::Warn: stream << "Warn: "; break;
-	case LogType::Error: stream << "Error: "; break;
-	case LogType::Fatal: stream << "Fatal: "; break;
+	case LogType::Verbose: stream << "[Verbose] "; break;
+	case LogType::Debug: stream << "[Debug] "; break;
+	case LogType::Info: stream << "[Info] "; break;
+	case LogType::Warn: stream << "[Warn] "; break;
+	case LogType::Error: stream << "[Error] "; break;
+	case LogType::Fatal: stream << "[Fatal] "; break;
 	}
 #endif
 
@@ -212,8 +224,28 @@ CustomLog& CustomLog::operator=(CustomLog && other) {
 	return *this;
 }
 
+static std::bitset<6> makeFilterMask(InitializerList<LogType> type) {
+	std::bitset<6> mask;
+	for (auto &it : type) {
+		mask.set(toInt(it));
+	}
+	return mask;
+}
+
+std::bitset<6> None = makeFilterMask({Verbose, Debug, Info, Warn, Error, Fatal});
+std::bitset<6> ErrorsOnly = makeFilterMask({Verbose, Debug, Info, Warn});
+std::bitset<6> Full = std::bitset<6>(0);
+
+void setLogFilterMask(const std::bitset<6> &mask) {
+	s_logMask = mask;
+}
+
 void setLogFilterMask(std::bitset<6> &&mask) {
 	s_logMask = sp::move(mask);
+}
+
+void setLogFilterMask(InitializerList<LogType> types) {
+	setLogFilterMask(makeFilterMask(types));
 }
 
 std::bitset<6> getlogFilterMask() {

@@ -39,6 +39,34 @@ bool CommandLinePatternParsingData::parse() {
 	return true;
 }
 
+static StringView CommandLinePatternParsingData_parseInteger(StringView &str) {
+	str.skipChars<StringView::WhiteSpace>();
+
+	auto tmp = str;
+	auto v = str.readInteger(10);
+	if (v) {
+		if (str.empty() || str.is<StringView::WhiteSpace>()) {
+			return StringView(tmp.data(), str.data() - tmp.data());
+		}
+	}
+
+	return StringView();
+}
+
+static StringView CommandLinePatternParsingData_parseFloat(StringView str) {
+	str.skipChars<StringView::WhiteSpace>();
+
+	auto tmp = str;
+	auto v = str.readFloat();
+	if (v) {
+		if (str.empty() || str.is<StringView::WhiteSpace>()) {
+			return StringView(tmp.data(), str.data() - tmp.data());
+		}
+	}
+
+	return StringView();
+}
+
 bool CommandLinePatternParsingData::parsePatternString() {
 	auto str = args.readUntil<StringView::WhiteSpace, StringView::Chars<'<'>>();
 	if (!str.empty()) {
@@ -57,8 +85,18 @@ bool CommandLinePatternParsingData::parsePatternString() {
 		auto tpl = args.readUntil<StringView::Chars<'>'>>();
 		if (args.is('>')) {
 			++ args;
-			if (tpl == "#") {
-				auto num = target.readChars<StringView::Numbers>();
+			if (tpl == "#.#") {
+				auto num = CommandLinePatternParsingData_parseFloat(target);
+				if (!num.empty()) {
+					result.emplace_back(StringView(num));
+				} else {
+					log::error("CommandLine", "Invalid option input: ",
+							(offset > 0) ? argv[offset - 1] : target,
+							" for ", type, pattern->pattern, pattern->args);
+					return false;
+				}
+			} else if (tpl == "#") {
+				auto num = CommandLinePatternParsingData_parseInteger(target);
 				if (!num.empty()) {
 					result.emplace_back(StringView(num));
 				} else {
@@ -110,6 +148,8 @@ bool CommandLinePatternParsingData::parseWhitespace() {
 					" for ", type, pattern->pattern, pattern->args);
 			return false;
 		}
+	} else if (!args.empty() && target.empty()) {
+		return false;
 	}
 	return true;
 }
@@ -202,6 +242,8 @@ bool CommandLineParserBase::parse(void *output, int argc, const char * argv[], c
 }
 
 void CommandLineParserBase::describe(const Callback<void(StringView)> &out) const {
+	out << "Options:\n";
+
 	for (auto &it : *_options) {
 		out << "  ";
 		bool front = true;

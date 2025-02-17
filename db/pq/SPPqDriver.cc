@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2019-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -283,7 +283,7 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 			for (auto &it : toCreate) {
 				StringStream query;
 				query << "CREATE DATABASE " << it << ";";
-				auto q = query.weak().data();
+				auto q = query.data();
 				auto res = exec(conn, q);
 				clearResult(res);
 			}
@@ -981,7 +981,9 @@ Driver::Handle Driver::doConnect(const char * const *keywords, const char * cons
 	h->conn = _handle->PQconnectdbParams(keywords, values, expand_dbname);
 
 	if (h->conn) {
-		if (_handle->PQstatus(h->conn) != CONNECTION_OK) {
+		auto status = _handle->PQstatus(h->conn);
+		if (status != CONNECTION_OK) {
+			log::error("db::pq::Driver", "Fail to connect: ", _handle->PQerrorMessage(h->conn));
 			_handle->PQfinish(h->conn);
 			return Driver::Handle(nullptr);
 		}
