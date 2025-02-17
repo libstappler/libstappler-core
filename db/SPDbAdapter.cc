@@ -488,40 +488,6 @@ size_t Adapter::count(Worker &w, const Query &q) const {
 	return _interface->count(w, q);
 }
 
-void Adapter::scheduleAutoField(const Scheme &scheme, const Field &field, uint64_t id) {
-	struct Adapter_TaskData : AllocPool {
-		const Scheme *scheme = nullptr;
-		const Field *field = nullptr;
-		Set<uint64_t> objects;
-	};
-
-	if (!id) {
-		return;
-	}
-
-	stappler::memory::pool_t * p = stappler::memory::pool::acquire();
-	if (Adapter_TaskData *obj = memory::pool::get<Adapter_TaskData>(p, toString(scheme.getName(), "_f_", field.getName()))) {
-		obj->objects.emplace(id);
-	} else {
-		auto d = new (p) Adapter_TaskData;
-		d->scheme = &scheme;
-		d->field = &field;
-		d->objects.emplace(id);
-		memory::pool::store(p, d, toString(scheme.getName(), "_f_", field.getName()), [d, this] {
-			_application->scheduleAyncDbTask([this, d] (stappler::memory::pool_t *p) -> Function<void(const Transaction &t)> {
-				auto vec = new (p) Vector<uint64_t>(p);
-				for (auto &it : d->objects) {
-					vec->push_back(it);
-				}
-
-				return [this, vec, scheme = d->scheme, field = d->field] (const Transaction &t) {
-					runAutoFields(t, *vec, *scheme, *field);
-				};
-			});
-		});
-	}
-}
-
 Value Adapter::field(Action a, Worker &w, uint64_t oid, const Field &f, Value &&data) const {
 	return _interface->field(a, w, oid, f, sp::move(data));
 }
@@ -559,32 +525,6 @@ bool Adapter::isInTransaction() const {
 
 TransactionStatus Adapter::getTransactionStatus() const {
 	return _interface->getTransactionStatus();
-}
-
-void Adapter::runAutoFields(const Transaction &t, const Vector<uint64_t> &vec, const Scheme &scheme, const Field &field) {
-	auto &defs = field.getSlot()->autoField;
-	if (defs.defaultFn) {
-		auto includeSelf = (std::find(defs.requireFields.begin(), defs.requireFields.end(), field.getName()) == defs.requireFields.end());
-		for (auto &id : vec) {
-			Query q; q.select(id);
-			for (auto &req : defs.requireFields) {
-				q.include(req);
-			}
-			if (includeSelf) {
-				q.include(field.getName());
-			}
-
-			auto objs = scheme.select(t, q);
-			if (auto obj = objs.getValue(0)) {
-				auto newValue = defs.defaultFn(obj);
-				if (newValue != obj.getValue(field.getName())) {
-					Value patch;
-					patch.setValue(sp::move(newValue), field.getName().str<Interface>());
-					scheme.update(t, obj, patch, UpdateFlags::Protected | UpdateFlags::NoReturn);
-				}
-			}
-		}
-	}
 }
 
 void Adapter::processFullTextFields(const Scheme &scheme, Value &patch, Vector<InputField> &ifields, Vector<InputRow> &ivalues) const {

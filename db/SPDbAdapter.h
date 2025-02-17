@@ -158,8 +158,6 @@ protected:
 
 	size_t count(Worker &, const Query &) const;
 
-	void scheduleAutoField(const Scheme &, const Field &, uint64_t id);
-
 	Value field(Action, Worker &, uint64_t oid, const Field &, Value && = Value()) const;
 	Value field(Action, Worker &, const Value &, const Field &, Value && = Value()) const;
 
@@ -173,7 +171,6 @@ protected:
 	bool isInTransaction() const;
 	TransactionStatus getTransactionStatus() const;
 
-	void runAutoFields(const Transaction &t, const Vector<uint64_t> &vec, const Scheme &, const Field &);
 	void processFullTextFields(const Scheme &, Value &patch, Vector<InputField> &ifields, Vector<InputRow> &ivalues) const;
 
 	const ApplicationInterface *_application = nullptr;

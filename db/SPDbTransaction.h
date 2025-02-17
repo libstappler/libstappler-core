@@ -73,11 +73,19 @@ public:
 		Max,
 	};
 
+	struct TaskData : AllocPool {
+		const Scheme *scheme = nullptr;
+		const Field *field = nullptr;
+		Set<uint64_t> objects;
+	};
+
 	struct Data : AllocPool {
 		Adapter adapter;
 		pool_t * pool;
 		Map<String, Value> data;
 		int status = 0;
+
+		Vector<TaskData *> *delayedTasks = nullptr;
 
 		mutable Map<int64_t, Value> objects;
 		mutable AccessRoleId role = AccessRoleId::Nobody;

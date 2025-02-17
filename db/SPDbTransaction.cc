@@ -48,7 +48,7 @@ Transaction Transaction::acquire(const Adapter &adapter) {
 		ret.retain();
 		return ret;
 	} else {
-		d = new (pool) Transaction::Data{adapter};
+		d = new (pool) Transaction::Data{adapter, pool};
 		d->role = AccessRoleId::System;
 		pool::store(pool, d, adapter.getTransactionKey());
 		auto ret = Transaction(d);
@@ -633,21 +633,90 @@ Value Transaction::performQueryListField(const QueryList &list, const Field &f) 
 }
 
 void Transaction::scheduleAutoField(const Scheme &scheme, const Field &field, uint64_t id) const {
-	_data->adapter.scheduleAutoField(scheme, field, id);
+	mem_pool::perform([&] {
+		if (!_data->delayedTasks) {
+			_data->delayedTasks = new (_data->pool) Vector<TaskData *>;
+		}
+
+		TaskData *data = nullptr;
+
+		for (auto &it : *_data->delayedTasks) {
+			if (it->scheme == &scheme && it->field == &field) {
+				data = it;
+			}
+		}
+
+		if (!data) {
+			auto d = new (_data->pool) TaskData;
+			d->field = &field;
+			d->scheme = &scheme;
+
+			_data->delayedTasks->emplace_back(d);
+
+			data = d;
+		}
+
+		data->objects.emplace(id);
+	}, _data->pool);
 }
 
 bool Transaction::beginTransaction() const {
 	return _data->adapter.beginTransaction();
 }
+
+static void Transaction_runAutoFields(const Transaction &t, const Vector<uint64_t> &vec, const Scheme &scheme, const Field &field) {
+	auto &defs = field.getSlot()->autoField;
+	if (defs.defaultFn) {
+		auto includeSelf = (std::find(defs.requireFields.begin(), defs.requireFields.end(), field.getName()) == defs.requireFields.end());
+		for (auto &id : vec) {
+			Query q; q.select(id);
+			for (auto &req : defs.requireFields) {
+				q.include(req);
+			}
+			if (includeSelf) {
+				q.include(field.getName());
+			}
+
+			auto objs = scheme.select(t, q);
+			if (auto obj = objs.getValue(0)) {
+				auto newValue = defs.defaultFn(obj);
+				if (newValue != obj.getValue(field.getName())) {
+					Value patch;
+					patch.setValue(sp::move(newValue), field.getName().str<Interface>());
+					scheme.update(t, obj, patch, UpdateFlags::Protected | UpdateFlags::NoReturn);
+				}
+			}
+		}
+	}
+}
+
+
 bool Transaction::endTransaction() const {
 	if (_data->adapter.endTransaction()) {
 		if (!_data->adapter.isInTransaction()) {
+			if (_data->delayedTasks) {
+				for (auto &it : *_data->delayedTasks) {
+					_data->adapter.getApplicationInterface()->scheduleAyncDbTask([d = it] (stappler::memory::pool_t *p) -> Function<void(const Transaction &t)> {
+						auto vec = new (p) Vector<uint64_t>(p);
+						for (auto &it : d->objects) {
+							vec->push_back(it);
+						}
+
+						return [vec, scheme = d->scheme, field = d->field] (const Transaction &t) {
+							Transaction_runAutoFields(t, *vec, *scheme, *field);
+						};
+					});
+				}
+				_data->delayedTasks = nullptr;
+			}
+
 			clearObjectStorage();
 		}
 		return true;
 	}
 	return false;
 }
+
 void Transaction::cancelTransaction() const {
 	_data->adapter.cancelTransaction();
 }
