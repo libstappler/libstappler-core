@@ -31,6 +31,7 @@ TOOLKIT_MODULE_LIST += \
 	$(STAPPLER_MODULE_DIR)/bitmap/bitmap.mk \
 	$(STAPPLER_MODULE_DIR)/data/data.mk \
 	$(STAPPLER_MODULE_DIR)/db/db.mk \
+	$(STAPPLER_MODULE_DIR)/event/event.mk \
 	$(STAPPLER_MODULE_DIR)/filesystem/filesystem.mk \
 	$(STAPPLER_MODULE_DIR)/threads/threads.mk \
 	$(STAPPLER_MODULE_DIR)/idn/idn.mk \
