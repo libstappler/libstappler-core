@@ -20,61 +20,29 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_SPEVENTSOURCE_H_
-#define CORE_EVENT_SPEVENTSOURCE_H_
+#ifndef CORE_EVENT_SPEVENTTIMER_H_
+#define CORE_EVENT_SPEVENTTIMER_H_
 
-#include "SPEvent.h"
-#include "SPEventBufferChain.h"
+#include "SPEventSource.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class Queue;
-
-class Source : public Ref {
-public:
-	static constexpr size_t DataSize = 64;
-
-	virtual ~Source() = default;
-
-	Source();
-
-	virtual Status read(uint8_t *, size_t &);
-	virtual Status read(BufferChain &);
-
-	virtual Status write(const uint8_t *, size_t &);
-	virtual Status write(BufferChain &);
-
-	virtual void close();
-
-	virtual bool isOpen() const;
-	virtual bool isEndOfStream() const;
-
-	virtual void bind(Queue *);
-
-	virtual void setError(ErrorFlags);
-
-	const uint8_t *getData() const { return _data; }
-	uint8_t *getData() { return _data; }
-
-protected:
-	alignas(void *) uint8_t _data[DataSize];
-	Queue *_owner;
-	ErrorFlags _errorFlags = ErrorFlags::None;
-};
-
-/*class Timer : public Source {
+class Timer : public Source {
 public:
 	virtual ~Timer();
 
+	bool init(TimeInterval timeout, TimeInterval ival = TimeInterval(), uint32_t count = 0);
+
+	TimeInterval getTimeout() const { return _timeout; }
+	TimeInterval getInterval() const { return _interval; }
+	uint32_t getCount() const { return _count; }
+
+protected:
+	TimeInterval _timeout;
+	TimeInterval _interval;
+	uint32_t _count = 0;
 };
-
-class Socket : public Source {
-public:
-	virtual ~Socket();
-
-};*/
-
 
 }
 
-#endif /* CORE_EVENT_SPEVENTSOURCE_H_ */
+#endif /* CORE_EVENT_SPEVENTTIMER_H_ */

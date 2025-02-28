@@ -22,14 +22,43 @@
 
 #include "SPCommon.h"
 
+
+#include "platform/linux/SPEvent-linux.cc"
 #include "platform/uring/SPEvent-uring.cc"
 #include "platform/epoll/SPEvent-epoll.cc"
 //#include "platform/SPEvent-epoll.cc"
-#include "platform/SPEventFile-fd.cc"
-#include "platform/linux/SPEvent-linux.cc"
+#include "platform/fd/SPEvent-fd.cc"
 
+#include "detail/SPEventQueueData.cc"
 #include "SPEventBufferChain.cc"
-#include "SPEventCompletionHandle.cc"
-#include "SPEventSource.cc"
 #include "SPEventHandle.cc"
 #include "SPEventQueue.cc"
+
+namespace STAPPLER_VERSIONIZED stappler::event {
+
+std::ostream &operator<<(std::ostream &stream, Status status) {
+	switch (status) {
+	case Status::Ok: stream << "Status::Ok"; break;
+	case Status::Declined: stream << "Status::Declined"; break;
+	case Status::Done: stream << "Status::Done"; break;
+	case Status::Suspended: stream << "Status::Suspended"; break;
+
+	// errors
+	case Status::ErrorNotPermitted: stream << "Status::ErrorNotPermitted"; break;
+	case Status::ErrorInvalidArguemnt: stream << "Status::ErrorInvalidArguemnt"; break;
+	case Status::ErrorAgain: stream << "Status::ErrorAgain"; break;
+	case Status::ErrorBusy: stream << "Status::ErrorBusy"; break;
+	case Status::ErrorNotImplemented: stream << "Status::ErrorNotImplemented"; break;
+	case Status::ErrorAlreadyPerformed: stream << "Status::ErrorAlreadyPerformed"; break;
+	case Status::ErrorCancelled: stream << "Status::ErrorCancelled"; break;
+	default:
+		if (toInt(status) < STATUS_ERRNO_OFFSET) {
+			stream << "Status::Errno(" << -(toInt(status) + STATUS_ERRNO_OFFSET) << ")"; break;
+		} else {
+			stream << "Status::Unknown(" << toInt(status) << ")"; break;
+		}
+	}
+	return stream;
+}
+
+}

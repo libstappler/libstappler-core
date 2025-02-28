@@ -20,59 +20,68 @@
  THE SOFTWARE.
  **/
 
+#include "SPEventQueueData.h"
 #include "SPEventHandle.h"
-#include "detail/SPEventQueueData.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-Handle::~Handle() { }
-
-Handle::Handle() {
-	::memset(_data, 0, DataSize);
-}
-
-bool Handle::init(QueueRef *q, QueueData *data) {
-	_queue = q;
-	_queueData = data;
-	return true;
-}
-
-Status Handle::run() {
-	if (_runFn) {
-		return _runFn(this);
+uint32_t QueueData::suspendAll() {
+	uint32_t ret;
+	_running = false;
+	for (auto &it : _suspendableHandles) {
+		if (it->suspend() == Status::Ok) {
+			++ ret;
+		}
 	}
-	return Status::ErrorNotImplemented;
+	return ret;
 }
 
-Status Handle::suspend() {
-	if (_suspendFn) {
-		return _suspendFn(this);
+uint32_t QueueData::resumeAll() {
+	if (_running) {
+		return 0;
 	}
-	return Status::ErrorNotImplemented;
+
+	uint32_t ret;
+	_running = true;
+	for (auto &it : _suspendableHandles) {
+		if (it->resume() == Status::Ok) {
+			++ ret;
+		}
+	}
+	for (auto &it : _pendingHandles) {
+		auto status = it->run();
+		if (!isSuccessful(status)) {
+			it->cancel(status);
+		} else if (it->isSuspendable()) {
+			_suspendableHandles.emplace(it);
+		}
+	}
+	_pendingHandles.clear();
+	return ret;
 }
 
-Status Handle::resume() {
-	if (_resumeFn) {
-		return _resumeFn(this);
+Status QueueData::runHandle(Handle *h) {
+	if (_running) {
+		auto status = h->run();
+		if (!isSuccessful(status)) {
+			h->cancel(status);
+		} else if (h->isSuspendable()) {
+			_suspendableHandles.emplace(h);
+		}
+		return status;
+	} else {
+		_pendingHandles.emplace(h);
+		return Status::Suspended;
 	}
-	return Status::ErrorNotImplemented;
 }
 
-Status Handle::cancel(Status st) {
-	if (!isValidCancelStatus(st)) {
-		log::warn("event::Handle", "Handle::cancel should be called with Status::Done or one of the error statuses."
-				" It's undefined behavior otherwise");
-		return Status::ErrorInvalidArguemnt;
-	}
-	_status = st;
-	if (isSuspendable()) {
-		_queueData->cancel(this);
-	}
-	return Status::Ok;
+void QueueData::cancel(Handle *h) {
+	_suspendableHandles.erase(h);
 }
 
-void TimerHandle::sendCompletion(uint32_t value, Status status) {
-	_completion.fn(_completion.userdata, this, value, status);
+QueueData::QueueData(QueueRef *ref, QueueFlags flags) : _queue(ref), _flags(flags) {
+	_pendingHandles.set_memory_persistent(true);
+	_suspendableHandles.set_memory_persistent(true);
 }
 
 }

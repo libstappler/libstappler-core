@@ -106,6 +106,10 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
+inline constexpr uint32_t SP_MAKE_API_VERSION(uint32_t variant, uint32_t major, uint32_t minor, uint32_t patch) {
+   return (uint32_t(variant) << 29) | (uint32_t(major) << 22) | (uint32_t(minor) << 12) | uint32_t(patch & 0b1111'1111'1111);
+}
+
 // Use sp::move instead of std::move to enable additional diagnostics
 template<typename T, typename std::enable_if_t<
 		// Attempt to move pointer is most likely an reference count error
@@ -509,11 +513,18 @@ struct Result {
 
 SP_PUBLIC const char * getStapplerVersionString();
 
+SP_PUBLIC uint32_t getStapplerVersionIndex();
+
+SP_PUBLIC uint32_t getStapplerVersionVariant();
+
 // API version number
 SP_PUBLIC uint32_t getStapplerVersionApi();
 
 // Build revision version number
 SP_PUBLIC uint32_t getStapplerVersionRev();
+
+// Build number
+SP_PUBLIC uint32_t getStapplerVersionBuild();
 
 }
 

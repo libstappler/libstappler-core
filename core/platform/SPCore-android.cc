@@ -244,7 +244,7 @@ struct IcuJave {
 
 	int compare(StringView l, StringView r, bool caseInsensetive) {
 		if (!env) {
-			return string::compare_c(l, r);
+			return string::detail::compare_c(l, r);
 		}
 
 		int ret = 0;
@@ -259,7 +259,7 @@ struct IcuJave {
 			ret = env->CallIntMethod(coll, _compare, strL, strR);
 			env->DeleteLocalRef(coll);
 		} else {
-			ret = string::compare_c(l, r);
+			ret = string::detail::compare_c(l, r);
 		}
 
 		env->DeleteLocalRef(strL);
@@ -269,7 +269,7 @@ struct IcuJave {
 
 	int compare(WideStringView l, WideStringView r, bool caseInsensetive) {
 		if (!env) {
-			return string::compare_c(l, r);
+			return string::detail::compare_c(l, r);
 		}
 
 		int ret = 0;
@@ -282,7 +282,7 @@ struct IcuJave {
 			ret = env->CallIntMethod(coll, _compare, strL, strR);
 			env->DeleteLocalRef(coll);
 		} else {
-			ret = string::compare_c(l, r);
+			ret = string::detail::compare_c(l, r);
 		}
 
 		env->DeleteLocalRef(strL);

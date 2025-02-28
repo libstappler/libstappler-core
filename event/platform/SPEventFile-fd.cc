@@ -20,9 +20,8 @@
  THE SOFTWARE.
  **/
 
-#include "SPEventFile.h"
 #include "SPPlatformUnistd.h"
-#include "platform/SPEvent-fd.h"
+#include "platform/fd/SPEvent-fd.h"
 
 #if LINUX || ANDROID || MACOS
 
@@ -101,6 +100,19 @@ bool File::init(StringView path, FileOpenFlags flags, FileProtFlags prot) {
 	((SourceData *)_data)->fd = fd;
 	_openFlags = flags;
 	return true;
+}
+
+bool File::isSupported(HandleOp op) const {
+	switch (op) {
+	case HandleOp::Read:
+	case HandleOp::Write:
+		return true;
+		break;
+	default:
+		return false;
+		break;
+	}
+	return false;
 }
 
 Status File::read(uint8_t *data, size_t &size) {

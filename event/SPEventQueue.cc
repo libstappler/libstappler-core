@@ -24,22 +24,47 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+Queue::~Queue() {
+	if (_data) {
+		delete _data;
+		_data = nullptr;
+	}
+}
+
 bool Queue::init(const QueueInfo &info, QueueFlags flags) {
 	mem_pool::perform([&] {
-		_data = new (getPool()) Data(this, info, flags);
+		_data = new (getPool()) Data(static_cast<QueueRef *>(getRef()), info, flags);
 	}, getPool());
 	return _data != nullptr && _data->isValid();
 }
 
-Rc<Handle> Queue::submitRead(Source *, BufferChain *, size_t, CompletionHandle *) {
+Rc<OpHandle> Queue::openDir(CompletionHandle<DirHandle> &&, StringView path) {
 	return nullptr;
 }
 
-Rc<Handle> Queue::submitWrite(Source *, BufferChain *, size_t, CompletionHandle *) {
+Rc<OpHandle> Queue::openFile(OpenFileInfo &&) {
 	return nullptr;
 }
 
-Status Queue::submit() {
+Rc<TimerHandle> Queue::scheduleTimer(TimerInfo &&info) {
+	if (info.count == 0 || (!info.interval && !info.timeout)) {
+		log::error("event::Queue", "Invalid parameters for timer");
+		return nullptr;
+	}
+
+	auto h = _data->scheduleTimer(move(info));
+	_data->runHandle(h);
+	return h;
+}
+
+Rc<OpHandle> Queue::read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t) {
+	return nullptr;
+}
+Rc<OpHandle> Queue::write(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t) {
+	return nullptr;
+}
+
+Status Queue::submitPending() {
 	return _data->submit();
 }
 
@@ -55,11 +80,16 @@ uint32_t Queue::wait(TimeInterval ival) {
 
 // run for some time
 Status Queue::run(TimeInterval ival) {
+	submitPending();
 	return _data->run(ival);
 }
 
-void Queue::wakeup() {
+void Queue::wakeup(QueueWakeupFlags flags, TimeInterval gracefulTimeout) {
+	_data->wakeup(flags, gracefulTimeout);
+}
 
+QueueFlags Queue::getFlags() const {
+	return _data->_flags;
 }
 
 }

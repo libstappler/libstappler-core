@@ -23,25 +23,92 @@
 #ifndef CORE_EVENT_SPEVENTHANDLE_H_
 #define CORE_EVENT_SPEVENTHANDLE_H_
 
-#include "SPEventSource.h"
 #include "SPEventBufferChain.h"
-#include "SPEventCompletionHandle.h"
+#include "SPEventQueue.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+class Queue;
+struct QueueData;
+
 class Handle : public Ref {
 public:
-	Source *getSource() const { return _source; }
+	static constexpr size_t DataSize = 64;
+
+	static inline bool isValidCancelStatus(Status st) {
+		return st == Status::Done || !isSuccessful(st);
+	}
+
+	virtual ~Handle();
+
+	Handle();
+
+	bool init(QueueRef *, QueueData *);
+
+	Queue *getQueue() const { return _queue; }
+
+	// Initially, handle in Declined state
+	// When handle run within queue - it's on Ok state
+	// When handle completes it's execution, it's on Done state
+	// When handle's execution were suspended (like on graceful wakeup) - it's on Suspended state
 	Status getStatus() const { return _status; }
 
-	void cancel(ErrorFlags);
+	bool isSuspendable() const { return _suspendFn != nullptr && _resumeFn != nullptr; }
+
+	const uint8_t *getData() const { return _data; }
+
+	// Cancel handle operation (performed asynchronically)
+	virtual Status cancel(Status);
 
 protected:
-	Rc<Source> _source;
-	Rc<BufferChain> _buffer;
-	Rc<CompletionHandle> _completion;
-	Rc<Queue> _queue;
-	Status _status = Status::Ok;
+	friend struct QueueData;
+
+	Status run();
+	Status suspend();
+	Status resume();
+
+	Rc<QueueRef> _queue;
+	QueueData *_queueData = nullptr;
+
+	// Any others are errors
+	Status _status = Status::Declined;
+
+	Status (*_runFn) (Handle *) = nullptr;
+	Status (*_suspendFn) (Handle *) = nullptr;
+	Status (*_resumeFn) (Handle *) = nullptr;
+
+	// platform data block
+	alignas(void *) uint8_t _data[DataSize];
+};
+
+class OpHandle : public Handle {
+
+};
+
+class TimerHandle : public Handle {
+public:
+	virtual ~TimerHandle() = default;
+
+	void setCompletion(CompletionHandle<TimerHandle> &&c) { _completion = move(c); }
+
+	const CompletionHandle<TimerHandle> &getCompletion() const { return _completion; }
+
+protected:
+	void sendCompletion(uint32_t value, Status);
+
+	CompletionHandle<TimerHandle> _completion;
+};
+
+class DirHandle : public Handle {
+
+};
+
+class InputOutputHandle : public Handle {
+
+};
+
+class FileHandle : public InputOutputHandle {
+
 };
 
 }

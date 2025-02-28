@@ -76,14 +76,19 @@ class SP_PUBLIC Ref : public RefAlloc {
 public:
 	virtual ~Ref() = default;
 
+	// You can assign an unique number for retain/release sequence to track leaked references
+	// In this case, release should be called with the same id, as returned from retain.
+	// Retain argument can be used as designated id, or maxOf<uint64_t>() to allocate unique id
+	// If SP_REF_DEBUG is not enabled - it's noop
+
 #if SP_REF_DEBUG
-	virtual uint64_t retain();
+	virtual uint64_t retain(uint64_t value = maxOf<uint64_t>());
 	virtual void release(uint64_t id);
 
 	void foreachBacktrace(const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &) const;
 
 #else
-	uint64_t retain() { incrementReferenceCount(); return 0; }
+	uint64_t retain(uint64_t value = maxOf<uint64_t>()) { (void)value; incrementReferenceCount(); return 0; }
 	void release(uint64_t id) { if (decrementReferenceCount()) { delete this; } }
 #endif
 
@@ -141,7 +146,7 @@ public:
 	memory::allocator_t *getAllocator() const { return _allocator; }
 
 protected:
-	SharedRef(SharedRefMode m, memory::allocator_t *, memory::pool_t *, T *) noexcept;
+	SharedRef(SharedRefMode m, memory::allocator_t *, memory::pool_t *) noexcept;
 
 	memory::allocator_t *_allocator = nullptr;
 	memory::pool_t *_pool = nullptr;
@@ -311,7 +316,7 @@ namespace memleak {
 
 SP_PUBLIC uint64_t getNextRefId();
 
-SP_PUBLIC uint64_t retainBacktrace(const Ref *);
+SP_PUBLIC uint64_t retainBacktrace(const Ref *, uint64_t = maxOf<uint64_t>());
 SP_PUBLIC void releaseBacktrace(const Ref *, uint64_t);
 SP_PUBLIC void foreachBacktrace(const Ref *,
 		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &);
@@ -351,8 +356,10 @@ auto SharedRef<T>::create(Args && ... args) -> SharedRef * {
 
 	SharedRef *shared = nullptr;
 	memory::pool::perform([&] {
-		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool,
-			new (pool) T(pool, std::forward<Args>(args)...));
+		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool);
+		if (shared) {
+			shared->_shared = new (pool) T(shared, pool, std::forward<Args>(args)...);
+		}
 	}, pool);
 	return shared;
 }
@@ -364,9 +371,10 @@ auto SharedRef<T>::create(memory::pool_t *p, Args && ... args) -> SharedRef * {
 
 	SharedRef *shared = nullptr;
 	memory::pool::perform([&] {
-		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool,
-			new (pool) T(pool, std::forward<Args>(args)...));
-
+		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool);
+		if (shared) {
+			shared->_shared = new (pool) T(shared, pool, std::forward<Args>(args)...);
+		}
 		if (p) {
 			shared->_parent = p;
 			memory::pool::pre_cleanup_register(shared->_parent, shared, &invaldate);
@@ -393,8 +401,10 @@ auto SharedRef<T>::create(SharedRefMode mode, Args && ... args) -> SharedRef * {
 
 	SharedRef *shared = nullptr;
 	memory::pool::perform([&] {
-		shared = new (pool) SharedRef(mode, alloc, pool,
-			new (pool) T(pool, std::forward<Args>(args)...));
+		shared = new (pool) SharedRef(mode, alloc, pool);
+		if (shared) {
+			shared->_shared = new (pool) T(shared, pool, std::forward<Args>(args)...);
+		}
 	}, pool);
 	return shared;
 }
@@ -449,8 +459,8 @@ void SharedRef<T>::perform(Callback &&cb) {
 }
 
 template <typename T>
-SharedRef<T>::SharedRef(SharedRefMode m, memory::allocator_t *alloc, memory::pool_t *pool, T *obj) noexcept
-: _allocator(alloc), _pool(pool), _shared(obj), _mode(m) { }
+SharedRef<T>::SharedRef(SharedRefMode m, memory::allocator_t *alloc, memory::pool_t *pool) noexcept
+: _allocator(alloc), _pool(pool), _shared(nullptr), _mode(m) { }
 
 
 template <typename _Base, typename _Pointer>
@@ -651,7 +661,7 @@ inline RcBase<_Base, _Pointer>::RcBase(Pointer value, bool v) noexcept
 template <typename _Base>
 template <class... Args>
 inline auto Rc<_Base>::create(Args && ... args) -> Self {
-	auto pRet = new (std::nothrow_t()) Type();
+	auto pRet = new (std::nothrow) Type();
     if (pRet->init(std::forward<Args>(args)...)) {
     	return Self(pRet, true); // unsafe assignment
 	} else {
@@ -662,13 +672,13 @@ inline auto Rc<_Base>::create(Args && ... args) -> Self {
 
 template <typename _Base>
 inline auto Rc<_Base>::alloc() -> Self {
-	return Self(new (std::nothrow_t()) Type(), true);
+	return Self(new (std::nothrow) Type(), true);
 }
 
 template <typename _Base>
 template <class... Args>
 inline auto Rc<_Base>::alloc(Args && ... args) -> Self{
-	return Self(new (std::nothrow_t()) Type(std::forward<Args>(args)...), true);
+	return Self(new (std::nothrow) Type(std::forward<Args>(args)...), true);
 }
 
 template <typename _Base>

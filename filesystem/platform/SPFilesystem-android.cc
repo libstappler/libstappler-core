@@ -438,7 +438,7 @@ struct PathSource {
 		auto path = _getPlatformPath(ipath);
 		if (assetsRoot) {
 			StringView prefix = "assets/";
-			_archive.ftw_b(string::toString<Interface>(prefix, path), [&] (StringView path, bool isFile) {
+			return _archive.ftw_b(string::toString<Interface>(prefix, path), [&] (StringView path, bool isFile) {
 				if (path.starts_with(prefix)) {
 					path = path.sub(prefix.size());
 				}

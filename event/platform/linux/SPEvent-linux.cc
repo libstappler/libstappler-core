@@ -25,41 +25,55 @@
 
 #if LINUX
 
+#include "detail/SPEventQueueData.h"
+
+#include "../fd/SPEvent-fd.h"
 #include "../epoll/SPEvent-epoll.h"
 #include "../uring/SPEvent-uring.h"
 
+#include <signal.h>
+
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-struct Queue::Data : public mem_pool::AllocBase {
-	Queue *_queue = nullptr;
-
+struct Queue::Data : public QueueData {
 	URingData *_uring = nullptr;
 
-	Rc<SignalFdSource> _signalFd;
+	SignalFdSource _signalFd;
+	EventFdSource _eventFd;
 
-	QueueFlags _flags = QueueFlags::None;
+	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
 
 	Status submit();
 	uint32_t poll();
 	uint32_t wait(TimeInterval);
 	Status run(TimeInterval);
+	void wakeup(QueueWakeupFlags, TimeInterval);
 
 	bool isValid() const;
 
 	~Data();
-	Data(Queue *q, const QueueInfo &info, QueueFlags flags);
+	Data(QueueRef *q, const QueueInfo &info, QueueFlags flags);
 };
 
 static int SignalsToIntercept[] = { SIGUSR1, SIGUSR2 };
 
+Rc<TimerHandle> Queue::Data::scheduleTimer(TimerInfo &&info) {
+	if (_uring) {
+		return Rc<TimerFdURingHandle>::create(_uring, move(info));
+	}
+	return nullptr;
+}
+
 Status Queue::Data::submit() {
+	resumeAll();
 	if (_uring) {
 		return _uring->submit();
 	}
-	return Status::NotImplemented;
+	return Status::ErrorNotImplemented;
 }
 
 uint32_t Queue::Data::poll() {
+	resumeAll();
 	if (_uring) {
 		return _uring->poll();
 	}
@@ -67,6 +81,7 @@ uint32_t Queue::Data::poll() {
 }
 
 uint32_t Queue::Data::wait(TimeInterval ival) {
+	resumeAll();
 	if (_uring) {
 		return _uring->wait(ival);
 	}
@@ -74,10 +89,19 @@ uint32_t Queue::Data::wait(TimeInterval ival) {
 }
 
 Status Queue::Data::run(TimeInterval ival) {
+	resumeAll();
 	if (_uring) {
 		return _uring->run(ival);
 	}
-	return Status::NotImplemented;
+	return Status::ErrorNotImplemented;
+}
+
+void Queue::Data::wakeup(QueueWakeupFlags flags, TimeInterval gracefulTimeout) {
+	if (_uring) {
+		_uring->_wakeupFlags |= toInt(flags);
+		_uring->_wakeupTimeout = gracefulTimeout.toMicros();
+	}
+	_eventFd.write(1);
 }
 
 bool Queue::Data::isValid() const {
@@ -91,66 +115,22 @@ Queue::Data::~Data() {
 	}
 }
 
-Queue::Data::Data(Queue *q, const QueueInfo &info, QueueFlags flags) : _queue(q), _flags(flags) {
+Queue::Data::Data(QueueRef *q, const QueueInfo &info, QueueFlags flags) : QueueData(q, flags) {
+	if (!_eventFd.init()) {
+		log::error("event::Queue", "Fail to initialize eventfd");
+		return;
+	}
+
 	if (hasFlag(_flags, QueueFlags::Protected)) {
-		_signalFd = Rc<SignalFdSource>::create(SignalsToIntercept);
+		if (!_signalFd.init(SignalsToIntercept)) {
+			log::error("event::Queue", "Fail to initialize signalfd");
+			return;
+		}
 	}
 
 	if (URingData::checkSupport()) {
-		_uring = new (memory::pool::acquire()) URingData(_signalFd, info, flags);
+		_uring = new (memory::pool::acquire()) URingData(_queue, this, &_signalFd, &_eventFd, info, flags);
 	}
-}
-
-}
-
-namespace STAPPLER_VERSIONIZED stappler::event::platform {
-
-static uint64_t getStaticMinFrameTime() {
-	return 1000'000 / 60;
-}
-
-static clockid_t getClockSource() {
-	struct timespec ts;
-
-	auto minFrameNano = (getStaticMinFrameTime() * 1000) / 5; // clock should have at least 1/5 frame resolution
-	if (clock_getres(CLOCK_MONOTONIC_COARSE, &ts) == 0) {
-		if (ts.tv_sec == 0 && uint64_t(ts.tv_nsec) < minFrameNano) {
-			return CLOCK_MONOTONIC_COARSE;
-		}
-	}
-
-	if (clock_getres(CLOCK_MONOTONIC, &ts) == 0) {
-		if (ts.tv_sec == 0 && uint64_t(ts.tv_nsec) < minFrameNano) {
-			return CLOCK_MONOTONIC;
-		}
-	}
-
-	if (clock_getres(CLOCK_MONOTONIC_RAW, &ts) == 0) {
-		if (ts.tv_sec == 0 && uint64_t(ts.tv_nsec) < minFrameNano) {
-			return CLOCK_MONOTONIC_RAW;
-		}
-	}
-
-	return CLOCK_MONOTONIC;
-}
-
-uint64_t clock(ClockType type) {
-	static clockid_t ClockSource = getClockSource();
-
-	struct timespec ts;
-	switch (type) {
-	case ClockType::Default: clock_gettime(ClockSource, &ts); break;
-	case ClockType::Monotonic: clock_gettime(CLOCK_MONOTONIC, &ts); break;
-	case ClockType::Realtime: clock_gettime(CLOCK_REALTIME, &ts); break;
-	case ClockType::Process: clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts); break;
-	case ClockType::Thread: clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts); break;
-	}
-
-	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1000'000) + static_cast<uint64_t>(ts.tv_nsec / 1000);
-}
-
-void sleep(uint64_t microseconds) {
-	usleep(useconds_t(microseconds));
 }
 
 }

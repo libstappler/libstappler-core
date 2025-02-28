@@ -126,13 +126,23 @@ struct InterfaceObject {
 
 }
 
+
+namespace STAPPLER_VERSIONIZED stappler {
+
+class Ref;
+
+}
+
+
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
 class PoolObject : public memory::PoolInterface::AllocBaseType, public InterfaceObject<memory::PoolInterface> {
 public:
 	virtual ~PoolObject() = default;
 
-	PoolObject(memory::pool_t *p) : _pool(p) { }
+	PoolObject(Ref *ref, memory::pool_t *p) : _ref(ref), _pool(p) { }
+
+	Ref *getRef() const { return _ref; }
 
 	memory::pool_t *getPool() const { return _pool; }
 
@@ -142,6 +152,7 @@ public:
 	}
 
 protected:
+	Ref *_ref = nullptr;
 	memory::pool_t *_pool = nullptr;
 };
 

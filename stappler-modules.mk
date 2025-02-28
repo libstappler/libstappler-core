@@ -23,6 +23,7 @@ STAPPLER_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 STAPPLER_VERSION_API := 4
 STAPPLER_VERSION_REV := 9
+STAPPLER_VERSION_BUILD := $(firstword $(call sp_detect_build_number,$(STAPPLER_MODULE_DIR)))
 
 STAPPLER_CRYPTO_DEFAULT ?= openssl
 

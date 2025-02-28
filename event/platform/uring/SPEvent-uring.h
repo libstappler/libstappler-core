@@ -23,12 +23,13 @@
 #ifndef CORE_EVENT_PLATFORM_SPEVENT_URING_H_
 #define CORE_EVENT_PLATFORM_SPEVENT_URING_H_
 
-#include "SPEventSource.h"
 #include "SPEventHandle.h"
 
 #if LINUX
 
-#include "../epoll/SPEvent-epoll.h"
+#include "detail/SPEventQueueData.h"
+
+#include "../fd/SPEvent-fd.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,20 +103,51 @@ enum class URingFlags {
 	CoopTaskrunSupported = 1 << 2,
 	SingleIssuerSupported = 1 << 3,
 	DeferTaskrunSupported = 1 << 4,
+	AsyncCancelFdSupported = 1 << 5,
+	AsyncCancelAnyAllSupported = AsyncCancelFdSupported,
+	AsyncCancelFdFixedSupported = 1 << 6,
 };
 
 SP_DEFINE_ENUM_AS_MASK(URingFlags)
+
+enum class URingUserFlags {
+	None,
+	Retained = 1 << 0,
+	CancellationRequest = 1 << 1,
+};
+
+SP_DEFINE_ENUM_AS_MASK(URingUserFlags)
+
+enum class URingCancelFlags {
+	None,
+	All = 1 << 0,
+	Any = 1 << 1,
+	Drain = 1 << 2,
+	FixedFile = 1 << 3,
+};
+
+SP_DEFINE_ENUM_AS_MASK(URingCancelFlags)
 
 struct URingData : public mem_pool::AllocBase {
 	static constexpr size_t CQESize = sizeof(struct io_uring_cqe);
 	static constexpr uint32_t DefaultIdleInterval = 500;
 
+	static constexpr uint64_t UserdataPointerMask = 0xFFFF'FFFF'FFFF'FFF0; // to use last 4 bits for a flags
+	static constexpr uint64_t UserdataFlagsMask = ~UserdataPointerMask; // to use last 4 bits for a flags
+
+	static inline Status getErrnoStatus(int negErrno) {
+		return Status(-STATUS_ERRNO_OFFSET + negErrno);
+	}
+
 	static bool checkSupport();
 
+	QueueRef *_queue = nullptr;
+	Queue::Data *_data = nullptr;
 	QueueFlags _flags = QueueFlags::None;
 	URingFlags _uflags = URingFlags::None;
 	int _ringFd = -1;
 	SignalFdSource *_signalFd = nullptr;
+	EventFdSource *_eventFd = nullptr;
 
 	io_uring_params _params;
 	URingSq sq;
@@ -128,20 +160,45 @@ struct URingData : public mem_pool::AllocBase {
 	uint64_t _now = 0;
 	uint32_t _events = 0;
 	std::atomic_flag _shouldWakeup;
+	std::atomic<std::underlying_type_t<QueueWakeupFlags>> _wakeupFlags = 0;
+	std::atomic<uint64_t> _wakeupTimeout;
+
+	__kernel_timespec _wakeupTimespec;
 
 	unsigned getUnprocessedSqeCount();
 
 	unsigned flushSqe();
 
-	io_uring_sqe *tryGetNextSqe();
-	io_uring_sqe *getNextSqe();
+	struct SqeBlock {
+		io_uring_sqe *front;
+		unsigned first;
+		uint32_t count;
+		Status status;
+
+		explicit operator bool() const { return front != nullptr; }
+	};
+
+	SqeBlock tryGetNextSqe(uint32_t count = 1);
+	SqeBlock getNextSqe(uint32_t count = 1);
+
+	Status pushSqe(std::initializer_list<uint8_t> ops, const Callback<void(io_uring_sqe *, uint32_t n)> &);
+
+	// owner should keep ts buffer available until operation is consumed
+	// In case of SQPOLL - it's undefined, when data will be consumed, so, keep until the end
+	Status pushSqe(uint8_t op, const Callback<void(io_uring_sqe *)> &, const __kernel_timespec *ts);
+
 	int submitSqe(unsigned sub, unsigned wait, bool waitAvailable);
 	int submitPending();
 
 	Status pushRead(int fd, uint8_t *buf, size_t bsize, uint64_t userdata);
-	Status pushWrite(int fd, const uint8_t *buf, size_t bsize, uint64_t userdata);
+	Status pushReadRetain(int fd, uint8_t *buf, size_t bsize, Handle *);
 
-	//bool push(uint8_t opcode, int fd, uint64_t userdata);
+	Status pushWrite(int fd, const uint8_t *buf, size_t bsize, uint64_t userdata);
+	Status pushWriteRetain(int fd, const uint8_t *buf, size_t bsize, Handle *);
+
+	Status cancelOp(void *, URingUserFlags ptrFlags, URingCancelFlags = URingCancelFlags::None);
+	Status cancelFd(int fd, URingCancelFlags = URingCancelFlags::None);
+
 	uint32_t pop();
 	void processEvent(int32_t res, uint32_t flags, uint64_t userdata);
 
@@ -152,9 +209,24 @@ struct URingData : public mem_pool::AllocBase {
 
 	int enter(unsigned sub, unsigned wait, unsigned flags, __kernel_timespec *);
 
-	URingData(SignalFdSource *, const QueueInfo &info, QueueFlags);
-	~URingData();
+	void suspendSystemHandles();
+	void resumeSystemHandles();
 
+	URingData(QueueRef *, Queue::Data *data, SignalFdSource *, EventFdSource *, const QueueInfo &info, QueueFlags);
+	~URingData();
+};
+
+class TimerFdURingHandle : public TimerFdHandle {
+public:
+	virtual ~TimerFdURingHandle() = default;
+
+	bool init(URingData *, TimerInfo &&);
+
+	Status rearm();
+	Status disarm(bool suspend);
+	void notify(int32_t res, uint32_t flags);
+
+	virtual Status cancel(Status) override;
 };
 
 }

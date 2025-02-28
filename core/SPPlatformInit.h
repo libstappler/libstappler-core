@@ -97,6 +97,7 @@
 
 // enable all modules
 
+#define MODULE_STAPPLER_EVENT 1
 #define MODULE_STAPPLER_DATA 1
 #define MODULE_STAPPLER_FILESYSTEM 1
 #define MODULE_STAPPLER_BROTLI_LIB 1
@@ -283,5 +284,7 @@ using iter_reference_t = typename T::reference;
 #define _UNICODE
 
 #endif
+
+#include "SPPlatformCleanup.h"
 
 #endif /* CORE_CORE_SPPLATFORMDETECTION_H_ */

@@ -127,7 +127,7 @@ struct TaskQueue::WorkerContext {
 
 	void spawn(uint32_t threadId, uint32_t threadCount, StringView name) {
 		for (uint32_t i = 0; i < threadCount; i++) {
-			auto worker = new (std::nothrow_t()) Worker(this, threadId, i, name.empty() ? queue->getName() : name);
+			auto worker = new (std::nothrow) Worker(this, threadId, i, name.empty() ? queue->getName() : name);
 			workers.push_back(worker);
 			worker->run();
 		}
@@ -354,7 +354,7 @@ void TaskQueue::finalize() {
 
 void TaskQueue::performAsync(Rc<Task> &&task) {
 	if (task) {
-		_SingleTaskWorker *worker = new (std::nothrow_t()) _SingleTaskWorker(this, sp::move(task));
+		_SingleTaskWorker *worker = new (std::nothrow) _SingleTaskWorker(this, sp::move(task));
 		worker->run();
 	}
 }

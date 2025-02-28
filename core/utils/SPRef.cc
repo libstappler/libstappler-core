@@ -304,8 +304,10 @@ uint64_t getNextRefId() {
 	return s_refId.fetch_add(1);
 }
 
-uint64_t retainBacktrace(const Ref *ptr) {
-	auto id = getNextRefId();
+uint64_t retainBacktrace(const Ref *ptr, uint64_t id) {
+	if (id == maxOf<uint64_t>()) {
+		id = getNextRefId();
+	}
 	std::vector<std::string> bt;
 	getBacktrace(0, [&] (StringView str) {
 		bt.emplace_back(str.str<memory::StandartInterface>());

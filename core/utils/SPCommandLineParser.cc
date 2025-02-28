@@ -53,7 +53,7 @@ static StringView CommandLinePatternParsingData_parseInteger(StringView &str) {
 	return StringView();
 }
 
-static StringView CommandLinePatternParsingData_parseFloat(StringView str) {
+static StringView CommandLinePatternParsingData_parseFloat(StringView &str) {
 	str.skipChars<StringView::WhiteSpace>();
 
 	auto tmp = str;

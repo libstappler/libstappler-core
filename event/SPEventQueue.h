@@ -23,17 +23,30 @@
 #ifndef CORE_EVENT_SPEVENTQUEUE_H_
 #define CORE_EVENT_SPEVENTQUEUE_H_
 
-#include "SPEventHandle.h"
+#include "SPEvent.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 enum class QueueFlags {
 	None,
 	Protected = 1 << 0, // try to protect operations from interrupting with signals
-	SubmitImmediate = 1 << 1, // submit all operations as they added, no need to call
+	SubmitImmediate = 1 << 1, // submit all operations as they added, no need to call `submitPending`
 };
 
 SP_DEFINE_ENUM_AS_MASK(QueueFlags)
+
+enum class QueueWakeupFlags {
+	None,
+	Graceful = 1 << 0,
+};
+
+SP_DEFINE_ENUM_AS_MASK(QueueWakeupFlags)
+
+struct OpenFileInfo {
+	StringView path;
+	FileOpenFlags flags;
+	FileProtFlags prot;
+};
 
 struct QueueInfo {
 	static constexpr uint32_t DefaultQueueSize = 32;
@@ -47,18 +60,24 @@ struct QueueInfo {
  *
  * Interface is single-threaded, no submission allowed from other threads
  */
+
 class Queue : public memory::PoolObject {
 public:
-	virtual ~Queue() = default;
+	struct Data; // private platform data
+
+	virtual ~Queue();
 
 	bool init(const QueueInfo & = QueueInfo(), QueueFlags flags = QueueFlags::None);
 
-	void setErrorHandle(CompletionHandle *);
+	Rc<OpHandle> openDir(CompletionHandle<DirHandle> &&, StringView path);
+	Rc<OpHandle> openFile(OpenFileInfo &&);
 
-	Rc<Handle> submitRead(Source *, BufferChain *, size_t, CompletionHandle *);
-	Rc<Handle> submitWrite(Source *, BufferChain *, size_t, CompletionHandle *);
+	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
 
-	Status submit();
+	Rc<OpHandle> read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t);
+	Rc<OpHandle> write(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t);
+
+	Status submitPending();
 
 	// non-blocking poll
 	uint32_t poll();
@@ -66,20 +85,19 @@ public:
 	// wait until next event, or timeout
 	uint32_t wait(TimeInterval = TimeInterval());
 
-	// run for some time
-	Status run(TimeInterval);
+	// run for some time or infinite (when no timeout)
+	Status run(TimeInterval = TimeInterval());
 
-	void wakeup();
-
-	void cancel();
+	// wakeup queue from `run`
+	// If Graceful flag is set - wait until all operations are completed, and forbid a new ones from running
+	// If gracefulTimeout is set, queue will issue a graceful wakeup, but after timeout hard wakeup will be performed
+	void wakeup(QueueWakeupFlags = QueueWakeupFlags::None, TimeInterval gracefulTimeout = TimeInterval());
 
 	QueueFlags getFlags() const;
 
 	using PoolObject::PoolObject;
 
 protected:
-	struct Data;
-
 	std::thread::id _ownerThread;
 	Data *_data = nullptr;
 };

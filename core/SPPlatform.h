@@ -20,12 +20,12 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_SPEVENTPLATFORM_H_
-#define CORE_EVENT_SPEVENTPLATFORM_H_
+#ifndef CORE_CORE_SPPLATFORM_H_
+#define CORE_CORE_SPPLATFORM_H_
 
-#include "SPCommon.h"
+#include "SPCore.h"
 
-namespace STAPPLER_VERSIONIZED stappler::event::platform {
+namespace STAPPLER_VERSIONIZED stappler {
 
 enum class ClockType {
 	Default,
@@ -35,10 +35,18 @@ enum class ClockType {
 	Thread,
 };
 
+}
+
+namespace STAPPLER_VERSIONIZED stappler::platform {
+
+SP_PUBLIC size_t makeRandomBytes(uint8_t * buf, size_t count);
+
+// current time in microseconds
 SP_PUBLIC uint64_t clock(ClockType = ClockType::Default);
 
+// sleep for the microseconds
 SP_PUBLIC void sleep(uint64_t microseconds);
 
 }
 
-#endif /* CORE_EVENT_SPEVENTPLATFORM_H_ */
+#endif /* CORE_CORE_SPPLATFORM_H_ */

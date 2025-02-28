@@ -169,10 +169,10 @@ public:
 	TimeInterval & operator= (nullptr_t);
 
 	constexpr TimeInterval() : TimeStorage(0) { }
-	constexpr TimeInterval(const TimeInterval &other) : TimeStorage(other._value) { }
-	constexpr TimeInterval(TimeInterval &&other) : TimeStorage(other._value) { }
-	constexpr TimeInterval & operator= (const TimeInterval &other) { _value = other._value; return *this; }
-	constexpr TimeInterval & operator= (TimeInterval &&other) { _value = other._value; return *this; }
+	constexpr TimeInterval(const TimeInterval &other) = default;
+	constexpr TimeInterval(TimeInterval &&other) = default;
+	constexpr TimeInterval & operator= (const TimeInterval &other) = default;
+	constexpr TimeInterval & operator= (TimeInterval &&other) = default;
 
 protected:
     friend class Time;

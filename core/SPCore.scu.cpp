@@ -48,6 +48,7 @@ THE SOFTWARE.
 #include "SPDso.cc"
 #include "SPSharedModule.cc"
 
+#include "platform/SPCore-posix.cc"
 #include "platform/SPCore-linux.cc"
 #include "platform/SPCore-android.cc"
 #include "platform/SPCore-win32.cc"
@@ -57,13 +58,35 @@ THE SOFTWARE.
 #include "SPValid.cc"
 #include "SPCommandLineParser.cc"
 
+#define STAPPLER_VERSION_VARIANT 0
+
+#ifndef STAPPLER_VERSION_API
+#define STAPPLER_VERSION_API 0
+#endif
+
+#ifndef STAPPLER_VERSION_REV
+#define STAPPLER_VERSION_REV 0
+#endif
+
+#ifndef STAPPLER_VERSION_BUILD
+#define STAPPLER_VERSION_BUILD 0
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler {
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
 const char * getStapplerVersionString() {
-	return TOSTRING(STAPPLER_VERSION_API) "/" TOSTRING(STAPPLER_VERSION_REV);
+	return TOSTRING(STAPPLER_VERSION_VARIANT) "." TOSTRING(STAPPLER_VERSION_API) "." TOSTRING(STAPPLER_VERSION_REV) "." TOSTRING(STAPPLER_VERSION_BUILD);
+}
+
+uint32_t getStapplerVersionIndex() {
+	return SP_MAKE_API_VERSION(STAPPLER_VERSION_VARIANT, STAPPLER_VERSION_API, STAPPLER_VERSION_REV, STAPPLER_VERSION_BUILD);
+}
+
+uint32_t getStapplerVersionVariant() {
+	return STAPPLER_VERSION_VARIANT;
 }
 
 uint32_t getStapplerVersionApi() {
@@ -72,6 +95,10 @@ uint32_t getStapplerVersionApi() {
 
 uint32_t getStapplerVersionRev() {
 	return STAPPLER_VERSION_REV;
+}
+
+uint32_t getStapplerVersionBuild() {
+	return STAPPLER_VERSION_BUILD;
 }
 
 }

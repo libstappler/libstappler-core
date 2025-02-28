@@ -20,65 +20,35 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_SPEVENTFILE_H_
-#define CORE_EVENT_SPEVENTFILE_H_
+#ifndef CORE_EVENT_DETAIL_SPEVENTQUEUEDATA_H_
+#define CORE_EVENT_DETAIL_SPEVENTQUEUEDATA_H_
 
-#include "SPIO.h"
-#include "SPEventSource.h"
+#include "SPEventQueue.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-enum class FileOpenFlags {
-	None,
-	Read = 1 << 0,
-	Write = 1 << 1,
-	Create = 1 << 2,
-	Append = 1 << 3,
-	Truncate = 1 << 4,
-	CreateExclusive = 1 << 5,
-	DelOnClose = 1 << 6,
-};
+struct QueueData : public mem_pool::AllocBase {
+	QueueRef *_queue = nullptr;
+	QueueFlags _flags = QueueFlags::None;
 
-SP_DEFINE_ENUM_AS_MASK(FileOpenFlags)
+	bool _running = true;
 
-enum class FileProtFlags {
-	UserSetId = 0x8000,
-	UserRead = 0x0400,
-	UserWrite = 0x0200,
-	UserExecute = 0x0100,
-	GroupSetId = 0x4000,
-	GroupRead = 0x0040,
-	GroupWrite = 0x0020,
-	GroupExecute = 0x0010,
-	AllRead = 0x0004,
-	AllWrite = 0x0002,
-	AllExecute = 0x0001,
-	Default = 0x0FFF,
-};
+	mem_pool::Set<Rc<Handle>> _pendingHandles;
+	mem_pool::Set<Rc<Handle>> _suspendableHandles;
 
-SP_DEFINE_ENUM_AS_MASK(FileProtFlags)
+	// returns number of operations suspended
+	uint32_t suspendAll();
 
-class File : public Source {
-public:
-	virtual ~File();
+	// returns number of operations suspended
+	uint32_t resumeAll();
 
-	virtual bool init(StringView path, FileOpenFlags, FileProtFlags);
+	Status runHandle(Handle *);
 
-	virtual Status read(uint8_t *, size_t &) override;
+	void cancel(Handle *);
 
-	virtual Status write(const uint8_t *, size_t &) override;
-
-	virtual size_t seek(int64_t offset, io::Seek s);
-	virtual size_t tell() const;
-	virtual size_t size() const;
-
-	virtual void close() override;
-
-protected:
-	FileOpenFlags _openFlags = FileOpenFlags::None;
-	bool _eof = false;
+	QueueData(QueueRef *, QueueFlags);
 };
 
 }
 
-#endif /* CORE_EVENT_SPEVENTFILE_H_ */
+#endif /* CORE_EVENT_DETAIL_SPEVENTQUEUEDATA_H_ */

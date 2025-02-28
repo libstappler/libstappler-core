@@ -33,35 +33,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-struct SourceData {
-	int fd = -1;
-	bool connected = false;
-	epoll_event event;
-};
-
-class SignalFdSource : public Source {
-public:
-	virtual ~SignalFdSource();
-
-	bool init();
-	bool init(SpanView<int>);
-
-	bool read();
-	bool process(bool panding = false);
-	void enable();
-	void enable(const sigset_t *);
-	void disable();
-
-	const sigset_t *getSigset() const { return &_sigset; }
-
-	const signalfd_siginfo *getInfo() const { return &_info; }
-
-protected:
-	signalfd_siginfo _info;
-	sigset_t _sigset;
-	mem_std::Vector<int> _extra;
-};
-
 }
 
 #endif
