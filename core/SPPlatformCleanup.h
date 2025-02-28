@@ -26,6 +26,7 @@
 // suppress common macro leak
 #if WIN32
 #undef interface
+#undef DELETE
 
 #if XWIN
 #pragma clang diagnostic pop

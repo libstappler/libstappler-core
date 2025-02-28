@@ -46,6 +46,10 @@ ifdef MACOS
 MODULE_STAPPLER_CORE_GENERAL_LDFLAGS += -framework CoreFoundation
 endif
 
+ifdef WIN32
+MODULE_STAPPLER_CORE_LIBS += -ladvapi32
+endif
+
 # spec
 
 MODULE_STAPPLER_CORE_SHARED_SPEC_SUMMARY := libstappler basic functions
