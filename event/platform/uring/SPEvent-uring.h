@@ -29,7 +29,9 @@
 
 #include "detail/SPEventQueueData.h"
 
-#include "../fd/SPEvent-fd.h"
+#include "../fd/SPEventFd.h"
+#include "../fd/SPEventSignalFd.h"
+#include "../fd/SPEventEventFd.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,6 +108,8 @@ enum class URingFlags {
 	AsyncCancelFdSupported = 1 << 5,
 	AsyncCancelAnyAllSupported = AsyncCancelFdSupported,
 	AsyncCancelFdFixedSupported = 1 << 6,
+	InternalFdsSupported = 1 << 7,
+	FutexSupported = 1 << 8,
 };
 
 SP_DEFINE_ENUM_AS_MASK(URingFlags)
@@ -122,8 +126,8 @@ enum class URingCancelFlags {
 	None,
 	All = 1 << 0,
 	Any = 1 << 1,
-	Drain = 1 << 2,
-	FixedFile = 1 << 3,
+	FixedFile = 1 << 2,
+	Suspend = 1 << 3,
 };
 
 SP_DEFINE_ENUM_AS_MASK(URingCancelFlags)
@@ -146,8 +150,12 @@ struct URingData : public mem_pool::AllocBase {
 	QueueFlags _flags = QueueFlags::None;
 	URingFlags _uflags = URingFlags::None;
 	int _ringFd = -1;
-	SignalFdSource *_signalFd = nullptr;
-	EventFdSource *_eventFd = nullptr;
+
+	mem_pool::Vector<int32_t> _fds;
+	mem_pool::Vector<uint64_t> _tags;
+
+	Rc<SignalFdHandle> _signalFd;
+	Rc<EventFdHandle> _eventFd;
 
 	io_uring_params _params;
 	URingSq sq;
@@ -156,18 +164,20 @@ struct URingData : public mem_pool::AllocBase {
 
 	mem_pool::Vector<io_uring_cqe> _out;
 
-	uint64_t _start = 0;
-	uint64_t _now = 0;
 	uint32_t _events = 0;
 	std::atomic_flag _shouldWakeup;
 	std::atomic<std::underlying_type_t<QueueWakeupFlags>> _wakeupFlags = 0;
+	QueueWakeupFlags _runWakeupFlags = QueueWakeupFlags::None;
 	std::atomic<uint64_t> _wakeupTimeout;
-
+	uint32_t _wakeupCounter = 0;
+	Status _wakeupStatus = Status::Suspended;
 	__kernel_timespec _wakeupTimespec;
 
 	unsigned getUnprocessedSqeCount();
 
 	unsigned flushSqe();
+
+	void retainHandleForSqe(io_uring_sqe *, Handle *);
 
 	struct SqeBlock {
 		io_uring_sqe *front;
@@ -190,6 +200,7 @@ struct URingData : public mem_pool::AllocBase {
 	int submitSqe(unsigned sub, unsigned wait, bool waitAvailable);
 	int submitPending();
 
+	Status pushRead(int fd, uint8_t *buf, size_t bsize, void * userdata);
 	Status pushRead(int fd, uint8_t *buf, size_t bsize, uint64_t userdata);
 	Status pushReadRetain(int fd, uint8_t *buf, size_t bsize, Handle *);
 
@@ -197,6 +208,8 @@ struct URingData : public mem_pool::AllocBase {
 	Status pushWriteRetain(int fd, const uint8_t *buf, size_t bsize, Handle *);
 
 	Status cancelOp(void *, URingUserFlags ptrFlags, URingCancelFlags = URingCancelFlags::None);
+	Status cancelOpRelease(Handle *, URingCancelFlags = URingCancelFlags::None);
+
 	Status cancelFd(int fd, URingCancelFlags = URingCancelFlags::None);
 
 	uint32_t pop();
@@ -205,29 +218,23 @@ struct URingData : public mem_pool::AllocBase {
 	Status submit();
 	uint32_t poll();
 	uint32_t wait(TimeInterval);
-	Status run(TimeInterval);
+	Status run(TimeInterval, QueueWakeupFlags, TimeInterval wakeupTimeout);
+
+	void wakeup(QueueWakeupFlags, TimeInterval);
 
 	int enter(unsigned sub, unsigned wait, unsigned flags, __kernel_timespec *);
 
-	void suspendSystemHandles();
-	void resumeSystemHandles();
+	Status suspendHandles();
 
-	URingData(QueueRef *, Queue::Data *data, SignalFdSource *, EventFdSource *, const QueueInfo &info, QueueFlags);
+	Status doWakeupInterrupt(QueueWakeupFlags, bool externalCall);
+
+	URingData(QueueRef *, Queue::Data *data, const QueueInfo &info, QueueFlags, SpanView<int> sigs);
 	~URingData();
 };
 
-class TimerFdURingHandle : public TimerFdHandle {
-public:
-	virtual ~TimerFdURingHandle() = default;
-
-	bool init(URingData *, TimerInfo &&);
-
-	Status rearm();
-	Status disarm(bool suspend);
-	void notify(int32_t res, uint32_t flags);
-
-	virtual Status cancel(Status) override;
-};
+static constexpr uint64_t URING_USERDATA_IGNORED = maxOf<uint64_t>() & URingData::UserdataPointerMask;
+static constexpr uint64_t URING_USERDATA_SUSPENDED = maxOf<uint64_t>() & (URingData::UserdataPointerMask << 1);
+static constexpr uint64_t URING_USERDATA_TIMEOUT = maxOf<uint64_t>() & (URingData::UserdataPointerMask << 2);
 
 }
 

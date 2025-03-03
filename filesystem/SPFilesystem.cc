@@ -300,7 +300,7 @@ void File::set_tmp_path(const char *buf) {
 	memcpy(_buf, buf, 256);
 }
 
-MemoryMappedRegion MemoryMappedRegion::mapFile(StringView path, MappingType type, ProtectionFlags prot, size_t offset, size_t len) {
+MemoryMappedRegion MemoryMappedRegion::mapFile(StringView path, MappingType type, ProtFlags prot, size_t offset, size_t len) {
 	if (math::align(offset, size_t(platform::_getMemoryPageSize())) != offset) {
 		log::error("filesystem", "offset for MemoryMappedRegion::mapFile should be aligned as platform::_getMemoryPageSize");
 		return MemoryMappedRegion();
@@ -365,9 +365,9 @@ void MemoryMappedRegion::sync() {
 	platform::_syncMappedRegion(_region, _storage.data());
 }
 
-MemoryMappedRegion::MemoryMappedRegion() : _region(nullptr), _type(MappingType::Private), _prot(ProtectionFlags::None) { }
+MemoryMappedRegion::MemoryMappedRegion() : _region(nullptr), _type(MappingType::Private), _prot(ProtFlags::None) { }
 
-MemoryMappedRegion::MemoryMappedRegion(PlatformStorage &&storage, uint8_t *ptr, MappingType t, ProtectionFlags p)
+MemoryMappedRegion::MemoryMappedRegion(PlatformStorage &&storage, uint8_t *ptr, MappingType t, ProtFlags p)
 : _storage(move(storage)), _region(ptr), _type(t), _prot(p) { }
 
 bool exists(StringView ipath) {
@@ -474,7 +474,7 @@ bool mkdir_recursive(StringView ipath, bool appWide) {
 				if (control || !filesystem::native::stat_fn(path, stat)) {
 					control = true;
 					filesystem::native::mkdir_fn(construct);
-				} else if (!stat.isDir) {
+				} else if (stat.type != FileType::Dir) {
 					return false;
 				}
 			}
@@ -535,7 +535,7 @@ static bool performCopy(StringView source, StringView dest) {
 static bool isdir(StringView path) {
 	Stat stat;
 	native::stat_fn(path, stat);
-	return stat.isDir;
+	return stat.type == FileType::Dir;
 }
 
 bool copy(StringView isource, StringView idest, bool stopOnError) {
@@ -641,6 +641,47 @@ bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, St
 		return ret;
 	}
 	return false;
+}
+
+std::ostream &operator<<(std::ostream &stream, FileType type) {
+	switch (type) {
+	case FileType::File: stream << "FileType::File"; break;
+	case FileType::Dir: stream << "FileType::Dir"; break;
+	case FileType::BlockDevice: stream << "FileType::BlockDevice"; break;
+	case FileType::CharDevice: stream << "FileType::CharDevice"; break;
+	case FileType::Pipe: stream << "FileType::Pipe"; break;
+	case FileType::Socket: stream << "FileType::Socket"; break;
+	case FileType::Link: stream << "FileType::Link"; break;
+	case FileType::Unknown: stream << "FileType::Unknown"; break;
+	}
+	return stream;
+}
+
+std::ostream &operator<<(std::ostream &stream, ProtFlags flags) {
+	char buf[11] = "----------";
+
+	if (hasFlag(flags, ProtFlags::AllExecute)) { buf[9] = 'x'; }
+	if (hasFlag(flags, ProtFlags::AllWrite)) { buf[8] = 'w'; }
+	if (hasFlag(flags, ProtFlags::AllRead)) { buf[7] = 'r'; }
+	if (hasFlag(flags, ProtFlags::GroupExecute)) { buf[6] = 'x'; }
+	if (hasFlag(flags, ProtFlags::GroupWrite)) { buf[5] = 'w'; }
+	if (hasFlag(flags, ProtFlags::GroupRead)) { buf[4] = 'r'; }
+	if (hasFlag(flags, ProtFlags::UserExecute)) { buf[3] = 'x'; }
+	if (hasFlag(flags, ProtFlags::UserWrite)) { buf[2] = 'w'; }
+	if (hasFlag(flags, ProtFlags::UserRead)) { buf[1] = 'r'; }
+
+	stream << buf;
+	return stream;
+}
+
+std::ostream &operator<<(std::ostream &stream, const Stat &stat) {
+	stream << "Stat { size: " << stat.size << "; u: " << stat.user << "; g: " << stat.group << "; "
+			<< stat.type << "; " << stat.prot
+			<< "; ctime: " << stat.ctime.toHttp<memory::StandartInterface>()
+			<< "; mtime: " << stat.mtime.toHttp<memory::StandartInterface>()
+			<< "; atime: " << stat.atime.toHttp<memory::StandartInterface>()
+			<< " };";
+	return stream;
 }
 
 }

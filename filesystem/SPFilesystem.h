@@ -38,26 +38,69 @@ enum Access {
 	Execute
 };
 
-enum class ProtectionFlags : uint32_t {
-	None,
-	Read = 1 << 0,
-	Write = 1 << 1,
-	Exec = 1 << 2,
-};
-
-SP_DEFINE_ENUM_AS_MASK(ProtectionFlags)
-
 enum class MappingType {
 	Private,
 	Shared
 };
 
+enum class FileType : uint16_t {
+	File,
+	Dir,
+	BlockDevice,
+	CharDevice,
+	Pipe,
+	Socket,
+	Link,
+	Unknown
+};
+
+enum class ProtFlags : uint16_t {
+	None = 0,
+	UserSetId = 0x8000,
+	UserRead = 0x0400,
+	UserWrite = 0x0200,
+	UserExecute = 0x0100,
+	GroupSetId = 0x4000,
+	GroupRead = 0x0040,
+	GroupWrite = 0x0020,
+	GroupExecute = 0x0010,
+	AllRead = 0x0004,
+	AllWrite = 0x0002,
+	AllExecute = 0x0001,
+
+	// Flags for file mapping (others will be ignored)
+	MapRead = AllRead,
+	MapWrite = AllWrite,
+	MapExecute = AllExecute,
+
+	Default = 0x0FFF,
+	MapMask = ProtFlags::MapRead | ProtFlags::MapWrite | ProtFlags::MapExecute,
+};
+
+SP_DEFINE_ENUM_AS_MASK(ProtFlags)
+
+enum class OpenFlags {
+	None,
+	Read = 1 << 0,
+	Write = 1 << 1,
+	Create = 1 << 2,
+	Append = 1 << 3,
+	Truncate = 1 << 4,
+	CreateExclusive = 1 << 5,
+	DelOnClose = 1 << 6,
+};
+
+SP_DEFINE_ENUM_AS_MASK(OpenFlags)
+
 struct Stat {
 	size_t size = 0;
-	Time atime;
+	uint32_t user = 0;
+	uint32_t group = 0;
+	FileType type = FileType::Unknown;
+	ProtFlags prot = ProtFlags::None;
 	Time ctime;
 	Time mtime;
-	bool isDir = false;
+	Time atime;
 };
 
 class SP_PUBLIC File final {
@@ -126,7 +169,7 @@ class MemoryMappedRegion final {
 public:
 	using PlatformStorage = std::array<uint8_t, 16>;
 
-	static MemoryMappedRegion mapFile(StringView, MappingType, ProtectionFlags,
+	static MemoryMappedRegion mapFile(StringView, MappingType, ProtFlags,
 			size_t offset = 0, size_t len = maxOf<size_t>());
 
 	~MemoryMappedRegion();
@@ -138,7 +181,7 @@ public:
 	MemoryMappedRegion & operator=(const MemoryMappedRegion &) = delete;
 
 	MappingType getType() const { return _type; }
-	ProtectionFlags getProtectionFlags() const { return _prot; }
+	ProtFlags getProtectionFlags() const { return _prot; }
 
 	uint8_t * getRegion() const { return _region; }
 
@@ -148,12 +191,12 @@ public:
 
 protected:
 	MemoryMappedRegion();
-	MemoryMappedRegion(PlatformStorage &&, uint8_t *, MappingType, ProtectionFlags);
+	MemoryMappedRegion(PlatformStorage &&, uint8_t *, MappingType, ProtFlags);
 
 	PlatformStorage _storage;
 	uint8_t *_region;
 	MappingType _type;
-	ProtectionFlags _prot;
+	ProtFlags _prot;
 };
 
 // Check if file at path exists
@@ -290,6 +333,10 @@ auto readIntoMemory(StringView ipath, size_t off = 0, size_t size = maxOf<size_t
 
 SP_PUBLIC StringView detectMimeType(StringView path);
 
+std::ostream &operator<<(std::ostream &, FileType);
+std::ostream &operator<<(std::ostream &, ProtFlags);
+std::ostream &operator<<(std::ostream &, const Stat &);
+
 }
 
 // *::platform::* functions handles some FS actions in platform-specific way
@@ -329,7 +376,7 @@ SP_PUBLIC void _ftw(StringView path, const Callback<void(StringView path, bool i
 SP_PUBLIC bool _ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
 
 SP_PUBLIC uint32_t _getMemoryPageSize();
-SP_PUBLIC uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtectionFlags prot, size_t offset, size_t len);
+SP_PUBLIC uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot, size_t offset, size_t len);
 SP_PUBLIC bool _unmapFile(uint8_t *region, uint8_t storage[16]);
 SP_PUBLIC bool _syncMappedRegion(uint8_t *region, uint8_t storage[16]);
 

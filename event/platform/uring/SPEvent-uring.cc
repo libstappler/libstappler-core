@@ -26,7 +26,6 @@
 #if LINUX
 
 #include "SPEvent-uring.h"
-#include <signal.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -70,10 +69,6 @@ static constexpr int DEBUG_ERROR_THRESHOLD = -1;
 #else
 static constexpr int DEBUG_ERROR_THRESHOLD = 0;
 #endif
-
-static constexpr uint64_t URING_USERDATA_IGNORED = maxOf<uint64_t>() & URingData::UserdataPointerMask;
-static constexpr uint64_t URING_USERDATA_DRAIN = maxOf<uint64_t>() & (URingData::UserdataPointerMask << 1);
-static constexpr uint64_t URING_USERDATA_TIMEOUT = maxOf<uint64_t>() & (URingData::UserdataPointerMask << 2);
 
 bool URingData::checkSupport() {
 	struct utsname buffer;
@@ -123,6 +118,11 @@ unsigned URingData::flushSqe() {
 	}
 
 	return tail - atomicLoadRelaxed(sq.head);
+}
+
+void URingData::retainHandleForSqe(io_uring_sqe *sqe, Handle *ref) {
+	ref->retain(reinterpret_cast<uintptr_t>(this) ^ reinterpret_cast<uintptr_t>(ref));
+	sqe->user_data = uint64_t(reinterpret_cast<uintptr_t>(ref)) | toInt(URingUserFlags::Retained);
 }
 
 URingData::SqeBlock URingData::tryGetNextSqe(uint32_t count) {
@@ -286,6 +286,10 @@ int URingData::submitPending() {
 	return submitSqe(flushSqe(), 0, false);
 }
 
+Status URingData::pushRead(int fd, uint8_t *buf, size_t bsize, void * userdata) {
+	return pushRead(fd, buf, bsize, reinterpret_cast<uintptr_t>(userdata));
+}
+
 Status URingData::pushRead(int fd, uint8_t *buf, size_t bsize, uint64_t userdata) {
 	return pushSqe({IORING_OP_READ}, [&] (io_uring_sqe *sqe, uint32_t) {
 		updateIoSqe(sqe, fd, buf, unsigned(bsize), -1, userdata);
@@ -321,16 +325,21 @@ Status URingData::cancelOp(void *ptr, URingUserFlags ptrFlags, URingCancelFlags 
 	}
 	return pushSqe({IORING_OP_ASYNC_CANCEL}, [&] (io_uring_sqe *sqe, uint32_t) {
 		updateIoSqe(sqe, -1, reinterpret_cast<uintptr_t>(ptr) | toInt(ptrFlags), 0, 0,
-				hasFlag(cancelFlags, URingCancelFlags::Drain) ? URING_USERDATA_DRAIN : URING_USERDATA_IGNORED);
+				hasFlag(cancelFlags, URingCancelFlags::Suspend) ? URING_USERDATA_SUSPENDED : URING_USERDATA_IGNORED);
 		sqe->cancel_flags =
 				(hasFlag(cancelFlags, URingCancelFlags::All) ? IORING_ASYNC_CANCEL_ALL : 0)
 				| (hasFlag(cancelFlags, URingCancelFlags::Any) ? IORING_ASYNC_CANCEL_ANY : 0);
-		sqe->flags =
-				(hasFlag(cancelFlags, URingCancelFlags::Drain) ? IOSQE_IO_DRAIN : 0);
 	});
 }
 
+Status URingData::cancelOpRelease(Handle *ref, URingCancelFlags cancelFlags) {
+	return cancelOp(ref, URingUserFlags::Retained, cancelFlags);
+}
+
 Status URingData::cancelFd(int fd, URingCancelFlags cancelFlags) {
+	if (!hasFlag(_uflags, URingFlags::AsyncCancelFdSupported)) {
+		return Status::ErrorNotImplemented;
+	}
 	if ((hasFlag(cancelFlags, URingCancelFlags::All) || hasFlag(cancelFlags, URingCancelFlags::Any))
 			&& !hasFlag(_uflags, URingFlags::AsyncCancelAnyAllSupported)) {
 		return Status::ErrorNotImplemented;
@@ -339,14 +348,11 @@ Status URingData::cancelFd(int fd, URingCancelFlags cancelFlags) {
 		return Status::ErrorNotImplemented;
 	}
 	return pushSqe({IORING_OP_ASYNC_CANCEL}, [&] (io_uring_sqe *sqe, uint32_t) {
-		updateIoSqe(sqe, fd, nullptr, 0, 0,
-				hasFlag(cancelFlags, URingCancelFlags::Drain) ? URING_USERDATA_DRAIN : URING_USERDATA_IGNORED);
-		sqe->cancel_flags =
-				(hasFlag(cancelFlags, URingCancelFlags::All) ? IORING_ASYNC_CANCEL_ALL : 0)
+		updateIoSqe(sqe, fd, nullptr, 0, 0, URING_USERDATA_IGNORED);
+		sqe->cancel_flags = IORING_ASYNC_CANCEL_FD
+				| (hasFlag(cancelFlags, URingCancelFlags::All) ? IORING_ASYNC_CANCEL_ALL : 0)
 				| (hasFlag(cancelFlags, URingCancelFlags::Any) ? IORING_ASYNC_CANCEL_ANY : 0)
 				| (hasFlag(cancelFlags, URingCancelFlags::FixedFile) ? IORING_ASYNC_CANCEL_FD_FIXED : 0);
-		sqe->flags =
-				(hasFlag(cancelFlags, URingCancelFlags::Drain) ? IOSQE_IO_DRAIN : 0);
 	});
 }
 
@@ -388,42 +394,43 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 	auto userFlags = URingUserFlags(userdata & UserdataFlagsMask);
 	auto userptr = userdata & UserdataPointerMask;
 
-	if (userdata == URING_USERDATA_IGNORED) {
-		std::cout << "URING_USERDATA_IGNORED: " << res << " : " << flags << "\n";
+	if (userdata == reinterpret_cast<uintptr_t>(this)) {
+		// general timeout
+		if (res == -ETIME) {
+			doWakeupInterrupt(_runWakeupFlags, false);
+		}
+	} else if (userdata == URING_USERDATA_IGNORED) {
 		// do nothing
+		//std::cout << "URING_USERDATA_IGNORED: " << res << " : " << flags << "\n";
 	} else if (userdata == URING_USERDATA_TIMEOUT) {
-		std::cout << "URING_USERDATA_TIMEOUT: " << res << " : " << flags << "\n";
-		// do nothing
-
-	} else if (userdata == URING_USERDATA_DRAIN) {
-		std::cout << "URING_USERDATA_DRAIN: " << res << " : " << flags << "\n";
-		// drain event complete, perform wakeup
-		if (res == 0) {
+		// graceful wakeup timeout
+		//std::cout << "URING_USERDATA_TIMEOUT: " << res << " : " << flags << "\n";
+		if (_wakeupCounter != 0 && res == -ETIME) {
 			_shouldWakeup.clear();
-		} else {
-			_shouldWakeup.clear();
+			_wakeupStatus = Status::ErrorCancelled;
 		}
-	} else if (userdata == reinterpret_cast<uintptr_t>(_signalFd)) {
-		_signalFd->process();
+	} else if (userdata == URING_USERDATA_SUSPENDED) {
+		// graceful wakeup suspend task completed
+		//std::cout << "URING_USERDATA_SUSPENDED: " << res << " : " << flags << "\n";
 
-		pushRead(_signalFd->getFd(), (uint8_t *)_signalFd->getInfo(), sizeof(signalfd_siginfo), reinterpret_cast<uintptr_t>(_signalFd));
-		if ((_params.flags & IORING_SETUP_SQPOLL) == 0) {
+		-- _wakeupCounter;
+		if (_wakeupCounter == 0) {
+			_shouldWakeup.clear();
+
+			pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
+				sqe->addr = URING_USERDATA_TIMEOUT;
+				sqe->len = 0;
+				sqe->off = 0;
+				sqe->user_data = URING_USERDATA_IGNORED;
+			});
 			submitPending();
-		}
-	} else if (userdata == reinterpret_cast<uintptr_t>(_eventFd)) {
-		auto flags = QueueWakeupFlags(_wakeupFlags.exchange(0));
 
-		if (hasFlag(flags, QueueWakeupFlags::Graceful)) {
-			_data->suspendAll();
-			suspendSystemHandles();
-		} else {
-			_shouldWakeup.clear();
-			pushRead(_eventFd->getFd(), (uint8_t *)_eventFd->getValue(), sizeof(uint64_t), reinterpret_cast<uintptr_t>(_eventFd));
+			_wakeupStatus = Status::Ok;
 		}
 	} else if (userdata) {
 		auto h = reinterpret_cast<Handle *>(userptr);
 
-		auto d = (FdSource *)h->getData();
+		auto d = h->getData<FdSource>();
 		d->getCallback()(h, res, flags);
 		if (hasFlag(userFlags, URingUserFlags::Retained)) {
 			h->release(reinterpret_cast<uintptr_t>(this) ^ reinterpret_cast<uintptr_t>(h));
@@ -472,45 +479,55 @@ uint32_t URingData::wait(TimeInterval ival) {
 	return _events;
 }
 
-Status URingData::run(TimeInterval ival) {
-	Status result = Status::Suspended;
-	bool hasInterval = ival ? true : false;
+Status URingData::run(TimeInterval ival, QueueWakeupFlags flags, TimeInterval wakeupTimeout) {
+	_wakeupStatus = Status::Suspended;
+	_wakeupTimeout.store(wakeupTimeout.toMicros());
+	_runWakeupFlags = flags;
+
 	__kernel_timespec ts;
 
-	_events = poll();
-	_shouldWakeup.test_and_set();
-	_start = _now = hasInterval ? platform::clock(ClockType::Monotonic) : 0;
-
-	while (_shouldWakeup.test_and_set()) {
-		if (hasInterval) {
-			if (ival.toMicros() > _now - _start) {
-				ival -= TimeInterval::microseconds(_now - _start);
-			} else {
-				result = Status::Done;
-				break;
-			}
-		}
-
-		_start = _now;
-
+	if (ival) {
+		// set timeout
 		setNanoTimespec(ts, ival);
-
-		int err = enter(0, 1, IORING_ENTER_GETEVENTS, ival ? &ts : nullptr);
-
-		_events += poll();
-
-		if (err < DEBUG_ERROR_THRESHOLD) {
-			log::error("event::URingData", "io_uring_enter: ", -err);
-			result = Status::Declined;
-			break;
-		}
-
-		if (hasInterval) {
-			_now = platform::clock(ClockType::Monotonic);
+		if (pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
+			sqe->addr = reinterpret_cast<uintptr_t>(&ts);
+			sqe->len = 1;
+			sqe->user_data = reinterpret_cast<uintptr_t>(this);
+		}) == Status::Suspended) {
+			submitPending();
 		}
 	}
 
-	return result;
+	_events = poll();
+	_shouldWakeup.test_and_set();
+
+	while (_shouldWakeup.test_and_set()) {
+		int err = enter(0, 1, IORING_ENTER_GETEVENTS, nullptr);
+		_events += poll();
+		if (err < DEBUG_ERROR_THRESHOLD) {
+			log::error("event::URingData", "io_uring_enter: ", -err);
+			_wakeupStatus = getErrnoStatus(err);
+			break;
+		}
+	}
+
+	if (ival) {
+		// remove timeout if set
+		if (pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
+			sqe->addr = reinterpret_cast<uintptr_t>(this);
+			sqe->user_data = URING_USERDATA_IGNORED;
+		}) == Status::Suspended) {
+			submitPending();
+		}
+	}
+
+	return _wakeupStatus;
+}
+
+void URingData::wakeup(QueueWakeupFlags flags, TimeInterval gracefulTimeout) {
+	_wakeupFlags |= toInt(flags);
+	_wakeupTimeout = gracefulTimeout.toMicros();
+	_eventFd->write(1);
 }
 
 int URingData::enter(unsigned sub, unsigned wait, unsigned flags, __kernel_timespec *ts) {
@@ -535,50 +552,67 @@ int URingData::enter(unsigned sub, unsigned wait, unsigned flags, __kernel_times
 	}
 }
 
-void URingData::suspendSystemHandles() {
-	if (_signalFd && hasFlag(_flags, QueueFlags::Protected)) {
-		cancelOp(_signalFd, URingUserFlags::None, URingCancelFlags::None);
+Status URingData::suspendHandles() {
+	_wakeupStatus = Status::Suspended;
+
+	auto nhandles = _data->suspendAll();
+	if (nhandles == 0) {
+		submitPending();
+		return Status::Done;
 	}
+
+	_wakeupCounter = nhandles;
 
 	auto wakeupTimeout = _wakeupTimeout.load();
 	if (wakeupTimeout > 0) {
 		setNanoTimespec(_wakeupTimespec, wakeupTimeout);
-		pushSqe({IORING_OP_TIMEOUT, IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
-			switch (n) {
-			case 0:
-				sqe->addr = reinterpret_cast<uintptr_t>(&_wakeupTimespec);
-				sqe->len = 1;
-				sqe->off = 0;
-				sqe->timeout_flags = 0;
-				sqe->user_data = URING_USERDATA_TIMEOUT;
-				sqe->flags = IOSQE_IO_HARDLINK;
-				break;
-			case 1:
-				sqe->addr = URING_USERDATA_DRAIN;
-				sqe->user_data = URING_USERDATA_IGNORED;
-				break;
-			default: break;
-			}
+		pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
+			sqe->addr = reinterpret_cast<uintptr_t>(&_wakeupTimespec);
+			sqe->len = 1;
+			sqe->off = 0;
+			sqe->timeout_flags = 0;
+			sqe->user_data = URING_USERDATA_TIMEOUT;
+			sqe->flags = 0;
 		});
 	}
 
-	pushSqe({IORING_OP_NOP}, [&] (io_uring_sqe *sqe, uint32_t n) {
-		sqe->user_data = URING_USERDATA_DRAIN;
-		sqe->flags = IOSQE_IO_DRAIN;
-	});
-
 	submitPending();
+
+	return Status::Ok;
 }
 
-void URingData::resumeSystemHandles() {
-	pushRead(_signalFd->getFd(), (uint8_t *)_signalFd->getInfo(), sizeof(signalfd_siginfo), uint64_t(_signalFd));
-	if (pushRead(_eventFd->getFd(), (uint8_t *)_eventFd->getValue(), sizeof(uint64_t), uint64_t(_eventFd)) == Status::Suspended) {
-		submitPending();
+Status URingData::doWakeupInterrupt(QueueWakeupFlags flags, bool externalCall) {
+	if (hasFlag(flags, QueueWakeupFlags::Graceful)) {
+		if (suspendHandles() == Status::Done) {
+			_wakeupStatus = Status::Ok; // graceful wakeup
+		}
+		return Status::Suspended; // do not rearm eventfd
+	} else {
+		_shouldWakeup.clear();
+		_wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
+		return Status::Ok; // rearm eventfd
 	}
 }
 
-URingData::URingData(QueueRef *q, Queue::Data *data, SignalFdSource *sigFd, EventFdSource *evFd, const QueueInfo &info, QueueFlags f)
+URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, QueueFlags f, SpanView<int> sigs)
 : _queue(q), _data(data), _flags(f) {
+
+	_eventFd = Rc<EventFdURingHandle>::create(this, [this] () {
+		return doWakeupInterrupt(QueueWakeupFlags(_wakeupFlags.exchange(0)), true);
+	});
+	if (!_eventFd) {
+		log::error("event::Queue", "Fail to initialize eventfd");
+		return;
+	}
+
+	if (hasFlag(_flags, QueueFlags::Protected)) {
+		_signalFd = Rc<SignalFdURingHandle>::create(this, sigs);
+		if (!_signalFd) {
+			log::error("event::Queue", "Fail to initialize signalfd");
+			return;
+		}
+	}
+
 	int ringFd = -1;
 
 	auto cleanup = [&] () {
@@ -597,14 +631,14 @@ URingData::URingData(QueueRef *q, Queue::Data *data, SignalFdSource *sigFd, Even
 	}
 
 #ifdef IORING_SETUP_SUBMIT_ALL
-	if (strverscmp(buffer.release, "5.18.0") <= 0) {
+	if (strverscmp(buffer.release, "5.18.0") >= 0) {
 		_uflags |= URingFlags::SubmitAllSupported;
 		_params.flags |= IORING_SETUP_SUBMIT_ALL;
 	}
 #endif
 
 #ifdef IORING_SETUP_COOP_TASKRUN
-	if (strverscmp(buffer.release, "5.19.0") <= 0) {
+	if (strverscmp(buffer.release, "5.19.0") >= 0) {
 		_uflags |= URingFlags::CoopTaskrunSupported;
 		_uflags |= URingFlags::AsyncCancelFdSupported;
 		_params.flags |= (IORING_SETUP_COOP_TASKRUN | IORING_SETUP_TASKRUN_FLAG);
@@ -612,19 +646,24 @@ URingData::URingData(QueueRef *q, Queue::Data *data, SignalFdSource *sigFd, Even
 #endif
 
 #ifdef IORING_SETUP_SINGLE_ISSUER
-	if (strverscmp(buffer.release, "6.0.0") <= 0) {
+	if (strverscmp(buffer.release, "6.0.0") >= 0) {
 		_uflags |= URingFlags::SingleIssuerSupported;
 		_uflags |= URingFlags::AsyncCancelFdFixedSupported;
+		_uflags |= URingFlags::InternalFdsSupported;
 		_params.flags |= IORING_SETUP_SINGLE_ISSUER;
 	}
 #endif
 
 #ifdef IORING_SETUP_DEFER_TASKRUN
-	if (strverscmp(buffer.release, "6.1.0") <= 0) {
+	if (strverscmp(buffer.release, "6.1.0") >= 0) {
 		_uflags |= URingFlags::DeferTaskrunSupported;
 		_params.flags |= IORING_SETUP_DEFER_TASKRUN;
 	}
 #endif
+
+	if (strverscmp(buffer.release, "6.7.0") >= 0) {
+		_uflags |= URingFlags::FutexSupported;
+	}
 
 	if (hasFlag(_flags, QueueFlags::SubmitImmediate)) {
 		_params.flags |= IORING_SETUP_SQPOLL;
@@ -745,21 +784,58 @@ URingData::URingData(QueueRef *q, Queue::Data *data, SignalFdSource *sigFd, Even
 		sq.array[index] = index;
 	}
 
-	_ringFd = ringFd;
-	_signalFd = sigFd;
-	_eventFd = evFd;
+	// allocate internal FD table
+	auto totalHandles = info.externalHandles + info.internalHandles;
 
+	if (totalHandles > 0) {
+		_fds.resize(totalHandles);
+		_tags.resize(totalHandles);
+
+		io_uring_rsrc_register fdTableReg;
+		fdTableReg.nr = totalHandles;
+		fdTableReg.flags = 0;
+		fdTableReg.resv2 = 0;
+		fdTableReg.data = reinterpret_cast<uintptr_t>(_fds.data());
+		fdTableReg.tags = reinterpret_cast<uintptr_t>(_tags.data());
+
+		err = io_uring_register(ringFd, IORING_REGISTER_FILES2, &fdTableReg, sizeof(io_uring_rsrc_register));
+		if (err < 0) {
+			log::error("event::URingData", "Fail to set fd table");
+			cleanup();
+			return;
+		}
+
+		if (info.internalHandles > 0 && hasFlag(_uflags, URingFlags::InternalFdsSupported)) {
+			struct io_uring_file_index_range {
+				__u32 off;
+				__u32 len;
+				__u64 resv;
+			};
+
+			io_uring_file_index_range range;
+			range.off = 0;
+			range.len = info.internalHandles;
+			range.resv = 0;
+
+			err = io_uring_register(ringFd, IORING_REGISTER_FILE_ALLOC_RANGE, &range, 0);
+			if (err < 0) {
+				log::error("event::URingData", "Fail to register file alloc range");
+				cleanup();
+				return;
+			}
+		}
+	}
+
+	_ringFd = ringFd;
+
+	// run internal services
 	if (_signalFd && hasFlag(_flags, QueueFlags::Protected)) {
 		// enable with current mask
 		_signalFd->enable();
-
-		pushRead(_signalFd->getFd(), (uint8_t *)_signalFd->getInfo(), sizeof(signalfd_siginfo), uint64_t(_signalFd));
+		_data->runHandle(_signalFd);
 	}
 
-	if (_eventFd) {
-		pushRead(_eventFd->getFd(), (uint8_t *)_eventFd->getValue(), sizeof(uint64_t), uint64_t(_eventFd));
-	}
-
+	_data->runHandle(_eventFd);
 	_shouldWakeup.test_and_set();
 }
 
@@ -767,119 +843,6 @@ URingData::~URingData() {
 	if (_ringFd >= 0) {
 		::close(_ringFd);
 		_ringFd = -1;
-	}
-}
-
-bool TimerFdURingHandle::init(URingData *uring, TimerInfo &&info) {
-	if (!TimerFdHandle::init(uring->_queue, uring->_data, move(info))) {
-		return false;
-	}
-
-	_runFn = [] (Handle *h) -> Status {
-		return ((TimerFdURingHandle *)h)->rearm();
-	};
-
-	_suspendFn = [] (Handle *h) -> Status {
-		return ((TimerFdURingHandle *)h)->disarm(true);
-	};
-
-	_resumeFn = [] (Handle *h) -> Status {
-		return ((TimerFdURingHandle *)h)->rearm();
-	};
-
-	auto source = (TimerFdSource *)getData();
-	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags) {
-		reinterpret_cast<TimerFdURingHandle *>(h)->notify(res, flags);
-	});
-
-	return true;
-}
-
-Status TimerFdURingHandle::rearm() {
-	auto source = (TimerFdSource *)getData();
-
-	if (_status == Status::Ok) {
-		return Status::ErrorAlreadyPerformed;
-	}
-
-	if (_status != Status::Declined && _status != Status::Suspended) {
-		return Status::ErrorNotPermitted;
-	}
-
-	_status = Status::Ok;
-	_value = 0;
-
-	auto status = source->getURingData()->pushReadRetain(source->getFd(), (uint8_t *)&_value, sizeof(uint64_t), this);
-	if (status == Status::Suspended) {
-		status = source->getURingData()->submit();
-	}
-	return status;
-}
-
-Status TimerFdURingHandle::disarm(bool suspend) {
-	auto source = (TimerFdSource *)getData();
-
-	if (_status != Status::Ok) {
-		return Status::ErrorAlreadyPerformed;
-	}
-
-	if (suspend) {
-		_status = Status::Suspended;
-	}
-
-	auto status = source->getURingData()->cancelOp(this, URingUserFlags::Retained);
-	if (status == Status::Suspended) {
-		status = source->getURingData()->submit();
-	}
-	return status;
-}
-
-void TimerFdURingHandle::notify(int32_t res, uint32_t flags) {
-	auto source = (TimerFdSource *)getData();
-
-	if (_status != Status::Ok) {
-		return;
-	}
-
-	_status = Status::Suspended;
-
-	if (res < 0) {
-		cancel(URingData::getErrnoStatus(res));
-	}
-
-	auto count = source->getCount();
-	auto current = source->getCurrent();
-
-	if (res == sizeof(uint64_t)) {
-		// successful read
-		current += _value;
-		if (count != maxOf<uint32_t>()) {
-			source->setCurrent(current);
-		}
-	}
-
-	if (current >= count && _status == Status::Suspended) {
-		cancel(Status::Done);
-	}
-
-	sendCompletion(uint32_t(std::min(current, count)), _status == Status::Suspended ? Status::Ok : _status);
-
-	if (_status == Status::Suspended && (count == maxOf<uint32_t>() || current < count)) {
-		rearm();
-	}
-}
-
-Status TimerFdURingHandle::cancel(Status st) {
-	if (!isValidCancelStatus(st)) {
-		return Status::ErrorInvalidArguemnt;
-	}
-
-	if (_status == Status::Ok) {
-		return disarm(false);
-	} else if (_status == Status::Suspended || _status == Status::Declined) {
-		return TimerFdHandle::cancel(st);
-	} else {
-		return Status::ErrorAlreadyPerformed;
 	}
 }
 

@@ -20,29 +20,40 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_SPEVENTTIMER_H_
-#define CORE_EVENT_SPEVENTTIMER_H_
+#ifndef CORE_EVENT_PLATFORM_FD_SPEVENTTIMER_FD_H_
+#define CORE_EVENT_PLATFORM_FD_SPEVENTTIMER_FD_H_
 
-#include "SPEventSource.h"
+#include "SPEventFd.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class Timer : public Source {
+class TimerFdSource : public FdSource {
 public:
-	virtual ~Timer();
+	bool init(const TimerInfo &info);
+};
 
-	bool init(TimeInterval timeout, TimeInterval ival = TimeInterval(), uint32_t count = 0);
+class TimerFdHandle : public TimerHandle {
+public:
+	virtual ~TimerFdHandle();
 
-	TimeInterval getTimeout() const { return _timeout; }
-	TimeInterval getInterval() const { return _interval; }
-	uint32_t getCount() const { return _count; }
+	bool init(QueueRef *, QueueData *, TimerInfo &&);
 
 protected:
-	TimeInterval _timeout;
-	TimeInterval _interval;
-	uint32_t _count = 0;
+	uint64_t _target = 0;
+};
+
+class TimerFdURingHandle : public TimerFdHandle {
+public:
+	virtual ~TimerFdURingHandle() = default;
+
+	bool init(URingData *, TimerInfo &&);
+
+	Status rearm(TimerFdSource *);
+	Status disarm(TimerFdSource *, bool suspend);
+
+	void notify(TimerFdSource *source, int32_t res, uint32_t flags);
 };
 
 }
 
-#endif /* CORE_EVENT_SPEVENTTIMER_H_ */
+#endif /* CORE_EVENT_PLATFORM_FD_SPEVENTTIMER_FD_H_ */

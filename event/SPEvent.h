@@ -26,16 +26,19 @@
 #include "SPMemory.h"
 #include "SPRef.h"
 #include "SPPlatform.h"
+#include "SPFilesystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 class Queue;
 class Handle;
-class OpHandle;
 class InputOutputHandle;
+class FileOpHandle;
 class DirHandle;
+class StatHandle;
 class FileHandle;
 class TimerHandle;
+class ThreadHandle;
 
 class BufferChain;
 
@@ -55,11 +58,13 @@ enum class Status : int {
 	// errors
 	ErrorNumber =			ERROR_NUMBER(0),
 	ErrorNotPermitted =		ERROR_NUMBER(1), // EPERM
+	ErrorNotFound =			ERROR_NUMBER(2), // ENOENT
 	ErrorAgain =			ERROR_NUMBER(11), // EAGAIN
 	ErrorBusy =				ERROR_NUMBER(16), // EBUSY
 	ErrorInvalidArguemnt =	ERROR_NUMBER(22), // EINVAL
 	ErrorNotImplemented =	ERROR_NUMBER(38), // ENOSYS
 	ErrorAlreadyPerformed =	ERROR_NUMBER(114), // EALREADY
+	ErrorInProgress =		ERROR_NUMBER(115), // EINPROGRESS
 	ErrorCancelled =		ERROR_NUMBER(125), // ECANCELED
 };
 
@@ -84,46 +89,10 @@ inline int toErrno(Status st) {
 	return -(toInt(st) - toInt(Status::ErrorNumber));
 }
 
-std::ostream &operator<<(std::ostream &, Status);
-
-enum class ErrorFlags {
-	None,
-	GenericError = 1 << 0,
-	HangUp = 1 << 1,
-	StreamClosed = 1 << 2,
-};
-
-SP_DEFINE_ENUM_AS_MASK(ErrorFlags)
-
-enum class FileOpenFlags {
-	None,
-	Read = 1 << 0,
-	Write = 1 << 1,
-	Create = 1 << 2,
-	Append = 1 << 3,
-	Truncate = 1 << 4,
-	CreateExclusive = 1 << 5,
-	DelOnClose = 1 << 6,
-};
-
-SP_DEFINE_ENUM_AS_MASK(FileOpenFlags)
-
-enum class FileProtFlags {
-	UserSetId = 0x8000,
-	UserRead = 0x0400,
-	UserWrite = 0x0200,
-	UserExecute = 0x0100,
-	GroupSetId = 0x4000,
-	GroupRead = 0x0040,
-	GroupWrite = 0x0020,
-	GroupExecute = 0x0010,
-	AllRead = 0x0004,
-	AllWrite = 0x0002,
-	AllExecute = 0x0001,
-	Default = 0x0FFF,
-};
-
-SP_DEFINE_ENUM_AS_MASK(FileProtFlags)
+using FileType = filesystem::FileType;
+using OpenFlags = filesystem::OpenFlags;
+using ProtFlags = filesystem::ProtFlags;
+using Stat = filesystem::Stat;
 
 template <typename Result = Handle>
 struct CompletionHandle {
@@ -135,6 +104,13 @@ struct CompletionHandle {
 		ret.userdata = reinterpret_cast<void *>(ptr);
 		ret.fn = reinterpret_cast<Fn>(cb);
 		return ret;
+	}
+
+	template <typename Other>
+	CompletionHandle &operator=(const CompletionHandle<Other> &other) {
+		fn = reinterpret_cast<Fn>(other.fn);
+		userdata = other.userdata;
+		return *this;
 	}
 
 	Fn fn;
@@ -150,6 +126,37 @@ struct TimerInfo {
 	uint32_t count = 0;
 	ClockType type = ClockType::Default;
 };
+
+struct FileOpInfo {
+	DirHandle *root = nullptr;
+	StringView path;
+};
+
+struct OpenDirInfo {
+	using Completion = CompletionHandle<DirHandle>;
+
+	Completion completion;
+	FileOpInfo file;
+};
+
+struct StatOpInfo {
+	using Completion = CompletionHandle<StatHandle>;
+
+	Completion completion;
+	FileOpInfo file;
+};
+
+struct OpenFileInfo {
+	using Completion = CompletionHandle<FileHandle>;
+
+	Completion completion;
+	DirHandle *dir = nullptr;
+	StringView path;
+	OpenFlags flags = OpenFlags::None;
+	ProtFlags prot = ProtFlags::None;
+};
+
+std::ostream &operator<<(std::ostream &, Status);
 
 }
 

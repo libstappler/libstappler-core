@@ -20,15 +20,9 @@
  THE SOFTWARE.
  **/
 
-#include "SPEvent-fd.h"
+#include "SPEventSignalFd.h"
+#include "../uring/SPEvent-uring.h"
 
-#if LINUX || ANDROID
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/eventfd.h>
-#include <sys/timerfd.h>
-#include <fcntl.h>
 #include <signal.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
@@ -166,44 +160,8 @@ static const siginfo *getSignalInfo(int sig) {
 	return nullptr;
 }
 
-FdSource::~FdSource() {
-	cancel();
-}
-
-bool FdSource::init(int fd) {
-	_fd = fd;
-	return true;
-}
-
-void FdSource::cancel() {
-	if (_fd >= 0) {
-		::close(_fd);
-		_fd = -1;
-	}
-}
-
-void FdSource::setEpollMask(uint32_t ev) {
-	_epoll.event.events = ev;
-	_epoll.event.data.ptr = this;
-}
-
-void FdSource::setURingCallback(URingData *r, URingCallback cb) {
-	_uring.uring = r;
-	_uring.ucb = cb;
-}
-
-SignalFdSource::~SignalFdSource() { }
-
-bool SignalFdSource::init() {
-	return init(SpanView<int>());
-}
-
-bool SignalFdSource::init(SpanView<int> sigs) {
-	_extra = sigs.vec<memory::StandartInterface>();
-
-	sigemptyset(&_sigset);
-
-	auto fd = ::signalfd(-1, &_sigset, SFD_CLOEXEC | SFD_NONBLOCK);
+bool SignalFdSource::init(const sigset_t *sigset) {
+	auto fd = ::signalfd(-1, sigset, SFD_CLOEXEC | SFD_NONBLOCK);
 	if (fd < 0) {
 		return false;
 	}
@@ -211,7 +169,21 @@ bool SignalFdSource::init(SpanView<int> sigs) {
 	return FdSource::init(fd);
 }
 
-bool SignalFdSource::read() {
+bool SignalFdHandle::init(QueueRef *q, QueueData *d, SpanView<int> sigs) {
+	static_assert(sizeof(SignalFdSource) <= DataSize && std::is_standard_layout<SignalFdSource>::value);
+
+	sigemptyset(&_sigset);
+
+	auto source = new (_data) SignalFdSource();
+	if (!source->init(&_sigset)) {
+		return false;
+	}
+
+	_extra = sigs.vec<memory::StandartInterface>();
+	return true;
+}
+
+bool SignalFdHandle::read() {
 	auto s = ::read(getFd(), &_info, sizeof(signalfd_siginfo));
 	if (s == sizeof(signalfd_siginfo)) {
 		process();
@@ -220,7 +192,7 @@ bool SignalFdSource::read() {
 	return false;
 }
 
-bool SignalFdSource::process(bool panding) {
+bool SignalFdHandle::process() {
 	if (_info.ssi_signo == 0) {
 		return false;
 	}
@@ -246,7 +218,7 @@ bool SignalFdSource::process(bool panding) {
 	return true;
 }
 
-void SignalFdSource::enable() {
+void SignalFdHandle::enable() {
 	sigset_t sigset;
 	::sigemptyset(&sigset);
 	::sigprocmask(SIG_UNBLOCK, nullptr, &sigset);
@@ -254,14 +226,12 @@ void SignalFdSource::enable() {
 	enable(&sigset);
 }
 
-void SignalFdSource::enable(const sigset_t *sigset) {
+void SignalFdHandle::enable(const sigset_t *sigset) {
 	memcpy(&_sigset, sigset, sizeof(sigset_t));
 
 	for (auto &it : _extra) {
 		::sigaddset(&_sigset, it);
 	}
-
-	::sigfillset(&_sigset);
 
 	mem_std::StringStream signals;
 	for (size_t i = 0; i < sizeof(siglist) / sizeof(siginfo); i++) {
@@ -275,93 +245,56 @@ void SignalFdSource::enable(const sigset_t *sigset) {
 	::signalfd(getFd(), &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
 }
 
-void SignalFdSource::disable() {
+void SignalFdHandle::disable() {
 	::sigemptyset(&_sigset);
 	::signalfd(getFd(), &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
 }
 
-
-EventFdSource::~EventFdSource() { }
-
-bool EventFdSource::init() {
-	auto fd = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-	if (fd < 0) {
+bool SignalFdURingHandle::init(URingData *uring, SpanView<int> sigs) {
+	if (!SignalFdHandle::init(uring->_queue, uring->_data, sigs)) {
 		return false;
 	}
 
-	return FdSource::init(fd);
+	setupURing<SignalFdURingHandle, SignalFdSource>(uring, this);
+
+	return true;
 }
 
-bool EventFdSource::read() {
-	return ::eventfd_read(getFd(), &_value) >= 0;
+Status SignalFdURingHandle::rearm(SignalFdSource *source) {
+	auto status = prepareRearm();
+	if (status == Status::Ok) {
+		status = source->getURingData()->pushRead(source->getFd(), (uint8_t *)&_info, sizeof(signalfd_siginfo), this);
+		if (status == Status::Suspended) {
+			status = source->getURingData()->submit();
+		}
+	}
+	return status;
 }
 
-bool EventFdSource::write(uint64_t val) {
-	return ::eventfd_write(getFd(), val) >= 0;
+Status SignalFdURingHandle::disarm(SignalFdSource *source, bool suspend) {
+	auto status = prepareDisarm(suspend);
+	if (status == Status::Ok) {
+		status = source->getURingData()->cancelOp(this, URingUserFlags::None,
+				suspend ? URingCancelFlags::Suspend : URingCancelFlags::None);
+	}
+	return status;
 }
 
-bool TimerFdSource::init(TimerInfo &&info) {
-	__clockid_t clockid = CLOCK_MONOTONIC;
-
-	switch (info.type) {
-	case ClockType::Default:
-	case ClockType::Monotonic:
-		clockid = CLOCK_MONOTONIC;
-		break;
-	case ClockType::Realtime:
-		clockid = CLOCK_REALTIME;
-		break;
-	case ClockType::Process:
-		log::error("event::Queue", "ClockType::Thread is not supported for a timer on this system");
-		return false;
-		break;
-	case ClockType::Thread:
-		log::error("event::Queue", "ClockType::Thread is not supported for a timer on this system");
-		return false;
-		break;
+void SignalFdURingHandle::notify(SignalFdSource *source, int32_t res, uint32_t flags) {
+	if (_status != Status::Ok) {
+		return;
 	}
 
-	auto fd = ::timerfd_create(clockid, TFD_NONBLOCK | TFD_CLOEXEC);
-	if (fd < 0) {
-		log::error("event::Queue", "fail to timerfd_create");
-		return false;
+	_status = Status::Suspended;
+
+	if (res == sizeof(signalfd_siginfo)) {
+		process();
+		if (_status == Status::Suspended) {
+			rearm(source);
+		}
+	} else{
+		cancel(URingData::getErrnoStatus(res));
 	}
-
-	itimerspec spec;
-	if (info.timeout) {
-		setNanoTimespec(spec.it_value, info.timeout);
-	} else {
-		setNanoTimespec(spec.it_value, info.interval);
-	}
-
-	setNanoTimespec(spec.it_interval, info.interval);
-
-	_count = info.count;
-
-	::timerfd_settime(fd, 0, &spec, nullptr);
-
-	return FdSource::init(fd);
-}
-
-bool TimerFdHandle::init(QueueRef *q, QueueData *d, TimerInfo &&info) {
-	auto source = new (_data) TimerFdSource;
-
-	if (!source->init(move(info))) {
-		return false;
-	}
-
-	setCompletion(std::move(info.completion));
-
-	return TimerHandle::init(q, d);
-}
-
-Status TimerFdHandle::cancel(Status st) {
-	auto source = (TimerFdSource *)getData();
-	source->cancel();
-
-	return TimerHandle::cancel(st);
 }
 
 }
-
-#endif

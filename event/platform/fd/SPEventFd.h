@@ -24,11 +24,12 @@
 #define CORE_EVENT_SPEVENT_FD_H_
 
 #include "SPEventHandle.h"
-
-#if LINUX || ANDROID
+#include "SPEventFileHandle.h"
+#include "SPEventTimerHandle.h"
 
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
+#include <linux/stat.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -38,13 +39,12 @@ class FdSource {
 public:
 	using URingCallback = void (*) (Handle *, int32_t res, uint32_t flags);
 
-	virtual ~FdSource();
-
 	bool init(int fd);
 
 	void cancel();
 
 	int getFd() const { return _fd; }
+	void setFd(int fd) { _fd = fd; }
 
 	uint32_t getEventMask() const { return _epoll.event.events; }
 	const epoll_event *getEvent() const { return &_epoll.event; }
@@ -68,70 +68,36 @@ protected:
 	};
 };
 
-class SignalFdSource : public FdSource {
+class FdHandle : public Handle {
 public:
-	virtual ~SignalFdSource();
+	virtual ~FdHandle();
 
-	bool init();
-	bool init(SpanView<int>);
-
-	bool read();
-	bool process(bool panding = false);
-	void enable();
-	void enable(const sigset_t *);
-	void disable();
-
-	const sigset_t *getSigset() const { return &_sigset; }
-
-	const signalfd_siginfo *getInfo() const { return &_info; }
+	int getFd() const { return getData<FdSource>()->getFd(); }
 
 protected:
-	signalfd_siginfo _info;
-	sigset_t _sigset;
-	mem_std::Vector<int> _extra;
+	template <typename T, typename S>
+	void setupURing(URingData *uring, T *t) {
+		setup<T, S>();
+
+		auto source = getData<S>();
+		source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags) {
+			reinterpret_cast<T *>(h)->notify(h->getData<S>(), res, flags);
+		});
+	}
 };
 
-class EventFdSource : public FdSource {
+class StatURingHandle : public StatHandle {
 public:
-	virtual ~EventFdSource();
+	virtual ~StatURingHandle() = default;
 
-	bool init();
-	bool read();
-	bool write(uint64_t = 1);
+	bool init(URingData *, StatOpInfo &&);
 
-	const uint64_t *getValue() const { return &_value; }
+	Status run(FdSource *);
+
+	void notify(FdSource *, int32_t res, uint32_t flags);
 
 protected:
-	uint64_t _value = 0;
-};
-
-class TimerFdSource : public FdSource {
-public:
-	virtual ~TimerFdSource() = default;
-
-	bool init(TimerInfo &&info);
-
-	void setCurrent(uint32_t c) { _current = c; }
-	uint32_t getCurrent() const { return _current; }
-	uint32_t getCount() const { return _count; }
-
-protected:
-	uint32_t _count = 0;
-	uint32_t _current = 0;
-};
-
-class TimerFdHandle : public TimerHandle {
-public:
-	virtual ~TimerFdHandle() = default;
-
-	bool init(QueueRef *, QueueData *, TimerInfo &&);
-
-	virtual Status cancel(Status) override;
-
-	const uint64_t *getValue() const { return &_value; }
-
-protected:
-	uint64_t _value = 0;
+	struct statx _buffer;
 };
 
 template <typename TimeSpec>
@@ -141,7 +107,5 @@ inline void setNanoTimespec(TimeSpec &ts, TimeInterval ival) {
 }
 
 }
-
-#endif
 
 #endif /* CORE_EVENT_SPEVENT_FD_H_ */

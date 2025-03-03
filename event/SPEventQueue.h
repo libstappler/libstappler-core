@@ -42,25 +42,28 @@ enum class QueueWakeupFlags {
 
 SP_DEFINE_ENUM_AS_MASK(QueueWakeupFlags)
 
-struct OpenFileInfo {
-	StringView path;
-	FileOpenFlags flags;
-	FileProtFlags prot;
-};
-
 struct QueueInfo {
 	static constexpr uint32_t DefaultQueueSize = 32;
 
 	uint32_t submitQueueSize = DefaultQueueSize;
 	uint32_t completeQueueSize = 0; // or 0 for default size, based on submitQueueSize
 	TimeInterval osIdleInterval; // interval, on which internal OS systems will be put to sleep, if idle
+
+	uint32_t externalHandles = 32; // limit for externally opened handles (if applicable)
+	uint32_t internalHandles = 32; // limit for internally opened handles (if applicable)
+};
+
+// If Graceful flag is set - wait until all operations are completed, and forbid a new ones from running
+// If timeout is set, queue will issue a graceful wakeup, but after timeout hard wakeup will be performed
+struct QueueWakeupInfo {
+	QueueWakeupFlags flags = QueueWakeupFlags::None;
+	TimeInterval timeout = TimeInterval();
 };
 
 /* Simple IO event loop interface
  *
  * Interface is single-threaded, no submission allowed from other threads
  */
-
 class Queue : public memory::PoolObject {
 public:
 	struct Data; // private platform data
@@ -69,13 +72,20 @@ public:
 
 	bool init(const QueueInfo & = QueueInfo(), QueueFlags flags = QueueFlags::None);
 
-	Rc<OpHandle> openDir(CompletionHandle<DirHandle> &&, StringView path);
-	Rc<OpHandle> openFile(OpenFileInfo &&);
+	Rc<DirHandle> openDir(OpenDirInfo &&);
+
+	Rc<StatHandle> stat(StatOpInfo &&);
 
 	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
 
-	Rc<OpHandle> read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t);
-	Rc<OpHandle> write(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t);
+	Rc<ThreadHandle> addThreadHandle();
+
+	//Rc<FileHandle> openFile(OpenFileInfo &&);
+	//Rc<OpHandle> read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t);
+	//Rc<OpHandle> write(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t);
+
+	// run custom handle
+	Status runHandle(Handle *);
 
 	Status submitPending();
 
@@ -86,12 +96,17 @@ public:
 	uint32_t wait(TimeInterval = TimeInterval());
 
 	// run for some time or infinite (when no timeout)
-	Status run(TimeInterval = TimeInterval());
+	// QueueWakeupFlags can be defined for a wakeup on timer
+	// Done when timeout expired
+	// Ok on graceful wakeup
+	// Suspended on forced wakeup
+	// ErrorCancelled when graceful wakeup failed on timeout
+	//
+	// You can set QueueWakeupInfo for timeout wakeup mode
+	Status run(TimeInterval = TimeInterval(), QueueWakeupInfo && = QueueWakeupInfo());
 
 	// wakeup queue from `run`
-	// If Graceful flag is set - wait until all operations are completed, and forbid a new ones from running
-	// If gracefulTimeout is set, queue will issue a graceful wakeup, but after timeout hard wakeup will be performed
-	void wakeup(QueueWakeupFlags = QueueWakeupFlags::None, TimeInterval gracefulTimeout = TimeInterval());
+	void wakeup(QueueWakeupInfo && = QueueWakeupInfo());
 
 	QueueFlags getFlags() const;
 

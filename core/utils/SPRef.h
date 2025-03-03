@@ -31,6 +31,14 @@ THE SOFTWARE.
 #define SP_REF_DEBUG 0
 #endif
 
+// WinCRT instantiates Rc's in place of definition, not actual usage
+// So, we need to safely call Ref's methods on classes with only forward declarations visible
+#if WIN32
+#define SP_REF_SAFE_INSTANIATION 1
+#else
+#define SP_REF_SAFE_INSTANIATION 0
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler {
 
 // Reference allocation base class
@@ -622,34 +630,54 @@ inline bool RcBase<_Base, _Pointer>::operator <= (const std::nullptr_t other) co
 
 template <typename _Base, typename _Pointer>
 inline void RcBase<_Base, _Pointer>::doRetain() {
-#if SP_REF_DEBUG
-	if (_ptr) { _id = _ptr->retain(); }
+#if SP_REF_SAFE_INSTANIATION
+	auto ptr = (Ref *)_ptr;
 #else
-	if (_ptr) { _ptr->retain(); }
+	auto ptr = _ptr;
+#endif
+
+#if SP_REF_DEBUG
+	if (ptr) { _id = ptr->retain(); }
+#else
+	if (ptr) { ptr->retain(); }
 #endif
 }
 
 template <typename _Base, typename _Pointer>
 inline void RcBase<_Base, _Pointer>::doRelease() {
-#if SP_REF_DEBUG
-	if (_ptr) { _ptr->release(_id); }
+#if SP_REF_SAFE_INSTANIATION
+	auto ptr = (Ref *)_ptr;
 #else
-	if (_ptr) { _ptr->release(0); }
+	auto ptr = _ptr;
+#endif
+
+#if SP_REF_DEBUG
+	if (ptr) { ptr->release(_id); }
+#else
+	if (ptr) { ptr->release(0); }
 #endif
 }
 
 template <typename _Base, typename _Pointer>
-inline auto RcBase<_Base, _Pointer>::doSwap(Pointer value) -> Pointer {
+inline auto RcBase<_Base, _Pointer>::doSwap(Pointer _value) -> Pointer {
+#if SP_REF_SAFE_INSTANIATION
+	auto ptr = (Ref *)_ptr;
+	auto value = (Ref *)_value;
+#else
+	auto ptr = _ptr;
+	auto value = _value;
+#endif
+
 #if SP_REF_DEBUG
 	uint64_t id = 0;
 	if (value) { id = value->retain(); }
-	if (_ptr) { _ptr->release(_id); }
+	if (ptr) { ptr->release(_id); }
 	_id = id;
 	return value;
 #else
 	if (value) { value->retain(); }
-	if (_ptr) { _ptr->release(0); }
-	return value;
+	if (ptr) { ptr->release(0); }
+	return (Pointer)value;
 #endif
 }
 
@@ -661,6 +689,7 @@ inline RcBase<_Base, _Pointer>::RcBase(Pointer value, bool v) noexcept
 template <typename _Base>
 template <class... Args>
 inline auto Rc<_Base>::create(Args && ... args) -> Self {
+	static_assert(std::is_base_of<Ref, _Base>::value, "Rc base class should be derived from Ref");
 	auto pRet = new (std::nothrow) Type();
     if (pRet->init(std::forward<Args>(args)...)) {
     	return Self(pRet, true); // unsafe assignment
@@ -672,12 +701,14 @@ inline auto Rc<_Base>::create(Args && ... args) -> Self {
 
 template <typename _Base>
 inline auto Rc<_Base>::alloc() -> Self {
+	static_assert(std::is_base_of<Ref, _Base>::value, "Rc base class should be derived from Ref");
 	return Self(new (std::nothrow) Type(), true);
 }
 
 template <typename _Base>
 template <class... Args>
 inline auto Rc<_Base>::alloc(Args && ... args) -> Self{
+	static_assert(std::is_base_of<Ref, _Base>::value, "Rc base class should be derived from Ref");
 	return Self(new (std::nothrow) Type(std::forward<Args>(args)...), true);
 }
 

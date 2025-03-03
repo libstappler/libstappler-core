@@ -24,10 +24,16 @@
 
 
 #include "platform/linux/SPEvent-linux.cc"
+#include "platform/uring/SPEventThreadHandle-uring.cc"
 #include "platform/uring/SPEvent-uring.cc"
 #include "platform/epoll/SPEvent-epoll.cc"
 //#include "platform/SPEvent-epoll.cc"
-#include "platform/fd/SPEvent-fd.cc"
+#include "platform/fd/SPEventFd.cc"
+#include "platform/fd/SPEventFdStat.cc"
+#include "platform/fd/SPEventEventFd.cc"
+#include "platform/fd/SPEventSignalFd.cc"
+#include "platform/fd/SPEventTimerFd.cc"
+#include "platform/fd/SPEventDirFd.cc"
 
 #include "detail/SPEventQueueData.cc"
 #include "SPEventBufferChain.cc"
@@ -45,11 +51,13 @@ std::ostream &operator<<(std::ostream &stream, Status status) {
 
 	// errors
 	case Status::ErrorNotPermitted: stream << "Status::ErrorNotPermitted"; break;
+	case Status::ErrorNotFound: stream << "Status::ErrorNotFound"; break;
 	case Status::ErrorInvalidArguemnt: stream << "Status::ErrorInvalidArguemnt"; break;
 	case Status::ErrorAgain: stream << "Status::ErrorAgain"; break;
 	case Status::ErrorBusy: stream << "Status::ErrorBusy"; break;
 	case Status::ErrorNotImplemented: stream << "Status::ErrorNotImplemented"; break;
 	case Status::ErrorAlreadyPerformed: stream << "Status::ErrorAlreadyPerformed"; break;
+	case Status::ErrorInProgress: stream << "Status::ErrorInProgress"; break;
 	case Status::ErrorCancelled: stream << "Status::ErrorCancelled"; break;
 	default:
 		if (toInt(status) < STATUS_ERRNO_OFFSET) {

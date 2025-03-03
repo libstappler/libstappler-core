@@ -27,9 +27,12 @@
 
 #include "detail/SPEventQueueData.h"
 
-#include "../fd/SPEvent-fd.h"
+#include "../fd/SPEventFd.h"
+#include "../fd/SPEventTimerFd.h"
+#include "../fd/SPEventDirFd.h"
 #include "../epoll/SPEvent-epoll.h"
 #include "../uring/SPEvent-uring.h"
+#include "../uring/SPEventThreadHandle-uring.h"
 
 #include <signal.h>
 
@@ -38,16 +41,17 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 struct Queue::Data : public QueueData {
 	URingData *_uring = nullptr;
 
-	SignalFdSource _signalFd;
-	EventFdSource _eventFd;
+	Rc<DirHandle> openDir(OpenDirInfo &&);
+	Rc<StatHandle> stat(StatOpInfo &&);
 
 	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
+	Rc<ThreadHandle> addThreadHandle();
 
 	Status submit();
 	uint32_t poll();
 	uint32_t wait(TimeInterval);
-	Status run(TimeInterval);
-	void wakeup(QueueWakeupFlags, TimeInterval);
+	Status run(TimeInterval, QueueWakeupInfo &&);
+	void wakeup(QueueWakeupInfo &&);
 
 	bool isValid() const;
 
@@ -57,6 +61,20 @@ struct Queue::Data : public QueueData {
 
 static int SignalsToIntercept[] = { SIGUSR1, SIGUSR2 };
 
+Rc<DirHandle> Queue::Data::openDir(OpenDirInfo &&info) {
+	if (_uring) {
+		return Rc<DirFdURingHandle>::create(_uring, move(info));
+	}
+	return nullptr;
+}
+
+Rc<StatHandle> Queue::Data::stat(StatOpInfo &&info) {
+	if (_uring) {
+		return Rc<StatURingHandle>::create(_uring, move(info));
+	}
+	return nullptr;
+}
+
 Rc<TimerHandle> Queue::Data::scheduleTimer(TimerInfo &&info) {
 	if (_uring) {
 		return Rc<TimerFdURingHandle>::create(_uring, move(info));
@@ -64,8 +82,14 @@ Rc<TimerHandle> Queue::Data::scheduleTimer(TimerInfo &&info) {
 	return nullptr;
 }
 
+Rc<ThreadHandle> Queue::Data::addThreadHandle() {
+	if (_uring && hasFlag(_uring->_uflags, URingFlags::FutexSupported)) {
+		return Rc<ThreadUringHandle>::create(_uring);
+	}
+	return nullptr;
+}
+
 Status Queue::Data::submit() {
-	resumeAll();
 	if (_uring) {
 		return _uring->submit();
 	}
@@ -73,7 +97,6 @@ Status Queue::Data::submit() {
 }
 
 uint32_t Queue::Data::poll() {
-	resumeAll();
 	if (_uring) {
 		return _uring->poll();
 	}
@@ -81,27 +104,23 @@ uint32_t Queue::Data::poll() {
 }
 
 uint32_t Queue::Data::wait(TimeInterval ival) {
-	resumeAll();
 	if (_uring) {
 		return _uring->wait(ival);
 	}
 	return 0;
 }
 
-Status Queue::Data::run(TimeInterval ival) {
-	resumeAll();
+Status Queue::Data::run(TimeInterval ival, QueueWakeupInfo &&info) {
 	if (_uring) {
-		return _uring->run(ival);
+		return _uring->run(ival, info.flags, info.timeout);
 	}
 	return Status::ErrorNotImplemented;
 }
 
-void Queue::Data::wakeup(QueueWakeupFlags flags, TimeInterval gracefulTimeout) {
+void Queue::Data::wakeup(QueueWakeupInfo &&info) {
 	if (_uring) {
-		_uring->_wakeupFlags |= toInt(flags);
-		_uring->_wakeupTimeout = gracefulTimeout.toMicros();
+		_uring->wakeup(info.flags, info.timeout);
 	}
-	_eventFd.write(1);
 }
 
 bool Queue::Data::isValid() const {
@@ -116,20 +135,8 @@ Queue::Data::~Data() {
 }
 
 Queue::Data::Data(QueueRef *q, const QueueInfo &info, QueueFlags flags) : QueueData(q, flags) {
-	if (!_eventFd.init()) {
-		log::error("event::Queue", "Fail to initialize eventfd");
-		return;
-	}
-
-	if (hasFlag(_flags, QueueFlags::Protected)) {
-		if (!_signalFd.init(SignalsToIntercept)) {
-			log::error("event::Queue", "Fail to initialize signalfd");
-			return;
-		}
-	}
-
 	if (URingData::checkSupport()) {
-		_uring = new (memory::pool::acquire()) URingData(_queue, this, &_signalFd, &_eventFd, info, flags);
+		_uring = new (memory::pool::acquire()) URingData(_queue, this, info, flags, SignalsToIntercept);
 	}
 }
 

@@ -38,12 +38,28 @@ bool Queue::init(const QueueInfo &info, QueueFlags flags) {
 	return _data != nullptr && _data->isValid();
 }
 
-Rc<OpHandle> Queue::openDir(CompletionHandle<DirHandle> &&, StringView path) {
-	return nullptr;
+Rc<DirHandle> Queue::openDir(OpenDirInfo &&info) {
+	Rc<DirHandle> h = _data->openDir(move(info));
+	if (!info.file.root || info.file.root->getStatus() == Status::Done) {
+		_data->runHandle(h);
+	} else {
+		if (!isSuccessful(info.file.root->addPending(h))) {
+			h = nullptr;
+		}
+	}
+	return h;
 }
 
-Rc<OpHandle> Queue::openFile(OpenFileInfo &&) {
-	return nullptr;
+Rc<StatHandle> Queue::stat(StatOpInfo &&info) {
+	Rc<StatHandle> h = _data->stat(move(info));
+	if (!info.file.root || info.file.root->getStatus() == Status::Done) {
+		_data->runHandle(h);
+	} else {
+		if (!isSuccessful(info.file.root->addPending(h))) {
+			h = nullptr;
+		}
+	}
+	return h;
 }
 
 Rc<TimerHandle> Queue::scheduleTimer(TimerInfo &&info) {
@@ -57,35 +73,55 @@ Rc<TimerHandle> Queue::scheduleTimer(TimerInfo &&info) {
 	return h;
 }
 
-Rc<OpHandle> Queue::read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t) {
+Rc<ThreadHandle> Queue::addThreadHandle() {
+	auto h = _data->addThreadHandle();
+	_data->runHandle(h);
+	return h;
+}
+
+/*Rc<OpHandle> Queue::read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t) {
 	return nullptr;
 }
 Rc<OpHandle> Queue::write(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t) {
 	return nullptr;
+}*/
+
+Status Queue::runHandle(Handle *h) {
+	if (h->getStatus() != Status::Declined) {
+		return Status::ErrorAlreadyPerformed;
+	}
+
+	return _data->runHandle(h);
 }
 
 Status Queue::submitPending() {
+	_data->resumeAll();
 	return _data->submit();
 }
 
 // non-blocking poll
 uint32_t Queue::poll() {
+	_data->resumeAll();
+	_data->submit();
 	return _data->poll();
 }
 
 // wait until next event or timeout
 uint32_t Queue::wait(TimeInterval ival) {
+	_data->resumeAll();
+	_data->submit();
 	return _data->wait(ival);
 }
 
 // run for some time
-Status Queue::run(TimeInterval ival) {
-	submitPending();
-	return _data->run(ival);
+Status Queue::run(TimeInterval ival, QueueWakeupInfo &&info) {
+	_data->resumeAll();
+	_data->submit();
+	return _data->run(ival, move(info));
 }
 
-void Queue::wakeup(QueueWakeupFlags flags, TimeInterval gracefulTimeout) {
-	_data->wakeup(flags, gracefulTimeout);
+void Queue::wakeup(QueueWakeupInfo &&info) {
+	_data->wakeup(move(info));
 }
 
 QueueFlags Queue::getFlags() const {

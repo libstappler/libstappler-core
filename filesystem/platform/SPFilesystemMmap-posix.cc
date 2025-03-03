@@ -42,15 +42,15 @@ uint32_t _getMemoryPageSize() {
 
 #define SP_TERMINATED_DATA(view) (view.terminated()?view.data():view.str<memory::StandartInterface>().data())
 
-uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtectionFlags prot, size_t offset, size_t len) {
+uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot, size_t offset, size_t len) {
 	int oFlags = 0;
-	if (hasFlag(prot, ProtectionFlags::Read)) {
-		if (hasFlag(prot, ProtectionFlags::Write)) {
+	if (hasFlag(prot, ProtFlags::MapRead)) {
+		if (hasFlag(prot, ProtFlags::MapWrite)) {
 			oFlags = O_RDWR;
 		} else {
 			oFlags = O_RDONLY;
 		}
-	} else if (hasFlag(prot, ProtectionFlags::Write)) {
+	} else if (hasFlag(prot, ProtFlags::MapWrite)) {
 		oFlags = O_WRONLY;
 	}
 
@@ -61,13 +61,13 @@ uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, Protec
 	}
 
 	int mProt = 0;
-	if (hasFlag(prot, ProtectionFlags::Read)) {
+	if (hasFlag(prot, ProtFlags::MapRead)) {
 		mProt = PROT_READ;
 	}
-	if (hasFlag(prot, ProtectionFlags::Write)) {
+	if (hasFlag(prot, ProtFlags::MapWrite)) {
 		mProt = PROT_WRITE;
 	}
-	if (hasFlag(prot, ProtectionFlags::Exec)) {
+	if (hasFlag(prot, ProtFlags::MapExecute)) {
 		mProt = PROT_EXEC;
 	}
 

@@ -21,6 +21,9 @@
  **/
 
 #include "SPEventHandle.h"
+#include "SPEventTimerHandle.h"
+#include "SPEventFileHandle.h"
+#include "SPEventThreadHandle.h"
 #include "detail/SPEventQueueData.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
@@ -35,6 +38,59 @@ bool Handle::init(QueueRef *q, QueueData *data) {
 	_queue = q;
 	_queueData = data;
 	return true;
+}
+
+Status Handle::cancel(Status st) {
+	if (!isValidCancelStatus(st)) {
+		log::warn("event::Handle", "Handle::cancel should be called with Status::Done or one of the error statuses."
+				" It's undefined behavior otherwise");
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	if (isValidCancelStatus(_status)) {
+		return Status::ErrorAlreadyPerformed;
+	}
+
+	if (_status == Status::Ok) {
+		if (_suspendFn) {
+			return _suspendFn(this);
+		}
+		return Status::ErrorNotPermitted;
+	} else if (_status == Status::Suspended || _status == Status::Declined) {
+		_status = st;
+		finalize(_status);
+		if (isResumable()) {
+			// Disable auto-resume
+			_queueData->cancel(this);
+		}
+		if (_status == Status::Done) {
+			// Run pending on queue
+			for (auto &it : _pendingHandles) {
+				_queueData->runHandle(it);
+			}
+		} else {
+			// Cancel all pending
+			for (auto &it : _pendingHandles) {
+				it->cancel(Status::ErrorCancelled);
+			}
+		}
+		_queue->submitPending();
+		_pendingHandles.clear();
+		return Status::Ok;
+	} else {
+		return Status::ErrorAlreadyPerformed;
+	}
+}
+
+Status Handle::addPending(Rc<Handle> &&handle) {
+	if (_status == Status::Done) {
+		return _queueData->runHandle(handle);
+	} else if (isSuccessful(_status)) {
+		_pendingHandles.emplace_back(move(handle));
+		return Status::Suspended;
+	} else {
+		return Status::ErrorInvalidArguemnt;
+	}
 }
 
 Status Handle::run() {
@@ -58,21 +114,103 @@ Status Handle::resume() {
 	return Status::ErrorNotImplemented;
 }
 
-Status Handle::cancel(Status st) {
-	if (!isValidCancelStatus(st)) {
-		log::warn("event::Handle", "Handle::cancel should be called with Status::Done or one of the error statuses."
-				" It's undefined behavior otherwise");
-		return Status::ErrorInvalidArguemnt;
+Status Handle::prepareRearm() {
+	if (_status == Status::Ok) {
+		return Status::ErrorAlreadyPerformed;
 	}
-	_status = st;
-	if (isSuspendable()) {
-		_queueData->cancel(this);
+
+	if (_status != Status::Declined && _status != Status::Suspended) {
+		return Status::ErrorNotPermitted;
 	}
+
+	_status = Status::Ok;
+	return _status;
+}
+
+Status Handle::prepareDisarm(bool suspend) {
+	if (_status != Status::Ok) {
+		return Status::ErrorAlreadyPerformed;
+	}
+
+	if (suspend) {
+		_status = Status::Suspended;
+	}
+
 	return Status::Ok;
 }
 
-void TimerHandle::sendCompletion(uint32_t value, Status status) {
-	_completion.fn(_completion.userdata, this, value, status);
+void Handle::sendCompletion(uint32_t value, Status status) {
+	if (_completion.fn) {
+		_completion.fn(_completion.userdata, this, value, status);
+	}
+}
+
+void Handle::finalize(Status status) {
+	sendCompletion(_value, status);
+	_completion.fn = nullptr;
+	_completion.userdata = nullptr;
+}
+
+bool TimerHandle::init(QueueRef *q, QueueData *d, TimerInfo &&info) {
+	if (!Handle::init(q, d)) {
+		return false;
+	}
+
+	_count = info.count;
+	_completion = move(info.completion);
+
+	return true;
+}
+
+bool FileOpHandle::init(QueueRef *q, QueueData *d, FileOpInfo &&info) {
+	if (!Handle::init(q, d)) {
+		return false;
+	}
+
+	_root = info.root;
+	_pathname = info.path.str<memory::StandartInterface>();
+	return true;
+}
+
+bool StatHandle::init(QueueRef *q, QueueData *d, StatOpInfo &&info) {
+	if (!FileOpHandle::init(q, d, move(info.file))) {
+		return false;
+	}
+
+	_completion = move(info.completion);
+	return true;
+}
+
+bool DirHandle::init(QueueRef *q, QueueData *d, OpenDirInfo &&info) {
+	if (!FileOpHandle::init(q, d, move(info.file))) {
+		return false;
+	}
+
+	_completion = move(info.completion);
+	return true;
+}
+
+void ThreadHandle::performAll(const Callback<void()> &unlockCallback) {
+	auto stack = sp::move(_outputQueue);
+	auto callbacks = sp::move(_outputCallbacks);
+
+	_outputQueue.clear();
+	_outputCallbacks.clear();
+
+	unlockCallback();
+
+	memory::pool::perform_temporary([&] {
+		for (auto &task : stack) {
+			task->onComplete();
+		}
+
+		for (auto &task : callbacks) {
+			task.first();
+		}
+	});
+
+	stack.clear();
+	callbacks.clear();
 }
 
 }

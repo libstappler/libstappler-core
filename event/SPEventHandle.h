@@ -53,62 +53,65 @@ public:
 	// When handle's execution were suspended (like on graceful wakeup) - it's on Suspended state
 	Status getStatus() const { return _status; }
 
-	bool isSuspendable() const { return _suspendFn != nullptr && _resumeFn != nullptr; }
+	bool isResumable() const { return _suspendFn != nullptr && _resumeFn != nullptr; }
 
-	const uint8_t *getData() const { return _data; }
+	template <typename T = uint8_t>
+	T *getData() const { return (T *)_data; }
 
 	// Cancel handle operation (performed asynchronically)
-	virtual Status cancel(Status);
+	Status cancel(Status);
+
+	uint32_t getValue() const { return _value; }
 
 protected:
+	friend class Queue;
 	friend struct QueueData;
+
+	void setValue(uint32_t c) { _value = c; }
+
+	Status addPending(Rc<Handle> &&);
 
 	Status run();
 	Status suspend();
 	Status resume();
 
+	template <typename T, typename S>
+	void setup() {
+		_runFn = [] (Handle *h) -> Status {
+			return ((T *)h)->rearm(h->getData<S>());
+		};
+
+		_suspendFn = [] (Handle *h) -> Status {
+			return ((T *)h)->disarm(h->getData<S>(), true);
+		};
+
+		_resumeFn = [] (Handle *h) -> Status {
+			return ((T *)h)->rearm(h->getData<S>());
+		};
+	}
+
+	Status prepareRearm();
+	Status prepareDisarm(bool suspend);
+
+	void sendCompletion(uint32_t value, Status);
+	void finalize(Status);
+
 	Rc<QueueRef> _queue;
+	mem_std::Vector<Rc<Handle>> _pendingHandles;
+
 	QueueData *_queueData = nullptr;
 
-	// Any others are errors
 	Status _status = Status::Declined;
 
 	Status (*_runFn) (Handle *) = nullptr;
 	Status (*_suspendFn) (Handle *) = nullptr;
 	Status (*_resumeFn) (Handle *) = nullptr;
 
+	CompletionHandle<void> _completion;
+	uint32_t _value = 0;
+
 	// platform data block
 	alignas(void *) uint8_t _data[DataSize];
-};
-
-class OpHandle : public Handle {
-
-};
-
-class TimerHandle : public Handle {
-public:
-	virtual ~TimerHandle() = default;
-
-	void setCompletion(CompletionHandle<TimerHandle> &&c) { _completion = move(c); }
-
-	const CompletionHandle<TimerHandle> &getCompletion() const { return _completion; }
-
-protected:
-	void sendCompletion(uint32_t value, Status);
-
-	CompletionHandle<TimerHandle> _completion;
-};
-
-class DirHandle : public Handle {
-
-};
-
-class InputOutputHandle : public Handle {
-
-};
-
-class FileHandle : public InputOutputHandle {
-
 };
 
 }

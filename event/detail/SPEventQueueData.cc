@@ -26,10 +26,10 @@
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 uint32_t QueueData::suspendAll() {
-	uint32_t ret;
+	uint32_t ret = 0;
 	_running = false;
 	for (auto &it : _suspendableHandles) {
-		if (it->suspend() == Status::Ok) {
+		if (isSuccessful(it->suspend())) {
 			++ ret;
 		}
 	}
@@ -41,8 +41,7 @@ uint32_t QueueData::resumeAll() {
 		return 0;
 	}
 
-	uint32_t ret;
-	_running = true;
+	uint32_t ret = 0;
 	for (auto &it : _suspendableHandles) {
 		if (it->resume() == Status::Ok) {
 			++ ret;
@@ -52,11 +51,15 @@ uint32_t QueueData::resumeAll() {
 		auto status = it->run();
 		if (!isSuccessful(status)) {
 			it->cancel(status);
-		} else if (it->isSuspendable()) {
-			_suspendableHandles.emplace(it);
+		} else {
+			if (it->isResumable()) {
+				_suspendableHandles.emplace(it);
+			}
+			++ ret;
 		}
 	}
 	_pendingHandles.clear();
+	_running = true;
 	return ret;
 }
 
@@ -65,7 +68,7 @@ Status QueueData::runHandle(Handle *h) {
 		auto status = h->run();
 		if (!isSuccessful(status)) {
 			h->cancel(status);
-		} else if (h->isSuspendable()) {
+		} else if (h->isResumable()) {
 			_suspendableHandles.emplace(h);
 		}
 		return status;
