@@ -53,10 +53,14 @@ Status Handle::cancel(Status st) {
 
 	if (_status == Status::Ok) {
 		if (_suspendFn) {
-			return _suspendFn(this);
+			if (suspend() != Status::Ok) {
+				return Status::ErrorNotPermitted;
+			}
+		} else {
+			return Status::ErrorNotPermitted;
 		}
-		return Status::ErrorNotPermitted;
-	} else if (_status == Status::Suspended || _status == Status::Declined) {
+	}
+	if (_status == Status::Suspended || _status == Status::Declined) {
 		_status = st;
 		finalize(_status);
 		if (isResumable()) {
@@ -75,6 +79,7 @@ Status Handle::cancel(Status st) {
 			}
 		}
 		_queue->submitPending();
+		_queue = nullptr;
 		_pendingHandles.clear();
 		return Status::Ok;
 	} else {
@@ -95,21 +100,40 @@ Status Handle::addPending(Rc<Handle> &&handle) {
 
 Status Handle::run() {
 	if (_runFn) {
-		return _runFn(this);
+		_status = _runFn(this);
+		if (_status != Status::Ok && _status != Status::Done) {
+			log::error("event::Handle", "Fail to run handle: ", _status);
+		} else {
+			_status = Status::Ok;
+		}
+		return _status;
 	}
 	return Status::ErrorNotImplemented;
 }
 
 Status Handle::suspend() {
 	if (_suspendFn) {
-		return _suspendFn(this);
+		_status = _suspendFn(this);
+		if (_status != Status::Ok && _status != Status::Done) {
+			log::error("event::Handle", "Fail to suspend handle: ", _status);
+		} else {
+			_status = Status::Suspended;
+			return Status::Ok;
+		}
+		return _status;
 	}
 	return Status::ErrorNotImplemented;
 }
 
 Status Handle::resume() {
 	if (_resumeFn) {
-		return _resumeFn(this);
+		_status = _runFn(this);
+		if (_status != Status::Ok && _status != Status::Done) {
+			log::error("event::Handle", "Fail to resume handle: ", _status);
+		} else {
+			_status = Status::Ok;
+		}
+		return _status;
 	}
 	return Status::ErrorNotImplemented;
 }
@@ -190,27 +214,56 @@ bool DirHandle::init(QueueRef *q, QueueData *d, OpenDirInfo &&info) {
 	return true;
 }
 
-void ThreadHandle::performAll(const Callback<void()> &unlockCallback) {
+bool ThreadHandle::init(QueueRef *q, QueueData *d) {
+	if (!Handle::init(q, d)) {
+		return false;
+	}
+
+	_pool = Rc<PoolRef>::alloc(memory::app_root_pool);
+
+	_outputQueue.reserve(2);
+	_outputCallbacks.reserve(2);
+
+	return true;
+}
+
+uint32_t ThreadHandle::performAll(const Callback<void(uint32_t)> &unlockCallback) {
 	auto stack = sp::move(_outputQueue);
 	auto callbacks = sp::move(_outputCallbacks);
 
 	_outputQueue.clear();
 	_outputCallbacks.clear();
 
-	unlockCallback();
+	unlockCallback(static_cast<uint32_t>(stack.size() + callbacks.size()));
 
-	memory::pool::perform_temporary([&] {
+	uint32_t nevents = 0;
+	memory::pool::perform_clear([&] {
 		for (auto &task : stack) {
-			task->onComplete();
+			task->run();
+			++ nevents;
 		}
 
 		for (auto &task : callbacks) {
 			task.first();
+			++ nevents;
 		}
-	});
+
+		for (auto &task : _unsafeQueue) {
+			task->run();
+			++ nevents;
+		}
+
+		for (auto &task : _unsafeCallbacks) {
+			task.first();
+			++ nevents;
+		}
+	}, _pool->getPool());
 
 	stack.clear();
 	callbacks.clear();
+	_unsafeQueue.clear();
+	_unsafeCallbacks.clear();
+	return nevents;
 }
 
 }

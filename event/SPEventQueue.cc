@@ -24,6 +24,14 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+Rc<SharedRef<Queue>> Queue::create(QueueInfo &&info) {
+	if (info.pool) {
+		return Rc<QueueRef>::create(info.pool, move(info));
+	} else {
+		return Rc<QueueRef>::create(SharedRefMode::Allocator, move(info));
+	}
+}
+
 Queue::~Queue() {
 	if (_data) {
 		delete _data;
@@ -31,9 +39,9 @@ Queue::~Queue() {
 	}
 }
 
-bool Queue::init(const QueueInfo &info, QueueFlags flags) {
+bool Queue::init(const QueueInfo &info) {
 	mem_pool::perform([&] {
-		_data = new (getPool()) Data(static_cast<QueueRef *>(getRef()), info, flags);
+		_data = new (getPool()) Data(static_cast<QueueRef *>(getRef()), info);
 	}, getPool());
 	return _data != nullptr && _data->isValid();
 }
@@ -120,8 +128,14 @@ Status Queue::run(TimeInterval ival, QueueWakeupInfo &&info) {
 	return _data->run(ival, move(info));
 }
 
-void Queue::wakeup(QueueWakeupInfo &&info) {
-	_data->wakeup(move(info));
+Status Queue::wakeup(QueueWakeupInfo &&info) {
+	return _data->wakeup(move(info));
+}
+
+void Queue::cancel() {
+	_data->cancel();
+	delete _data;
+	_data = nullptr;
 }
 
 QueueFlags Queue::getFlags() const {

@@ -58,19 +58,28 @@ static clockid_t getClockSource() {
 	return CLOCK_MONOTONIC;
 }
 
-uint64_t clock(ClockType type) {
+static void _clock(struct timespec *ts, ClockType type) {
 	static clockid_t ClockSource = getClockSource();
 
-	struct timespec ts;
 	switch (type) {
-	case ClockType::Default: ::clock_gettime(ClockSource, &ts); break;
-	case ClockType::Monotonic: ::clock_gettime(CLOCK_MONOTONIC, &ts); break;
-	case ClockType::Realtime: ::clock_gettime(CLOCK_REALTIME, &ts); break;
-	case ClockType::Process: ::clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts); break;
-	case ClockType::Thread: ::clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts); break;
+	case ClockType::Default: ::clock_gettime(ClockSource, ts); break;
+	case ClockType::Monotonic: ::clock_gettime(CLOCK_MONOTONIC, ts); break;
+	case ClockType::Realtime: ::clock_gettime(CLOCK_REALTIME, ts); break;
+	case ClockType::Process: ::clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ts); break;
+	case ClockType::Thread: ::clock_gettime(CLOCK_THREAD_CPUTIME_ID, ts); break;
 	}
+}
 
+uint64_t clock(ClockType type) {
+	struct timespec ts;
+	_clock(&ts, type);
 	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1000'000) + static_cast<uint64_t>(ts.tv_nsec / 1000);
+}
+
+uint64_t nanoclock(ClockType type) {
+	struct timespec ts;
+	_clock(&ts, type);
+	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1000'000'000) + static_cast<uint64_t>(ts.tv_nsec);
 }
 
 void sleep(uint64_t microseconds) {

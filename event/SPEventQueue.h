@@ -35,28 +35,33 @@ enum class QueueFlags {
 
 SP_DEFINE_ENUM_AS_MASK(QueueFlags)
 
-enum class QueueWakeupFlags {
+enum class WakeupFlags {
 	None,
 	Graceful = 1 << 0,
+	SuspendThreads = 1 << 1 // Looper should suspend worker threads
 };
 
-SP_DEFINE_ENUM_AS_MASK(QueueWakeupFlags)
+SP_DEFINE_ENUM_AS_MASK(WakeupFlags)
 
-struct QueueInfo {
+struct SP_PUBLIC QueueInfo {
 	static constexpr uint32_t DefaultQueueSize = 32;
+
+	QueueFlags flags = QueueFlags::None;
 
 	uint32_t submitQueueSize = DefaultQueueSize;
 	uint32_t completeQueueSize = 0; // or 0 for default size, based on submitQueueSize
 	TimeInterval osIdleInterval; // interval, on which internal OS systems will be put to sleep, if idle
 
-	uint32_t externalHandles = 32; // limit for externally opened handles (if applicable)
-	uint32_t internalHandles = 32; // limit for internally opened handles (if applicable)
+	uint32_t externalHandles = 0; // limit for externally opened handles (if applicable)
+	uint32_t internalHandles = 0; // limit for internally opened handles (if applicable)
+
+	memory::pool_t *pool = nullptr;
 };
 
 // If Graceful flag is set - wait until all operations are completed, and forbid a new ones from running
 // If timeout is set, queue will issue a graceful wakeup, but after timeout hard wakeup will be performed
-struct QueueWakeupInfo {
-	QueueWakeupFlags flags = QueueWakeupFlags::None;
+struct SP_PUBLIC QueueWakeupInfo {
+	WakeupFlags flags = WakeupFlags::None;
 	TimeInterval timeout = TimeInterval();
 };
 
@@ -64,13 +69,15 @@ struct QueueWakeupInfo {
  *
  * Interface is single-threaded, no submission allowed from other threads
  */
-class Queue : public memory::PoolObject {
+class SP_PUBLIC Queue : public memory::PoolObject {
 public:
 	struct Data; // private platform data
 
+	static Rc<SharedRef<Queue>> create(QueueInfo &&);
+
 	virtual ~Queue();
 
-	bool init(const QueueInfo & = QueueInfo(), QueueFlags flags = QueueFlags::None);
+	bool init(const QueueInfo & = QueueInfo());
 
 	Rc<DirHandle> openDir(OpenDirInfo &&);
 
@@ -100,13 +107,18 @@ public:
 	// Done when timeout expired
 	// Ok on graceful wakeup
 	// Suspended on forced wakeup
-	// ErrorCancelled when graceful wakeup failed on timeout
+	// ErrorTimerExpired when graceful wakeup failed on timeout
 	//
 	// You can set QueueWakeupInfo for timeout wakeup mode
 	Status run(TimeInterval = TimeInterval(), QueueWakeupInfo && = QueueWakeupInfo());
 
 	// wakeup queue from `run`
-	void wakeup(QueueWakeupInfo && = QueueWakeupInfo());
+	// returns ErrorNotImplemented if requested parameters is not supported
+	Status wakeup(QueueWakeupInfo && = QueueWakeupInfo());
+
+	void cancel();
+
+	Data *getData() const { return _data; }
 
 	QueueFlags getFlags() const;
 

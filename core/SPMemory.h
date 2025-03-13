@@ -82,6 +82,34 @@ public:
 	void (*resize_fn) (void *, size_t) = nullptr;
 };
 
+class SP_PUBLIC PoolRef : public Ref {
+public:
+	virtual ~PoolRef() {
+		memory::pool::destroy(_pool);
+	}
+
+	PoolRef(memory::pool_t *root = nullptr) {
+		_pool = memory::pool::create(root);
+	}
+
+	PoolRef(PoolRef *p) : PoolRef(p->_pool) { }
+
+	memory::pool_t *getPool() const { return _pool; }
+
+	void *palloc(size_t size) {
+		return memory::pool::palloc(_pool, size);
+	}
+
+	template <typename Callable>
+	auto perform(const Callable &cb) {
+		memory::pool::context<memory::pool_t *> ctx(_pool);
+		return cb();
+	}
+
+protected:
+	memory::pool_t *_pool = nullptr;
+};
+
 }
 
 namespace STAPPLER_VERSIONIZED stappler::mem_pool {

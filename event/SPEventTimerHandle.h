@@ -27,8 +27,10 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class TimerHandle : public Handle {
+class SP_PUBLIC TimerHandle : public Handle {
 public:
+	static constexpr uint32_t Infinite = TimerInfo::Infinite;
+
 	virtual ~TimerHandle() = default;
 
 	bool init(QueueRef *, QueueData *, TimerInfo &&);

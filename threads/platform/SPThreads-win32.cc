@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -21,23 +21,28 @@
  **/
 
 #include "SPCommon.h"
+#include "SPThreadTaskQueue.h"
 
+#if (WIN32)
 
-#include "platform/linux/SPEvent-linux.cc"
-#include "platform/uring/SPEventThreadHandle-uring.cc"
-#include "platform/uring/SPEventTimer-uring.cc"
-#include "platform/uring/SPEvent-uring.cc"
-#include "platform/epoll/SPEvent-epoll.cc"
-#include "platform/fd/SPEventFd.cc"
-#include "platform/fd/SPEventFdStat.cc"
-#include "platform/fd/SPEventEventFd.cc"
-#include "platform/fd/SPEventSignalFd.cc"
-#include "platform/fd/SPEventTimerFd.cc"
-#include "platform/fd/SPEventDirFd.cc"
-#include "platform/fd/SPEventPollFd.cc"
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
-#include "detail/SPEventQueueData.cc"
-#include "SPEventBufferChain.cc"
-#include "SPEventHandle.cc"
-#include "SPEventQueue.cc"
-#include "SPEventLooper.cc"
+struct ThreadCallbacks;
+
+static void ThreadCallbacks_init(const ThreadCallbacks &, Thread *tm);
+static bool ThreadCallbacks_worker(const ThreadCallbacks &, Thread *tm);
+static void ThreadCallbacks_dispose(const ThreadCallbacks &, Thread *tm);
+
+SP_LOCAL static void _setThreadName(StringView name) {
+	// TODO: https://learn.microsoft.com/ru-ru/previous-versions/visualstudio/visual-studio-2015/debugger/how-to-set-a-thread-name-in-native-code?view=vs-2015&redirectedfrom=MSDN
+}
+
+SP_LOCAL static void _workerThread(const ThreadCallbacks &cb, Thread *tm) {
+	ThreadCallbacks_init(cb, tm);
+    while (ThreadCallbacks_worker(cb, tm)) { }
+    ThreadCallbacks_dispose(cb, tm);
+}
+
+}
+
+#endif

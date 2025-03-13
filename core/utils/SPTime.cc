@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPTime.h"
+#include "SPPlatform.h"
 #include "SPPlatformUnistd.h"
 
 inline time_t _time() {
@@ -101,21 +102,7 @@ TimeInterval & TimeInterval::operator= (nullptr_t) {
 
 
 Time Time::now() {
-#if (WIN32)
-    static const uint64_t EPOCH = ((uint64_t) 116444736000000000LL);
-	FILETIME ft;
-	GetSystemTimeAsFileTime(&ft);
-	uint64_t tt = ft.dwHighDateTime;
-	tt <<= 32;
-	tt |= ft.dwLowDateTime;
-	tt -= EPOCH;
-	tt /= 10;
-	return Time(tt);
-#else
-	struct timeval t0;
-	gettimeofday(&t0, NULL);
-	return Time(t0.tv_sec * 1000000LL + t0.tv_usec);
-#endif
+	return Time(platform::clock(ClockType::Monotonic));
 }
 
 Time Time::microseconds(uint64_t mksec) {

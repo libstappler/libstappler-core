@@ -31,7 +31,9 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 class Queue;
 struct QueueData;
 
-class Handle : public Ref {
+class SP_PUBLIC Handle;
+
+class alignas(16) Handle : public Ref {
 public:
 	static constexpr size_t DataSize = 64;
 
@@ -44,6 +46,9 @@ public:
 	Handle();
 
 	bool init(QueueRef *, QueueData *);
+
+	void setUserdata(Ref *ref) { _userdata = ref; }
+	Ref *getUserdata() const { return _userdata; }
 
 	Queue *getQueue() const { return _queue; }
 
@@ -59,7 +64,7 @@ public:
 	T *getData() const { return (T *)_data; }
 
 	// Cancel handle operation (performed asynchronically)
-	Status cancel(Status);
+	Status cancel(Status = Status::ErrorCancelled);
 
 	uint32_t getValue() const { return _value; }
 
@@ -97,6 +102,7 @@ protected:
 	void finalize(Status);
 
 	Rc<QueueRef> _queue;
+	Rc<Ref> _userdata;
 	mem_std::Vector<Rc<Handle>> _pendingHandles;
 
 	QueueData *_queueData = nullptr;

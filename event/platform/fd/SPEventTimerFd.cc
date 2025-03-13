@@ -58,11 +58,14 @@ bool TimerFdSource::init(const TimerInfo &info) {
 	itimerspec spec;
 	if (info.timeout) {
 		setNanoTimespec(spec.it_value, info.timeout);
+		setNanoTimespec(_timer.it_value, info.timeout);
 	} else {
 		setNanoTimespec(spec.it_value, info.interval);
+		setNanoTimespec(_timer.it_value, info.timeout);
 	}
 
 	setNanoTimespec(spec.it_interval, info.interval);
+	setNanoTimespec(_timer.it_interval, info.timeout);
 
 	::timerfd_settime(fd, 0, &spec, nullptr);
 
@@ -95,8 +98,8 @@ bool TimerFdURingHandle::init(URingData *uring, TimerInfo &&info) {
 	setup<TimerFdURingHandle, TimerFdSource>();
 
 	auto source = getData<TimerFdSource>();
-	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags) {
-		reinterpret_cast<TimerFdURingHandle *>(h)->notify(h->getData<TimerFdSource>(), res, flags);
+	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
+		reinterpret_cast<TimerFdURingHandle *>(h)->notify(h->getData<TimerFdSource>(), res, flags, uflags);
 	});
 
 	return true;
@@ -107,10 +110,14 @@ Status TimerFdURingHandle::rearm(TimerFdSource *source) {
 	if (status == Status::Ok) {
 		_target = 0;
 
-		status = source->getURingData()->pushReadRetain(source->getFd(), (uint8_t *)&_target, sizeof(uint64_t), this);
-		if (status == Status::Suspended) {
-			status = source->getURingData()->submit();
-		}
+		auto uring = source->getURingData();
+		status = uring->pushSqe({IORING_OP_READ}, [&] (io_uring_sqe *sqe, uint32_t) {
+			sqe->fd = source->getFd();
+			sqe->addr = reinterpret_cast<uintptr_t>(&_target);
+			sqe->len = sizeof(uint64_t);
+			sqe->off = -1;
+			sqe->user_data = reinterpret_cast<uintptr_t>(this);
+		}, URingPushFlags::Submit);
 	}
 	return status;
 }
@@ -123,7 +130,7 @@ Status TimerFdURingHandle::disarm(TimerFdSource *source, bool suspend) {
 	return status;
 }
 
-void TimerFdURingHandle::notify(TimerFdSource *source, int32_t res, uint32_t flags) {
+void TimerFdURingHandle::notify(TimerFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
 	if (_status != Status::Ok) {
 		return;
 	}
@@ -140,7 +147,7 @@ void TimerFdURingHandle::notify(TimerFdSource *source, int32_t res, uint32_t fla
 	if (res == sizeof(uint64_t)) {
 		// successful read
 		current += _target;
-		if (count != maxOf<uint32_t>()) {
+		if (count != Infinite) {
 			setValue(std::min(current, count));
 		}
 	}

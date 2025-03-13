@@ -27,12 +27,12 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class TimerFdSource : public FdSource {
+class SP_PUBLIC TimerFdSource : public FdSource {
 public:
 	bool init(const TimerInfo &info);
 };
 
-class TimerFdHandle : public TimerHandle {
+class SP_PUBLIC TimerFdHandle : public TimerHandle {
 public:
 	virtual ~TimerFdHandle();
 
@@ -42,7 +42,7 @@ protected:
 	uint64_t _target = 0;
 };
 
-class TimerFdURingHandle : public TimerFdHandle {
+class SP_PUBLIC TimerFdURingHandle : public TimerFdHandle {
 public:
 	virtual ~TimerFdURingHandle() = default;
 
@@ -51,7 +51,7 @@ public:
 	Status rearm(TimerFdSource *);
 	Status disarm(TimerFdSource *, bool suspend);
 
-	void notify(TimerFdSource *source, int32_t res, uint32_t flags);
+	void notify(TimerFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags);
 };
 
 }

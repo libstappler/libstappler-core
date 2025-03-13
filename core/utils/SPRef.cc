@@ -38,16 +38,24 @@ struct RefAllocData {
 	std::forward_list<memory::pool_t *> delayedPools;
 	std::forward_list<memory::allocator_t *> delayedAllocs;
 
+	~RefAllocData() {
+		clear();
+	}
+
 	void clear() {
 		while (!delayedPools.empty()) {
 			memory::pool::destroy(delayedPools.front());
 			delayedPools.pop_front();
 		}
 
+		delayedPools.clear();
+
 		while (!delayedAllocs.empty()) {
 			memory::allocator::destroy(delayedAllocs.front());
 			delayedAllocs.pop_front();
 		}
+
+		delayedAllocs.clear();
 	}
 };
 

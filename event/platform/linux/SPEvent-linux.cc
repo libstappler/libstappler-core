@@ -20,44 +20,20 @@
  THE SOFTWARE.
  **/
 
-#include "SPEventQueue.h"
-#include "SPPlatformUnistd.h"
+#include "SPEvent-linux.h"
 
 #if LINUX
-
-#include "detail/SPEventQueueData.h"
 
 #include "../fd/SPEventFd.h"
 #include "../fd/SPEventTimerFd.h"
 #include "../fd/SPEventDirFd.h"
 #include "../epoll/SPEvent-epoll.h"
-#include "../uring/SPEvent-uring.h"
 #include "../uring/SPEventThreadHandle-uring.h"
+#include "../uring/SPEventTimer-uring.h"
 
 #include <signal.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
-
-struct Queue::Data : public QueueData {
-	URingData *_uring = nullptr;
-
-	Rc<DirHandle> openDir(OpenDirInfo &&);
-	Rc<StatHandle> stat(StatOpInfo &&);
-
-	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
-	Rc<ThreadHandle> addThreadHandle();
-
-	Status submit();
-	uint32_t poll();
-	uint32_t wait(TimeInterval);
-	Status run(TimeInterval, QueueWakeupInfo &&);
-	void wakeup(QueueWakeupInfo &&);
-
-	bool isValid() const;
-
-	~Data();
-	Data(QueueRef *q, const QueueInfo &info, QueueFlags flags);
-};
 
 static int SignalsToIntercept[] = { SIGUSR1, SIGUSR2 };
 
@@ -77,14 +53,28 @@ Rc<StatHandle> Queue::Data::stat(StatOpInfo &&info) {
 
 Rc<TimerHandle> Queue::Data::scheduleTimer(TimerInfo &&info) {
 	if (_uring) {
-		return Rc<TimerFdURingHandle>::create(_uring, move(info));
+		if ((hasFlag(_uring->_uflags, URingFlags::TimerMultishotSupported) && info.count == TimerInfo::Infinite)
+				|| info.count == 1) {
+			return Rc<TimerURingHandle>::create(_uring, move(info));
+		} else {
+			return Rc<TimerFdURingHandle>::create(_uring, move(info));
+		}
 	}
 	return nullptr;
 }
 
 Rc<ThreadHandle> Queue::Data::addThreadHandle() {
-	if (_uring && hasFlag(_uring->_uflags, URingFlags::FutexSupported)) {
-		return Rc<ThreadUringHandle>::create(_uring);
+	return Rc<ThreadEventFdHandle>::create(_uring);
+	if (_uring) {
+		if constexpr (URING_THREAD_USE_FUTEX_HANDLE) {
+			if (hasFlag(_uring->_uflags, URingFlags::FutexSupported)) {
+				return Rc<ThreadUringHandle>::create(_uring);
+			} else {
+				return Rc<ThreadEventFdHandle>::create(_uring);
+			}
+		} else {
+			return Rc<ThreadEventFdHandle>::create(_uring);
+		}
 	}
 	return nullptr;
 }
@@ -117,14 +107,19 @@ Status Queue::Data::run(TimeInterval ival, QueueWakeupInfo &&info) {
 	return Status::ErrorNotImplemented;
 }
 
-void Queue::Data::wakeup(QueueWakeupInfo &&info) {
+Status Queue::Data::wakeup(QueueWakeupInfo &&info) {
 	if (_uring) {
-		_uring->wakeup(info.flags, info.timeout);
+		return _uring->wakeup(info.flags, info.timeout);
 	}
+	return Status::ErrorNotImplemented;
 }
 
 bool Queue::Data::isValid() const {
 	return _uring != nullptr;
+}
+
+void Queue::Data::cancel() {
+	cleanup();
 }
 
 Queue::Data::~Data() {
@@ -134,10 +129,24 @@ Queue::Data::~Data() {
 	}
 }
 
-Queue::Data::Data(QueueRef *q, const QueueInfo &info, QueueFlags flags) : QueueData(q, flags) {
+Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags) {
 	if (URingData::checkSupport()) {
-		_uring = new (memory::pool::acquire()) URingData(_queue, this, info, flags, SignalsToIntercept);
+		auto uring = new (memory::pool::acquire()) URingData(_queue, this, info, SignalsToIntercept);
+		if (uring->_ringFd >= 0) {
+			_uring = uring;
+		} else {
+			uring->~URingData();
+		}
 	}
+}
+
+}
+
+namespace STAPPLER_VERSIONIZED stappler::event::platform {
+
+Rc<QueueRef> getThreadQueue(QueueInfo &&info) {
+	// Just create the queue, Linux has no specifics
+	return Queue::create(move(info));
 }
 
 }

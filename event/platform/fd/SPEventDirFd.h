@@ -27,12 +27,12 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class DirFdSource : public FdSource {
+class SP_PUBLIC DirFdSource : public FdSource {
 public:
 	bool init();
 };
 
-class DirFdHandle : public DirHandle {
+class SP_PUBLIC DirFdHandle : public DirHandle {
 public:
 	virtual ~DirFdHandle();
 
@@ -41,7 +41,7 @@ public:
 	virtual Status scan(const Callback<void(FileType, StringView)> &) override;
 };
 
-class DirFdURingHandle : public DirFdHandle {
+class SP_PUBLIC DirFdURingHandle : public DirFdHandle {
 public:
 	virtual ~DirFdURingHandle() = default;
 
@@ -49,7 +49,7 @@ public:
 
 	Status run(DirFdSource *);
 
-	void notify(DirFdSource *, int32_t res, uint32_t flags);
+	void notify(DirFdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
 };
 
 }

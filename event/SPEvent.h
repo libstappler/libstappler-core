@@ -27,9 +27,11 @@
 #include "SPRef.h"
 #include "SPPlatform.h"
 #include "SPFilesystem.h"
+#include "SPStatus.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+class Looper;
 class Queue;
 class Handle;
 class InputOutputHandle;
@@ -42,60 +44,13 @@ class ThreadHandle;
 
 class BufferChain;
 
-static constexpr int STATUS_ERRNO_OFFSET = 0xFFFF;
-
-static constexpr inline int ERROR_NUMBER(int __errno) {
-	return - STATUS_ERRNO_OFFSET - __errno;
-}
-
-enum class Status : int {
-	// general return values
-	Ok = 0,
-	Declined = -1,
-	Done = -2,
-	Suspended = -3,
-
-	// errors
-	ErrorNumber =			ERROR_NUMBER(0),
-	ErrorNotPermitted =		ERROR_NUMBER(1), // EPERM
-	ErrorNotFound =			ERROR_NUMBER(2), // ENOENT
-	ErrorAgain =			ERROR_NUMBER(11), // EAGAIN
-	ErrorBusy =				ERROR_NUMBER(16), // EBUSY
-	ErrorInvalidArguemnt =	ERROR_NUMBER(22), // EINVAL
-	ErrorNotImplemented =	ERROR_NUMBER(38), // ENOSYS
-	ErrorAlreadyPerformed =	ERROR_NUMBER(114), // EALREADY
-	ErrorInProgress =		ERROR_NUMBER(115), // EINPROGRESS
-	ErrorCancelled =		ERROR_NUMBER(125), // ECANCELED
-};
-
-inline bool isSuccessful(Status st) {
-	switch (st) {
-	case Status::Ok:
-	case Status::Done:
-	case Status::Suspended:
-		return true;
-		break;
-	default:
-		break;
-	}
-	return false;
-}
-
-inline int toErrno(Status st) {
-	if (toInt(st) > toInt(Status::ErrorNumber)) {
-		return 0;
-	}
-
-	return -(toInt(st) - toInt(Status::ErrorNumber));
-}
-
 using FileType = filesystem::FileType;
 using OpenFlags = filesystem::OpenFlags;
 using ProtFlags = filesystem::ProtFlags;
 using Stat = filesystem::Stat;
 
 template <typename Result = Handle>
-struct CompletionHandle {
+struct SP_PUBLIC CompletionHandle {
 	using Fn = void (*) (void *, Result *, uint32_t value, Status);
 
 	template <typename T>
@@ -117,7 +72,9 @@ struct CompletionHandle {
 	void *userdata;
 };
 
-struct TimerInfo {
+struct SP_PUBLIC TimerInfo {
+	static constexpr uint32_t Infinite = maxOf<uint32_t>();
+
 	using Completion = CompletionHandle<TimerHandle>;
 
 	Completion completion;
@@ -127,26 +84,26 @@ struct TimerInfo {
 	ClockType type = ClockType::Default;
 };
 
-struct FileOpInfo {
+struct SP_PUBLIC FileOpInfo {
 	DirHandle *root = nullptr;
 	StringView path;
 };
 
-struct OpenDirInfo {
+struct SP_PUBLIC OpenDirInfo {
 	using Completion = CompletionHandle<DirHandle>;
 
 	Completion completion;
 	FileOpInfo file;
 };
 
-struct StatOpInfo {
+struct SP_PUBLIC StatOpInfo {
 	using Completion = CompletionHandle<StatHandle>;
 
 	Completion completion;
 	FileOpInfo file;
 };
 
-struct OpenFileInfo {
+struct SP_PUBLIC OpenFileInfo {
 	using Completion = CompletionHandle<FileHandle>;
 
 	Completion completion;
@@ -155,8 +112,6 @@ struct OpenFileInfo {
 	OpenFlags flags = OpenFlags::None;
 	ProtFlags prot = ProtFlags::None;
 };
-
-std::ostream &operator<<(std::ostream &, Status);
 
 }
 

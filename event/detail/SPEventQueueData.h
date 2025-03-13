@@ -27,9 +27,10 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-struct QueueData : public mem_pool::AllocBase {
+struct SP_PUBLIC QueueData : public mem_pool::AllocBase {
 	QueueRef *_queue = nullptr;
 	QueueFlags _flags = QueueFlags::None;
+	memory::pool_t *_tmpPool = nullptr;
 
 	bool _running = true;
 
@@ -45,6 +46,8 @@ struct QueueData : public mem_pool::AllocBase {
 	Status runHandle(Handle *);
 
 	void cancel(Handle *);
+
+	void cleanup();
 
 	QueueData(QueueRef *, QueueFlags);
 };

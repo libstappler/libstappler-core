@@ -25,28 +25,27 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
-Task::Task() { }
-Task::~Task() { }
-
 /* creates empty task with only complete function to be used as callback from other thread */
-bool Task::init(const CompleteCallback &c, Ref *t) {
+bool Task::init(const CompleteCallback &c, Ref *t, TaskGroup *g) {
 	addRef(t);
 	if (c) {
 		_complete.push_back(c);
 	}
+	_group = g;
 	return true;
 }
 
-bool Task::init(CompleteCallback &&c, Ref *t) {
+bool Task::init(CompleteCallback &&c, Ref *t, TaskGroup *g) {
 	addRef(t);
 	if (c) {
 		_complete.emplace_back(sp::move(c));
 	}
+	_group = g;
 	return true;
 }
 
 /* creates regular async task without initialization phase */
-bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t) {
+bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g) {
 	addRef(t);
 	if (e) {
 		_execute.push_back(e);
@@ -54,10 +53,11 @@ bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t) {
 	if (c) {
 		_complete.push_back(c);
 	}
+	_group = g;
 	return true;
 }
 
-bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t) {
+bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g) {
 	addRef(t);
 	if (e) {
 		_execute.emplace_back(sp::move(e));
@@ -65,11 +65,12 @@ bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t) {
 	if (c) {
 		_complete.emplace_back(sp::move(c));
 	}
+	_group = g;
 	return true;
 }
 
 /* creates regular async task with initialization phase */
-bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const CompleteCallback &c, Ref *t) {
+bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g) {
 	addRef(t);
 	if (p) {
 		_prepare.push_back(p);
@@ -80,10 +81,11 @@ bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const Comple
 	if (c) {
 		_complete.push_back(c);
 	}
+	_group = g;
 	return true;
 }
 
-bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, Ref *t) {
+bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g) {
 	addRef(t);
 	if (p) {
 		_prepare.emplace_back(sp::move(p));
@@ -94,6 +96,7 @@ bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, 
 	if (c) {
 		_complete.emplace_back(sp::move(c));
 	}
+	_group = g;
 	return true;
 }
 
@@ -136,35 +139,82 @@ void Task::addCompleteCallback(CompleteCallback &&cb) {
 	}
 }
 
+void Task::run() const {
+	if (_state == TaskState::Initial) {
+		prepare();
+	}
+	if (_state == TaskState::Prepared) {
+		execute();
+	}
+	handleCompleted();
+}
+
 bool Task::prepare() const {
-	if (!_prepare.empty()) {
-		for (auto i : _prepare) {
-			if (i && !i(*this)) {
-				return false;
+	if (_state == TaskState::Initial) {
+		if (!_prepare.empty()) {
+			for (auto i : _prepare) {
+				if (i && !i(*this)) {
+					_state = TaskState::ExecutedFailed;
+					return false;
+				}
 			}
 		}
+		if (_group) {
+			_group->handleAdded(this);
+		}
+		_state = TaskState::Prepared;
+		return true;
+	} else {
+		log::warn("thread::Task", "Task::prepare was called on the task, that was already prepared");
 	}
-	return true;
+	return false;
 }
 
 /** called on worker thread */
-bool Task::execute() {
-	if (!_execute.empty()) {
-		for (auto i : _execute) {
-			if (i && !i(*this)) {
-				return false;
+bool Task::execute() const {
+	if (_state == TaskState::Prepared) {
+		if (!_execute.empty()) {
+			for (auto i : _execute) {
+				if (i && !i(*this)) {
+					_state = TaskState::ExecutedFailed;
+					return false;
+				}
 			}
 		}
+		_state = TaskState::ExecutedSuccessful;
+		return true;
+	} else {
+		log::warn("thread::Task", "Task::execute was called on the task, that is not in TaskState::Prepared");
 	}
-	return true;
+	return false;
 }
 
-/** called on UI thread when request is completed */
-void Task::onComplete() {
-	if (!_complete.empty()) {
-		for (auto i : _complete) {
-			i(*this, isSuccessful());
+/** called on dispatcher thread when request is completed */
+void Task::handleCompleted() const {
+	switch (_state) {
+	case TaskState::ExecutedSuccessful:
+	case TaskState::ExecutedFailed:
+		if (!_complete.empty()) {
+			for (auto i : _complete) {
+				i(*this, isSuccessful());
+			}
 		}
+		if (_group) {
+			_group->handlePerformed(this);
+		}
+		break;
+	default:
+		log::warn("thread::Task", "Task::handleComplete was called on the task, that is not in TaskState::ExecutedSuccessful or TaskState::ExecutedFailed");
+		break;
+	}
+}
+
+void Task::cancel() const {
+	if (_state == TaskState::Prepared) {
+		_state = TaskState::ExecutedFailed;
+		handleCompleted();
+	} else {
+		log::warn("thread::Task", "Task::cancel was called on the task, that is not in TaskState::Prepared");
 	}
 }
 

@@ -70,8 +70,8 @@ bool StatURingHandle::init(URingData *uring, StatOpInfo &&info) {
 		return ((StatURingHandle *)h)->run(h->getData<FdSource>());
 	};
 
-	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags) {
-		reinterpret_cast<StatURingHandle *>(h)->notify(h->getData<FdSource>(), res, flags);
+	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
+		reinterpret_cast<StatURingHandle *>(h)->notify(h->getData<FdSource>(), res, flags, uflags);
 	});
 
 	return true;
@@ -87,7 +87,7 @@ Status StatURingHandle::run(FdSource *source) {
 			sqe->len = STATX_ALL;
 			sqe->off = reinterpret_cast<uintptr_t>(&_buffer);
 			uring->retainHandleForSqe(sqe, this);
-		});
+		}, URingPushFlags::Submit);
 		if (isSuccessful(result)) {
 			_status = Status::Ok;
 		}
@@ -95,7 +95,7 @@ Status StatURingHandle::run(FdSource *source) {
 	return Status::ErrorAlreadyPerformed;
 }
 
-void StatURingHandle::notify(FdSource *source, int32_t res, uint32_t flags) {
+void StatURingHandle::notify(FdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
 	if (_status != Status::Ok) {
 		return;
 	}

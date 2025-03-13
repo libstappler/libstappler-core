@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,34 +29,19 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct SP_PUBLIC ThreadInfo {
-	static constexpr uint32_t mainThreadId = maxOf<uint32_t>() - 1;
+	static constexpr uint32_t DetachedWorker = maxOf<uint32_t>();
 
-	static ThreadInfo *getThreadInfo();
-	static void setMainThread();
-	static void setThreadInfo(uint32_t, uint32_t, StringView, bool);
-	static void setThreadInfo(StringView);
+	static const ThreadInfo *getThreadInfo();
 
-	uint32_t threadId = 0;
+	static void setThreadInfo(StringView, uint32_t worker = DetachedWorker, bool managed = true);
+
 	uint32_t workerId = 0;
 	StringView name;
 	bool managed = false;
-	bool detouched = false;
 
 	memory::allocator_t *threadAlloc = nullptr;
 	memory::pool_t *threadPool = nullptr;
 	memory::pool_t *workerPool = nullptr;
-};
-
-/* Interface for thread workers or handlers */
-class SP_PUBLIC ThreadInterface : public Ref {
-public:
-	virtual ~ThreadInterface() = default;
-
-	static void workerThread(ThreadInterface *tm);
-
-	virtual void threadInit() { }
-	virtual void threadDispose() { }
-	virtual bool worker() { return false; }
 };
 
 enum class ThreadFlags {
@@ -66,8 +51,11 @@ enum class ThreadFlags {
 
 SP_DEFINE_ENUM_AS_MASK(ThreadFlags)
 
-class SP_PUBLIC Thread : public ThreadInterface {
+/* Interface for thread workers or handlers */
+class SP_PUBLIC Thread : public Ref {
 public:
+	static void workerThread(Thread *tm);
+
 	static const Thread *getCurrentThread();
 
 	template <typename T>
@@ -81,23 +69,24 @@ public:
 	virtual void waitRunning();
 	virtual void waitStopped();
 
-	virtual void threadInit() override;
-	virtual void threadDispose() override;
-	virtual bool worker() override;
-
-	virtual bool isOnThisThread() const;
-
-	virtual bool isRunning() const { return _running.load(); }
-
-	const Thread *getParentThread() const { return _parentThread; }
-
-	std::thread::id getThreadId() const { return _thisThreadId; }
+	virtual void threadInit();
+	virtual void threadDispose();
+	virtual bool worker();
 
 	// workload overload
 	virtual bool performWorkload() { return false; }
 
+	virtual bool isRunning() const { return _running.load(); }
+
+	std::thread::id getThreadId() const { return _thisThreadId; }
+
+	bool isOnThisThread() const;
+
+	const Thread *getParentThread() const { return _parentThread; }
+
 protected:
 	ThreadFlags _flags = ThreadFlags::None;
+
 	const Thread *_parentThread = nullptr;
 
 	const std::type_info *_type = nullptr;
@@ -111,7 +100,6 @@ protected:
 
 	mutable std::atomic_flag _continueExecution;
 };
-
 
 template <typename T>
 auto Thread::findSpecificThread() -> const T * {

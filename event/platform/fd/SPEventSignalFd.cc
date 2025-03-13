@@ -280,7 +280,7 @@ Status SignalFdURingHandle::disarm(SignalFdSource *source, bool suspend) {
 	return status;
 }
 
-void SignalFdURingHandle::notify(SignalFdSource *source, int32_t res, uint32_t flags) {
+void SignalFdURingHandle::notify(SignalFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
 	if (_status != Status::Ok) {
 		return;
 	}

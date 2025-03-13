@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class FileOpHandle : public Handle {
+class SP_PUBLIC FileOpHandle : public Handle {
 public:
 	virtual ~FileOpHandle() = default;
 
@@ -40,7 +40,7 @@ protected:
 	mem_std::String _pathname;
 };
 
-class StatHandle : public FileOpHandle {
+class SP_PUBLIC StatHandle : public FileOpHandle {
 public:
 	virtual ~StatHandle() = default;
 
@@ -52,7 +52,7 @@ protected:
 	Stat _stat;
 };
 
-class DirHandle : public FileOpHandle {
+class SP_PUBLIC DirHandle : public FileOpHandle {
 public:
 	virtual ~DirHandle() = default;
 
@@ -62,11 +62,11 @@ public:
 	virtual Status scan(const Callback<void(FileType, StringView)> &) { return Status::ErrorNotImplemented; }
 };
 
-class InputOutputHandle : public Handle {
+class SP_PUBLIC InputOutputHandle : public Handle {
 
 };
 
-class FileHandle : public InputOutputHandle {
+class SP_PUBLIC FileHandle : public InputOutputHandle {
 
 };
 

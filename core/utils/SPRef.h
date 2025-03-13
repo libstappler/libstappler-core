@@ -242,6 +242,9 @@ public:
 	using Self = Rc<_Base>;
 	using Type = typename std::remove_cv<_Base>::type;
 
+	template <typename Target>
+	static auto doReferenceCast(Rc<Type> &&source) -> Rc<Target>;
+
 	template <class... Args>
 	static inline Self create(Args && ... args);
 
@@ -255,6 +258,13 @@ public:
 
 	template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type* = nullptr>
 	inline Rc & operator = (const Rc<B> &value) noexcept;
+
+	template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type* = nullptr>
+	inline Rc & operator = (Rc<B> &&value) noexcept;
+
+	// upcast
+	template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type* = nullptr>
+	B *get_cast() const noexcept;
 
 	// Direct call of `get` should not be on empty storage
 	_Base *get() const noexcept;
@@ -270,6 +280,9 @@ public:
 
 	template <typename Target>
 	Rc<Target> cast() const;
+
+	template<typename T>
+	friend class Rc;
 };
 
 template <typename _Base>
@@ -319,6 +332,22 @@ public:
 
 template <typename T>
 using SharedRc = Rc<SharedRef<T>>;
+
+// Cast between reference types, possibly, without retain/release cycle
+// Can be performed for upcast/downcast
+template <typename Target, typename Source,
+	typename std::enable_if<std::is_convertible_v<Target*, Source*>
+						|| std::is_convertible_v<Source*, Target*>>::type* = nullptr>
+auto ref_cast(Rc<Source> &&source) -> Rc<Target> {
+	return Rc<Source>::template doReferenceCast<Target>(move(source));
+}
+
+template <typename Target, typename Source,
+	typename std::enable_if<std::is_convertible_v<Target*, Source*>
+						|| std::is_convertible_v<Source*, Target*>>::type* = nullptr>
+auto ref_cast(const Rc<Source> &source) -> Rc<Target> {
+	return Rc<Source>::template doReferenceCast<Target>(source.get());
+}
 
 namespace memleak {
 
@@ -687,6 +716,19 @@ inline RcBase<_Base, _Pointer>::RcBase(Pointer value, bool v) noexcept
 
 
 template <typename _Base>
+template <typename Target>
+inline auto Rc<_Base>::doReferenceCast(Rc<Type> &&source) -> Rc<Target> {
+	Rc<Target> ret;
+	ret._ptr = static_cast<Target *>(source._ptr);
+	source._ptr = nullptr;
+#if SP_REF_DEBUG
+	ret._id = source._id;
+	source._id = 0;
+#endif
+	return ret;
+}
+
+template <typename _Base>
 template <class... Args>
 inline auto Rc<_Base>::create(Args && ... args) -> Self {
 	static_assert(std::is_base_of<Ref, _Base>::value, "Rc base class should be derived from Ref");
@@ -717,6 +759,25 @@ template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}
 inline auto Rc<_Base>::operator = (const Rc<B> &value) noexcept -> Rc & {
 	this->set(value);
 	return *this;
+}
+
+template <typename _Base>
+template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type *>
+inline auto Rc<_Base>::operator = (Rc<B> &&value) noexcept -> Rc & {
+	this->_ptr = static_cast<Type *>(value._ptr);
+	value._ptr = nullptr;
+#if SP_REF_DEBUG
+	this->_id = value._id;
+	value._id = 0;
+#endif
+	return *this;
+}
+
+// upcast
+template <typename _Base>
+template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type*>
+inline auto Rc<_Base>::get_cast() const noexcept -> B * {
+	return static_cast<B *>(this->_ptr);
 }
 
 template <typename _Base>

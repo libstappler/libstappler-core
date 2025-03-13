@@ -20,52 +20,39 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_PLATFORM_FD_SPEVENTSIGNALFD_H_
-#define CORE_EVENT_PLATFORM_FD_SPEVENTSIGNALFD_H_
+#ifndef CORE_EVENT_PLATFORM_URING_SPEVENTTIMER_URING_H_
+#define CORE_EVENT_PLATFORM_URING_SPEVENTTIMER_URING_H_
 
-#include "SPEventFd.h"
+#include "SPEventThreadHandle.h"
+#include "../fd/SPEventEventFd.h"
+#include "SPEvent-uring.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class SP_PUBLIC SignalFdSource : public FdSource {
+/* io_uring timer, based on IORING_TIMEOUT_MULTISHOT
+ *
+ * It's more performant, then timerfd, but can be stopped from repeating
+ * by kernel on unknown reason, so, it should be used only for single-shot
+ * or infinite timers
+ */
+
+class SP_PUBLIC TimerUringSource : public FdSource {
 public:
-	bool init(const sigset_t *);
+	bool init(const TimerInfo &info);
 };
 
-class SP_PUBLIC SignalFdHandle : public FdHandle {
+class SP_PUBLIC TimerURingHandle : public TimerHandle {
 public:
-	virtual ~SignalFdHandle() = default;
+	virtual ~TimerURingHandle() = default;
 
-	bool init(QueueRef *, QueueData *, SpanView<int>);
+	bool init(URingData *, TimerInfo &&);
 
-	bool read();
-	bool process();
-	void enable();
-	void enable(const sigset_t *);
-	void disable();
+	Status rearm(TimerUringSource *);
+	Status disarm(TimerUringSource *, bool suspend);
 
-	const sigset_t *getSigset() const { return &_sigset; }
-
-	const signalfd_siginfo *getInfo() const { return &_info; }
-
-protected:
-	signalfd_siginfo _info;
-	sigset_t _sigset;
-	mem_std::Vector<int> _extra;
-};
-
-class SP_PUBLIC SignalFdURingHandle : public SignalFdHandle {
-public:
-	virtual ~SignalFdURingHandle() = default;
-
-	bool init(URingData *, SpanView<int>);
-
-	Status rearm(SignalFdSource *);
-	Status disarm(SignalFdSource *, bool suspend);
-
-	void notify(SignalFdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
+	void notify(TimerUringSource *source, int32_t res, uint32_t flags, URingUserFlags uflags);
 };
 
 }
 
-#endif /* CORE_EVENT_PLATFORM_FD_SPEVENTSIGNALFD_H_ */
+#endif /* CORE_EVENT_PLATFORM_URING_SPEVENTTIMER_URING_H_ */

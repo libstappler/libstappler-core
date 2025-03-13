@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,29 +20,44 @@
  THE SOFTWARE.
  **/
 
-#include "SPCommon.h"
-#include "SPThreadTaskQueue.h"
+#ifndef CORE_EVENT_PLATFORM_LINUX_SPEVENT_LINUX_H_
+#define CORE_EVENT_PLATFORM_LINUX_SPEVENT_LINUX_H_
 
-#if (WIN32)
+#include "SPEventQueue.h"
+#include "SPPlatformUnistd.h"
+#include "detail/SPEventQueueData.h"
 
-namespace STAPPLER_VERSIONIZED stappler::thread {
+#if LINUX
 
-struct ThreadCallbacks;
+#include "../uring/SPEvent-uring.h"
 
-static void ThreadCallbacks_init(const ThreadCallbacks &, ThreadInterface *tm);
-static bool ThreadCallbacks_worker(const ThreadCallbacks &, ThreadInterface *tm);
-static void ThreadCallbacks_dispose(const ThreadCallbacks &, ThreadInterface *tm);
+namespace STAPPLER_VERSIONIZED stappler::event {
 
-SP_LOCAL static void _setThreadName(StringView name) {
-	// TODO: https://learn.microsoft.com/ru-ru/previous-versions/visualstudio/visual-studio-2015/debugger/how-to-set-a-thread-name-in-native-code?view=vs-2015&redirectedfrom=MSDN
-}
+struct SP_PUBLIC Queue::Data : public QueueData {
+	URingData *_uring = nullptr;
 
-SP_LOCAL static void _workerThread(const ThreadCallbacks &cb, ThreadInterface *tm) {
-	ThreadCallbacks_init(cb, tm);
-    while (ThreadCallbacks_worker(cb, tm)) { }
-    ThreadCallbacks_dispose(cb, tm);
-}
+	Rc<DirHandle> openDir(OpenDirInfo &&);
+	Rc<StatHandle> stat(StatOpInfo &&);
+
+	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
+	Rc<ThreadHandle> addThreadHandle();
+
+	Status submit();
+	uint32_t poll();
+	uint32_t wait(TimeInterval);
+	Status run(TimeInterval, QueueWakeupInfo &&);
+	Status wakeup(QueueWakeupInfo &&);
+
+	bool isValid() const;
+
+	void cancel();
+
+	~Data();
+	Data(QueueRef *q, const QueueInfo &info);
+};
 
 }
 
 #endif
+
+#endif /* CORE_EVENT_PLATFORM_LINUX_SPEVENT_LINUX_H_ */

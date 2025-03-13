@@ -36,7 +36,9 @@ bool FdSource::init(int fd) {
 
 void FdSource::cancel() {
 	if (_fd >= 0) {
-		::close(_fd);
+		if (_closeFd) {
+			::close(_fd);
+		}
 		_fd = -1;
 	}
 }
@@ -49,6 +51,16 @@ void FdSource::setEpollMask(uint32_t ev) {
 void FdSource::setURingCallback(URingData *r, URingCallback cb) {
 	_uring.uring = r;
 	_uring.ucb = cb;
+}
+
+void FdSource::setTimeoutInterval(TimeInterval timeout, TimeInterval interval) {
+	if (timeout) {
+		setNanoTimespec(_timer.it_value, timeout);
+	} else {
+		setNanoTimespec(_timer.it_value, interval);
+	}
+
+	setNanoTimespec(_timer.it_interval, interval);
 }
 
 FdHandle::~FdHandle() {

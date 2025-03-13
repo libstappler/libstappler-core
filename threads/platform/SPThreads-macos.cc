@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -40,9 +40,9 @@ using NSThread_currentThread_type = id(*)(Class, SEL);
 using NSString_stringWithUTF8String_type = id(*)(Class, SEL, const char *);
 using NSThread_setName_type = id(*)(id, SEL, id);
 
-static void ThreadCallbacks_init(const ThreadCallbacks &, ThreadInterface *tm);
-static bool ThreadCallbacks_worker(const ThreadCallbacks &, ThreadInterface *tm);
-static void ThreadCallbacks_dispose(const ThreadCallbacks &, ThreadInterface *tm);
+static void ThreadCallbacks_init(const ThreadCallbacks &, Thread *tm);
+static bool ThreadCallbacks_worker(const ThreadCallbacks &, Thread *tm);
+static void ThreadCallbacks_dispose(const ThreadCallbacks &, Thread *tm);
 
 template <typename Callback>
 static void ThreadCallbacks_performInAutorelease(Callback &&cb) {
@@ -58,7 +58,7 @@ SP_LOCAL static void _setThreadName(StringView name) {
 	((NSThread_setName_type)&objc_msgSend)(thread, sel_getUid("setName:"), string);
 }
 
-SP_LOCAL static void _workerThread(const ThreadCallbacks &cb, ThreadInterface *tm) {
+SP_LOCAL static void _workerThread(const ThreadCallbacks &cb, Thread *tm) {
 	ThreadCallbacks_performInAutorelease([&] {
 		ThreadCallbacks_init(cb, tm);
 	});

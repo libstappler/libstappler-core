@@ -20,52 +20,55 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_PLATFORM_FD_SPEVENTSIGNALFD_H_
-#define CORE_EVENT_PLATFORM_FD_SPEVENTSIGNALFD_H_
+#ifndef CORE_EVENT_PLATFORM_FD_SPEVENTPOLLFD_H_
+#define CORE_EVENT_PLATFORM_FD_SPEVENTPOLLFD_H_
 
 #include "SPEventFd.h"
 
+#include <poll.h>
+
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class SP_PUBLIC SignalFdSource : public FdSource {
-public:
-	bool init(const sigset_t *);
+enum class PollFlags : uint16_t {
+	None = 0,
+	In = POLLIN,
+	Pri = POLLPRI,
+	Out = POLLOUT,
+	Err = POLLERR,
+	HungUp = POLLHUP,
+	Invalid = POLLNVAL,
+
+	PollMask = 0x3FFF,
+	CloseFd = 0x4000,
 };
 
-class SP_PUBLIC SignalFdHandle : public FdHandle {
+SP_DEFINE_ENUM_AS_MASK(PollFlags)
+
+class SP_PUBLIC PollFdHandle : public FdHandle {
 public:
-	virtual ~SignalFdHandle() = default;
+	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags, mem_std::Function<Status(int, PollFlags)> &&);
 
-	bool init(QueueRef *, QueueData *, SpanView<int>);
+	virtual ~PollFdHandle() = default;
 
-	bool read();
-	bool process();
-	void enable();
-	void enable(const sigset_t *);
-	void disable();
-
-	const sigset_t *getSigset() const { return &_sigset; }
-
-	const signalfd_siginfo *getInfo() const { return &_info; }
+	bool init(QueueRef *, QueueData *, int, PollFlags, mem_std::Function<Status(int, PollFlags)> &&);
 
 protected:
-	signalfd_siginfo _info;
-	sigset_t _sigset;
-	mem_std::Vector<int> _extra;
+	PollFlags _flags = PollFlags::None;
+	mem_std::Function<Status(int, PollFlags)> _notify;
 };
 
-class SP_PUBLIC SignalFdURingHandle : public SignalFdHandle {
+class SP_PUBLIC PollFdURingHandle : public PollFdHandle {
 public:
-	virtual ~SignalFdURingHandle() = default;
+	virtual ~PollFdURingHandle() = default;
 
-	bool init(URingData *, SpanView<int>);
+	bool init(URingData *, int, PollFlags, mem_std::Function<Status(int, PollFlags)> &&);
 
-	Status rearm(SignalFdSource *);
-	Status disarm(SignalFdSource *, bool suspend);
+	Status rearm(FdSource *);
+	Status disarm(FdSource *, bool suspend);
 
-	void notify(SignalFdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
+	void notify(FdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
 };
 
 }
 
-#endif /* CORE_EVENT_PLATFORM_FD_SPEVENTSIGNALFD_H_ */
+#endif /* CORE_EVENT_PLATFORM_FD_SPEVENTPOLLFD_H_ */

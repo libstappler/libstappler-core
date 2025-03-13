@@ -44,6 +44,9 @@ SP_PUBLIC size_t makeRandomBytes(uint8_t * buf, size_t count);
 // current time in microseconds
 SP_PUBLIC uint64_t clock(ClockType = ClockType::Default);
 
+// current time in nanoseconds
+SP_PUBLIC uint64_t nanoclock(ClockType = ClockType::Default);
+
 // sleep for the microseconds
 SP_PUBLIC void sleep(uint64_t microseconds);
 

@@ -30,14 +30,24 @@
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
 #include <linux/stat.h>
+#include <linux/time_types.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 struct URingData;
 
-class FdSource {
+enum class URingUserFlags {
+	None,
+	Retained = 1 << 0,
+	CancellationRequest = 1 << 1,
+	Alternative = 1 << 2,
+};
+
+SP_DEFINE_ENUM_AS_MASK(URingUserFlags)
+
+class SP_PUBLIC FdSource {
 public:
-	using URingCallback = void (*) (Handle *, int32_t res, uint32_t flags);
+	using URingCallback = void (*) (Handle *, int32_t res, uint32_t flags, URingUserFlags);
 
 	bool init(int fd);
 
@@ -45,6 +55,8 @@ public:
 
 	int getFd() const { return _fd; }
 	void setFd(int fd) { _fd = fd; }
+
+	void setCloseFd(bool val) { _closeFd = val; }
 
 	uint32_t getEventMask() const { return _epoll.event.events; }
 	const epoll_event *getEvent() const { return &_epoll.event; }
@@ -55,8 +67,19 @@ public:
 	void setEpollMask(uint32_t);
 	void setURingCallback(URingData *, URingCallback);
 
+	void setTimeoutInterval(TimeInterval, TimeInterval);
+
+	const __kernel_timespec &getTimeout() const {
+		return _timer.it_value;
+	}
+
+	const __kernel_timespec &getInterval() const {
+		return _timer.it_interval;
+	}
+
 protected:
 	int _fd = -1;
+	bool _closeFd = true;
 	union {
 		struct {
 			epoll_event event;
@@ -66,9 +89,12 @@ protected:
 			URingCallback ucb;
 		} _uring;
 	};
+	union {
+		__kernel_itimerspec _timer;
+	};
 };
 
-class FdHandle : public Handle {
+class SP_PUBLIC FdHandle : public Handle {
 public:
 	virtual ~FdHandle();
 
@@ -80,13 +106,13 @@ protected:
 		setup<T, S>();
 
 		auto source = getData<S>();
-		source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags) {
-			reinterpret_cast<T *>(h)->notify(h->getData<S>(), res, flags);
+		source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
+			reinterpret_cast<T *>(h)->notify(h->getData<S>(), res, flags, uflags);
 		});
 	}
 };
 
-class StatURingHandle : public StatHandle {
+class SP_PUBLIC StatURingHandle : public StatHandle {
 public:
 	virtual ~StatURingHandle() = default;
 
@@ -94,7 +120,7 @@ public:
 
 	Status run(FdSource *);
 
-	void notify(FdSource *, int32_t res, uint32_t flags);
+	void notify(FdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
 
 protected:
 	struct statx _buffer;

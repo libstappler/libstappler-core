@@ -24,17 +24,38 @@
 #define CORE_EVENT_PLATFORM_URING_SPEVENTTHREADHANDLE_H_
 
 #include "SPEventThreadHandle.h"
+#include "../fd/SPEventEventFd.h"
 #include "SPEvent-uring.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class FutexImpl {
+/* Thread handle implementations for io_uring.
+ *
+ * Classic implementation uses eventfd + mutex with write + potential futex syscalls per task
+ * Modern implementation uses IORING_OP_FUTEX_WAIT with only futex syscall per task
+ */
+
+// For eventfd-based haandle - do not block on mutex, wait until nonblocking capture
+// Can increase overall performance, with the cost of stable context switch time
+static constexpr bool URING_THREAD_NONBLOCK = false;
+
+// Try to observe context switch timer (in nanoseconds) to determine Handle performance
+static constexpr bool URING_THREAD_DEBUG_SWITCH_TIMER = false;
+
+// For now, classic implementation gives more stable context switch time, so, ThreadUringHandle is disabled
+static constexpr bool URING_THREAD_USE_FUTEX_HANDLE = false;
+
+// Thread dispatch control with a single futex (requires FUTEX2 syscalls)
+// On client side - works normally, but always calls futex_wake on unlock, to signal server thread
+// Server thread uses uring instead of syscalls to do async lockless processing
+class SP_PUBLIC FutexImpl {
 public:
 	static constexpr uint32_t CLIENT_MASK = 0x01;
 	static constexpr uint32_t SERVER_MASK = 0x02;
 	static constexpr uint32_t FULL_MASK = CLIENT_MASK | SERVER_MASK;
 
 	void client_lock();
+	bool client_try_lock();
 	bool server_try_lock();
 
 	bool server_unlock();
@@ -51,22 +72,61 @@ private:
 	volatile uint32_t _futex = 0;
 };
 
-class ThreadUringHandle : public ThreadHandle {
+// IORING_OP_FUTEX_WAIT - based handler
+class SP_PUBLIC ThreadUringHandle : public ThreadHandle {
 public:
+	// Most of the events handled via futex notification,
+	// but in very rare cases uring-based futex events can be stalled due ABA problem.
+	// In this case, failsafe timer can unstall process.
+	// Discovered ABA problem, for now, observed only with debugger-issues signals
+	// and should not occur in production environment.
+	static constexpr TimeInterval FAILSAFE_TIMER_INTERVAL = TimeInterval::microseconds(500);
+
 	virtual ~ThreadUringHandle() = default;
 
 	bool init(URingData *);
 
-	Status rearm(FdSource *, bool unlock = false);
+	Status rearm(FdSource *, bool unlock = false, bool init = true);
 	Status disarm(FdSource *, bool suspend);
 
-	void notify(FdSource *source, int32_t res, uint32_t flags);
+	void notify(FdSource *source, int32_t res, uint32_t flags, URingUserFlags);
 
 	Status perform(Rc<thread::Task> &&task) override;
 	Status perform(mem_std::Function<void()> &&func, Ref *target) override;
 
 protected:
+	void rearmFailsafe(FdSource *);
+
+	bool _failsafe = false;
 	FutexImpl _futex;
+	std::thread::id _thisThread;
+};
+
+// eventfd - based handler
+class SP_PUBLIC ThreadEventFdHandle : public ThreadHandle {
+public:
+	// READ_MULTISHOT, if available, allows us to receive up to N events before rearming,
+	// it improves handle performance, but requires some memory
+	static constexpr int TARGET_BUFFER_COUNT = 8;
+
+	virtual ~ThreadEventFdHandle() = default;
+
+	bool init(URingData *);
+
+	Status rearmBuffers(EventFdSource *);
+
+	Status rearm(EventFdSource *, bool updateBuffers = false);
+	Status disarm(EventFdSource *, bool suspend);
+
+	void notify(EventFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags);
+
+	Status perform(Rc<thread::Task> &&task) override;
+	Status perform(mem_std::Function<void()> &&func, Ref *target) override;
+
+protected:
+	uint64_t _targetBuf[TARGET_BUFFER_COUNT];
+	uint16_t _bufferGroup = 0;
+	std::mutex _mutex;
 };
 
 }

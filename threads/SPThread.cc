@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,20 +27,20 @@
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadCallbacks {
-	void (*init) (ThreadInterface *);
-	void (*dispose) (ThreadInterface *);
-	bool (*worker) (ThreadInterface *);
+	void (*init) (Thread *);
+	void (*dispose) (Thread *);
+	bool (*worker) (Thread *);
 };
 
-static void _workerThread(const ThreadCallbacks &tm, ThreadInterface *);
+static void _workerThread(const ThreadCallbacks &tm, Thread *);
 static void _setThreadName(StringView name);
 
 static std::atomic<uint32_t> s_threadId(1);
 
 thread_local ThreadInfo tl_threadInfo;
-thread_local const ThreadInterface *tl_owner = nullptr;
+thread_local const Thread *tl_owner = nullptr;
 
-static void ThreadCallbacks_init(const ThreadCallbacks &cb, ThreadInterface *tm) {
+static void ThreadCallbacks_init(const ThreadCallbacks &cb, Thread *tm) {
 	memory::pool::initialize();
 
 	tl_threadInfo.threadAlloc = memory::allocator::create();
@@ -53,7 +53,7 @@ static void ThreadCallbacks_init(const ThreadCallbacks &cb, ThreadInterface *tm)
 	}, tl_threadInfo.threadPool);
 }
 
-static bool ThreadCallbacks_worker(const ThreadCallbacks &cb, ThreadInterface *tm) {
+static bool ThreadCallbacks_worker(const ThreadCallbacks &cb, Thread *tm) {
 	SPASSERT(tl_threadInfo.workerPool, "Thread pool should be initialized");
 	bool ret = false;
 
@@ -64,7 +64,7 @@ static bool ThreadCallbacks_worker(const ThreadCallbacks &cb, ThreadInterface *t
 	return ret;
 }
 
-static void ThreadCallbacks_dispose(const ThreadCallbacks &cb, ThreadInterface *tm) {
+static void ThreadCallbacks_dispose(const ThreadCallbacks &cb, Thread *tm) {
 	memory::pool::perform([&] {
 		cb.dispose(tm);
 		tm->release(0);
@@ -77,7 +77,7 @@ static void ThreadCallbacks_dispose(const ThreadCallbacks &cb, ThreadInterface *
 	memory::pool::terminate();
 }
 
-ThreadInfo *ThreadInfo::getThreadInfo() {
+const ThreadInfo *ThreadInfo::getThreadInfo() {
 	if (!tl_threadInfo.managed) {
 		return nullptr;
 	}
@@ -85,50 +85,27 @@ ThreadInfo *ThreadInfo::getThreadInfo() {
 	return &tl_threadInfo;
 }
 
-void ThreadInfo::setMainThread() {
-	tl_threadInfo.threadId = mainThreadId;
-	tl_threadInfo.workerId = 0;
-	tl_threadInfo.name = StringView("Main");
-	tl_threadInfo.managed = true;
-}
+void ThreadInfo::setThreadInfo(StringView n, uint32_t w, bool m) {
+	_setThreadName(n);
 
-void ThreadInfo::setThreadInfo(uint32_t t, uint32_t w, StringView name, bool m) {
-	_setThreadName(name);
-
-	tl_threadInfo.threadId = t;
 	tl_threadInfo.workerId = w;
-	tl_threadInfo.name = name;
+	tl_threadInfo.name = n;
 	tl_threadInfo.managed = m;
 }
 
-void ThreadInfo::setThreadInfo(StringView name) {
-	_setThreadName(name);
-
-	tl_threadInfo.threadId = 0;
-	tl_threadInfo.workerId = 0;
-	tl_threadInfo.name = name;
-	tl_threadInfo.managed = true;
-	tl_threadInfo.detouched = true;
-}
-
-SPUNUSED static uint32_t getNextThreadId() {
-	auto id = s_threadId.fetch_add(1);
-	return (id % 0xFFFF) + (1 << 16);
-}
-
-void ThreadInterface::workerThread(ThreadInterface *tm) {
+void Thread::workerThread(Thread *tm) {
 	tl_owner = tm;
 
 	ThreadCallbacks cb;
-	cb.init = [] (ThreadInterface *obj) {
+	cb.init = [] (Thread *obj) {
 		obj->threadInit();
 	};
 
-	cb.dispose = [] (ThreadInterface *obj) {
+	cb.dispose = [] (Thread *obj) {
 		obj->threadDispose();
 	};
 
-	cb.worker = [] (ThreadInterface *obj) -> bool {
+	cb.worker = [] (Thread *obj) -> bool {
 		return obj->worker();
 	};
 
@@ -138,7 +115,7 @@ void ThreadInterface::workerThread(ThreadInterface *tm) {
 }
 
 const Thread *Thread::getCurrentThread() {
-	return dynamic_cast<const Thread *>(tl_owner);
+	return tl_owner;
 }
 
 Thread::~Thread() {
@@ -157,6 +134,7 @@ bool Thread::run(ThreadFlags flags) {
 		log::error("Thread", "Thread already started");
 		return false;
 	}
+
 	_flags = flags;
 	_type = &(typeid(*this));
 	_continueExecution.test_and_set();

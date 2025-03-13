@@ -51,7 +51,7 @@ bool EventFdHandle::init(QueueRef *q, QueueData *d, mem_std::Function<Status()> 
 }
 
 bool EventFdHandle::read() {
-	return ::eventfd_read(getFd(), &_value) >= 0;
+	return ::eventfd_read(getFd(), &_target) >= 0;
 }
 
 bool EventFdHandle::write(uint64_t val) {
@@ -71,9 +71,9 @@ bool EventFdURingHandle::init(URingData *uring, mem_std::Function<Status()> &&cb
 Status EventFdURingHandle::rearm(EventFdSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		_value = 0;
+		_target = 0;
 
-		status = source->getURingData()->pushRead(source->getFd(), (uint8_t *)&_value, sizeof(uint64_t), this);
+		status = source->getURingData()->pushRead(source->getFd(), (uint8_t *)&_target, sizeof(uint64_t), this);
 		if (status == Status::Suspended) {
 			status = source->getURingData()->submit();
 		}
@@ -86,11 +86,13 @@ Status EventFdURingHandle::disarm(EventFdSource *source, bool suspend) {
 	if (status == Status::Ok) {
 		status = source->getURingData()->cancelOp(this, URingUserFlags::None,
 				suspend ? URingCancelFlags::Suspend : URingCancelFlags::None);
+	} else if (status == Status::ErrorAlreadyPerformed) {
+		return Status::Ok;
 	}
 	return status;
 }
 
-void EventFdURingHandle::notify(EventFdSource *source, int32_t res, uint32_t flags) {
+void EventFdURingHandle::notify(EventFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
 	if (_status != Status::Ok) {
 		return;
 	}

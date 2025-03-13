@@ -27,12 +27,12 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class EventFdSource : public FdSource {
+class SP_PUBLIC EventFdSource : public FdSource {
 public:
 	bool init();
 };
 
-class EventFdHandle : public FdHandle {
+class SP_PUBLIC EventFdHandle : public FdHandle {
 public:
 	virtual ~EventFdHandle() = default;
 
@@ -41,14 +41,14 @@ public:
 	bool read();
 	bool write(uint64_t = 1);
 
-	const uint64_t *getValue() const { return &_value; }
+	const uint64_t *getValue() const { return &_target; }
 
 protected:
-	uint64_t _value = 0;
+	uint64_t _target = 0;
 	mem_std::Function<Status()> _callback;
 };
 
-class EventFdURingHandle : public EventFdHandle {
+class SP_PUBLIC EventFdURingHandle : public EventFdHandle {
 public:
 	virtual ~EventFdURingHandle() = default;
 
@@ -57,7 +57,7 @@ public:
 	Status rearm(EventFdSource *);
 	Status disarm(EventFdSource *, bool suspend);
 
-	void notify(EventFdSource *, int32_t res, uint32_t flags);
+	void notify(EventFdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
 };
 
 }

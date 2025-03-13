@@ -25,63 +25,57 @@ THE SOFTWARE.
 #define STAPPLER_THREADS_SPTHREADTASKQUEUE_H_
 
 #include "SPThreadTask.h"
+#include "SPThreadPool.h"
+#include "SPMemory.h"
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 class Worker;
 
-class SP_PUBLIC TaskQueue : public Ref {
+struct SP_PUBLIC TaskQueueInfo {
+	ThreadPoolFlags flags = ThreadPoolFlags::None;
+	StringView name;
+	uint16_t threadCount;
+	mem_std::Function<void()> wakeup;
+};
+
+class SP_PUBLIC TaskQueue : public ThreadPool {
 public:
-	using Ref = Ref;
-	using TaskMap = std::map<uint32_t, std::vector<Rc<Task>>, std::less<void>>;
+	virtual ~TaskQueue();
 
-	struct WorkerContext;
+	bool init(TaskQueueInfo &&);
 
-	TaskQueue(StringView name = StringView(), std::function<void()> &&wakeup = std::function<void()>());
-	~TaskQueue();
-
-	void finalize();
-
-	void performAsync(Rc<Task> &&task);
-
-	void perform(Rc<Task> &&task, bool first = false);
-	void perform(std::function<void()> &&, Ref * = nullptr, bool first = false);
+	Status performOnThread(Rc<Task> &&task);
+	Status performOnThread(mem_std::Function<void()> &&func, Ref *target);
 
 	void update(uint32_t *count = nullptr);
 
-	void onMainThread(Rc<Task> &&task);
-	void onMainThread(std::function<void()> &&func, Ref *target);
+	Status waitForAll(TimeInterval = TimeInterval::seconds(1));
 
-	bool spawnWorkers();
+	Status wait(uint32_t *count = nullptr);
+	Status wait(TimeInterval, uint32_t *count = nullptr);
 
-	// maxOf<uint32_t> - set id to next available
-	bool spawnWorkers(uint32_t threadId, uint16_t threadCount, StringView name = StringView());
-	bool cancelWorkers();
-
-	void performAll();
-	bool waitForAll(TimeInterval = TimeInterval::seconds(1));
-
-	bool wait(uint32_t *count = nullptr);
-	bool wait(TimeInterval, uint32_t *count = nullptr);
+	size_t getOutputCounter() const;
 
 	void lock();
 	void unlock();
 
-	StringView getName() const { return _name; }
-
-	std::vector<std::thread::id> getThreadIds() const;
-
-	size_t getOutputCounter() const;
-
-	uint16_t getThreadCount() const;
-
 protected:
-	friend class Worker;
+	struct SP_PUBLIC OutputContext : PerformInterface {
+		Rc<PoolRef> pool;
+		TaskQueue *queue = nullptr;
+		std::mutex outputMutex;
+		mem_std::Vector<Rc<Task>> outputQueue;
+		mem_std::Vector<Pair<std::function<void()>, Rc<Ref>>> outputCallbacks;
+		std::condition_variable outputCondition;
+		std::atomic<size_t> outputCounter = 0;
+		mem_std::Function<void()> wakeup;
 
-	void onMainThreadWorker(Rc<Task> &&task);
+		virtual Status perform(Rc<thread::Task> &&task) override;
+		virtual Status perform(mem_std::Function<void()> &&func, Ref *) override;
+	};
 
-	WorkerContext *_context = nullptr;
-	StringView _name = StringView("TaskQueue");
+	OutputContext _outContext;
 };
 
 }

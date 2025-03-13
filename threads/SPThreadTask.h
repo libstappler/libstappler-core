@@ -26,12 +26,42 @@ THE SOFTWARE.
 
 #include "SPMemPriorityQueue.h"
 #include "SPRef.h"
+#include "SPMemory.h"
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
+enum class TaskState {
+	Initial,
+	Prepared,
+	ExecutedSuccessful,
+	ExecutedFailed,
+	CompletedSuccessful,
+	CompletedFailed,
+};
+
+class Task;
+
+class SP_PUBLIC TaskGroup : public Ref {
+public:
+	virtual ~TaskGroup() = default;
+
+	bool init(mem_std::Function<void()> &&);
+
+	virtual void handleAdded(const Task *);
+	virtual void handlePerformed(const Task *);
+
+	Pair<size_t, size_t> getCounters() const; // <completed, added>
+
+protected:
+	std::atomic<size_t> _added = 0;
+	std::atomic<size_t> _completed = 0;
+
+	mem_std::Function<void()> _notifyFn;
+};
+
 class SP_PUBLIC Task : public Ref {
-public: /* typedefs */
-	using Ref = Ref;
+public:
+	static const uint32_t INVALID_TAG = std::numeric_limits<uint32_t>::max();
 
 	/* Function to be executed in init phase */
 	using PrepareCallback = std::function<bool(const Task &)>;
@@ -44,20 +74,19 @@ public: /* typedefs */
 
 	using PriorityType = ValueWrapper<memory::PriorityQueue<Rc<Task>>::PriorityType, class PriorityTypeFlag>;
 
-	Task();
-	virtual ~Task();
+	virtual ~Task() = default;
 
 	/* creates empty task with only complete function to be used as callback from other thread */
-	bool init(const CompleteCallback &, Ref * = nullptr);
-	bool init(CompleteCallback &&, Ref * = nullptr);
+	bool init(const CompleteCallback &, Ref * = nullptr, TaskGroup * = nullptr);
+	bool init(CompleteCallback &&, Ref * = nullptr, TaskGroup * = nullptr);
 
 	/* creates regular async task without initialization phase */
-	bool init(const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr);
-	bool init(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr);
+	bool init(const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr, TaskGroup * = nullptr);
+	bool init(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr, TaskGroup * = nullptr);
 
 	/* creates regular async task with initialization phase */
-	bool init(const PrepareCallback &, const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr);
-	bool init(PrepareCallback &&, ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr);
+	bool init(const PrepareCallback &, const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr, TaskGroup * = nullptr);
+	bool init(PrepareCallback &&, ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr, TaskGroup * = nullptr);
 
 	/* adds one more function to be executed before task is added to queue, functions executed as FIFO */
 	void addPrepareCallback(const PrepareCallback &);
@@ -72,10 +101,10 @@ public: /* typedefs */
 	void addCompleteCallback(CompleteCallback &&);
 
 	/* mark this task with tag */
-	void setTag(int tag) { _tag = tag; }
+	void setTag(uint32_t tag) { _tag = tag; }
 
 	/* returns tag */
-	int getTag()  const{ return _tag; }
+	uint32_t getTag()  const{ return _tag; }
 
 	/* set default task priority */
 	void setPriority(PriorityType::Type priority) { _priority = PriorityType(priority); }
@@ -83,36 +112,44 @@ public: /* typedefs */
 	/* get task priority */
 	PriorityType getPriority() const { return _priority; }
 
-	void addRef(Ref *target) { _refs.emplace_back(target); }
+	TaskGroup *getGroup() const { return _group; }
 
-	/* used by task manager to set success state */
-	void setSuccessful(bool value) { _isSuccessful = value; }
+	void addRef(Ref *target) { if (target) { _refs.emplace_back(target); } }
 
 	/* if task execution was successful */
-	bool isSuccessful() const { return _isSuccessful; }
+	bool isSuccessful() const { return _state == TaskState::ExecutedSuccessful || _state == TaskState::CompletedSuccessful; }
 
 	const std::vector<PrepareCallback> &getPrepareTasks() const { return _prepare; }
 	const std::vector<ExecuteCallback> &getExecuteTasks() const { return _execute; }
 	const std::vector<CompleteCallback> &getCompleteTasks() const { return _complete; }
 
-public: /* overloads */
+public:
+	// run in one call on current thread
+	void run() const;
+
+	/** called on issuer thread before execution */
 	virtual bool prepare() const;
 
 	/** called on worker thread */
-	virtual bool execute();
+	virtual bool execute() const;
 
-	/** called on UI thread when request is completed */
-	virtual void onComplete();
+	/** called on dispatcher thread when request is completed */
+	virtual void handleCompleted() const;
+
+	/** called when assigned worker can not perform the task */
+	virtual void cancel() const;
 
 protected:
-	bool _isSuccessful = true;
-	int _tag = -1;
+	// prepare/execute/handleCompleted marked as const to forbid task changes, but it can change state
+	mutable TaskState _state = TaskState::Initial;
+	uint32_t _tag = INVALID_TAG;
 	PriorityType _priority = PriorityType();
 
 	std::vector<Rc<Ref>> _refs;
 	std::vector<PrepareCallback> _prepare;
 	std::vector<ExecuteCallback> _execute;
 	std::vector<CompleteCallback> _complete;
+	Rc<TaskGroup> _group;
 };
 
 }

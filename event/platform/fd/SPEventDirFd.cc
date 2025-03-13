@@ -53,7 +53,7 @@ Status DirFdHandle::scan(const Callback<void(FileType, StringView)> &cb) {
 		struct dirent **namelist;
 		int n = ::scandirat(getData<DirFdSource>()->getFd(), ".", &namelist, NULL, alphasort);
 		if (n == -1) {
-			return Status(ERROR_NUMBER(errno));
+			return status::errnoToStatus(errno);
 		}
 
 		for (int i = 0; i < n; ++ i) {
@@ -104,8 +104,8 @@ bool DirFdURingHandle::init(URingData *uring, OpenDirInfo &&info) {
 	};
 
 	auto source = getData<DirFdSource>();
-	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags) {
-		reinterpret_cast<DirFdURingHandle *>(h)->notify(h->getData<DirFdSource>(), res, flags);
+	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
+		reinterpret_cast<DirFdURingHandle *>(h)->notify(h->getData<DirFdSource>(), res, flags, uflags);
 	});
 
 	return true;
@@ -120,7 +120,7 @@ Status DirFdURingHandle::run(DirFdSource *source) {
 			sqe->open_flags = O_PATH | O_NOFOLLOW;
 			sqe->len = 0;
 			uring->retainHandleForSqe(sqe, this);
-		});
+		}, URingPushFlags::Submit);
 		if (isSuccessful(result)) {
 			_status = Status::Ok;
 		}
@@ -128,7 +128,7 @@ Status DirFdURingHandle::run(DirFdSource *source) {
 	return Status::ErrorAlreadyPerformed;
 }
 
-void DirFdURingHandle::notify(DirFdSource *source, int32_t res, uint32_t flags) {
+void DirFdURingHandle::notify(DirFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
 	if (_status != Status::Ok) {
 		return;
 	}

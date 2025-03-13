@@ -57,6 +57,7 @@ THE SOFTWARE.
 #include "SPUrl.cc"
 #include "SPValid.cc"
 #include "SPCommandLineParser.cc"
+#include "SPStatus.cc"
 
 #define STAPPLER_VERSION_VARIANT 0
 

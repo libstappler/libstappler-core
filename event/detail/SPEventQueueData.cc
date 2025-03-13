@@ -82,7 +82,24 @@ void QueueData::cancel(Handle *h) {
 	_suspendableHandles.erase(h);
 }
 
-QueueData::QueueData(QueueRef *ref, QueueFlags flags) : _queue(ref), _flags(flags) {
+void QueueData::cleanup() {
+	mem_pool::perform([&] {
+		mem_pool::Vector<Rc<Handle>> tmpHandles;
+		for (auto &it : _suspendableHandles) {
+			tmpHandles.emplace_back(it);
+		}
+
+		for (auto &it : tmpHandles) {
+			it->cancel();
+		}
+	}, _tmpPool);
+
+	_suspendableHandles.clear();
+	_pendingHandles.clear();
+}
+
+QueueData::QueueData(QueueRef *ref, QueueFlags flags)
+: _queue(ref), _flags(flags), _tmpPool(memory::pool::create(ref->getPool())) {
 	_pendingHandles.set_memory_persistent(true);
 	_suspendableHandles.set_memory_persistent(true);
 }

@@ -24,13 +24,15 @@
 #define CORE_EVENT_SPEVENTTHREADHANDLE_H_
 
 #include "SPEventHandle.h"
-#include "SPThreadTask.h"
+#include "SPThreadPool.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class ThreadHandle : public Handle {
+class SP_PUBLIC ThreadHandle : public Handle, public thread::PerformInterface {
 public:
 	virtual ~ThreadHandle() = default;
+
+	bool init(QueueRef *, QueueData *);
 
 	// Perform Task's complete functions on this event queue
 	virtual Status perform(Rc<thread::Task> &&task) { return Status::ErrorNotImplemented; }
@@ -39,10 +41,16 @@ public:
 	virtual Status perform(mem_std::Function<void()> &&func, Ref *target = nullptr) { return Status::ErrorNotImplemented; }
 
 protected:
-	void performAll(const Callback<void()> &unlockCallback);
+	uint32_t performAll(const Callback<void(uint32_t)> &unlockCallback);
 
+	Rc<PoolRef> _pool;
 	mem_std::Vector<Rc<thread::Task>> _outputQueue;
 	mem_std::Vector<Pair<mem_std::Function<void()>, Rc<Ref>>> _outputCallbacks;
+
+	mem_std::Vector<Rc<thread::Task>> _unsafeQueue;
+	mem_std::Vector<Pair<mem_std::Function<void()>, Rc<Ref>>> _unsafeCallbacks;
+
+	uint64_t _switchTimer = 0;
 };
 
 }
