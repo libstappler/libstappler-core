@@ -68,6 +68,14 @@ struct SP_PUBLIC CompletionHandle {
 		return *this;
 	}
 
+	template <typename Other>
+	operator CompletionHandle<Other> () const {
+		CompletionHandle<Other> ret;
+		ret.fn = reinterpret_cast<typename CompletionHandle<Other>::Fn>(fn);
+		ret.userdata = userdata;
+		return ret;
+	}
+
 	Fn fn;
 	void *userdata;
 };

@@ -49,7 +49,7 @@ bool TimerFdSource::init(const TimerInfo &info) {
 		break;
 	}
 
-	auto fd = ::timerfd_create(clockid, TFD_NONBLOCK | TFD_CLOEXEC);
+	fd = ::timerfd_create(clockid, TFD_NONBLOCK | TFD_CLOEXEC);
 	if (fd < 0) {
 		log::error("event::Queue", "fail to timerfd_create");
 		return false;
@@ -58,97 +58,97 @@ bool TimerFdSource::init(const TimerInfo &info) {
 	itimerspec spec;
 	if (info.timeout) {
 		setNanoTimespec(spec.it_value, info.timeout);
-		setNanoTimespec(_timer.it_value, info.timeout);
 	} else {
 		setNanoTimespec(spec.it_value, info.interval);
-		setNanoTimespec(_timer.it_value, info.timeout);
 	}
 
 	setNanoTimespec(spec.it_interval, info.interval);
-	setNanoTimespec(_timer.it_interval, info.timeout);
 
 	::timerfd_settime(fd, 0, &spec, nullptr);
 
-	return FdSource::init(fd);
-}
-
-TimerFdHandle::~TimerFdHandle() {
-	getData<TimerFdSource>()->cancel();
-}
-
-bool TimerFdHandle::init(QueueRef *q, QueueData *d, TimerInfo &&info) {
-	static_assert(sizeof(TimerFdSource) <= DataSize && std::is_standard_layout<TimerFdSource>::value);
-
-	auto source = new (_data) TimerFdSource;
-
-	if (!source->init(info) || !TimerHandle::init(q, d, move(info))) {
-		return false;
-	}
-
-	_count = info.count;
+	count = info.count;
 
 	return true;
 }
 
-bool TimerFdURingHandle::init(URingData *uring, TimerInfo &&info) {
-	if (!TimerFdHandle::init(uring->_queue, uring->_data, move(info))) {
+void TimerFdSource::cancel() {
+	if (fd >= 0) {
+		::close(fd);
+		fd = -1;
+	}
+}
+
+bool TimerFdHandle::init(HandleClass *cl, TimerInfo &&info) {
+	if (!TimerHandle::init(cl, info.completion)) {
 		return false;
 	}
 
-	setup<TimerFdURingHandle, TimerFdSource>();
+	if (info.count == 1) {
+		info.interval = info.timeout;
+	}
 
-	auto source = getData<TimerFdSource>();
-	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
-		reinterpret_cast<TimerFdURingHandle *>(h)->notify(h->getData<TimerFdSource>(), res, flags, uflags);
-	});
-
-	return true;
+	auto source = reinterpret_cast<TimerFdSource *>(_data);
+	return source->init(info);
 }
 
-Status TimerFdURingHandle::rearm(TimerFdSource *source) {
+Status TimerFdHandle::read(uint64_t *target) {
+	auto source = reinterpret_cast<TimerFdSource *>(_data);
+	auto ret = ::read(source->fd, target, sizeof(uint64_t));
+	if (ret == sizeof(uint64_t)) {
+		return Status::Ok;
+	} else if (ret < 0) {
+		return status::errnoToStatus(errno);
+	}
+	return Status::Declined;
+}
+
+#ifdef SP_EVENT_URING
+Status TimerFdURingHandle::rearm(URingData *uring, TimerFdSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		_target = 0;
+		source->target = 0;
 
-		auto uring = source->getURingData();
 		status = uring->pushSqe({IORING_OP_READ}, [&] (io_uring_sqe *sqe, uint32_t) {
-			sqe->fd = source->getFd();
-			sqe->addr = reinterpret_cast<uintptr_t>(&_target);
+			sqe->fd = source->fd;
+			sqe->addr = reinterpret_cast<uintptr_t>(&source->target);
 			sqe->len = sizeof(uint64_t);
 			sqe->off = -1;
-			sqe->user_data = reinterpret_cast<uintptr_t>(this);
+			sqe->user_data = reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
+					| (_timeline & URING_USERDATA_SERIAL_MASK);
 		}, URingPushFlags::Submit);
 	}
 	return status;
 }
 
-Status TimerFdURingHandle::disarm(TimerFdSource *source, bool suspend) {
-	auto status = prepareDisarm(suspend);
+Status TimerFdURingHandle::disarm(URingData *uring, TimerFdSource *source) {
+	auto status = prepareDisarm();
 	if (status == Status::Ok) {
-		status = source->getURingData()->cancelOpRelease(this, suspend ? URingCancelFlags::Suspend : URingCancelFlags::None);
+		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
+				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
+		++ _timeline;
 	}
 	return status;
 }
 
-void TimerFdURingHandle::notify(TimerFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
+void TimerFdURingHandle::notify(URingData *uring, TimerFdSource *source, const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
 
 	_status = Status::Suspended;
 
-	if (res < 0) {
-		cancel(URingData::getErrnoStatus(res));
+	if (data.result < 0) {
+		cancel(URingData::getErrnoStatus(data.result));
 	}
 
-	auto count = getCount();
-	auto current = getValue();
+	auto count = source->count;
+	auto current = source->value;
 
-	if (res == sizeof(uint64_t)) {
+	if (data.result == sizeof(uint64_t)) {
 		// successful read
-		current += _target;
+		current += static_cast<uint32_t>(source->target);
 		if (count != Infinite) {
-			setValue(std::min(current, count));
+			source->value = std::min(current, count);
 		}
 	}
 
@@ -156,11 +156,121 @@ void TimerFdURingHandle::notify(TimerFdSource *source, int32_t res, uint32_t fla
 		cancel(Status::Done);
 	}
 
-	sendCompletion(getValue(), _status == Status::Suspended ? Status::Ok : _status);
+	sendCompletion(source->value, _status == Status::Suspended ? Status::Ok : _status);
 
 	if (_status == Status::Suspended && (count == maxOf<uint32_t>() || current < count)) {
-		rearm(source);
+		rearm(uring, source);
 	}
 }
+#endif
+
+Status TimerFdEPollHandle::rearm(EPollData *epoll, TimerFdSource *source) {
+	auto status = prepareRearm();
+	if (status == Status::Ok) {
+		source->event.data.ptr = this;
+		source->event.events = EPOLLIN;
+
+		status = epoll->add(source->fd, source->event);
+	}
+	return status;
+}
+
+Status TimerFdEPollHandle::disarm(EPollData *epoll, TimerFdSource *source) {
+	auto status = prepareDisarm();
+	if (status == Status::Ok) {
+		status = epoll->remove(source->fd);
+		++ _timeline;
+	} else if (status == Status::ErrorAlreadyPerformed) {
+		return Status::Ok;
+	}
+	return status;
+}
+
+void TimerFdEPollHandle::notify(EPollData *epoll, TimerFdSource *source, const NotifyData &data) {
+	if (_status != Status::Ok) {
+		return;
+	}
+
+	if (data.queueFlags & EPOLLIN) {
+		auto count = source->count;
+		auto current = source->value;
+
+		uint64_t value = 0;
+		while (read(&value) == Status::Ok) {
+			current += static_cast<uint32_t>(value);
+			if (count != Infinite) {
+				source->value = std::min(current, count);
+			}
+
+			if (current >= count) {
+				cancel(Status::Done);
+				break;
+			}
+		}
+
+		if (value > 0) {
+			sendCompletion(source->value, _status);
+		}
+	}
+
+	if ((data.queueFlags & EPOLLERR) || (data.queueFlags & EPOLLHUP)) {
+		cancel();
+	}
+}
+
+#if ANDROID
+Status TimerFdALooperHandle::rearm(ALooperData *alooper, TimerFdSource *source) {
+	auto status = prepareRearm();
+	if (status == Status::Ok) {
+		status = alooper->add(source->fd, ALOOPER_EVENT_INPUT, this);
+	}
+	return status;
+}
+
+Status TimerFdALooperHandle::disarm(ALooperData *alooper, TimerFdSource *source) {
+	auto status = prepareDisarm();
+	if (status == Status::Ok) {
+		status = alooper->remove(source->fd);
+		++ _timeline;
+	} else if (status == Status::ErrorAlreadyPerformed) {
+		return Status::Ok;
+	}
+	return status;
+}
+
+void TimerFdALooperHandle::notify(ALooperData *alooper, TimerFdSource *source, const NotifyData &data) {
+	if (_status != Status::Ok) {
+		return;
+	}
+
+	if (data.queueFlags & ALOOPER_EVENT_INPUT) {
+		auto count = source->count;
+		auto current = source->value;
+
+		uint64_t value = 0;
+		while (read(&value) == Status::Ok) {
+			current += static_cast<uint32_t>(value);
+			if (count != Infinite) {
+				source->value = std::min(current, count);
+			}
+
+			if (current >= count) {
+				cancel(Status::Done);
+				break;
+			}
+		}
+
+		if (value > 0) {
+			sendCompletion(source->value, _status);
+		}
+	}
+
+	if ((data.queueFlags & ALOOPER_EVENT_ERROR)
+			|| (data.queueFlags & ALOOPER_EVENT_HANGUP)
+			|| (data.queueFlags & ALOOPER_EVENT_INVALID)) {
+		cancel();
+	}
+}
+#endif
 
 }

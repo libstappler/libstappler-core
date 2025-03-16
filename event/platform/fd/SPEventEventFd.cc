@@ -22,90 +22,180 @@
 
 #include "SPEventEventFd.h"
 #include "../uring/SPEvent-uring.h"
+#include "../android/SPEvent-alooper.h"
 
 #include <sys/eventfd.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 bool EventFdSource::init() {
-	auto fd = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+	fd = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 	if (fd < 0) {
 		return false;
 	}
 
-	return FdSource::init(fd);
-}
-
-bool EventFdHandle::init(QueueRef *q, QueueData *d, mem_std::Function<Status()> &&cb) {
-	static_assert(sizeof(EventFdSource) <= DataSize && std::is_standard_layout<EventFdSource>::value);
-
-	auto source = new (_data) EventFdSource;
-
-	if (!source->init()) {
-		return false;
-	}
-
-	_callback = sp::move(cb);
-
-	return Handle::init(q, d);
-}
-
-bool EventFdHandle::read() {
-	return ::eventfd_read(getFd(), &_target) >= 0;
-}
-
-bool EventFdHandle::write(uint64_t val) {
-	return ::eventfd_write(getFd(), val) >= 0;
-}
-
-bool EventFdURingHandle::init(URingData *uring, mem_std::Function<Status()> &&cb) {
-	if (!EventFdHandle::init(uring->_queue, uring->_data, sp::move(cb))) {
-		return false;
-	}
-
-	setupURing<EventFdURingHandle, EventFdSource>(uring, this);
-
 	return true;
 }
 
-Status EventFdURingHandle::rearm(EventFdSource *source) {
+void EventFdSource::cancel() {
+	if (fd >= 0) {
+		::close(fd);
+		fd = -1;
+	}
+}
+
+bool EventFdHandle::init(HandleClass *cl, CompletionHandle<void> &&c) {
+	if (!Handle::init(cl, move(c))) {
+		return false;
+	}
+
+	auto source = reinterpret_cast<EventFdSource *>(_data);
+	return source->init();
+}
+
+Status EventFdHandle::read(uint64_t *target) {
+	auto source = reinterpret_cast<EventFdSource *>(_data);
+	auto ret = ::eventfd_read(source->fd, target ? target : source->target);
+	if (ret < 0) {
+		return status::errnoToStatus(errno);
+	}
+	return Status::Ok;
+}
+
+Status EventFdHandle::write(uint64_t val) {
+	auto source = reinterpret_cast<EventFdSource *>(_data);
+	auto ret = ::eventfd_write(source->fd, val);
+	if (ret < 0) {
+		return status::errnoToStatus(errno);
+	}
+	return Status::Ok;
+}
+
+#ifdef SP_EVENT_URING
+Status EventFdURingHandle::rearm(URingData *uring, EventFdSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		_target = 0;
+		source->target[0] = 0;
 
-		status = source->getURingData()->pushRead(source->getFd(), (uint8_t *)&_target, sizeof(uint64_t), this);
-		if (status == Status::Suspended) {
-			status = source->getURingData()->submit();
-		}
+		status = uring->pushRead(source->fd, (uint8_t *)source->target, sizeof(uint64_t),
+				reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
+				| (_timeline & URING_USERDATA_SERIAL_MASK));
 	}
 	return status;
 }
 
-Status EventFdURingHandle::disarm(EventFdSource *source, bool suspend) {
-	auto status = prepareDisarm(suspend);
+Status EventFdURingHandle::disarm(URingData *uring, EventFdSource *source) {
+	auto status = prepareDisarm();
 	if (status == Status::Ok) {
-		status = source->getURingData()->cancelOp(this, URingUserFlags::None,
-				suspend ? URingCancelFlags::Suspend : URingCancelFlags::None);
+		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
+				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
+		++ _timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
 	return status;
 }
 
-void EventFdURingHandle::notify(EventFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
+void EventFdURingHandle::notify(URingData *uring, EventFdSource *source, const NotifyData &notify) {
 	if (_status != Status::Ok) {
 		return;
 	}
 
 	_status = Status::Suspended;
 
-	if (res == sizeof(uint64_t)) {
-		if (_callback() == Status::Ok) {
-			rearm(source);
-		}
+	if (notify.result == sizeof(uint64_t)) {
+		sendCompletion(0, Status::Ok);
+		rearm(uring, source);
 	} else{
-		cancel(URingData::getErrnoStatus(res));
+		cancel(URingData::getErrnoStatus(notify.result));
 	}
 }
+#endif
+
+Status EventFdEPollHandle::rearm(EPollData *epoll, EventFdSource *source) {
+	auto status = prepareRearm();
+	if (status == Status::Ok) {
+		source->event.data.ptr = this;
+		source->event.events = EPOLLIN;
+		source->eventTarget = 0;
+
+		status = epoll->add(source->fd, source->event);
+	}
+	return status;
+}
+
+Status EventFdEPollHandle::disarm(EPollData *epoll, EventFdSource *source) {
+	auto status = prepareDisarm();
+	if (status == Status::Ok) {
+		status = epoll->remove(source->fd);
+		++ _timeline;
+	} else if (status == Status::ErrorAlreadyPerformed) {
+		return Status::Ok;
+	}
+	return status;
+}
+
+void EventFdEPollHandle::notify(EPollData *epoll, EventFdSource *source, const NotifyData &data) {
+	if (_status != Status::Ok) {
+		return;
+	}
+
+	bool notify = false;
+
+	if (data.queueFlags & EPOLLIN) {
+		while (read(&source->eventTarget) == Status::Ok) {
+			notify = true;
+		}
+	}
+
+	if ((data.queueFlags & EPOLLERR) || (data.queueFlags & EPOLLHUP)) {
+		cancel();
+	} else if (notify) {
+		sendCompletion(0, Status::Ok);
+	}
+}
+
+#if ANDROID
+Status EventFdALooperHandle::rearm(ALooperData *alooper, EventFdSource *source) {
+	auto status = prepareRearm();
+	if (status == Status::Ok) {
+		status = alooper->add(source->fd, ALOOPER_EVENT_INPUT, this);
+	}
+	return status;
+}
+
+Status EventFdALooperHandle::disarm(ALooperData *alooper, EventFdSource *source) {
+	auto status = prepareDisarm();
+	if (status == Status::Ok) {
+		status = alooper->remove(source->fd);
+		++ _timeline;
+	} else if (status == Status::ErrorAlreadyPerformed) {
+		return Status::Ok;
+	}
+	return status;
+}
+
+void EventFdALooperHandle::notify(ALooperData *alooper, EventFdSource *source, const NotifyData &data) {
+	if (_status != Status::Ok) {
+		return;
+	}
+
+	bool notify = false;
+
+	if (data.queueFlags & ALOOPER_EVENT_INPUT) {
+		while (read(&source->eventTarget) == Status::Ok) {
+			notify = true;
+		}
+	}
+
+	if ((data.queueFlags & ALOOPER_EVENT_ERROR)
+			|| (data.queueFlags & ALOOPER_EVENT_HANGUP)
+			|| (data.queueFlags & ALOOPER_EVENT_INVALID)) {
+		cancel();
+	} else if (notify) {
+		sendCompletion(0, Status::Ok);
+	}
+}
+#endif
 
 }

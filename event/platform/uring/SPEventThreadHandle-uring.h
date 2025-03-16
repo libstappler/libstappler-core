@@ -27,6 +27,8 @@
 #include "../fd/SPEventEventFd.h"
 #include "SPEvent-uring.h"
 
+#if LINUX
+
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 /* Thread handle implementations for io_uring.
@@ -72,6 +74,17 @@ private:
 	volatile uint32_t _futex = 0;
 };
 
+struct ThreadUringSource {
+	bool failsafe = false;
+	FutexImpl futex;
+	std::thread::id thisThread;
+
+	struct __kernel_timespec interval;
+
+	bool init(TimeInterval);
+	void cancel();
+};
+
 // IORING_OP_FUTEX_WAIT - based handler
 class SP_PUBLIC ThreadUringHandle : public ThreadHandle {
 public:
@@ -84,51 +97,44 @@ public:
 
 	virtual ~ThreadUringHandle() = default;
 
-	bool init(URingData *);
+	bool init(HandleClass *);
 
-	Status rearm(FdSource *, bool unlock = false, bool init = true);
-	Status disarm(FdSource *, bool suspend);
+	Status rearm(URingData *, ThreadUringSource *, bool unlock = false, bool init = true);
+	Status disarm(URingData *, ThreadUringSource *);
 
-	void notify(FdSource *source, int32_t res, uint32_t flags, URingUserFlags);
+	void notify(URingData *, ThreadUringSource *source, const NotifyData &);
 
-	Status perform(Rc<thread::Task> &&task) override;
-	Status perform(mem_std::Function<void()> &&func, Ref *target) override;
+	virtual Status perform(Rc<thread::Task> &&task) override;
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target) override;
 
 protected:
-	void rearmFailsafe(FdSource *);
-
-	bool _failsafe = false;
-	FutexImpl _futex;
-	std::thread::id _thisThread;
+	void rearmFailsafe(URingData *, ThreadUringSource *);
 };
 
 // eventfd - based handler
 class SP_PUBLIC ThreadEventFdHandle : public ThreadHandle {
 public:
-	// READ_MULTISHOT, if available, allows us to receive up to N events before rearming,
-	// it improves handle performance, but requires some memory
-	static constexpr int TARGET_BUFFER_COUNT = 8;
-
 	virtual ~ThreadEventFdHandle() = default;
 
-	bool init(URingData *);
+	bool init(HandleClass *);
 
 	Status rearmBuffers(EventFdSource *);
 
-	Status rearm(EventFdSource *, bool updateBuffers = false);
-	Status disarm(EventFdSource *, bool suspend);
+	Status rearm(URingData *, EventFdSource *, bool updateBuffers = false);
+	Status disarm(URingData *, EventFdSource *);
 
-	void notify(EventFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags);
+	void notify(URingData *, EventFdSource *, const NotifyData &);
 
-	Status perform(Rc<thread::Task> &&task) override;
-	Status perform(mem_std::Function<void()> &&func, Ref *target) override;
+	virtual Status perform(Rc<thread::Task> &&task) override;
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target) override;
 
 protected:
-	uint64_t _targetBuf[TARGET_BUFFER_COUNT];
 	uint16_t _bufferGroup = 0;
 	std::mutex _mutex;
 };
 
 }
+
+#endif
 
 #endif /* CORE_EVENT_PLATFORM_URING_SPEVENTTHREADHANDLE_H_ */

@@ -54,7 +54,7 @@ struct Looper::Data : public memory::AllocPool {
 
 Looper *Looper::acquire(LooperInfo &&info) {
 	return acquire(move(info), QueueInfo{
-		.flags = QueueFlags::SubmitImmediate,
+		.flags = QueueFlags::SubmitImmediate | QueueFlags::ThreadNative,
 		.osIdleInterval = TimeInterval::milliseconds(100),
 	});
 }
@@ -102,37 +102,11 @@ Looper::~Looper() {
 }
 
 Rc<TimerHandle> Looper::scheduleTimer(TimerInfo &&info, Ref *ref) {
-	auto ret = _data->queue->scheduleTimer(move(info));
-	ret->setUserdata(ref);
-	return ret;
+	return _data->queue->scheduleTimer(move(info), ref);
 }
 
 Rc<Handle> Looper::schedule(TimeInterval timeout, mem_std::Function<void(Handle *, bool success)> &&fn, Ref *ref) {
-	struct ScheduleData : Ref {
-		mem_std::Function<void(Handle *, bool success)> fn;
-		Rc<Ref> ref;
-	};
-
-	auto data = Rc<ScheduleData>::alloc();
-	data->fn = sp::move(fn);
-	data->ref = ref;
-
-	return scheduleTimer(TimerInfo{
-		.completion = TimerInfo::Completion::create<ScheduleData>(data, [] (ScheduleData *data, TimerHandle *handle, uint32_t value, Status status) {
-			if (data->fn) {
-				if (status == Status::Done) {
-					data->fn(handle, true);
-				} else if (!isSuccessful(status)) {
-					data->fn(handle, false);
-				}
-			}
-			data->fn = nullptr;
-			data->ref = nullptr;
-		}),
-		.timeout = timeout,
-		.interval = TimeInterval(),
-		.count = 1
-	}, data);
+	return _data->queue->schedule(timeout, sp::move(fn), ref);
 }
 
 Status Looper::performOnThread(Rc<thread::Task> &&task, bool immediate) {

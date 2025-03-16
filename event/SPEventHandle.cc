@@ -31,16 +31,69 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 Handle::~Handle() { }
 
 Handle::Handle() {
+	if (_class) {
+		_class->destroyFn(_class, this, _data);
+	}
 	::memset(_data, 0, DataSize);
 }
 
-bool Handle::init(QueueRef *q, QueueData *data) {
-	_queue = q;
-	_queueData = data;
+bool Handle::init(HandleClass *cl, CompletionHandle<void> &&c) {
+	_class = cl;
+	_completion = move(c);
+
+	_class->createFn(_class, this, _data);
 	return true;
 }
 
-Status Handle::cancel(Status st) {
+bool Handle::isResumable() const {
+	return _class->suspendFn && _class->resumeFn;
+}
+
+Status Handle::pause() {
+	if (!isResumable()) {
+		return Status::ErrorNotSupported;
+	}
+
+	if (_status != Status::Ok) {
+		if (_status == Status::Suspended) {
+			// temporary suspended by system, mark as externally suspended
+			_status = Status::Declined;
+			return Status::Ok;
+		}
+		// not running
+		return Status::ErrorNoSuchProcess;
+	}
+
+	auto status = _class->suspendFn(_class, this, _data);
+	if (status != Status::Ok && status != Status::Done) {
+		log::error("event::Handle", "Fail to pause handle: ", _status);
+	} else {
+		_status = Status::Declined;
+		return Status::Ok;
+	}
+	return status;
+}
+
+Status Handle::resume() {
+	if (!isResumable()) {
+		return Status::ErrorNotSupported;
+	}
+
+	if (_status != Status::Suspended && _status != Status::Declined) {
+		// not running
+		return Status::ErrorNoSuchProcess;
+	}
+
+	auto status = _class->resumeFn(_class, this, _data);
+	if (status != Status::Ok && status != Status::Done) {
+		log::error("event::Handle", "Fail to resume handle: ", status);
+	} else {
+		status = _status = Status::Ok;
+	}
+	return status;
+}
+
+Status Handle::cancel(Status st, uint32_t value) {
 	if (!isValidCancelStatus(st)) {
 		log::warn("event::Handle", "Handle::cancel should be called with Status::Done or one of the error statuses."
 				" It's undefined behavior otherwise");
@@ -51,43 +104,30 @@ Status Handle::cancel(Status st) {
 		return Status::ErrorAlreadyPerformed;
 	}
 
+	// try to suspend running handle, stop if failed
 	if (_status == Status::Ok) {
-		if (_suspendFn) {
-			if (suspend() != Status::Ok) {
+		if (_class->suspendFn) {
+			auto status = _class->suspendFn(_class, this, _data);
+			if (status != Status::Ok) {
 				return Status::ErrorNotPermitted;
 			}
 		} else {
 			return Status::ErrorNotPermitted;
 		}
 	}
+
 	if (_status == Status::Suspended || _status == Status::Declined) {
 		_status = st;
-		finalize(_status);
-		if (isResumable()) {
-			// Disable auto-resume
-			_queueData->cancel(this);
-		}
-		if (_status == Status::Done) {
-			// Run pending on queue
-			for (auto &it : _pendingHandles) {
-				_queueData->runHandle(it);
-			}
-		} else {
-			// Cancel all pending
-			for (auto &it : _pendingHandles) {
-				it->cancel(Status::ErrorCancelled);
-			}
-		}
-		_queue->submitPending();
-		_queue = nullptr;
-		_pendingHandles.clear();
-		return Status::Ok;
+
+		finalize(value, _status);
+
+		return _class->cancelFn(_class, this, _data, _status);
 	} else {
 		return Status::ErrorAlreadyPerformed;
 	}
 }
 
-Status Handle::addPending(Rc<Handle> &&handle) {
+/*Status Handle::addPending(Rc<Handle> &&handle) {
 	if (_status == Status::Done) {
 		return _queueData->runHandle(handle);
 	} else if (isSuccessful(_status)) {
@@ -96,46 +136,37 @@ Status Handle::addPending(Rc<Handle> &&handle) {
 	} else {
 		return Status::ErrorInvalidArguemnt;
 	}
-}
+}*/
 
 Status Handle::run() {
-	if (_runFn) {
-		_status = _runFn(this);
-		if (_status != Status::Ok && _status != Status::Done) {
+	if (_class->runFn) {
+		auto status = _class->runFn(_class, this, _data);
+		if (status != Status::Ok && status != Status::Done) {
 			log::error("event::Handle", "Fail to run handle: ", _status);
 		} else {
 			_status = Status::Ok;
+			if (status == Status::Done) {
+				// Handle was executed in-place, cancel it
+				cancel(status);
+			}
 		}
 		return _status;
 	}
-	return Status::ErrorNotImplemented;
+	return Status::ErrorNotSupported;
 }
 
 Status Handle::suspend() {
-	if (_suspendFn) {
-		_status = _suspendFn(this);
-		if (_status != Status::Ok && _status != Status::Done) {
+	if (_class->suspendFn) {
+		auto status = _class->suspendFn(_class, this, _data);
+		if (status != Status::Ok && status != Status::Done) {
 			log::error("event::Handle", "Fail to suspend handle: ", _status);
 		} else {
 			_status = Status::Suspended;
 			return Status::Ok;
 		}
-		return _status;
+		return status;
 	}
-	return Status::ErrorNotImplemented;
-}
-
-Status Handle::resume() {
-	if (_resumeFn) {
-		_status = _runFn(this);
-		if (_status != Status::Ok && _status != Status::Done) {
-			log::error("event::Handle", "Fail to resume handle: ", _status);
-		} else {
-			_status = Status::Ok;
-		}
-		return _status;
-	}
-	return Status::ErrorNotImplemented;
+	return Status::ErrorNotSupported;
 }
 
 Status Handle::prepareRearm() {
@@ -147,19 +178,20 @@ Status Handle::prepareRearm() {
 		return Status::ErrorNotPermitted;
 	}
 
-	_status = Status::Ok;
+	if (!_class->info->data->isRunning()) {
+		_status = Status::Suspended;
+	} else {
+		_status = Status::Ok;
+	}
 	return _status;
 }
 
-Status Handle::prepareDisarm(bool suspend) {
+Status Handle::prepareDisarm() {
 	if (_status != Status::Ok) {
 		return Status::ErrorAlreadyPerformed;
 	}
 
-	if (suspend) {
-		_status = Status::Suspended;
-	}
-
+	_status = Status::Suspended;
 	return Status::Ok;
 }
 
@@ -169,24 +201,14 @@ void Handle::sendCompletion(uint32_t value, Status status) {
 	}
 }
 
-void Handle::finalize(Status status) {
-	sendCompletion(_value, status);
+void Handle::finalize(uint32_t value, Status status) {
+	sendCompletion(value, status);
 	_completion.fn = nullptr;
 	_completion.userdata = nullptr;
 }
 
-bool TimerHandle::init(QueueRef *q, QueueData *d, TimerInfo &&info) {
-	if (!Handle::init(q, d)) {
-		return false;
-	}
 
-	_count = info.count;
-	_completion = move(info.completion);
-
-	return true;
-}
-
-bool FileOpHandle::init(QueueRef *q, QueueData *d, FileOpInfo &&info) {
+/*bool FileOpHandle::init(QueueRef *q, QueueData *d, FileOpInfo &&info) {
 	if (!Handle::init(q, d)) {
 		return false;
 	}
@@ -212,10 +234,10 @@ bool DirHandle::init(QueueRef *q, QueueData *d, OpenDirInfo &&info) {
 
 	_completion = move(info.completion);
 	return true;
-}
+}*/
 
-bool ThreadHandle::init(QueueRef *q, QueueData *d) {
-	if (!Handle::init(q, d)) {
+bool ThreadHandle::init(HandleClass *cl) {
+	if (!Handle::init(cl, CompletionHandle<void>())) {
 		return false;
 	}
 

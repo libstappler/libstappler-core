@@ -36,21 +36,25 @@ namespace STAPPLER_VERSIONIZED stappler::event {
  * or infinite timers
  */
 
-class SP_PUBLIC TimerUringSource : public FdSource {
-public:
+struct TimerUringSource {
+	__kernel_itimerspec timer;
+	uint32_t count = 0;
+	uint32_t value = 0;
+
 	bool init(const TimerInfo &info);
+	void cancel() { }
 };
 
 class SP_PUBLIC TimerURingHandle : public TimerHandle {
 public:
 	virtual ~TimerURingHandle() = default;
 
-	bool init(URingData *, TimerInfo &&);
+	bool init(HandleClass *, TimerInfo &&);
 
-	Status rearm(TimerUringSource *);
-	Status disarm(TimerUringSource *, bool suspend);
+	Status rearm(URingData *, TimerUringSource *);
+	Status disarm(URingData *, TimerUringSource *);
 
-	void notify(TimerUringSource *source, int32_t res, uint32_t flags, URingUserFlags uflags);
+	void notify(URingData *, TimerUringSource *, const NotifyData &);
 };
 
 }

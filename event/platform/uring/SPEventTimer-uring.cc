@@ -21,122 +21,115 @@
  **/
 
 #include "SPEventTimer-uring.h"
+#include "detail/SPEventHandleClass.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 bool TimerUringSource::init(const TimerInfo &info) {
-	if (!FdSource::init(-1)) {
-		return false;
+	if (info.timeout) {
+		setNanoTimespec(timer.it_value, info.timeout);
+	} else {
+		setNanoTimespec(timer.it_value, info.interval);
 	}
+	setNanoTimespec(timer.it_interval, info.interval);
 
-	setTimeoutInterval(info.timeout, info.interval);
-
+	count = info.count;
 	return true;
 }
 
-bool TimerURingHandle::init(URingData *uring, TimerInfo &&info) {
-	static_assert(sizeof(TimerUringSource) <= DataSize && std::is_standard_layout<TimerUringSource>::value);
-
-	auto source = new (_data) TimerUringSource;
+bool TimerURingHandle::init(HandleClass *cl, TimerInfo &&info) {
+	if (!TimerHandle::init(cl, info.completion)) {
+		return false;
+	}
 
 	if (info.count == 1) {
 		info.interval = info.timeout;
 	}
 
-	if (!source->init(info) || !TimerHandle::init(uring->_queue, uring->_data, move(info))) {
-		return false;
-	}
-
-	setup<TimerURingHandle, TimerUringSource>();
-
-	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
-		reinterpret_cast<TimerURingHandle *>(h)->notify(h->getData<TimerUringSource>(), res, flags, uflags);
-	});
-
-	return true;
+	auto source = reinterpret_cast<TimerUringSource *>(_data);
+	return source->init(info);
 }
 
 static bool timespecIsEqual(const __kernel_timespec &l, const __kernel_timespec &r) {
 	return l.tv_nsec == r.tv_nsec && l.tv_sec == r.tv_sec;
 }
 
-Status TimerURingHandle::rearm(TimerUringSource *source) {
+Status TimerURingHandle::rearm(URingData *uring, TimerUringSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		if (getValue() == 0 && !timespecIsEqual(source->getTimeout(), source->getInterval())) {
-			auto uring = source->getURingData();
+		if (source->value == 0 && !timespecIsEqual(source->timer.it_value, source->timer.it_interval)) {
 			status = uring->pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
 				sqe->len = 1;
-				sqe->addr = reinterpret_cast<uintptr_t>(&source->getTimeout());
+				sqe->addr = reinterpret_cast<uintptr_t>(&source->timer.it_value);
 				sqe->off = 0;
 				sqe->timeout_flags = IORING_TIMEOUT_ETIME_SUCCESS;
-				uring->retainHandleForSqe(sqe, this);
+				sqe->user_data = reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
+						| (_timeline & URING_USERDATA_SERIAL_MASK);
 			}, URingPushFlags::Submit);
 		} else {
-			auto uring = source->getURingData();
 			status = uring->pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
 				sqe->fd = -1;
 				sqe->len = 1;
-				sqe->addr = reinterpret_cast<uintptr_t>(&source->getInterval());
-				sqe->off = (_count == TimerInfo::Infinite ? 0 : _count - getValue());
+				sqe->addr = reinterpret_cast<uintptr_t>(&source->timer.it_interval);
+				sqe->off = (source->count == TimerInfo::Infinite ? 0 : source->count - source->value);
 				sqe->timeout_flags = IORING_TIMEOUT_MULTISHOT | IORING_TIMEOUT_ETIME_SUCCESS;
-				uring->retainHandleForSqe(sqe, this);
+				sqe->user_data = reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
+						| (_timeline & URING_USERDATA_SERIAL_MASK);
 			}, URingPushFlags::Submit);
 		}
 	}
+	//log::debug("TimerURingHandle", uring->_tick, ": rearm");
 	return status;
 }
 
-Status TimerURingHandle::disarm(TimerUringSource *source, bool suspend) {
-	auto status = prepareDisarm(suspend);
+Status TimerURingHandle::disarm(URingData *uring, TimerUringSource *source) {
+	auto status = prepareDisarm();
 	if (status == Status::Ok) {
-		auto uring = source->getURingData();
-		status = uring->pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
-			sqe->len = 0;
-			sqe->addr = reinterpret_cast<uintptr_t>(this);
-			sqe->off = 0;
-			sqe->user_data = URING_USERDATA_IGNORED;
-		}, URingPushFlags::Submit);
+		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
+				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
+		++ _timeline;
 	}
+
+	//log::debug("TimerURingHandle", uring->_tick, ": disarm");
 	return status;
 }
 
-void TimerURingHandle::notify(TimerUringSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
+void TimerURingHandle::notify(URingData *uring, TimerUringSource *source, const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
 
-	_status = Status::Suspended;
+	//log::debug("TimerURingHandle", uring->_tick, ": notify");
 
-	bool more = (flags & IORING_CQE_F_MORE);
-
-	if (res != -ETIME && res < 0) {
-		cancel(URingData::getErrnoStatus(res));
+	bool more = (data.queueFlags & IORING_CQE_F_MORE);
+	if (!more) {
+		// if more - we still running
+		_status = Status::Suspended;
 	}
 
-	auto count = getCount();
-	auto current = getValue();
+	if (data.result != -ETIME && data.result < 0) {
+		cancel(URingData::getErrnoStatus(data.result));
+	}
+
+	auto count = source->count;
+	auto current = source->value;
 
 	bool isFirst = (current == 0);
 
 	++ current;
-	setValue(current);
+	source->value = current;
 
-	if ((isFirst && !timespecIsEqual(source->getTimeout(), source->getInterval()))
+	if ((isFirst && !timespecIsEqual(source->timer.it_value, source->timer.it_interval))
 			|| (!more)) {
 		if (count == TimerInfo::Infinite || current < count) {
 			// rearm if spatial
-			rearm(source);
+			rearm(uring, source);
 		} else {
-			cancel(Status::Done);
+			cancel(Status::Done, source->value);
 		}
 	}
 
 	sendCompletion(current, _status == Status::Suspended ? Status::Ok : _status);
-
-	if (more) {
-		_status = Status::Ok;
-	}
 }
 
 }

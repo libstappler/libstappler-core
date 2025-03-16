@@ -29,42 +29,4 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-bool FdSource::init(int fd) {
-	_fd = fd;
-	return true;
-}
-
-void FdSource::cancel() {
-	if (_fd >= 0) {
-		if (_closeFd) {
-			::close(_fd);
-		}
-		_fd = -1;
-	}
-}
-
-void FdSource::setEpollMask(uint32_t ev) {
-	_epoll.event.events = ev;
-	_epoll.event.data.ptr = this;
-}
-
-void FdSource::setURingCallback(URingData *r, URingCallback cb) {
-	_uring.uring = r;
-	_uring.ucb = cb;
-}
-
-void FdSource::setTimeoutInterval(TimeInterval timeout, TimeInterval interval) {
-	if (timeout) {
-		setNanoTimespec(_timer.it_value, timeout);
-	} else {
-		setNanoTimespec(_timer.it_value, interval);
-	}
-
-	setNanoTimespec(_timer.it_interval, interval);
-}
-
-FdHandle::~FdHandle() {
-	getData<FdSource>()->cancel();
-}
-
 }

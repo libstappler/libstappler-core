@@ -46,7 +46,53 @@ bool Queue::init(const QueueInfo &info) {
 	return _data != nullptr && _data->isValid();
 }
 
-Rc<DirHandle> Queue::openDir(OpenDirInfo &&info) {
+Rc<TimerHandle> Queue::scheduleTimer(TimerInfo &&info, Ref *ref) {
+	if (info.count == 0 || (!info.interval && !info.timeout)) {
+		log::error("event::Queue", "Invalid parameters for timer");
+		return nullptr;
+	}
+
+	auto h = _data->scheduleTimer(move(info));
+	_data->runHandle(h);
+	h->setUserdata(ref);
+	return h;
+}
+
+Rc<Handle> Queue::schedule(TimeInterval timeout, mem_std::Function<void(Handle *, bool success)> &&fn, Ref *ref) {
+	struct ScheduleData : Ref {
+		mem_std::Function<void(Handle *, bool success)> fn;
+		Rc<Ref> ref;
+	};
+
+	auto data = Rc<ScheduleData>::alloc();
+	data->fn = sp::move(fn);
+	data->ref = ref;
+
+	return scheduleTimer(TimerInfo{
+		.completion = TimerInfo::Completion::create<ScheduleData>(data, [] (ScheduleData *data, TimerHandle *handle, uint32_t value, Status status) {
+			if (data->fn) {
+				if (status == Status::Done) {
+					data->fn(handle, true);
+				} else if (!isSuccessful(status)) {
+					data->fn(handle, false);
+				}
+			}
+			data->fn = nullptr;
+			data->ref = nullptr;
+		}),
+		.timeout = timeout,
+		.interval = TimeInterval(),
+		.count = 1
+	}, data);
+}
+
+Rc<ThreadHandle> Queue::addThreadHandle() {
+	auto h = _data->addThreadHandle();
+	_data->runHandle(h);
+	return h;
+}
+
+/*Rc<DirHandle> Queue::openDir(OpenDirInfo &&info) {
 	Rc<DirHandle> h = _data->openDir(move(info));
 	if (!info.file.root || info.file.root->getStatus() == Status::Done) {
 		_data->runHandle(h);
@@ -70,24 +116,7 @@ Rc<StatHandle> Queue::stat(StatOpInfo &&info) {
 	return h;
 }
 
-Rc<TimerHandle> Queue::scheduleTimer(TimerInfo &&info) {
-	if (info.count == 0 || (!info.interval && !info.timeout)) {
-		log::error("event::Queue", "Invalid parameters for timer");
-		return nullptr;
-	}
-
-	auto h = _data->scheduleTimer(move(info));
-	_data->runHandle(h);
-	return h;
-}
-
-Rc<ThreadHandle> Queue::addThreadHandle() {
-	auto h = _data->addThreadHandle();
-	_data->runHandle(h);
-	return h;
-}
-
-/*Rc<OpHandle> Queue::read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t) {
+Rc<OpHandle> Queue::read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t) {
 	return nullptr;
 }
 Rc<OpHandle> Queue::write(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t) {

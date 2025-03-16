@@ -30,94 +30,75 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 
 class Queue;
 struct QueueData;
+struct HandleClass;
 
 class SP_PUBLIC Handle;
 
-class alignas(16) Handle : public Ref {
+class alignas(32) Handle : public Ref {
 public:
-	static constexpr size_t DataSize = 64;
+	static constexpr size_t DataSize = 40;
 
 	static inline bool isValidCancelStatus(Status st) {
-		return st == Status::Done || !isSuccessful(st);
+		return st == Status::Done || (st != Status::Declined && !isSuccessful(st));
 	}
 
 	virtual ~Handle();
 
 	Handle();
 
-	bool init(QueueRef *, QueueData *);
+	bool init(HandleClass *, CompletionHandle<void> &&);
 
 	void setUserdata(Ref *ref) { _userdata = ref; }
 	Ref *getUserdata() const { return _userdata; }
-
-	Queue *getQueue() const { return _queue; }
 
 	// Initially, handle in Declined state
 	// When handle run within queue - it's on Ok state
 	// When handle completes it's execution, it's on Done state
 	// When handle's execution were suspended (like on graceful wakeup) - it's on Suspended state
+	// When handle is paused - it's on Declined state
 	Status getStatus() const { return _status; }
 
-	bool isResumable() const { return _suspendFn != nullptr && _resumeFn != nullptr; }
+	// Timeline is monotonically increased in each suspend/resume cycle for internal synchronization
+	uint32_t getTimeline() const { return _timeline; }
 
-	template <typename T = uint8_t>
-	T *getData() const { return (T *)_data; }
+	bool isResumable() const;
+
+	// Pause handle's execution, handle should be resumable
+	// You need to cancel paused handle in order to really stop and release it
+	Status pause();
+
+	// Resume handle's execution
+	Status resume();
 
 	// Cancel handle operation (performed asynchronically)
-	Status cancel(Status = Status::ErrorCancelled);
-
-	uint32_t getValue() const { return _value; }
+	Status cancel(Status = Status::ErrorCancelled, uint32_t value = 0);
 
 protected:
 	friend class Queue;
 	friend struct QueueData;
+	friend struct HandleClass;
 
-	void setValue(uint32_t c) { _value = c; }
-
-	Status addPending(Rc<Handle> &&);
+#if ANDROID
+	friend struct ALooperData;
+#endif
 
 	Status run();
 	Status suspend();
-	Status resume();
-
-	template <typename T, typename S>
-	void setup() {
-		_runFn = [] (Handle *h) -> Status {
-			return ((T *)h)->rearm(h->getData<S>());
-		};
-
-		_suspendFn = [] (Handle *h) -> Status {
-			return ((T *)h)->disarm(h->getData<S>(), true);
-		};
-
-		_resumeFn = [] (Handle *h) -> Status {
-			return ((T *)h)->rearm(h->getData<S>());
-		};
-	}
 
 	Status prepareRearm();
-	Status prepareDisarm(bool suspend);
+	Status prepareDisarm();
 
 	void sendCompletion(uint32_t value, Status);
-	void finalize(Status);
-
-	Rc<QueueRef> _queue;
-	Rc<Ref> _userdata;
-	mem_std::Vector<Rc<Handle>> _pendingHandles;
-
-	QueueData *_queueData = nullptr;
-
-	Status _status = Status::Declined;
-
-	Status (*_runFn) (Handle *) = nullptr;
-	Status (*_suspendFn) (Handle *) = nullptr;
-	Status (*_resumeFn) (Handle *) = nullptr;
-
-	CompletionHandle<void> _completion;
-	uint32_t _value = 0;
+	void finalize(uint32_t value, Status);
 
 	// platform data block
 	alignas(void *) uint8_t _data[DataSize];
+
+	HandleClass *_class = nullptr;
+	CompletionHandle<void> _completion;
+	Status _status = Status::Declined;
+	uint32_t _timeline = 0;
+	Rc<Ref> _userdata;
 };
 
 }

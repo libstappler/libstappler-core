@@ -27,38 +27,65 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class SP_PUBLIC EventFdSource : public FdSource {
-public:
+struct SP_PUBLIC EventFdSource {
+	static constexpr int TARGET_BUFFER_COUNT = Handle::DataSize / sizeof(uint64_t) - 1;
+
+	int fd = -1;
+	union {
+		struct {
+			epoll_event event;
+			uint64_t eventTarget;
+		};
+		uint64_t target[TARGET_BUFFER_COUNT] = { 0 };
+	};
+
 	bool init();
+	void cancel();
 };
 
-class SP_PUBLIC EventFdHandle : public FdHandle {
+class SP_PUBLIC EventFdHandle : public Handle {
 public:
 	virtual ~EventFdHandle() = default;
 
-	bool init(QueueRef *, QueueData *, mem_std::Function<Status()> &&);
+	bool init(HandleClass *, CompletionHandle<void> &&);
 
-	bool read();
-	bool write(uint64_t = 1);
-
-	const uint64_t *getValue() const { return &_target; }
-
-protected:
-	uint64_t _target = 0;
-	mem_std::Function<Status()> _callback;
+	Status read(uint64_t *target = nullptr);
+	Status write(uint64_t = 1);
 };
 
+#ifdef SP_EVENT_URING
 class SP_PUBLIC EventFdURingHandle : public EventFdHandle {
 public:
 	virtual ~EventFdURingHandle() = default;
 
-	bool init(URingData *, mem_std::Function<Status()> &&);
+	Status rearm(URingData *, EventFdSource *);
+	Status disarm(URingData *, EventFdSource *);
 
-	Status rearm(EventFdSource *);
-	Status disarm(EventFdSource *, bool suspend);
-
-	void notify(EventFdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
+	void notify(URingData *, EventFdSource *, const NotifyData &);
 };
+#endif
+
+class SP_PUBLIC EventFdEPollHandle : public EventFdHandle {
+public:
+	virtual ~EventFdEPollHandle() = default;
+
+	Status rearm(EPollData *, EventFdSource *);
+	Status disarm(EPollData *, EventFdSource *);
+
+	void notify(EPollData *, EventFdSource *, const NotifyData &);
+};
+
+#if ANDROID
+class SP_PUBLIC EventFdALooperHandle : public EventFdHandle {
+public:
+	virtual ~EventFdALooperHandle() = default;
+
+	Status rearm(ALooperData *, EventFdSource *);
+	Status disarm(ALooperData *, EventFdSource *);
+
+	void notify(ALooperData *, EventFdSource *, const NotifyData &);
+};
+#endif
 
 }
 

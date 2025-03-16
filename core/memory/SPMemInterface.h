@@ -62,11 +62,13 @@ struct SP_PUBLIC PoolInterface final {
 struct SP_PUBLIC StandartInterface final {
 	struct SP_PUBLIC AllocBaseType {
 		static void * operator new (size_t size, const std::nothrow_t& tag) noexcept { return ::operator new(size, tag); }
+		static void * operator new (size_t size, std::align_val_t al, const std::nothrow_t& tag) noexcept { return ::operator new(size, al, tag); }
 		static void * operator new (size_t size, void* ptr) noexcept { return ::operator new(size, ptr); }
 
 		static void * operator new (size_t size, memory::pool_t* ptr) noexcept = delete;
 
 		static void operator delete(void *ptr) noexcept { return ::operator delete(ptr); }
+		static void operator delete(void *ptr, std::align_val_t al) noexcept { return ::operator delete(ptr, al); }
 	};
 
 	using StringType = std::string;

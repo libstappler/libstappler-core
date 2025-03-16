@@ -160,37 +160,65 @@ static const siginfo *getSignalInfo(int sig) {
 	return nullptr;
 }
 
-bool SignalFdSource::init(const sigset_t *sigset) {
-	auto fd = ::signalfd(-1, sigset, SFD_CLOEXEC | SFD_NONBLOCK);
+bool SignalFdSource::init(const sigset_t *sig) {
+	fd = ::signalfd(-1, sig, SFD_CLOEXEC | SFD_NONBLOCK);
 	if (fd < 0) {
 		return false;
 	}
 
-	return FdSource::init(fd);
-}
-
-bool SignalFdHandle::init(QueueRef *q, QueueData *d, SpanView<int> sigs) {
-	static_assert(sizeof(SignalFdSource) <= DataSize && std::is_standard_layout<SignalFdSource>::value);
-
-	sigemptyset(&_sigset);
-
-	auto source = new (_data) SignalFdSource();
-	if (!source->init(&_sigset)) {
-		return false;
-	}
-
-	_extra = sigs.vec<memory::StandartInterface>();
 	return true;
 }
 
+void SignalFdSource::cancel() {
+	if (fd >= 0) {
+		::close(fd);
+		fd = -1;
+	}
+}
+
+bool SignalFdHandle::init(HandleClass *cl, SpanView<int> sigs) {
+	static_assert(sizeof(SignalFdSource) <= DataSize && std::is_standard_layout<SignalFdSource>::value);
+
+	if (!Handle::init(cl, CompletionHandle<SignalFdHandle>::create<SignalFdHandle>(this,
+			[] (SignalFdHandle *, SignalFdHandle *h, uint32_t value, Status st) {
+		if (isSuccessful(st)) {
+			h->process();
+		}
+	}))) {
+		return false;
+	}
+
+	sigemptyset(&_sigset);
+	sigemptyset(&_default);
+
+	for (auto &it : sigs) {
+		::sigaddset(&_default, it);
+	}
+
+	auto source = reinterpret_cast<SignalFdSource *>(_data);
+
+	return source->init(&_sigset);
+}
+
 bool SignalFdHandle::read() {
-	auto s = ::read(getFd(), &_info, sizeof(signalfd_siginfo));
+	auto source = reinterpret_cast<SignalFdSource *>(_data);
+
+	auto s = ::read(source->fd, &_info, sizeof(signalfd_siginfo));
 	if (s == sizeof(signalfd_siginfo)) {
 		process();
 		return true;
 	}
 	return false;
 }
+
+#if ANDROID
+int sigisemptyset(const sigset_t *set) {
+	sigset_t sigset;
+	::sigemptyset(&sigset);
+
+	return memcmp(set, &sigset, sizeof(sigset_t)) == 0;
+}
+#endif
 
 bool SignalFdHandle::process() {
 	if (_info.ssi_signo == 0) {
@@ -227,11 +255,17 @@ void SignalFdHandle::enable() {
 }
 
 void SignalFdHandle::enable(const sigset_t *sigset) {
-	memcpy(&_sigset, sigset, sizeof(sigset_t));
+	auto source = reinterpret_cast<SignalFdSource *>(_data);
 
-	for (auto &it : _extra) {
-		::sigaddset(&_sigset, it);
+#if LINUX
+	::sigorset(&_sigset, sigset, &_default);
+#else
+	for (size_t i = 0; i < sizeof(siglist) / sizeof(siginfo); i++) {
+		if (::sigismember(&_default, siglist[i].code)) {
+			sigaddset(&_sigset, siglist[i].code);
+		}
 	}
+#endif
 
 	mem_std::StringStream signals;
 	for (size_t i = 0; i < sizeof(siglist) / sizeof(siginfo); i++) {
@@ -242,59 +276,149 @@ void SignalFdHandle::enable(const sigset_t *sigset) {
 
 	log::debug("event::Queue", "signalfd enabled:", signals.str());
 
-	::signalfd(getFd(), &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
+	::signalfd(source->fd, &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
 }
 
 void SignalFdHandle::disable() {
+	auto source = reinterpret_cast<SignalFdSource *>(_data);
+
 	::sigemptyset(&_sigset);
-	::signalfd(getFd(), &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
+	::signalfd(source->fd, &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
 }
 
-bool SignalFdURingHandle::init(URingData *uring, SpanView<int> sigs) {
-	if (!SignalFdHandle::init(uring->_queue, uring->_data, sigs)) {
-		return false;
-	}
-
-	setupURing<SignalFdURingHandle, SignalFdSource>(uring, this);
-
-	return true;
+const sigset_t *SignalFdHandle::getDefaultSigset() const {
+	return &_default;
 }
 
-Status SignalFdURingHandle::rearm(SignalFdSource *source) {
+const sigset_t *SignalFdHandle::getCurrentSigset() const {
+	return &_sigset;
+}
+
+#ifdef SP_EVENT_URING
+Status SignalFdURingHandle::rearm(URingData *uring, SignalFdSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		status = source->getURingData()->pushRead(source->getFd(), (uint8_t *)&_info, sizeof(signalfd_siginfo), this);
+		status = uring->pushRead(source->fd, (uint8_t *)&_info, sizeof(signalfd_siginfo), reinterpret_cast<uintptr_t>(this)
+				| (_timeline & URING_USERDATA_SERIAL_MASK));
 		if (status == Status::Suspended) {
-			status = source->getURingData()->submit();
+			status = uring->submit();
 		}
 	}
 	return status;
 }
 
-Status SignalFdURingHandle::disarm(SignalFdSource *source, bool suspend) {
-	auto status = prepareDisarm(suspend);
+Status SignalFdURingHandle::disarm(URingData *uring, SignalFdSource *source) {
+	auto status = prepareDisarm();
 	if (status == Status::Ok) {
-		status = source->getURingData()->cancelOp(this, URingUserFlags::None,
-				suspend ? URingCancelFlags::Suspend : URingCancelFlags::None);
+		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this)
+				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
+		++ _timeline;
 	}
 	return status;
 }
 
-void SignalFdURingHandle::notify(SignalFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
+void SignalFdURingHandle::notify(URingData *uring, SignalFdSource *source, const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
 
 	_status = Status::Suspended;
 
-	if (res == sizeof(signalfd_siginfo)) {
+	if (data.result == sizeof(signalfd_siginfo)) {
+		sendCompletion(0, Status::Ok);
 		process();
 		if (_status == Status::Suspended) {
-			rearm(source);
+			rearm(uring, source);
 		}
 	} else{
-		cancel(URingData::getErrnoStatus(res));
+		cancel(URingData::getErrnoStatus(data.result));
 	}
 }
+#endif
+
+Status SignalFdEPollHandle::rearm(EPollData *epoll, SignalFdSource *source) {
+	auto status = prepareRearm();
+	if (status == Status::Ok) {
+		source->event.data.ptr = this;
+		source->event.events = EPOLLIN;
+
+		status = epoll->add(source->fd, source->event);
+	}
+	return status;
+}
+
+Status SignalFdEPollHandle::disarm(EPollData *epoll, SignalFdSource *source) {
+	auto status = prepareDisarm();
+	if (status == Status::Ok) {
+		status = epoll->remove(source->fd);
+		++ _timeline;
+	} else if (status == Status::ErrorAlreadyPerformed) {
+		return Status::Ok;
+	}
+	return status;
+}
+
+void SignalFdEPollHandle::notify(EPollData *epoll, SignalFdSource *source, const NotifyData &data) {
+	if (_status != Status::Ok) {
+		return;
+	}
+
+	bool notify = false;
+
+	if (data.queueFlags & EPOLLIN) {
+		while (read()) {
+			notify = true;
+		}
+	}
+
+	if ((data.queueFlags & EPOLLERR) || (data.queueFlags & EPOLLHUP)) {
+		cancel();
+	} else if (notify) {
+		sendCompletion(0, Status::Ok);
+	}
+}
+
+#if ANDROID
+Status SignalFdALooperHandle::rearm(ALooperData *alooper, SignalFdSource *source) {
+	auto status = prepareRearm();
+	if (status == Status::Ok) {
+		status = alooper->add(source->fd, ALOOPER_EVENT_INPUT, this);
+	}
+	return status;
+}
+
+Status SignalFdALooperHandle::disarm(ALooperData *alooper, SignalFdSource *source) {
+	auto status = prepareDisarm();
+	if (status == Status::Ok) {
+		status = alooper->remove(source->fd);
+		++ _timeline;
+	} else if (status == Status::ErrorAlreadyPerformed) {
+		return Status::Ok;
+	}
+	return status;
+}
+
+void SignalFdALooperHandle::notify(ALooperData *alooper, SignalFdSource *source, const NotifyData &data) {
+	if (_status != Status::Ok) {
+		return;
+	}
+
+	bool notify = false;
+
+	if (data.queueFlags & ALOOPER_EVENT_INPUT) {
+		while (read()) {
+			notify = true;
+		}
+	}
+
+	if ((data.queueFlags & ALOOPER_EVENT_ERROR)
+			|| (data.queueFlags & ALOOPER_EVENT_HANGUP)
+			|| (data.queueFlags & ALOOPER_EVENT_INVALID)) {
+		cancel();
+	} else if (notify) {
+		sendCompletion(0, Status::Ok);
+	}
+}
+#endif
 
 }

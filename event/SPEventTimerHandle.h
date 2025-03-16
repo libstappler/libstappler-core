@@ -32,13 +32,6 @@ public:
 	static constexpr uint32_t Infinite = TimerInfo::Infinite;
 
 	virtual ~TimerHandle() = default;
-
-	bool init(QueueRef *, QueueData *, TimerInfo &&);
-
-	uint32_t getCount() const { return _count; }
-
-protected:
-	uint32_t _count = 0;
 };
 
 }

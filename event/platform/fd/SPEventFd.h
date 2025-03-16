@@ -27,25 +27,46 @@
 #include "SPEventFileHandle.h"
 #include "SPEventTimerHandle.h"
 
+#include "detail/SPEventQueueData.h"
+
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
 #include <linux/stat.h>
 #include <linux/time_types.h>
 
+#if LINUX
+#define SP_EVENT_URING
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+struct EPollData;
+
+#if ANDROID
+struct ALooperData;
+#endif
+
+#ifdef SP_EVENT_URING
 struct URingData;
 
-enum class URingUserFlags {
-	None,
-	Retained = 1 << 0,
-	CancellationRequest = 1 << 1,
-	Alternative = 1 << 2,
-};
+// Extra data can be passed to uring with Handle pointer
+// Handle is 32-byte alignment, so, we have 5 bits empty
 
-SP_DEFINE_ENUM_AS_MASK(URingUserFlags)
+static constexpr uint64_t URING_USERDATA_USER_MASK =	0b1'1111;
+static constexpr uint64_t URING_USERDATA_SERIAL_MASK =	0b0'0111;
+static constexpr uint64_t URING_USERDATA_RETAIN_BIT =	0b0'1000;
+static constexpr uint64_t URING_USERDATA_ALT_BIT =		0b1'0000;
+static constexpr uint64_t URING_USERDATA_PTR_MASK = ~URING_USERDATA_USER_MASK;
 
-class SP_PUBLIC FdSource {
+// Special userdata values
+// DO NOT set RETAIN bit for special values
+static constexpr uint64_t URING_USERDATA_IGNORED = maxOf<uint64_t>() & URING_USERDATA_PTR_MASK;
+static constexpr uint64_t URING_USERDATA_SUSPENDED = maxOf<uint64_t>() & (URING_USERDATA_PTR_MASK | 1);
+static constexpr uint64_t URING_USERDATA_TIMEOUT = maxOf<uint64_t>() & (URING_USERDATA_PTR_MASK | 2);
+
+#endif
+
+/*class SP_PUBLIC FdSource {
 public:
 	using URingCallback = void (*) (Handle *, int32_t res, uint32_t flags, URingUserFlags);
 
@@ -94,24 +115,6 @@ protected:
 	};
 };
 
-class SP_PUBLIC FdHandle : public Handle {
-public:
-	virtual ~FdHandle();
-
-	int getFd() const { return getData<FdSource>()->getFd(); }
-
-protected:
-	template <typename T, typename S>
-	void setupURing(URingData *uring, T *t) {
-		setup<T, S>();
-
-		auto source = getData<S>();
-		source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
-			reinterpret_cast<T *>(h)->notify(h->getData<S>(), res, flags, uflags);
-		});
-	}
-};
-
 class SP_PUBLIC StatURingHandle : public StatHandle {
 public:
 	virtual ~StatURingHandle() = default;
@@ -124,7 +127,7 @@ public:
 
 protected:
 	struct statx _buffer;
-};
+};*/
 
 template <typename TimeSpec>
 inline void setNanoTimespec(TimeSpec &ts, TimeInterval ival) {

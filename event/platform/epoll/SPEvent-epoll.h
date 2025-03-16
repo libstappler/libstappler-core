@@ -25,16 +25,67 @@
 
 #include "SPEventQueue.h"
 #include "SPPlatformUnistd.h"
+#include "detail/SPEventQueueData.h"
 
-#if LINUX || ANDROID
+#include "../fd/SPEventSignalFd.h"
+#include "../fd/SPEventEventFd.h"
 
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-}
+enum class EPollFlags {
+	None,
+	HaveEPollPWait2 = 1 << 0,
+};
 
-#endif
+SP_DEFINE_ENUM_AS_MASK(EPollFlags)
+
+struct SP_PUBLIC EPollData : public mem_pool::AllocBase {
+	QueueRef *_queue = nullptr;
+	Queue::Data *_data = nullptr;
+	QueueFlags _flags = QueueFlags::None;
+	EPollFlags _eflags = EPollFlags::None;
+
+	Rc<SignalFdHandle> _signalFd;
+	Rc<EventFdHandle> _eventFd;
+
+	int _epollFd = -1;
+
+	mem_pool::Vector<struct epoll_event> _events;
+
+	std::atomic_flag _shouldWakeup;
+	std::atomic<std::underlying_type_t<WakeupFlags>> _wakeupFlags = 0;
+	WakeupFlags _runWakeupFlags = WakeupFlags::None;
+	std::atomic<uint64_t> _wakeupTimeout;
+	uint32_t _wakeupCounter = 0;
+	Status _wakeupStatus = Status::Suspended;
+
+	Status add(int fd, const epoll_event &ev);
+	Status remove(int fd);
+
+	Status runPoll(TimeInterval, bool infinite = false);
+	Status processEvents(uint32_t nevents);
+
+	Status submit();
+	uint32_t poll();
+	uint32_t wait(TimeInterval);
+	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
+
+	Status wakeup(WakeupFlags, TimeInterval);
+
+	Status suspendHandles();
+	Status doWakeupInterrupt(WakeupFlags, bool externalCall);
+
+	void runInternalHandles();
+
+	void cancel();
+
+	EPollData(QueueRef *, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs);
+	~EPollData();
+};
+
+}
 
 #endif /* CORE_EVENT_PLATFORM_SPEVENT_EPOLL_H_ */

@@ -25,7 +25,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-static void fillStatData(Stat &target, const struct statx &source) {
+/*static void fillStatData(Stat &target, const struct statx &source) {
 	target.size = size_t(source.stx_size);
 
 	if (S_ISBLK(source.stx_mode)) { target.type = FileType::BlockDevice; }
@@ -111,6 +111,6 @@ void StatURingHandle::notify(FdSource *source, int32_t res, uint32_t flags, URin
 	}
 
 	_root = nullptr;
-}
+}*/
 
 }

@@ -218,7 +218,7 @@ struct ArchiveHierarchy {
 				if (it.name == name) {
 					stat.size = it.size;
 					stat.mtime = stat.ctime = stat.atime = it.time;
-					stat.isDir = false;
+					stat.type = FileType::File;
 					return true;
 				}
 			}
@@ -227,7 +227,7 @@ struct ArchiveHierarchy {
 		do {
 			auto it = target->dirs.find(name);
 			if (it != target->dirs.end()) {
-				stat.isDir = true;
+				stat.type = FileType::Dir;
 				return true;
 			}
 		} while (0);

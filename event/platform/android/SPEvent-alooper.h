@@ -20,38 +20,54 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_PLATFORM_FD_SPEVENTDIRFD_H_
-#define CORE_EVENT_PLATFORM_FD_SPEVENTDIRFD_H_
+#ifndef CORE_EVENT_PLATFORM_ANDROID_SPEVENT_ALOOPER_H_
+#define CORE_EVENT_PLATFORM_ANDROID_SPEVENT_ALOOPER_H_
 
-#include "SPEventFd.h"
+#include "SPEventQueue.h"
+#include "SPPlatformUnistd.h"
+#include "detail/SPEventQueueData.h"
+
+#if ANDROID
+
+#include "../fd/SPEventSignalFd.h"
+#include "../fd/SPEventEventFd.h"
+
+#include <android/looper.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-/*class SP_PUBLIC DirFdSource : public FdSource {
-public:
-	bool init();
+struct SP_PUBLIC ALooperData : public mem_pool::AllocBase {
+	QueueRef *_queue = nullptr;
+	Queue::Data *_data = nullptr;
+	QueueFlags _flags = QueueFlags::None;
+
+	ALooper *_looper = nullptr;
+
+	std::atomic<std::underlying_type_t<WakeupFlags>> _wakeupFlags = 0;
+	uint32_t _wakeupCounter = 0;
+	Status _wakeupStatus = Status::Suspended;
+
+	Status add(int fd, int events, Handle *);
+	Status remove(int fd);
+
+	Status submit();
+	uint32_t poll();
+	uint32_t wait(TimeInterval);
+	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
+
+	Status wakeup(WakeupFlags, TimeInterval);
+
+	Status suspendHandles();
+	Status doWakeupInterrupt(WakeupFlags, bool externalCall);
+
+	void cancel();
+
+	ALooperData(QueueRef *, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs);
+	~ALooperData();
 };
-
-class SP_PUBLIC DirFdHandle : public DirHandle {
-public:
-	virtual ~DirFdHandle();
-
-	bool init(QueueRef *, QueueData *, OpenDirInfo &&);
-
-	virtual Status scan(const Callback<void(FileType, StringView)> &) override;
-};
-
-class SP_PUBLIC DirFdURingHandle : public DirFdHandle {
-public:
-	virtual ~DirFdURingHandle() = default;
-
-	bool init(URingData *, OpenDirInfo &&);
-
-	Status run(DirFdSource *);
-
-	void notify(DirFdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
-};*/
 
 }
 
-#endif /* CORE_EVENT_PLATFORM_FD_SPEVENTDIRFD_H_ */
+#endif
+
+#endif /* CORE_EVENT_PLATFORM_ANDROID_SPEVENT_ALOOPER_H_ */

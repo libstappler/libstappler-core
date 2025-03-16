@@ -22,12 +22,24 @@
 
 #include "SPCommon.h"
 
+#if LINUX || ANDROID
 
+#if LINUX
 #include "platform/linux/SPEvent-linux.cc"
 #include "platform/uring/SPEventThreadHandle-uring.cc"
 #include "platform/uring/SPEventTimer-uring.cc"
 #include "platform/uring/SPEvent-uring.cc"
+#endif
+
+#if ANDROID
+#include "platform/android/SPEvent-android.cc"
+#include "platform/android/SPEvent-alooper.cc"
+#include "platform/android/SPEventThreadHandle-alooper.cc"
+#endif
+
+#include "platform/epoll/SPEventThreadHandle-epoll.cc"
 #include "platform/epoll/SPEvent-epoll.cc"
+
 #include "platform/fd/SPEventFd.cc"
 #include "platform/fd/SPEventFdStat.cc"
 #include "platform/fd/SPEventEventFd.cc"
@@ -36,6 +48,9 @@
 #include "platform/fd/SPEventDirFd.cc"
 #include "platform/fd/SPEventPollFd.cc"
 
+#endif
+
+#include "detail/SPEventHandleClass.cc"
 #include "detail/SPEventQueueData.cc"
 #include "SPEventBufferChain.cc"
 #include "SPEventHandle.cc"

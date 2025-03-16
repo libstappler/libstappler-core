@@ -24,7 +24,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-static size_t STATUS_DESC_BUFFER_SIZE = 512;
+#define STATUS_DESC_BUFFER_SIZE 512
 
 StringView getStatusName(Status status) {
 	switch (status) {
@@ -45,6 +45,8 @@ StringView getStatusName(Status status) {
 	case Status::ErrorUnknown: return "Status::ErrorUnknown"; break;
 	case Status::ErrorNotPermitted: return "Status::ErrorNotPermitted"; break;
 	case Status::ErrorNotFound: return "Status::ErrorNotFound"; break;
+	case Status::ErrorNoSuchProcess: return "Status::ErrorNoSuchProcess"; break;
+	case Status::ErrorInterrupted: return "Status::ErrorInterrupted"; break;
 	case Status::ErrorTooManyObjects: return "Status::ErrorTooManyObjects"; break;
 	case Status::ErrorAgain: return "Status::ErrorAgain"; break;
 	case Status::ErrorOutOfHostMemory: return "Status::ErrorOutOfHostMemory"; break;
@@ -86,6 +88,10 @@ StringView getStatusName(Status status) {
 
 static StringView getInternalDescription(Status st) {
 	switch (st) {
+	case Status::Ok: return "Ok"; break;
+	case Status::Done: return "Operation completed successfully"; break;
+	case Status::Declined: return "Operation was declined without an error"; break;
+	case Status::Suspended: return "Operation was suspended without an error"; break;
 	case Status::ErrorUnknown: return "Unknown error"; break;
 	case Status::ErrorNotPermitted: return "Operation not permitted"; break;
 	case Status::ErrorTooManyObjects: return "Too many objects for the command"; break;
@@ -138,11 +144,11 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 	if (name.empty()) {
 		if (toInt(st) > 0) {
 			outCb << "Status::Application(" << toInt(st) << ")";
-		} else if (toInt(st) > -status::STATUS_ERRNO_OFFSET) {
-			outCb << "Status::Errno(" << status::toErrno(st) << ")";
 		} else if (toInt(st) <= -status::STATUS_ERRNO_OFFSET && toInt(st) > -status::STATUS_GENERIC_OFFSET) {
-			outCb << "Status::Generic(" << status::toGeneric(st) << ")";
+			outCb << "Status::Errno(" << status::toErrno(st) << ")";
 		} else if (toInt(st) <= -status::STATUS_GENERIC_OFFSET && toInt(st) > -status::STATUS_GAPI_OFFSET) {
+			outCb << "Status::Generic(" << status::toGeneric(st) << ")";
+		} else if (toInt(st) <= -status::STATUS_GAPI_OFFSET && toInt(st) > -status::STATUS_END_OFFSET) {
 			outCb << "Status::Generic(" << status::toGApi(st) << ")";
 		} else {
 			outCb << "Status::Unknown(" << -toInt(st) << ")";
@@ -158,36 +164,47 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 		// errno-based error
 		outCb << ": ";
 
+		auto err = status::toErrno(st);
 		auto len = strlen(strerrBuffer);
+		auto target = &strerrBuffer[len];
 
-		strcat(strerrBuffer, ": ");
-		::strerror_r(status::toErrno(st), strerrBuffer + len, STATUS_DESC_BUFFER_SIZE - len - 1);
+#ifdef _GNU_SOURCE
+		auto ptr = ::strerror_r(err, target, STATUS_DESC_BUFFER_SIZE - len - 1);
+		if (strlen(strerrBuffer) == len) {
+			outCb << StringView(ptr, strlen(ptr));
+		}
+#else
+#error TODO
+#endif
 
 	} else {
 		outCb << ": No description found";
 	}
 
 	cb(StringView(strerrBuffer, strlen(strerrBuffer)));
-
 }
 
 std::ostream &operator<<(std::ostream &stream, Status st) {
-	auto name = getStatusName(st);
+	getStatusDescription(st, [&] (StringView str) {
+		stream << str;
+	});
+	/*auto name = getStatusName(st);
 	if (!name.empty()) {
 		stream << name;
 	} else {
+
 		if (toInt(st) > 0) {
 			stream << "Status::Application(" << toInt(st) << ")";
-		} else if (toInt(st) > -status::STATUS_ERRNO_OFFSET) {
-			stream << "Status::Errno(" << status::toErrno(st) << ")";
 		} else if (toInt(st) <= -status::STATUS_ERRNO_OFFSET && toInt(st) > -status::STATUS_GENERIC_OFFSET) {
-			stream << "Status::Generic(" << status::toGeneric(st) << ")";
+			stream << "Status::Errno(" << status::toErrno(st) << ")";
 		} else if (toInt(st) <= -status::STATUS_GENERIC_OFFSET && toInt(st) > -status::STATUS_GAPI_OFFSET) {
+			stream << "Status::Generic(" << status::toGeneric(st) << ")";
+		} else if (toInt(st) <= -status::STATUS_GAPI_OFFSET && toInt(st) > -status::STATUS_END_OFFSET) {
 			stream << "Status::Generic(" << status::toGApi(st) << ")";
 		} else {
 			stream << "Status::Unknown(" << -toInt(st) << ")";
 		}
-	}
+	}*/
 	return stream;
 }
 

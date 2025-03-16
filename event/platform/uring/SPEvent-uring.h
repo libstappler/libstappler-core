@@ -51,53 +51,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-struct URingSq {
-	unsigned *head = nullptr;
-	unsigned *tail = nullptr;
-	unsigned *mask = nullptr;
-	unsigned *entries = nullptr;
-	unsigned *flags = nullptr;
-	unsigned *dropped = nullptr;
-	unsigned *array = nullptr;
-	io_uring_sqe *sqes = nullptr;
-
-	unsigned userspaceHead = 0;
-	unsigned userspaceTail = 0;
-
-	size_t ringSize = 0;
-	uint8_t *ring = nullptr;
-};
-
-struct URingCq {
-	unsigned *head = nullptr;
-	unsigned *tail = nullptr;
-	unsigned *mask = nullptr;
-	unsigned *entries = nullptr;
-	unsigned *flags = nullptr;
-	unsigned *overflow = nullptr;
-	io_uring_cqe *cqes = nullptr;
-
-	size_t ringSize = 0;
-	uint8_t *ring = nullptr;
-};
-
-struct SP_PUBLIC URingProbe {
-	static constexpr size_t OpcodeCount = 256;
-
-	uint8_t last_op;	/* last opcode supported */
-	uint8_t ops_len;	/* length of ops[] array below */
-	uint16_t resv;
-	uint32_t resv2[3];
-	io_uring_probe_op ops[OpcodeCount];
-
-	bool isOpcodeSupported(int op) {
-		if (op > last_op) {
-			return false;
-		}
-		return (ops[op].flags & IO_URING_OP_SUPPORTED) != 0;
-	}
-};
-
 enum class URingFlags {
 	None,
 	PendingGetEvents = 1 << 0,
@@ -134,12 +87,58 @@ enum class URingPushFlags {
 
 SP_DEFINE_ENUM_AS_MASK(URingPushFlags)
 
-struct SP_PUBLIC URingData : public mem_pool::AllocBase {
+struct SP_PUBLIC URingSq {
+	unsigned *head = nullptr;
+	unsigned *tail = nullptr;
+	unsigned *mask = nullptr;
+	unsigned *entries = nullptr;
+	unsigned *flags = nullptr;
+	unsigned *dropped = nullptr;
+	unsigned *array = nullptr;
+	io_uring_sqe *sqes = nullptr;
+
+	unsigned userspaceHead = 0;
+	unsigned userspaceTail = 0;
+
+	size_t ringSize = 0;
+	uint8_t *ring = nullptr;
+};
+
+struct SP_PUBLIC URingCq {
+	unsigned *head = nullptr;
+	unsigned *tail = nullptr;
+	unsigned *mask = nullptr;
+	unsigned *entries = nullptr;
+	unsigned *flags = nullptr;
+	unsigned *overflow = nullptr;
+	io_uring_cqe *cqes = nullptr;
+
+	size_t ringSize = 0;
+	uint8_t *ring = nullptr;
+};
+
+struct SP_PUBLIC URingProbe {
+	static constexpr size_t OpcodeCount = 256;
+
+	uint8_t last_op;	/* last opcode supported */
+	uint8_t ops_len;	/* length of ops[] array below */
+	uint16_t resv;
+	uint32_t resv2[3];
+	io_uring_probe_op ops[OpcodeCount];
+
+	bool isOpcodeSupported(int op) {
+		if (op > last_op) {
+			return false;
+		}
+		return (ops[op].flags & IO_URING_OP_SUPPORTED) != 0;
+	}
+};
+
+struct SP_PUBLIC URingData;
+
+struct alignas(32) URingData : public mem_pool::AllocBase {
 	static constexpr size_t CQESize = sizeof(struct io_uring_cqe);
 	static constexpr uint32_t DefaultIdleInterval = 500;
-
-	static constexpr uint64_t UserdataPointerMask = 0xFFFF'FFFF'FFFF'FFF0; // to use last 4 bits for a flags
-	static constexpr uint64_t UserdataFlagsMask = ~UserdataPointerMask; // to use last 4 bits for a flags
 
 	static inline Status getErrnoStatus(int negErrno) {
 		return Status(-status::STATUS_ERRNO_OFFSET + negErrno);
@@ -166,6 +165,7 @@ struct SP_PUBLIC URingData : public mem_pool::AllocBase {
 
 	mem_pool::Vector<io_uring_cqe> _out;
 
+	uint64_t _tick = 0;
 	uint32_t _events = 0;
 	std::atomic_flag _shouldWakeup;
 	std::atomic<std::underlying_type_t<WakeupFlags>> _wakeupFlags = 0;
@@ -189,8 +189,6 @@ struct SP_PUBLIC URingData : public mem_pool::AllocBase {
 
 	unsigned flushSqe();
 
-	void retainHandleForSqe(io_uring_sqe *, Handle *);
-
 	struct SqeBlock {
 		io_uring_sqe *front;
 		unsigned first;
@@ -212,15 +210,11 @@ struct SP_PUBLIC URingData : public mem_pool::AllocBase {
 	int submitSqe(unsigned sub, unsigned wait, bool waitAvailable, bool force = false);
 	int submitPending(bool force = false);
 
-	Status pushRead(int fd, uint8_t *buf, size_t bsize, void * userdata);
 	Status pushRead(int fd, uint8_t *buf, size_t bsize, uint64_t userdata);
-	Status pushReadRetain(int fd, uint8_t *buf, size_t bsize, Handle *);
 
 	Status pushWrite(int fd, const uint8_t *buf, size_t bsize, uint64_t userdata);
-	Status pushWriteRetain(int fd, const uint8_t *buf, size_t bsize, Handle *);
 
-	Status cancelOp(void *, URingUserFlags ptrFlags, URingCancelFlags = URingCancelFlags::None);
-	Status cancelOpRelease(Handle *, URingCancelFlags = URingCancelFlags::None);
+	Status cancelOp(uint64_t userdata, URingCancelFlags = URingCancelFlags::None);
 
 	Status cancelFd(int fd, URingCancelFlags = URingCancelFlags::None);
 
@@ -240,13 +234,13 @@ struct SP_PUBLIC URingData : public mem_pool::AllocBase {
 
 	Status doWakeupInterrupt(WakeupFlags, bool externalCall);
 
+	void runInternalHandles();
+
+	void cancel();
+
 	URingData(QueueRef *, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs);
 	~URingData();
 };
-
-static constexpr uint64_t URING_USERDATA_IGNORED = maxOf<uint64_t>() & URingData::UserdataPointerMask;
-static constexpr uint64_t URING_USERDATA_SUSPENDED = maxOf<uint64_t>() & (URingData::UserdataPointerMask << 1);
-static constexpr uint64_t URING_USERDATA_TIMEOUT = maxOf<uint64_t>() & (URingData::UserdataPointerMask << 2);
 
 }
 

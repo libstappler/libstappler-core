@@ -27,16 +27,19 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class SP_PUBLIC SignalFdSource : public FdSource {
-public:
-	bool init(const sigset_t *);
+struct SP_PUBLIC SignalFdSource {
+	int fd;
+	epoll_event event;
+
+	bool init(const sigset_t *sig);
+	void cancel();
 };
 
-class SP_PUBLIC SignalFdHandle : public FdHandle {
+class SP_PUBLIC SignalFdHandle : public Handle {
 public:
 	virtual ~SignalFdHandle() = default;
 
-	bool init(QueueRef *, QueueData *, SpanView<int>);
+	bool init(HandleClass *, SpanView<int> sigs);
 
 	bool read();
 	bool process();
@@ -44,27 +47,50 @@ public:
 	void enable(const sigset_t *);
 	void disable();
 
-	const sigset_t *getSigset() const { return &_sigset; }
-
 	const signalfd_siginfo *getInfo() const { return &_info; }
 
+	const sigset_t *getDefaultSigset() const;
+	const sigset_t *getCurrentSigset() const;
+
 protected:
-	signalfd_siginfo _info;
 	sigset_t _sigset;
-	mem_std::Vector<int> _extra;
+	sigset_t _default;
+	signalfd_siginfo _info;
 };
 
+#ifdef SP_EVENT_URING
 class SP_PUBLIC SignalFdURingHandle : public SignalFdHandle {
 public:
 	virtual ~SignalFdURingHandle() = default;
 
-	bool init(URingData *, SpanView<int>);
+	Status rearm(URingData *, SignalFdSource *);
+	Status disarm(URingData *, SignalFdSource *);
 
-	Status rearm(SignalFdSource *);
-	Status disarm(SignalFdSource *, bool suspend);
-
-	void notify(SignalFdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
+	void notify(URingData *, SignalFdSource *, const NotifyData &);
 };
+#endif
+
+class SP_PUBLIC SignalFdEPollHandle : public SignalFdHandle {
+public:
+	virtual ~SignalFdEPollHandle() = default;
+
+	Status rearm(EPollData *, SignalFdSource *);
+	Status disarm(EPollData *, SignalFdSource *);
+
+	void notify(EPollData *, SignalFdSource *, const NotifyData &);
+};
+
+#if ANDROID
+class SP_PUBLIC SignalFdALooperHandle : public SignalFdHandle {
+public:
+	virtual ~SignalFdALooperHandle() = default;
+
+	Status rearm(ALooperData *, SignalFdSource *);
+	Status disarm(ALooperData *, SignalFdSource *);
+
+	void notify(ALooperData *, SignalFdSource *, const NotifyData &);
+};
+#endif
 
 }
 

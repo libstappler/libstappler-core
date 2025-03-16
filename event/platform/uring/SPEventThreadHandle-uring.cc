@@ -22,6 +22,8 @@
 
 #include "SPEventThreadHandle-uring.h"
 
+#if LINUX
+
 #include <linux/futex.h>
 #include <sys/syscall.h>
 #include <sys/eventfd.h>
@@ -90,7 +92,7 @@ bool FutexImpl::client_try_lock() {
 void FutexImpl::client_unlock() {
 	// drop LOCK flag, leave WAIT and SIGNAL in place
 	if ((atomicFetchAnd(&_futex, SIGNAL_VALUE | WAIT_VALUE) & SIGNAL_VALUE) == 0) {
-		std::cout << "+";
+		//std::cout << "+";
 	}
 
 	// wake server or clients
@@ -116,51 +118,46 @@ uint32_t FutexImpl::load() {
 	return atomicLoadSeq(&_futex);
 }
 
-bool ThreadUringHandle::init(URingData *uring) {
-	static_assert(sizeof(FdSource) <= DataSize && std::is_standard_layout<FdSource>::value);
 
-	auto source = new (_data) FdSource;
-
-	if (!source->init(-1) || !ThreadHandle::init(uring->_queue, uring->_data)) {
-		return false;
-	}
-
-	setup<ThreadUringHandle, FdSource>();
-
-	source->setTimeoutInterval(TimeInterval(), TimeInterval::microseconds(50000));
-
-	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
-		reinterpret_cast<ThreadUringHandle *>(h)->notify(h->getData<FdSource>(), res, flags, uflags);
-	});
-
+bool ThreadUringSource::init(TimeInterval ival) {
+	setNanoTimespec(interval, ival);
 	return true;
 }
 
-Status ThreadUringHandle::rearm(FdSource *source, bool unlock, bool init) {
+void ThreadUringSource::cancel() { }
+
+bool ThreadUringHandle::init(HandleClass *cl) {
+	if (!!ThreadHandle::init(cl)) {
+		return false;
+	}
+
+	auto source = reinterpret_cast<ThreadUringSource *>(_data);
+	return source->init(FAILSAFE_TIMER_INTERVAL);
+}
+
+Status ThreadUringHandle::rearm(URingData *uring, ThreadUringSource *source, bool unlock, bool init) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		auto uring = source->getURingData();
-
 		if (unlock) {
-			_futex.server_unlock();
+			source->futex.server_unlock();
 		}
 
 		if (init) {
-			_thisThread = std::this_thread::get_id();
+			source->thisThread = std::this_thread::get_id();
 		}
 
-		if (!_failsafe) {
-			rearmFailsafe(source);
+		if (!source->failsafe) {
+			rearmFailsafe(uring, source);
 		}
 
 		auto result = uring->pushSqe({IORING_OP_FUTEX_WAIT}, [&] (io_uring_sqe *sqe, uint32_t n) {
 			sqe->fd = FUTEX2_SIZE_U32 | FUTEX2_PRIVATE;
 			sqe->futex_flags = 0;
 			sqe->len = 0;
-			sqe->addr = reinterpret_cast<uintptr_t>(_futex.getAddr());
+			sqe->addr = reinterpret_cast<uintptr_t>(source->futex.getAddr());
 			sqe->addr2 = 0; // we can lock only on 0
 			sqe->addr3 = FutexImpl::SERVER_MASK;
-			uring->retainHandleForSqe(sqe, this);
+			sqe->user_data = reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT;
 		}, URingPushFlags::Submit);
 
 		if (isSuccessful(result)) {
@@ -168,50 +165,48 @@ Status ThreadUringHandle::rearm(FdSource *source, bool unlock, bool init) {
 		}
 	} else if (unlock) {
 		// force client unlock if server is dead
-		_futex.client_unlock();
+		source->futex.client_unlock();
 	}
 	return status;
 }
 
-Status ThreadUringHandle::disarm(FdSource *source, bool suspend) {
-	auto status = prepareDisarm(suspend);
+Status ThreadUringHandle::disarm(URingData *uring, ThreadUringSource *source) {
+	auto status = prepareDisarm();
 	if (status == Status::Ok) {
-		auto uring = source->getURingData();
-		if (_failsafe) {
+		if (source->failsafe) {
 			uring->pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
 				sqe->len = 0;
-				sqe->addr = reinterpret_cast<uintptr_t>(this) | uintptr_t(toInt(URingUserFlags::Alternative));
+				sqe->addr = reinterpret_cast<uintptr_t>(this) | URING_USERDATA_ALT_BIT;
 				sqe->off = 0;
 				sqe->user_data = URING_USERDATA_IGNORED;
 			}, URingPushFlags::None);
-			_failsafe = false;
+			source->failsafe = false;
 		}
 
-		status = uring->cancelOpRelease(this, suspend ? URingCancelFlags::Suspend : URingCancelFlags::None);
+		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT, URingCancelFlags::Suspend);
 	}
 	return status;
 }
 
-void ThreadUringHandle::notify(FdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
+void ThreadUringHandle::notify(URingData *uring, ThreadUringSource *source, const NotifyData &data) {
 	// !!! futex now should be on 0
 	if (_status != Status::Ok) {
 		return; // just exit
 	}
 
-	if (hasFlag(uflags, URingUserFlags::Alternative)) {
-		if ((flags & IORING_CQE_F_MORE) == 0) {
+	if (hasFlag(data.userFlags, uint32_t(URING_USERDATA_ALT_BIT))) {
+		if ((data.queueFlags & IORING_CQE_F_MORE) == 0) {
 			// rearm failsafe
-			std::cout << "Thread: IORING_CQE_F_MORE\n";
-			rearmFailsafe(source);
+			rearmFailsafe(uring, source);
 		}
-		if (_futex.server_try_lock()) {
+		if (source->futex.server_try_lock()) {
 			auto ev = performAll([&] (uint32_t count) {
 				if constexpr (URING_THREAD_DEBUG_SWITCH_TIMER) {
 					if (count == 1) {
 						log::info("event::ThreadUringHandle", "B ", sp::platform::nanoclock(ClockType::Monotonic) - _switchTimer);
 					}
 				}
-				_futex.server_unlock();
+				source->futex.server_unlock();
 			});
 			if (ev > 0) {
 				//log::info("event::ThreadUringHandle", "events was processed with failsafe timer: ", ev);
@@ -220,16 +215,16 @@ void ThreadUringHandle::notify(FdSource *source, int32_t res, uint32_t flags, UR
 	} else {
 		_status = Status::Suspended;
 
-		if (res < 0 && res != -EAGAIN) {
-			cancel(URingData::getErrnoStatus(res));
+		if (data.result < 0 && data.result != -EAGAIN) {
+			cancel(URingData::getErrnoStatus(data.result));
 			return;
 		}
 
 		// try to capture futex
-		auto success = _futex.server_try_lock();
+		auto success = source->futex.server_try_lock();
 		if (!success) {
 			// wait for a new wakeup
-			rearm(source, false, false);
+			rearm(uring, source, false, false);
 			return;
 		} else {
 			// now we own futex
@@ -239,7 +234,7 @@ void ThreadUringHandle::notify(FdSource *source, int32_t res, uint32_t flags, UR
 						log::info("event::ThreadUringHandle", "A ", sp::platform::nanoclock(ClockType::Monotonic) - _switchTimer);
 					}
 				}
-				rearm(source, true, false);
+				rearm(uring, source, true, false);
 			});
 			if (ev > 0) {
 				//log::info("event::ThreadUringHandle", "events was processed with futex: ", ev);
@@ -249,100 +244,91 @@ void ThreadUringHandle::notify(FdSource *source, int32_t res, uint32_t flags, UR
 }
 
 Status ThreadUringHandle::perform(Rc<thread::Task> &&task) {
-	if (std::this_thread::get_id() == _thisThread) {
+	auto source = reinterpret_cast<ThreadUringSource *>(_data);
+	if (std::this_thread::get_id() == source->thisThread) {
 		// Ensure that server will be notified by setting SIGNAL flag.
 		// Other thread will issue FITEX_WAKE, if we fail to lock, so
 		// just add task into non-protected queue
-		if (_futex.client_try_lock()) {
+		if (source->futex.client_try_lock()) {
 			_outputQueue.emplace_back(move(task));
-			_futex.client_unlock();
+			source->futex.client_unlock();
 		} else {
 			_unsafeQueue.emplace_back(move(task));
 		}
 	} else {
-		_futex.client_lock();
+		source->futex.client_lock();
 		_outputQueue.emplace_back(move(task));
 		if constexpr (URING_THREAD_DEBUG_SWITCH_TIMER) {
 			_switchTimer = sp::platform::nanoclock(ClockType::Monotonic);
 		}
-		_futex.client_unlock();
+		source->futex.client_unlock();
 	}
 	return Status::Ok;
 }
 
 Status ThreadUringHandle::perform(mem_std::Function<void()> &&func, Ref *target) {
-	if (std::this_thread::get_id() == _thisThread) {
+	auto source = reinterpret_cast<ThreadUringSource *>(_data);
+	if (std::this_thread::get_id() == source->thisThread) {
 		// Ensure that server will be notified by setting SIGNAL flag.
 		// Other thread will issue FITEX_WAKE, if we fail to lock, so
 		// just add task into non-protected queue
-		if (_futex.client_try_lock()) {
+		if (source->futex.client_try_lock()) {
 			_outputCallbacks.emplace_back(sp::move(func), target);
-			_futex.client_unlock();
+			source->futex.client_unlock();
 		} else {
 			_unsafeCallbacks.emplace_back(sp::move(func), target);
 		}
 	} else {
-		_futex.client_lock();
+		source->futex.client_lock();
 		_outputCallbacks.emplace_back(sp::move(func), target);
 		if constexpr (URING_THREAD_DEBUG_SWITCH_TIMER) {
 			_switchTimer = sp::platform::nanoclock(ClockType::Monotonic);
 		}
-		_futex.client_unlock();
+		source->futex.client_unlock();
 	}
 	return Status::Ok;
 }
 
-void ThreadUringHandle::rearmFailsafe(FdSource *source) {
-	auto uring = source->getURingData();
+void ThreadUringHandle::rearmFailsafe(URingData *uring, ThreadUringSource *source) {
 	uring->pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
 		sqe->fd = -1;
 		sqe->len = 1;
-		sqe->addr = reinterpret_cast<uintptr_t>(&source->getInterval());
+		sqe->addr = reinterpret_cast<uintptr_t>(&source->interval);
 		sqe->off = 0;
-		sqe->user_data = reinterpret_cast<uintptr_t>(this) | uintptr_t(toInt(URingUserFlags::Alternative));
+		sqe->user_data = reinterpret_cast<uintptr_t>(this) | URING_USERDATA_ALT_BIT;
 		sqe->timeout_flags = IORING_TIMEOUT_MULTISHOT | IORING_TIMEOUT_ETIME_SUCCESS;
 	}, URingPushFlags::Submit);
-	_failsafe = true;
+	source->failsafe = true;
 }
 
-bool ThreadEventFdHandle::init(URingData *uring) {
-	static_assert(sizeof(EventFdSource) <= DataSize && std::is_standard_layout<EventFdSource>::value);
-
-	auto source = new (_data) EventFdSource;
-
-	if (!source->init() || !ThreadHandle::init(uring->_queue, uring->_data)) {
+bool ThreadEventFdHandle::init(HandleClass *cl) {
+	if (!ThreadHandle::init(cl)) {
 		return false;
 	}
 
-	setup<ThreadEventFdHandle, EventFdSource>();
-
-	source->setURingCallback(uring, [] (Handle *h, int32_t res, uint32_t flags, URingUserFlags uflags) {
-		reinterpret_cast<ThreadEventFdHandle *>(h)->notify(h->getData<EventFdSource>(), res, flags, uflags);
-	});
-
-	return true;
+	auto source = reinterpret_cast<EventFdSource *>(_data);
+	return source->init();
 }
 
-Status ThreadEventFdHandle::rearm(EventFdSource *source, bool updateBuffers) {
+Status ThreadEventFdHandle::rearm(URingData *uring, EventFdSource *source, bool updateBuffers) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		auto uring = source->getURingData();
-
 		if (hasFlag(uring->_uflags, URingFlags::ReadMultishotSupported)) {
 			auto fillMultishot = [&] (io_uring_sqe *sqe) {
-				sqe->fd = source->getFd();
+				sqe->fd = source->fd;
 				sqe->buf_group = _bufferGroup;
 				sqe->off = -1;
-				sqe->user_data = reinterpret_cast<uintptr_t>(this);
+				sqe->user_data = reinterpret_cast<uintptr_t>(this)
+						| (_timeline & URING_USERDATA_SERIAL_MASK);
 				sqe->flags |= IOSQE_BUFFER_SELECT;
 			};
 
 			if (!_bufferGroup) {
-				_bufferGroup = uring->registerBufferGroup(TARGET_BUFFER_COUNT,
-					sizeof(uint64_t), (uint8_t *)_targetBuf);
+				_bufferGroup = uring->registerBufferGroup(EventFdSource::TARGET_BUFFER_COUNT,
+					sizeof(uint64_t), (uint8_t *)source->target);
 			} else if (updateBuffers) {
-				_bufferGroup = uring->reloadBufferGroup(_bufferGroup, TARGET_BUFFER_COUNT,
-					sizeof(uint64_t), (uint8_t *)_targetBuf);
+				_bufferGroup = uring->reloadBufferGroup(_bufferGroup, EventFdSource::TARGET_BUFFER_COUNT,
+					sizeof(uint64_t), (uint8_t *)source->target);
 			}
 
 			status = uring->pushSqe({IORING_OP_READ_MULTISHOT}, [&] (io_uring_sqe *sqe, uint32_t) {
@@ -350,33 +336,33 @@ Status ThreadEventFdHandle::rearm(EventFdSource *source, bool updateBuffers) {
 			}, URingPushFlags::Submit);
 		} else {
 			status = uring->pushSqe({IORING_OP_READ}, [&] (io_uring_sqe *sqe, uint32_t) {
-				sqe->fd = source->getFd();
-				sqe->addr = reinterpret_cast<uintptr_t>(_targetBuf);
+				sqe->fd = source->fd;
+				sqe->addr = reinterpret_cast<uintptr_t>(source->target);
 				sqe->len = sizeof(uint64_t);
 				sqe->off = -1;
-				sqe->user_data = reinterpret_cast<uintptr_t>(this);
+				sqe->user_data = reinterpret_cast<uintptr_t>(this)
+						| (_timeline & URING_USERDATA_SERIAL_MASK);
 			}, URingPushFlags::Submit);
 		}
 	}
 	return status;
 }
 
-Status ThreadEventFdHandle::disarm(EventFdSource *source, bool suspend) {
-	auto status = prepareDisarm(suspend);
+Status ThreadEventFdHandle::disarm(URingData *uring, EventFdSource *source) {
+	auto status = prepareDisarm();
 	if (status == Status::Ok) {
-		auto uring = source->getURingData();
-		status = source->getURingData()->cancelOp(this, URingUserFlags::None,
-				suspend ? URingCancelFlags::Suspend : URingCancelFlags::None);
-
+		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this)
+				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
+		++ _timeline;
 		if (_bufferGroup) {
-			uring->unregisterBufferGroup(_bufferGroup, TARGET_BUFFER_COUNT);
+			uring->unregisterBufferGroup(_bufferGroup, EventFdSource::TARGET_BUFFER_COUNT);
 			_bufferGroup = 0;
 		}
 	}
 	return status;
 }
 
-void ThreadEventFdHandle::notify(EventFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags) {
+void ThreadEventFdHandle::notify(URingData *uring, EventFdSource *source, const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
@@ -387,7 +373,11 @@ void ThreadEventFdHandle::notify(EventFdSource *source, int32_t res, uint32_t fl
 	// 	target = &_targetBuf[(flags >> 16) & 0xFFFF];
 	// }
 
-	_status = Status::Suspended;
+	bool more = (data.queueFlags & IORING_CQE_F_MORE);
+	if (!more) {
+		// if more - we still running
+		_status = Status::Suspended;
+	}
 
 	auto performUnlock = [&] {
 		performAll([&] (uint32_t count) {
@@ -399,34 +389,34 @@ void ThreadEventFdHandle::notify(EventFdSource *source, int32_t res, uint32_t fl
 			_mutex.unlock();
 		});
 
-		if ((flags & IORING_CQE_F_MORE) == 0) {
-			rearm(source);
+		if (!more) {
+			rearm(uring, source);
 		} else {
 			// no need to rearm, handle is still armed
 			_status = Status::Ok;
 		}
 	};
 
-	if (res == sizeof(uint64_t)) {
+	if (data.result == sizeof(uint64_t)) {
 		if constexpr (URING_THREAD_NONBLOCK) {
 			if (_mutex.try_lock()) {
 				performUnlock();
 			} else {
-				if ((flags & IORING_CQE_F_MORE) == 0) {
-					rearm(source);
+				if (!more) {
+					rearm(uring, source);
 				}
 				uint64_t value = 1;
-				::eventfd_write(getData<EventFdSource>()->getFd(), value);
+				::eventfd_write(source->fd, value);
 			}
 		} else {
 			_mutex.lock();
 			performUnlock();
 		}
-	} else if (res == -ENOBUFS) {
+	} else if (data.result == -ENOBUFS) {
 		// Rearm buffers only when multishot is failed
-		rearm(source, true);
+		rearm(uring, source, true);
 	} else {
-		cancel(URingData::getErrnoStatus(res));
+		cancel(URingData::getErrnoStatus(data.result));
 	}
 }
 
@@ -439,7 +429,7 @@ Status ThreadEventFdHandle::perform(Rc<thread::Task> &&task) {
 	}
 
 	uint64_t value = 1;
-	::eventfd_write(getData<EventFdSource>()->getFd(), value);
+	::eventfd_write(reinterpret_cast<EventFdSource *>(_data)->fd, value);
 	return Status::Ok;
 }
 
@@ -452,8 +442,10 @@ Status ThreadEventFdHandle::perform(mem_std::Function<void()> &&func, Ref *targe
 	}
 
 	uint64_t value = 1;
-	::eventfd_write(getData<EventFdSource>()->getFd(), value);
+	::eventfd_write(reinterpret_cast<EventFdSource *>(_data)->fd, value);
 	return Status::Ok;
 }
 
 }
+
+#endif

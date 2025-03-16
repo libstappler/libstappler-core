@@ -32,7 +32,7 @@ class SP_PUBLIC ThreadHandle : public Handle, public thread::PerformInterface {
 public:
 	virtual ~ThreadHandle() = default;
 
-	bool init(QueueRef *, QueueData *);
+	bool init(HandleClass *);
 
 	// Perform Task's complete functions on this event queue
 	virtual Status perform(Rc<thread::Task> &&task) { return Status::ErrorNotImplemented; }

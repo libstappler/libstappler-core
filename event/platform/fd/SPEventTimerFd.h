@@ -27,32 +27,59 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class SP_PUBLIC TimerFdSource : public FdSource {
-public:
+struct SP_PUBLIC TimerFdSource {
+	int fd = -1;
+	epoll_event event;
+	uint64_t target = 0;
+	uint32_t count = 0;
+	uint32_t value = 0;
+
 	bool init(const TimerInfo &info);
+	void cancel();
 };
 
 class SP_PUBLIC TimerFdHandle : public TimerHandle {
 public:
-	virtual ~TimerFdHandle();
+	virtual ~TimerFdHandle() = default;
 
-	bool init(QueueRef *, QueueData *, TimerInfo &&);
+	bool init(HandleClass *, TimerInfo &&);
 
-protected:
-	uint64_t _target = 0;
+	Status read(uint64_t *);
 };
 
+#ifdef SP_EVENT_URING
 class SP_PUBLIC TimerFdURingHandle : public TimerFdHandle {
 public:
 	virtual ~TimerFdURingHandle() = default;
 
-	bool init(URingData *, TimerInfo &&);
+	Status rearm(URingData *, TimerFdSource *);
+	Status disarm(URingData *, TimerFdSource *);
 
-	Status rearm(TimerFdSource *);
-	Status disarm(TimerFdSource *, bool suspend);
-
-	void notify(TimerFdSource *source, int32_t res, uint32_t flags, URingUserFlags uflags);
+	void notify(URingData *, TimerFdSource *source, const NotifyData &);
 };
+#endif
+
+class SP_PUBLIC TimerFdEPollHandle : public TimerFdHandle {
+public:
+	virtual ~TimerFdEPollHandle() = default;
+
+	Status rearm(EPollData *, TimerFdSource *);
+	Status disarm(EPollData *, TimerFdSource *);
+
+	void notify(EPollData *, TimerFdSource *source, const NotifyData &);
+};
+
+#if ANDROID
+class SP_PUBLIC TimerFdALooperHandle : public TimerFdHandle {
+public:
+	virtual ~TimerFdALooperHandle() = default;
+
+	Status rearm(ALooperData *, TimerFdSource *);
+	Status disarm(ALooperData *, TimerFdSource *);
+
+	void notify(ALooperData *, TimerFdSource *source, const NotifyData &);
+};
+#endif
 
 }
 

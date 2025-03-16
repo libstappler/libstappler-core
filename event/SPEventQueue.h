@@ -31,6 +31,9 @@ enum class QueueFlags {
 	None,
 	Protected = 1 << 0, // try to protect operations from interrupting with signals
 	SubmitImmediate = 1 << 1, // submit all operations as they added, no need to call `submitPending`
+
+	// Private flags
+	ThreadNative = 1 << 15, // use thread-native backend (used by Looper, do not use this on Queue directly)
 };
 
 SP_DEFINE_ENUM_AS_MASK(QueueFlags)
@@ -79,13 +82,14 @@ public:
 
 	bool init(const QueueInfo & = QueueInfo());
 
-	Rc<DirHandle> openDir(OpenDirInfo &&);
+	Rc<TimerHandle> scheduleTimer(TimerInfo &&, Ref * = nullptr);
 
-	Rc<StatHandle> stat(StatOpInfo &&);
-
-	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
+	Rc<Handle> schedule(TimeInterval, mem_std::Function<void(Handle *, bool success)> &&, Ref * = nullptr);
 
 	Rc<ThreadHandle> addThreadHandle();
+
+	//Rc<DirHandle> openDir(OpenDirInfo &&);
+	//Rc<StatHandle> stat(StatOpInfo &&);
 
 	//Rc<FileHandle> openFile(OpenFileInfo &&);
 	//Rc<OpHandle> read(CompletionHandle<void> &&, InputOutputHandle *, BufferChain *, uint32_t, uint32_t);

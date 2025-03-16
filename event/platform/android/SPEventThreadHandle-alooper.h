@@ -20,43 +20,36 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_DETAIL_SPEVENTQUEUEDATA_H_
-#define CORE_EVENT_DETAIL_SPEVENTQUEUEDATA_H_
+#ifndef CORE_EVENT_PLATFORM_ANDROID_SPEVENTTHREADHANDLE_ALOOPER_H_
+#define CORE_EVENT_PLATFORM_ANDROID_SPEVENTTHREADHANDLE_ALOOPER_H_
 
-#include "SPEventQueue.h"
-#include "SPEventHandleClass.h"
+#include "SPEventThreadHandle.h"
+#include "../fd/SPEventEventFd.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-struct SP_PUBLIC QueueData : public mem_pool::AllocBase {
-	QueueHandleClassInfo _info;
-	QueueFlags _flags = QueueFlags::None;
-	memory::pool_t *_tmpPool = nullptr;
+// eventfd - based handler
+class SP_PUBLIC ThreadALooperHandle : public ThreadHandle {
+public:
+	virtual ~ThreadALooperHandle() = default;
 
-	bool _running = true;
+	bool init(HandleClass *);
 
-	mem_pool::Set<Rc<Handle>> _pendingHandles;
-	mem_pool::Set<Rc<Handle>> _suspendableHandles;
+	Status read();
+	Status write(uint64_t = 1);
 
-	bool isRunning() const { return _running; }
+	Status rearm(ALooperData *, EventFdSource *);
+	Status disarm(ALooperData *, EventFdSource *);
 
-	// returns number of operations suspended
-	uint32_t suspendAll();
+	void notify(ALooperData *, EventFdSource *, const NotifyData &);
 
-	// returns number of operations suspended
-	uint32_t resumeAll();
+	virtual Status perform(Rc<thread::Task> &&task) override;
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target) override;
 
-	Status runHandle(Handle *);
-
-	void cancel(Handle *);
-
-	void cleanup();
-
-	void notify(Handle *, const NotifyData &);
-
-	QueueData(QueueRef *, QueueFlags);
+protected:
+	std::mutex _mutex;
 };
 
 }
 
-#endif /* CORE_EVENT_DETAIL_SPEVENTQUEUEDATA_H_ */
+#endif /* CORE_EVENT_PLATFORM_ANDROID_SPEVENTTHREADHANDLE_ALOOPER_H_ */

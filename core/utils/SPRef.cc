@@ -77,6 +77,14 @@ void RefAlloc::operator delete(void *ptr) noexcept {
 	tl_RefAllocData.clear();
 }
 
+void RefAlloc::operator delete(void *ptr, std::align_val_t al) noexcept {
+	if (ptr != tl_RefAllocData.lastPtr) {
+		AllocBaseType::operator delete(ptr, al);
+	}
+	tl_RefAllocData.lastPtr = nullptr;
+	tl_RefAllocData.clear();
+}
+
 RefAlloc::~RefAlloc() {
 	if ((_referenceCount.load() & PoolAllocBit) != 0) {
 		tl_RefAllocData.lastPtr = this;

@@ -49,7 +49,7 @@ constexpr inline int GAPI_ERROR_NUMBER(int __errno) {
 
 }
 
-enum class Status : int {
+enum class Status : int32_t {
 	// general return values
 	Ok = 0,
 	Declined = -1,
@@ -71,6 +71,8 @@ enum class Status : int {
 	ErrorNumber =				status::ERRNO_ERROR_NUMBER(0),
 	ErrorNotPermitted =			status::ERRNO_ERROR_NUMBER(1), // EPERM, VK_ERROR_NOT_PERMITTED_KHR
 	ErrorNotFound =				status::ERRNO_ERROR_NUMBER(2), // ENOENT
+	ErrorNoSuchProcess  =		status::ERRNO_ERROR_NUMBER(3), // ESRCH
+	ErrorInterrupted  =			status::ERRNO_ERROR_NUMBER(4), // ESRCH
 	ErrorTooManyObjects =		status::ERRNO_ERROR_NUMBER(7), // E2BIG, VK_ERROR_TOO_MANY_OBJECTS
 	ErrorAgain =				status::ERRNO_ERROR_NUMBER(11), // EAGAIN
 	ErrorOutOfHostMemory =		status::ERRNO_ERROR_NUMBER(12), // ENOMEM, VK_ERROR_OUT_OF_HOST_MEMORY

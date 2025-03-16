@@ -20,9 +20,9 @@
  THE SOFTWARE.
  **/
 
-#include "SPEvent-linux.h"
+#include "SPEvent-android.h"
 
-#if LINUX
+#if ANDROID
 
 #include "../fd/SPEventFd.h"
 #include "../fd/SPEventTimerFd.h"
@@ -30,8 +30,7 @@
 #include "../fd/SPEventPollFd.h"
 #include "../epoll/SPEvent-epoll.h"
 #include "../epoll/SPEventThreadHandle-epoll.h"
-#include "../uring/SPEventThreadHandle-uring.h"
-#include "../uring/SPEventTimer-uring.h"
+#include "SPEventThreadHandle-alooper.h"
 
 #include <signal.h>
 
@@ -39,146 +38,118 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 
 static int SignalsToIntercept[] = { SIGUSR1, SIGUSR2 };
 
-/*Rc<DirHandle> Queue::Data::openDir(OpenDirInfo &&info) {
-	if (_uring) {
-		return Rc<DirFdURingHandle>::create(_uring, move(info));
-	}
-	return nullptr;
-}
-
-Rc<StatHandle> Queue::Data::stat(StatOpInfo &&info) {
-	if (_uring) {
-		return Rc<StatURingHandle>::create(_uring, move(info));
-	}
-	return nullptr;
-}*/
-
 Rc<TimerHandle> Queue::Data::scheduleTimer(TimerInfo &&info) {
-	if (_uring) {
-		if ((hasFlag(_uring->_uflags, URingFlags::TimerMultishotSupported) && info.count == TimerInfo::Infinite)
-				|| info.count == 1) {
-			return Rc<TimerURingHandle>::create(&_uringTimerClass, move(info));
-		} else {
-			return Rc<TimerFdURingHandle>::create(&_uringTimerFdClass, move(info));
-		}
-	} else if (_epoll) {
+	if (_epoll) {
 		return Rc<TimerFdEPollHandle>::create(&_epollTimerFdClass, move(info));
+	} else if (_alooper) {
+		return Rc<TimerFdALooperHandle>::create(&_alooperTimerFdClass, move(info));
 	}
 	return nullptr;
 }
 
 Rc<ThreadHandle> Queue::Data::addThreadHandle() {
-	if (_uring) {
-		if constexpr (URING_THREAD_USE_FUTEX_HANDLE) {
-			if (hasFlag(_uring->_uflags, URingFlags::FutexSupported)) {
-				return Rc<ThreadUringHandle>::create(&_uringThreadFenceClass);
-			} else {
-				return Rc<ThreadEventFdHandle>::create(&_uringThreadEventFdClass);
-			}
-		} else {
-			return Rc<ThreadEventFdHandle>::create(&_uringThreadEventFdClass);
-		}
-	} else if (_epoll) {
+	if (_epoll) {
 		return Rc<ThreadEPollHandle>::create(&_epollThreadClass);
+	} else if (_alooper) {
+		return Rc<ThreadALooperHandle>::create(&_alooperThreadClass);
 	}
 	return nullptr;
 }
 
 Status Queue::Data::submit() {
-	if (_uring) {
-		return _uring->submit();
-	} else if (_epoll) {
+	if (_epoll) {
 		return _epoll->submit();
+	} else if (_alooper) {
+		return _alooper->submit();
 	}
 	return Status::ErrorNotImplemented;
 }
 
 uint32_t Queue::Data::poll() {
-	if (_uring) {
-		return _uring->poll();
-	} else if (_epoll) {
+	if (_epoll) {
 		return _epoll->poll();
+	} else if (_alooper) {
+		return _alooper->poll();
 	}
 	return 0;
 }
 
 uint32_t Queue::Data::wait(TimeInterval ival) {
-	if (_uring) {
-		return _uring->wait(ival);
-	} else if (_epoll) {
+	if (_epoll) {
 		return _epoll->wait(ival);
+	} else if (_alooper) {
+		return _alooper->wait(ival);
 	}
 	return 0;
 }
 
 Status Queue::Data::run(TimeInterval ival, QueueWakeupInfo &&info) {
-	if (_uring) {
-		return _uring->run(ival, info.flags, info.timeout);
-	} else if (_epoll) {
+	if (_epoll) {
 		return _epoll->run(ival, info.flags, info.timeout);
+	} else if (_alooper) {
+		return _alooper->run(ival, info.flags, info.timeout);
 	}
 	return Status::ErrorNotImplemented;
 }
 
 Status Queue::Data::wakeup(QueueWakeupInfo &&info) {
-	if (_uring) {
-		return _uring->wakeup(info.flags, info.timeout);
-	} else if (_epoll) {
+	if (_epoll) {
 		return _epoll->wakeup(info.flags, info.timeout);
+	} else if (_alooper) {
+		return _alooper->wakeup(info.flags, info.timeout);
 	}
 	return Status::ErrorNotImplemented;
 }
 
 bool Queue::Data::isValid() const {
-	return _uring != nullptr || _epoll != nullptr;
+	return _epoll != nullptr || _alooper != nullptr;
 }
 
 void Queue::Data::cancel() {
-	if (_uring) {
-		return _uring->cancel();
-	} else if (_epoll) {
+	if (_epoll) {
 		return _epoll->cancel();
+	} else if (_alooper) {
+		return _alooper->cancel();
 	}
 	cleanup();
 }
 
 Queue::Data::~Data() {
-	if (_uring) {
-		delete _uring;
-		_uring = nullptr;
-	}
 	if (_epoll) {
 		delete _epoll;
 		_epoll = nullptr;
 	}
+	if (_alooper) {
+		delete _alooper;
+		_alooper = nullptr;
+	}
 }
 
 Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags) {
-	setupUringHandleClass<TimerFdURingHandle, TimerFdSource>(&_info, &_uringTimerFdClass, true);
-	setupUringHandleClass<TimerURingHandle, TimerUringSource>(&_info, &_uringTimerClass, true);
-	setupUringHandleClass<ThreadEventFdHandle, EventFdSource>(&_info, &_uringThreadEventFdClass, true);
-	setupUringHandleClass<ThreadUringHandle, ThreadUringSource>(&_info, &_uringThreadFenceClass, true);
-
-	setupUringHandleClass<EventFdURingHandle, EventFdSource>(&_info, &_uringEventFdClass, true);
-	setupUringHandleClass<SignalFdURingHandle, SignalFdSource>(&_info, &_uringSignalFdClass, true);
-
-	setupUringHandleClass<PollFdURingHandle, PollFdSource>(&_info, &_uringPollFdClass, true);
-
 	setupEpollHandleClass<TimerFdEPollHandle, TimerFdSource>(&_info, &_epollTimerFdClass, true);
 	setupEpollHandleClass<ThreadEPollHandle, EventFdSource>(&_info, &_epollThreadClass, true);
 	setupEpollHandleClass<EventFdEPollHandle, EventFdSource>(&_info, &_epollEventFdClass, true);
 	setupEpollHandleClass<SignalFdEPollHandle, SignalFdSource>(&_info, &_epollSignalFdClass, true);
 	setupEpollHandleClass<PollFdEPollHandle, PollFdSource>(&_info, &_epollPollFdClass, true);
 
-	if (URingData::checkSupport()) {
-		auto uring = new (memory::pool::acquire()) URingData(_info.queue, this, info, SignalsToIntercept);
-		if (uring->_ringFd >= 0) {
-			_uring = uring;
-			_uring->runInternalHandles();
+	setupALooperHandleClass<TimerFdALooperHandle, TimerFdSource>(&_info, &_alooperTimerFdClass, true);
+	setupALooperHandleClass<ThreadALooperHandle, EventFdSource>(&_info, &_alooperThreadClass, true);
+	setupALooperHandleClass<EventFdALooperHandle, EventFdSource>(&_info, &_alooperEventFdClass, true);
+	setupALooperHandleClass<SignalFdALooperHandle, SignalFdSource>(&_info, &_alooperSignalFdClass, true);
+	setupALooperHandleClass<PollFdALooperHandle, PollFdSource>(&_info, &_alooperPollFdClass, true);
+
+	if (hasFlag(info.flags, QueueFlags::ThreadNative) && !hasFlag(info.flags, QueueFlags::Protected)) {
+		auto alooper = new (memory::pool::acquire()) ALooperData(_info.queue, this, info, SignalsToIntercept);
+		if (alooper->_looper != nullptr) {
+			_alooper = alooper;
+			return;
 		} else {
-			uring->~URingData();
+			alooper->~ALooperData();
 		}
-	} else {
+	}
+
+	// try epoll if failed with ALooper
+	if (!_alooper) {
 		auto epoll = new (memory::pool::acquire()) EPollData(_info.queue, this, info, SignalsToIntercept);
 		if (epoll->_epollFd >= 0) {
 			_epoll = epoll;

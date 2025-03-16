@@ -24,6 +24,7 @@
 #define CORE_EVENT_PLATFORM_FD_SPEVENTPOLLFD_H_
 
 #include "SPEventFd.h"
+#include "detail/SPEventHandleClass.h"
 
 #include <poll.h>
 
@@ -44,30 +45,58 @@ enum class PollFlags : uint16_t {
 
 SP_DEFINE_ENUM_AS_MASK(PollFlags)
 
-class SP_PUBLIC PollFdHandle : public FdHandle {
+struct PollFdSource {
+	int fd;
+	epoll_event event;
+	PollFlags flags;
+
+	bool init(int, PollFlags);
+	void cancel();
+};
+
+class SP_PUBLIC PollFdHandle : public Handle {
 public:
-	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags, mem_std::Function<Status(int, PollFlags)> &&);
+	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags, CompletionHandle<PollFdHandle> &&);
+	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags, mem_std::Function<void(int fd, PollFlags)> &&);
 
 	virtual ~PollFdHandle() = default;
 
-	bool init(QueueRef *, QueueData *, int, PollFlags, mem_std::Function<Status(int, PollFlags)> &&);
-
-protected:
-	PollFlags _flags = PollFlags::None;
-	mem_std::Function<Status(int, PollFlags)> _notify;
+	bool init(HandleClass *, int, PollFlags, CompletionHandle<PollFdHandle> &&);
 };
 
+#ifdef SP_EVENT_URING
 class SP_PUBLIC PollFdURingHandle : public PollFdHandle {
 public:
 	virtual ~PollFdURingHandle() = default;
 
-	bool init(URingData *, int, PollFlags, mem_std::Function<Status(int, PollFlags)> &&);
+	Status rearm(URingData *, PollFdSource *);
+	Status disarm(URingData *, PollFdSource *);
 
-	Status rearm(FdSource *);
-	Status disarm(FdSource *, bool suspend);
-
-	void notify(FdSource *, int32_t res, uint32_t flags, URingUserFlags uflags);
+	void notify(URingData *, PollFdSource *, const NotifyData &);
 };
+#endif
+
+class SP_PUBLIC PollFdEPollHandle : public PollFdHandle {
+public:
+	virtual ~PollFdEPollHandle() = default;
+
+	Status rearm(EPollData *, PollFdSource *);
+	Status disarm(EPollData *, PollFdSource *);
+
+	void notify(EPollData *, PollFdSource *, const NotifyData &);
+};
+
+#if ANDROID
+class SP_PUBLIC PollFdALooperHandle : public PollFdHandle {
+public:
+	virtual ~PollFdALooperHandle() = default;
+
+	Status rearm(ALooperData *, PollFdSource *);
+	Status disarm(ALooperData *, PollFdSource *);
+
+	void notify(ALooperData *, PollFdSource *, const NotifyData &);
+};
+#endif
 
 }
 

@@ -29,8 +29,12 @@ uint32_t QueueData::suspendAll() {
 	uint32_t ret = 0;
 	_running = false;
 	for (auto &it : _suspendableHandles) {
-		if (isSuccessful(it->suspend())) {
-			++ ret;
+		if (it->getStatus() == Status::Ok || it->getStatus() == Status::Suspended) {
+			if (isSuccessful(it->suspend())) {
+				++ ret;
+			}
+		} else if (it->getStatus() != Status::Declined) {
+			log::error("event::QueueData", "suspendAll: Invalid status for a resumable handle: ", it->getStatus());
 		}
 	}
 	return ret;
@@ -41,10 +45,16 @@ uint32_t QueueData::resumeAll() {
 		return 0;
 	}
 
+	_running = true;
+
 	uint32_t ret = 0;
 	for (auto &it : _suspendableHandles) {
-		if (it->resume() == Status::Ok) {
-			++ ret;
+		if (it->getStatus() == Status::Suspended) {
+			if (it->resume() == Status::Ok) {
+				++ ret;
+			}
+		} else if (it->getStatus() != Status::Declined) {
+			log::error("event::QueueData", "resumeAll: Invalid status for a resumable handle: ", it->getStatus());
 		}
 	}
 	for (auto &it : _pendingHandles) {
@@ -52,14 +62,10 @@ uint32_t QueueData::resumeAll() {
 		if (!isSuccessful(status)) {
 			it->cancel(status);
 		} else {
-			if (it->isResumable()) {
-				_suspendableHandles.emplace(it);
-			}
 			++ ret;
 		}
 	}
 	_pendingHandles.clear();
-	_running = true;
 	return ret;
 }
 
@@ -68,8 +74,6 @@ Status QueueData::runHandle(Handle *h) {
 		auto status = h->run();
 		if (!isSuccessful(status)) {
 			h->cancel(status);
-		} else if (h->isResumable()) {
-			_suspendableHandles.emplace(h);
 		}
 		return status;
 	} else {
@@ -84,9 +88,13 @@ void QueueData::cancel(Handle *h) {
 
 void QueueData::cleanup() {
 	mem_pool::perform([&] {
-		mem_pool::Vector<Rc<Handle>> tmpHandles;
+		mem_pool::Set<Rc<Handle>> tmpHandles;
 		for (auto &it : _suspendableHandles) {
-			tmpHandles.emplace_back(it);
+			tmpHandles.emplace(it);
+		}
+
+		for (auto &it : _pendingHandles) {
+			tmpHandles.emplace(it);
 		}
 
 		for (auto &it : tmpHandles) {
@@ -98,8 +106,16 @@ void QueueData::cleanup() {
 	_pendingHandles.clear();
 }
 
+void QueueData::notify(Handle *handle, const NotifyData &data) {
+	auto cl = handle->_class;
+
+	if (cl->notifyFn) {
+		cl->notifyFn(cl, handle, handle->_data, data);
+	}
+}
+
 QueueData::QueueData(QueueRef *ref, QueueFlags flags)
-: _queue(ref), _flags(flags), _tmpPool(memory::pool::create(ref->getPool())) {
+: _info(QueueHandleClassInfo{ref, this, ref->getPool()}), _flags(flags), _tmpPool(memory::pool::create(ref->getPool())) {
 	_pendingHandles.set_memory_persistent(true);
 	_suspendableHandles.set_memory_persistent(true);
 }

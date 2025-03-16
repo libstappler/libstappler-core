@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-bool DirFdSource::init() {
+/*bool DirFdSource::init() {
 	return FdSource::init(-1);
 }
 
@@ -144,6 +144,6 @@ void DirFdURingHandle::notify(DirFdSource *source, int32_t res, uint32_t flags, 
 	}
 
 	_root = nullptr;
-}
+}*/
 
 }
