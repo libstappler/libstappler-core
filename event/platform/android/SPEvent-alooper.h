@@ -43,9 +43,20 @@ struct SP_PUBLIC ALooperData : public mem_pool::AllocBase {
 
 	ALooper *_looper = nullptr;
 
-	std::atomic<std::underlying_type_t<WakeupFlags>> _wakeupFlags = 0;
-	uint32_t _wakeupCounter = 0;
-	Status _wakeupStatus = Status::Suspended;
+	Rc<EventFdHandle> _eventFd;
+
+	struct RunContext {
+		std::atomic_flag shouldWakeup;
+		std::atomic<std::underlying_type_t<WakeupFlags>> wakeupFlags = 0;
+		WakeupFlags runWakeupFlags = WakeupFlags::None;
+		std::atomic<uint64_t> wakeupTimeout;
+		uint32_t wakeupCounter = 0;
+		Status wakeupStatus = Status::Suspended;
+		RunContext *prev = nullptr;
+	};
+
+	RunContext *_runContext = nullptr;
+	std::mutex _runMutex;
 
 	Status add(int fd, int events, Handle *);
 	Status remove(int fd);
@@ -58,7 +69,9 @@ struct SP_PUBLIC ALooperData : public mem_pool::AllocBase {
 	Status wakeup(WakeupFlags, TimeInterval);
 
 	Status suspendHandles();
-	Status doWakeupInterrupt(WakeupFlags, bool externalCall);
+	Status doWakeupInterrupt(WakeupFlags flags, bool externalCall);
+
+	void runInternalHandles();
 
 	void cancel();
 

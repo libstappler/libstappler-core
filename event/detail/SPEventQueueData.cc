@@ -25,6 +25,99 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+Status PerformEngine::perform(Rc<thread::Task> &&task) {
+	if (!_performEnabled) {
+		return Status::Declined;
+	}
+
+	mem_pool::perform([&] {
+		Block *next;
+		if (_emptyBlocks) {
+			next = _emptyBlocks;
+			_emptyBlocks = _emptyBlocks->next;
+		} else {
+			next = new (_pool) Block;
+		}
+
+		next->task = move(task);
+
+		if (_pendingBlocksTail) {
+			_pendingBlocksTail->next = next;
+			_pendingBlocksTail = next;
+		} else {
+			_pendingBlocksFront = _pendingBlocksTail = next;
+		}
+	}, _pool);
+
+	return Status::Ok;
+}
+
+Status PerformEngine::perform(mem_std::Function<void()> &&fn, Ref *ref) {
+	if (!_performEnabled) {
+		return Status::Declined;
+	}
+
+	mem_pool::perform([&] {
+		Block *next;
+		if (_emptyBlocks) {
+			next = _emptyBlocks;
+			_emptyBlocks = _emptyBlocks->next;
+		} else {
+			next = new (_pool) Block;
+		}
+
+		next->fn = sp::move(fn);
+		next->ref = ref;
+
+		if (_pendingBlocksTail) {
+			_pendingBlocksTail->next = next;
+			_pendingBlocksTail = next;
+		} else {
+			_pendingBlocksFront = _pendingBlocksTail = next;
+		}
+	}, _pool);
+
+	return Status::Ok;
+}
+
+uint32_t PerformEngine::runAllTasks(memory::pool_t *tmpPool) {
+	uint32_t nevents = 0;
+
+	while (_pendingBlocksFront) {
+		auto next = _pendingBlocksFront;
+
+		if (_pendingBlocksFront == _pendingBlocksTail) {
+			_pendingBlocksFront = _pendingBlocksTail = nullptr;
+		} else {
+			_pendingBlocksFront = _pendingBlocksFront->next;
+		}
+
+		mem_pool::perform_clear([&] {
+			if (next->fn) {
+				next->fn();
+			}
+
+			if (next->task) {
+				next->task->run();
+			}
+
+			++ nevents;
+
+			next->fn = nullptr;
+			next->task = nullptr;
+			next->ref = nullptr;
+		}, tmpPool);
+
+		next->next = _emptyBlocks;
+		_emptyBlocks = next;
+	}
+
+	return nevents;
+}
+
+PerformEngine::PerformEngine(memory::pool_t *pool)
+: _pool(pool), _tmpPool(memory::pool::create(pool)) { }
+
 uint32_t QueueData::suspendAll() {
 	uint32_t ret = 0;
 	_running = false;
@@ -109,13 +202,25 @@ void QueueData::cleanup() {
 void QueueData::notify(Handle *handle, const NotifyData &data) {
 	auto cl = handle->_class;
 
-	if (cl->notifyFn) {
-		cl->notifyFn(cl, handle, handle->_data, data);
-	}
+	_performEnabled = true;
+
+	auto tmpPool = memory::pool::create(_tmpPool);
+
+	mem_pool::perform_clear([&] {
+		if (cl->notifyFn) {
+			cl->notifyFn(cl, handle, handle->_data, data);
+		}
+	}, tmpPool);
+
+	runAllTasks(tmpPool);
+
+	memory::pool::destroy(tmpPool);
+
+	_performEnabled = false;
 }
 
 QueueData::QueueData(QueueRef *ref, QueueFlags flags)
-: _info(QueueHandleClassInfo{ref, this, ref->getPool()}), _flags(flags), _tmpPool(memory::pool::create(ref->getPool())) {
+: PerformEngine(ref->getPool()), _info(QueueHandleClassInfo{ref, this, ref->getPool()}), _flags(flags) {
 	_pendingHandles.set_memory_persistent(true);
 	_suspendableHandles.set_memory_persistent(true);
 }

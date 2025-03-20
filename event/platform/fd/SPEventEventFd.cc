@@ -104,8 +104,8 @@ void EventFdURingHandle::notify(URingData *uring, EventFdSource *source, const N
 	_status = Status::Suspended;
 
 	if (notify.result == sizeof(uint64_t)) {
-		sendCompletion(0, Status::Ok);
 		rearm(uring, source);
+		sendCompletion(0, Status::Ok);
 	} else{
 		cancel(URingData::getErrnoStatus(notify.result));
 	}

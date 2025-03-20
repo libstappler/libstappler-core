@@ -195,6 +195,11 @@ auto makeSpanView(const Type *ptr, size_t size) -> SpanView<Type> {
 	return SpanView<Type>(ptr, size);
 }
 
+template <typename Type, size_t Size>
+auto makeSpanView(const Type (&array)[Size]) -> SpanView<Type> {
+	return SpanView<Type>(array, Size);
+}
+
 }
 
 namespace std {

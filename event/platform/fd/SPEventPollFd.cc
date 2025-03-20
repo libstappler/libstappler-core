@@ -119,11 +119,11 @@ void PollFdURingHandle::notify(URingData *uring, PollFdSource *source, const Not
 		return;
 	}
 
-	sendCompletion(uint32_t(data.result), Status::Ok);
-
 	if (_status == Status::Suspended) {
 		rearm(uring, source);
 	}
+
+	sendCompletion(uint32_t(data.result), Status::Ok);
 }
 #endif
 

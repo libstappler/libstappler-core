@@ -243,10 +243,21 @@ bool ThreadHandle::init(HandleClass *cl) {
 
 	_pool = Rc<PoolRef>::alloc(memory::app_root_pool);
 
+	_engine = new (_pool->getPool()) PerformEngine(_pool->getPool());
+	_engine->_performEnabled = true;
+
 	_outputQueue.reserve(2);
 	_outputCallbacks.reserve(2);
 
 	return true;
+}
+
+void ThreadHandle::wakeup() {
+	auto p = memory::pool::create(_engine->_tmpPool);
+
+	_engine->runAllTasks(p);
+
+	memory::pool::destroy(p);
 }
 
 uint32_t ThreadHandle::performAll(const Callback<void(uint32_t)> &unlockCallback) {
@@ -258,34 +269,31 @@ uint32_t ThreadHandle::performAll(const Callback<void(uint32_t)> &unlockCallback
 
 	unlockCallback(static_cast<uint32_t>(stack.size() + callbacks.size()));
 
-	uint32_t nevents = 0;
-	memory::pool::perform_clear([&] {
-		for (auto &task : stack) {
-			task->run();
-			++ nevents;
-		}
-
-		for (auto &task : callbacks) {
-			task.first();
-			++ nevents;
-		}
-
-		for (auto &task : _unsafeQueue) {
-			task->run();
-			++ nevents;
-		}
-
-		for (auto &task : _unsafeCallbacks) {
-			task.first();
-			++ nevents;
-		}
-	}, _pool->getPool());
+	for (auto &it : stack) {
+		_engine->perform(move(it));
+	}
+	for (auto &it : callbacks) {
+		_engine->perform(sp::move(it.first), move(it.second));
+	}
+	for (auto &it : _unsafeQueue) {
+		_engine->perform(move(it));
+	}
+	for (auto &it : _unsafeCallbacks) {
+		_engine->perform(sp::move(it.first), move(it.second));
+	}
 
 	stack.clear();
 	callbacks.clear();
 	_unsafeQueue.clear();
 	_unsafeCallbacks.clear();
-	return nevents;
+
+	auto p = memory::pool::create(_engine->_tmpPool);
+
+	auto ret = _engine->runAllTasks(p);
+
+	memory::pool::destroy(p);
+
+	return ret;
 }
 
 }

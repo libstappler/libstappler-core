@@ -24,6 +24,7 @@
 #define CORE_EVENT_SPEVENTQUEUE_H_
 
 #include "SPEvent.h"
+#include "SPThreadTask.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -125,6 +126,12 @@ public:
 	Data *getData() const { return _data; }
 
 	QueueFlags getFlags() const;
+
+	// Schedule task for execution after current event
+	// Can be used only from within event processing, returns Declined otherwise
+	// Returns Ok if task was scheduled to execution successfully
+	Status performNext(Rc<thread::Task> &&);
+	Status performNext(mem_std::Function<void()> &&, Ref * = nullptr);
 
 	using PoolObject::PoolObject;
 

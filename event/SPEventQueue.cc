@@ -171,4 +171,12 @@ QueueFlags Queue::getFlags() const {
 	return _data->_flags;
 }
 
+Status Queue::performNext(Rc<thread::Task> &&task) {
+	return _data->perform(move(task));
+}
+
+Status Queue::performNext(mem_std::Function<void()> &&fn, Ref *ref) {
+	return _data->perform(sp::move(fn), ref);
+}
+
 }

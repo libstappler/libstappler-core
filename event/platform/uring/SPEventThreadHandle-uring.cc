@@ -387,11 +387,12 @@ void ThreadEventFdHandle::notify(URingData *uring, EventFdSource *source, const 
 				}
 			}
 			_mutex.unlock();
+			if (!more) {
+				rearm(uring, source);
+			}
 		});
 
-		if (!more) {
-			rearm(uring, source);
-		} else {
+		if (more) {
 			// no need to rearm, handle is still armed
 			_status = Status::Ok;
 		}

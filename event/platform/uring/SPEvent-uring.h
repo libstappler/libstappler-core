@@ -166,17 +166,25 @@ struct alignas(32) URingData : public mem_pool::AllocBase {
 	mem_pool::Vector<io_uring_cqe> _out;
 
 	uint64_t _tick = 0;
-	uint32_t _events = 0;
-	std::atomic_flag _shouldWakeup;
-	std::atomic<std::underlying_type_t<WakeupFlags>> _wakeupFlags = 0;
-	WakeupFlags _runWakeupFlags = WakeupFlags::None;
-	std::atomic<uint64_t> _wakeupTimeout;
-	uint32_t _wakeupCounter = 0;
-	Status _wakeupStatus = Status::Suspended;
-	__kernel_timespec _wakeupTimespec;
+	uint32_t _receivedEvents = 0;
+	uint32_t _processedEvents = 0;
 
 	uint16_t _bufferGroupId = 1;
 	mem_pool::Vector<uint16_t> _unregistredBuffers;
+
+	struct RunContext {
+		std::atomic_flag shouldWakeup;
+		std::atomic<std::underlying_type_t<WakeupFlags>> wakeupFlags = 0;
+		WakeupFlags runWakeupFlags = WakeupFlags::None;
+		std::atomic<uint64_t> wakeupTimeout = 0;
+		uint32_t wakeupCounter = 0;
+		Status wakeupStatus = Status::Suspended;
+		__kernel_timespec wakeupTimespec;
+		RunContext *prev = nullptr;
+	};
+
+	RunContext * _runContext = nullptr;
+	std::mutex _runMutex;
 
 	uint16_t registerBufferGroup(uint32_t count, uint32_t size, uint8_t *data, io_uring_sqe *sqe = nullptr);
 

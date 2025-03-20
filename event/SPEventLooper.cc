@@ -110,17 +110,29 @@ Rc<Handle> Looper::schedule(TimeInterval timeout, mem_std::Function<void(Handle 
 }
 
 Status Looper::performOnThread(Rc<thread::Task> &&task, bool immediate) {
-	if (immediate && isOnThisThread()) {
+	bool isOnThread = isOnThisThread();
+	if (immediate && isOnThread) {
 		task->run();
+		return Status::Ok;
 	}
-	return _data->threadHandle->perform(move(task));
+	if (!isOnThread || _data->queue->performNext(move(task)) == Status::Declined) {
+		return _data->threadHandle->perform(move(task));
+	} else {
+		return Status::Ok;
+	}
 }
 
 Status Looper::performOnThread(mem_std::Function<void()> &&func, Ref *target, bool immediate) {
-	if (immediate && isOnThisThread()) {
+	bool isOnThread = isOnThisThread();
+	if (immediate && isOnThread) {
 		func();
+		return Status::Ok;
 	}
-	return _data->threadHandle->perform(sp::move(func), target);
+	if (!isOnThread || _data->queue->performNext(sp::move(func), target) == Status::Declined) {
+		return _data->threadHandle->perform(sp::move(func), target);
+	} else {
+		return Status::Ok;
+	}
 }
 
 Status Looper::performAsync(Rc<thread::Task> &&task, bool first) {
@@ -144,6 +156,8 @@ uint32_t Looper::wait(TimeInterval ival) {
 }
 
 Status Looper::run(TimeInterval ival, QueueWakeupInfo &&info) {
+	_data->threadHandle->wakeup();
+
 	auto ret = _data->queue->run(ival, move(info));
 
 	if (_data->suspendThreadsOnWakeup) {

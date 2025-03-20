@@ -415,8 +415,21 @@ Status URingData::cancelFd(int fd, URingCancelFlags cancelFlags) {
 }
 
 uint32_t URingData::pop() {
-	auto count = atomicLoadAcquire(cq.tail) - *cq.head;
-	if (count) {
+	uint32_t count = 0;
+	if (_receivedEvents != _processedEvents) {
+		auto cqes = _out.data();
+		while (_processedEvents < _receivedEvents) {
+			auto &cqe = cqes[_processedEvents ++];
+			processEvent(cqe.res, cqe.flags, cqe.user_data);
+			++ count;
+		}
+		_receivedEvents = _processedEvents = 0;
+		return count;
+	}
+
+	_processedEvents = 0;
+	_receivedEvents = atomicLoadAcquire(cq.tail) - *cq.head;
+	if (_receivedEvents) {
 		auto cqes = _out.data();
 
 		unsigned head = *cq.head;
@@ -424,7 +437,7 @@ uint32_t URingData::pop() {
 		unsigned last;
 		unsigned i = 0;
 
-		last = head + count;
+		last = head + _receivedEvents;
 		for (;head != last; head++, i++)
 			cqes[i] = cq.cqes[(head & mask)];
 
@@ -436,14 +449,17 @@ uint32_t URingData::pop() {
 		}
 
 		// processEvent can schedule new submissions
-		for (i = 0; i < count; ++ i) {
-			auto &cqe = cqes[i];
+		while (_processedEvents < _receivedEvents) {
+			auto &cqe = cqes[_processedEvents ++];
 			processEvent(cqe.res, cqe.flags, cqe.user_data);
+			++ count;
 		}
 
 		if (hasFlag(_uflags, URingFlags::PendingGetEvents)) {
 			enter(0, 0, IORING_ENTER_GETEVENTS, NULL);
 		}
+
+		_receivedEvents = _processedEvents = 0;
 	}
 	return count;
 }
@@ -457,7 +473,9 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 	if (userdata == reinterpret_cast<uintptr_t>(this)) {
 		// general timeout
 		if (res == -ETIME) {
-			doWakeupInterrupt(_runWakeupFlags, false);
+			if (_runContext) {
+				doWakeupInterrupt(_runContext->runWakeupFlags, false);
+			}
 		}
 	} else if (userdata == URING_USERDATA_IGNORED) {
 		// do nothing
@@ -465,25 +483,29 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 	} else if (userdata == URING_USERDATA_TIMEOUT) {
 		// graceful wakeup timeout
 		//std::cout << "URING_USERDATA_TIMEOUT: " << res << " : " << flags << "\n";
-		if (_wakeupCounter != 0 && res == -ETIME) {
-			_shouldWakeup.clear();
-			_wakeupStatus = Status::ErrorTimerExpired;
+		if (_runContext) {
+			if (_runContext->wakeupCounter != 0 && res == -ETIME) {
+				_runContext->shouldWakeup.clear();
+				_runContext->wakeupStatus = Status::ErrorTimerExpired;
+			}
 		}
 	} else if (userdata == URING_USERDATA_SUSPENDED) {
 		// graceful wakeup suspend task completed
 		//std::cout << "URING_USERDATA_SUSPENDED: " << res << " : " << flags << "\n";
 
 		if (_data->_info.suspendedHandles == _data->_info.runningHandles) {
-			_shouldWakeup.clear();
+			if (_runContext) {
+				_runContext->shouldWakeup.clear();
 
-			pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
-				sqe->addr = URING_USERDATA_TIMEOUT;
-				sqe->len = 0;
-				sqe->off = 0;
-				sqe->user_data = URING_USERDATA_IGNORED;
-			}, URingPushFlags::Submit);
+				pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
+					sqe->addr = URING_USERDATA_TIMEOUT;
+					sqe->len = 0;
+					sqe->off = 0;
+					sqe->user_data = URING_USERDATA_IGNORED;
+				}, URingPushFlags::Submit);
 
-			_wakeupStatus = Status::Ok;
+				_runContext->wakeupStatus = Status::Ok;
+			}
 		}
 	} else if (userdata) {
 		auto h = reinterpret_cast<Handle *>(userptr);
@@ -541,15 +563,15 @@ uint32_t URingData::poll() {
 }
 
 uint32_t URingData::wait(TimeInterval ival) {
-	_events = poll();
-	if (_events == 0) {
+	auto events = poll();
+	if (events == 0) {
 		while (true) {
 			__kernel_timespec ts;
 			setNanoTimespec(ts, ival);
 
 			int err = enter(0, 1, IORING_ENTER_GETEVENTS, ival ? &ts : nullptr);
 
-			_events += poll();
+			events += poll();
 
 			if (err < DEBUG_ERROR_THRESHOLD) {
 				log::error("event::URingData", "io_uring_enter: ", -err);
@@ -559,13 +581,15 @@ uint32_t URingData::wait(TimeInterval ival) {
 			}
 		}
 	}
-	return _events;
+	return events;
 }
 
 Status URingData::run(TimeInterval ival, WakeupFlags flags, TimeInterval wakeupTimeout) {
-	_wakeupStatus = Status::Suspended;
-	_wakeupTimeout.store(wakeupTimeout.toMicros());
-	_runWakeupFlags = flags;
+	RunContext ctx;
+
+	ctx.wakeupStatus = Status::Suspended;
+	ctx.wakeupTimeout.store(wakeupTimeout.toMicros());
+	ctx.runWakeupFlags = flags;
 
 	__kernel_timespec ts;
 
@@ -579,15 +603,20 @@ Status URingData::run(TimeInterval ival, WakeupFlags flags, TimeInterval wakeupT
 		}, URingPushFlags::Submit);
 	}
 
-	_events = poll();
-	_shouldWakeup.test_and_set();
+	poll();
+	ctx.shouldWakeup.test_and_set();
 
-	while (_shouldWakeup.test_and_set()) {
+	std::unique_lock lock(_runMutex);
+	ctx.prev = _runContext;
+	_runContext = &ctx;
+	lock.unlock();
+
+	while (ctx.shouldWakeup.test_and_set()) {
 		int err = enter(0, 1, IORING_ENTER_GETEVENTS, nullptr);
-		_events += poll();
+		poll();
 		if (err < DEBUG_ERROR_THRESHOLD) {
 			log::error("event::URingData", "io_uring_enter: ", -err);
-			_wakeupStatus = getErrnoStatus(err);
+			ctx.wakeupStatus = getErrnoStatus(err);
 			break;
 		}
 	}
@@ -600,12 +629,20 @@ Status URingData::run(TimeInterval ival, WakeupFlags flags, TimeInterval wakeupT
 		}, URingPushFlags::Submit);
 	}
 
-	return _wakeupStatus;
+	lock.lock();
+	_runContext = ctx.prev;
+	lock.unlock();
+
+	return ctx.wakeupStatus;
 }
 
 Status URingData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
-	_wakeupFlags |= toInt(flags);
-	_wakeupTimeout = gracefulTimeout.toMicros();
+	std::unique_lock lock(_runMutex);
+	if (auto v = _runContext) {
+		v->wakeupFlags |= toInt(flags);
+		v->wakeupTimeout = gracefulTimeout.toMicros();
+	}
+	_runMutex.unlock();
 	_eventFd->write(1);
 	return Status::Ok;
 }
@@ -633,7 +670,11 @@ int URingData::enter(unsigned sub, unsigned wait, unsigned flags, __kernel_times
 }
 
 Status URingData::suspendHandles() {
-	_wakeupStatus = Status::Suspended;
+	if (!_runContext) {
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	_runContext->wakeupStatus = Status::Suspended;
 
 	auto nhandles = _data->suspendAll();
 	if (nhandles == 0) {
@@ -641,13 +682,13 @@ Status URingData::suspendHandles() {
 		return Status::Done;
 	}
 
-	_wakeupCounter = nhandles;
+	_runContext->wakeupCounter = nhandles;
 
-	auto wakeupTimeout = _wakeupTimeout.load();
+	auto wakeupTimeout = _runContext->wakeupTimeout.load();
 	if (wakeupTimeout > 0) {
-		setNanoTimespec(_wakeupTimespec, wakeupTimeout);
+		setNanoTimespec(_runContext->wakeupTimespec, wakeupTimeout);
 		pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
-			sqe->addr = reinterpret_cast<uintptr_t>(&_wakeupTimespec);
+			sqe->addr = reinterpret_cast<uintptr_t>(&_runContext->wakeupTimespec);
 			sqe->len = 1;
 			sqe->off = 0;
 			sqe->timeout_flags = 0;
@@ -662,15 +703,19 @@ Status URingData::suspendHandles() {
 }
 
 Status URingData::doWakeupInterrupt(WakeupFlags flags, bool externalCall) {
+	if (!_runContext) {
+		return Status::ErrorInvalidArguemnt;
+	}
+
 	if (hasFlag(flags, WakeupFlags::Graceful)) {
 		if (suspendHandles() == Status::Done) {
-			_shouldWakeup.clear();
-			_wakeupStatus = Status::Ok; // graceful wakeup
+			_runContext->shouldWakeup.clear();
+			_runContext->wakeupStatus = Status::Ok; // graceful wakeup
 		}
 		return Status::Suspended; // do not rearm eventfd
 	} else {
-		_shouldWakeup.clear();
-		_wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
+		_runContext->shouldWakeup.clear();
+		_runContext->wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
 		return Status::Ok; // rearm eventfd
 	}
 }
@@ -697,7 +742,9 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 			CompletionHandle<EventFdURingHandle>::create<URingData>(this,
 					[] (URingData *data, EventFdURingHandle *h, uint32_t value, Status st) {
 		if (st == Status::Ok) {
-			data->doWakeupInterrupt(WakeupFlags(data->_wakeupFlags.exchange(0)), true);
+			if (data->_runContext) {
+				data->doWakeupInterrupt(WakeupFlags(data->_runContext->wakeupFlags.exchange(0)), true);
+			}
 		}
 	}));
 
@@ -937,8 +984,6 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	}
 
 	_ringFd = ringFd;
-
-	_shouldWakeup.test_and_set();
 }
 
 URingData::~URingData() {

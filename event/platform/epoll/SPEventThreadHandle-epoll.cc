@@ -82,9 +82,13 @@ void ThreadEPollHandle::notify(EPollData *epoll, EventFdSource *source, const No
 	}
 
 	if (data.queueFlags & EPOLLIN) {
+		bool checked = false;
 		while (read() == Status::Ok) {
-			_mutex.lock();
+			checked = true;
+		}
 
+		if (checked) {
+			_mutex.lock();
 			performAll([&] (uint32_t count) {
 				_mutex.unlock();
 			});

@@ -325,11 +325,12 @@ void SignalFdURingHandle::notify(URingData *uring, SignalFdSource *source, const
 	_status = Status::Suspended;
 
 	if (data.result == sizeof(signalfd_siginfo)) {
-		sendCompletion(0, Status::Ok);
-		process();
 		if (_status == Status::Suspended) {
 			rearm(uring, source);
 		}
+
+		sendCompletion(0, Status::Ok);
+		process();
 	} else{
 		cancel(URingData::getErrnoStatus(data.result));
 	}

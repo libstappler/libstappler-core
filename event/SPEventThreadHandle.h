@@ -34,6 +34,9 @@ public:
 
 	bool init(HandleClass *);
 
+	// resume event processing for a nested run
+	virtual void wakeup();
+
 	// Perform Task's complete functions on this event queue
 	virtual Status perform(Rc<thread::Task> &&task) { return Status::ErrorNotImplemented; }
 
@@ -44,6 +47,7 @@ protected:
 	uint32_t performAll(const Callback<void(uint32_t)> &unlockCallback);
 
 	Rc<PoolRef> _pool;
+	PerformEngine *_engine = nullptr;
 	mem_std::Vector<Rc<thread::Task>> _outputQueue;
 	mem_std::Vector<Pair<mem_std::Function<void()>, Rc<Ref>>> _outputCallbacks;
 

@@ -156,11 +156,12 @@ void TimerFdURingHandle::notify(URingData *uring, TimerFdSource *source, const N
 		cancel(Status::Done);
 	}
 
-	sendCompletion(source->value, _status == Status::Suspended ? Status::Ok : _status);
-
 	if (_status == Status::Suspended && (count == maxOf<uint32_t>() || current < count)) {
 		rearm(uring, source);
 	}
+
+	sendCompletion(source->value, _status == Status::Suspended ? Status::Ok : _status);
+
 }
 #endif
 

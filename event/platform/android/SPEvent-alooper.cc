@@ -70,7 +70,7 @@ Status ALooperData::submit() {
 
 uint32_t ALooperData::poll() {
 	auto ret = ALooper_pollOnce(0, nullptr, nullptr, nullptr);
-	if (ret == ALOOPER_POLL_CALLBACK) {
+	while (ret == ALOOPER_POLL_CALLBACK) {
 		return 1;
 	}
 	return 0;
@@ -85,34 +85,48 @@ uint32_t ALooperData::wait(TimeInterval ival) {
 }
 
 Status ALooperData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval wakeupTimeout) {
-	_wakeupStatus = Status::Suspended;
-	_wakeupFlags.store(0);
+	RunContext ctx;
+
+	ctx.wakeupStatus = Status::Suspended;
+	ctx.wakeupTimeout.store(wakeupTimeout.toMicros());
+	ctx.runWakeupFlags = wakeupFlags;
 
 	Rc<Handle> timerHandle;
 	if (ival) {
 		// set timeout
 		timerHandle = _queue->get()->schedule(ival, [this, wakeupFlags] (Handle *handle, bool success) {
 			if (success) {
-				_wakeupStatus = Status::Done;
-				wakeup(wakeupFlags, TimeInterval());
+				doWakeupInterrupt(wakeupFlags, false);
 			}
 		});
 	}
 
+	ctx.shouldWakeup.test_and_set();
+
+	std::unique_lock lock(_runMutex);
+	ctx.prev = _runContext;
+	_runContext = &ctx;
+	lock.unlock();
+
 	int ret = 0;
 
-	while (ret != ALOOPER_POLL_WAKE && ret != ALOOPER_POLL_ERROR) {
+	while (ctx.shouldWakeup.test_and_set()) {
 		ret = ALooper_pollOnce(-1, nullptr, nullptr, nullptr);
+		if (ret == ALOOPER_POLL_ERROR) {
+			log::error("event::ALooperData", "ALooper error: ", ret);
+			ctx.wakeupStatus = Status::ErrorUnknown;
+			break;
+		}
 	}
 
 	if (ret == ALOOPER_POLL_ERROR) {
 		log::error("event::Queue", "ALooper failed with error");
 	}
 
-	auto wFlags = WakeupFlags(_wakeupFlags.load());
+	auto wFlags = WakeupFlags(_runContext->wakeupFlags.load());
 	if (hasFlag(wFlags, WakeupFlags::Graceful)) {
 		if (suspendHandles() == Status::Done) {
-			_wakeupStatus = Status::Ok;
+			_runContext->wakeupStatus = Status::Ok;
 		}
 	}
 
@@ -121,22 +135,53 @@ Status ALooperData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval
 		timerHandle->cancel();
 	}
 
-	return _wakeupStatus;
+	lock.lock();
+	_runContext = ctx.prev;
+	lock.unlock();
+
+	return ctx.wakeupStatus;
 }
 
 Status ALooperData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
-	_wakeupFlags |= toInt(flags);
-	ALooper_wake(_looper);
+	std::unique_lock lock(_runMutex);
+	if (auto v = _runContext) {
+		v->wakeupFlags |= toInt(flags);
+		v->wakeupTimeout = gracefulTimeout.toMicros();
+	}
+	_runMutex.unlock();
+	_eventFd->write(1);
 	return Status::Ok;
 }
 
 Status ALooperData::suspendHandles() {
-	_wakeupStatus = Status::Suspended;
+	_runContext->wakeupStatus = Status::Suspended;
 
 	auto nhandles = _data->suspendAll();
-	_wakeupCounter = nhandles;
+	_runContext->wakeupCounter = nhandles;
 
 	return Status::Done;
+}
+
+Status ALooperData::doWakeupInterrupt(WakeupFlags flags, bool externalCall) {
+	if (!_runContext) {
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	if (hasFlag(flags, WakeupFlags::Graceful)) {
+		if (suspendHandles() == Status::Done) {
+			_runContext->shouldWakeup.clear();
+			_runContext->wakeupStatus = Status::Ok; // graceful wakeup
+		}
+		return Status::Suspended; // do not rearm eventfd
+	} else {
+		_runContext->shouldWakeup.clear();
+		_runContext->wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
+		return Status::Ok; // rearm eventfd
+	}
+}
+
+void ALooperData::runInternalHandles() {
+	_data->runHandle(_eventFd);
 }
 
 void ALooperData::cancel() {
@@ -151,6 +196,14 @@ ALooperData::ALooperData(QueueRef *q, Queue::Data *data, const QueueInfo &info, 
 	}
 
 	_looper = ALooper_prepare(0);
+
+	_eventFd = Rc<EventFdALooperHandle>::create(&data->_alooperEventFdClass,
+			CompletionHandle<EventFdALooperHandle>::create<ALooperData>(this,
+					[] (ALooperData *data, EventFdALooperHandle *h, uint32_t value, Status st) {
+		if (st == Status::Ok && data->_runContext) {
+			data->doWakeupInterrupt(WakeupFlags(data->_runContext->wakeupFlags.exchange(0)), true);
+		}
+	}));
 }
 
 ALooperData::~ALooperData() {

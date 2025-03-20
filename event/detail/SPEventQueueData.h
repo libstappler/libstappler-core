@@ -28,10 +28,34 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-struct SP_PUBLIC QueueData : public mem_pool::AllocBase {
+// PerformEngine can be used for resumable nested 'perform' variants
+// Action, that performed within engine, can safely call Queue::run, that also can cause 'perform'
+struct SP_PUBLIC PerformEngine : public mem_pool::AllocBase {
+	struct Block : AllocPool {
+		Block *next = nullptr;
+		Rc<thread::Task> task;
+		mem_std::Function<void()> fn;
+		Rc<Ref> ref;
+	};
+
+	bool _performEnabled = false;
+	memory::pool_t *_pool = nullptr;
+	memory::pool_t *_tmpPool = nullptr;
+	Block *_pendingBlocksFront = nullptr;
+	Block *_pendingBlocksTail = nullptr;
+	Block *_emptyBlocks = nullptr;
+
+	Status perform(Rc<thread::Task> &&);
+	Status perform(mem_std::Function<void()> &&, Ref * = nullptr);
+
+	uint32_t runAllTasks(memory::pool_t *);
+
+	PerformEngine(memory::pool_t *);
+};
+
+struct SP_PUBLIC QueueData : public PerformEngine {
 	QueueHandleClassInfo _info;
 	QueueFlags _flags = QueueFlags::None;
-	memory::pool_t *_tmpPool = nullptr;
 
 	bool _running = true;
 
@@ -39,6 +63,7 @@ struct SP_PUBLIC QueueData : public mem_pool::AllocBase {
 	mem_pool::Set<Rc<Handle>> _suspendableHandles;
 
 	bool isRunning() const { return _running; }
+	bool isWithinNotify() const { return _performEnabled; }
 
 	// returns number of operations suspended
 	uint32_t suspendAll();

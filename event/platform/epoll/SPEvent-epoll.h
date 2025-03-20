@@ -55,18 +55,27 @@ struct SP_PUBLIC EPollData : public mem_pool::AllocBase {
 
 	mem_pool::Vector<struct epoll_event> _events;
 
-	std::atomic_flag _shouldWakeup;
-	std::atomic<std::underlying_type_t<WakeupFlags>> _wakeupFlags = 0;
-	WakeupFlags _runWakeupFlags = WakeupFlags::None;
-	std::atomic<uint64_t> _wakeupTimeout;
-	uint32_t _wakeupCounter = 0;
-	Status _wakeupStatus = Status::Suspended;
+	uint32_t _receivedEvents = 0;
+	uint32_t _processedEvents = 0;
+
+	struct RunContext {
+		std::atomic_flag shouldWakeup;
+		std::atomic<std::underlying_type_t<WakeupFlags>> wakeupFlags = 0;
+		WakeupFlags runWakeupFlags = WakeupFlags::None;
+		std::atomic<uint64_t> wakeupTimeout;
+		uint32_t wakeupCounter = 0;
+		Status wakeupStatus = Status::Suspended;
+		RunContext *prev = nullptr;
+	};
+
+	RunContext *_runContext = nullptr;
+	std::mutex _runMutex;
 
 	Status add(int fd, const epoll_event &ev);
 	Status remove(int fd);
 
 	Status runPoll(TimeInterval, bool infinite = false);
-	Status processEvents(uint32_t nevents);
+	uint32_t processEvents();
 
 	Status submit();
 	uint32_t poll();
