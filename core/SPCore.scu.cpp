@@ -53,6 +53,7 @@ THE SOFTWARE.
 #include "platform/SPCore-android.cc"
 #include "platform/SPCore-win32.cc"
 #include "platform/SPCore-darwin.cc"
+#include "platform/SPJni.cc"
 
 #include "SPUrl.cc"
 #include "SPValid.cc"

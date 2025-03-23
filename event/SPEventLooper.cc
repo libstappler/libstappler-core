@@ -55,6 +55,7 @@ struct Looper::Data : public memory::AllocPool {
 Looper *Looper::acquire(LooperInfo &&info) {
 	return acquire(move(info), QueueInfo{
 		.flags = QueueFlags::SubmitImmediate | QueueFlags::ThreadNative,
+		.engineMask = info.engineMask,
 		.osIdleInterval = TimeInterval::milliseconds(100),
 	});
 }
@@ -97,7 +98,22 @@ Looper::~Looper() {
 		_data = nullptr;
 
 		queue->cancel();
+#if SP_REF_DEBUG
+		if (queue->getRef()->getReferenceCount() > 1) {
+			auto tmp = queue->getRef();
+			queue = nullptr;
+
+			tmp->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+				mem_std::StringStream stream;
+				stream << "[" << id << ":" << time.toHttp<memory::StandartInterface>() << "]:\n";
+				for (auto &it : vec) {
+					stream << "\t" << it << "\n";
+				}
+				log::debug("event::Queue", stream.str());
+			});
+		}
 		queue = nullptr;
+#endif
 	}
 }
 
@@ -122,14 +138,14 @@ Status Looper::performOnThread(Rc<thread::Task> &&task, bool immediate) {
 	}
 }
 
-Status Looper::performOnThread(mem_std::Function<void()> &&func, Ref *target, bool immediate) {
+Status Looper::performOnThread(mem_std::Function<void()> &&func, Ref *target, bool immediate, StringView tag) {
 	bool isOnThread = isOnThisThread();
 	if (immediate && isOnThread) {
 		func();
 		return Status::Ok;
 	}
-	if (!isOnThread || _data->queue->performNext(sp::move(func), target) == Status::Declined) {
-		return _data->threadHandle->perform(sp::move(func), target);
+	if (!isOnThread || _data->queue->performNext(sp::move(func), target, tag) == Status::Declined) {
+		return _data->threadHandle->perform(sp::move(func), target, tag);
 	} else {
 		return Status::Ok;
 	}
@@ -139,8 +155,8 @@ Status Looper::performAsync(Rc<thread::Task> &&task, bool first) {
 	return _data->getThreadPool()->perform(move(task), first);
 }
 
-Status Looper::performAsync(mem_std::Function<void()> &&func, Ref *target, bool first) {
-	return _data->getThreadPool()->perform(sp::move(func), target, first);
+Status Looper::performAsync(mem_std::Function<void()> &&func, Ref *target, bool first, StringView tag) {
+	return _data->getThreadPool()->perform(sp::move(func), target, first, tag);
 }
 
 Status Looper::performHandle(Handle *h) {
@@ -181,12 +197,16 @@ uint16_t Looper::getWorkersCount() const {
 	return _data->threadPool->getInfo().threadCount;
 }
 
-memory::pool_t *Looper::getThreadPool() const {
+memory::pool_t *Looper::getThreadMemPool() const {
 	return _data->threadMemPool;
 }
 
 const event::Queue *Looper::getQueue() const {
 	return _data->queue;
+}
+
+thread::ThreadPool *Looper::getThreadPool() const {
+	return _data->threadPool;
 }
 
 bool Looper::isOnThisThread() const {

@@ -33,11 +33,21 @@ enum class QueueFlags {
 	Protected = 1 << 0, // try to protect operations from interrupting with signals
 	SubmitImmediate = 1 << 1, // submit all operations as they added, no need to call `submitPending`
 
-	// Private flags
+	// Engine flags
 	ThreadNative = 1 << 15, // use thread-native backend (used by Looper, do not use this on Queue directly)
 };
 
 SP_DEFINE_ENUM_AS_MASK(QueueFlags)
+
+enum class QueueEngine {
+	None,
+	URing = 1 << 0, // Linux io_uring backend
+	EPoll = 1 << 1, // Linux/Android epoll backend
+	ALooper = 1 << 2, // Android ALooper backend
+	Any = URing | EPoll | ALooper,
+};
+
+SP_DEFINE_ENUM_AS_MASK(QueueEngine)
 
 enum class WakeupFlags {
 	None,
@@ -51,6 +61,7 @@ struct SP_PUBLIC QueueInfo {
 	static constexpr uint32_t DefaultQueueSize = 32;
 
 	QueueFlags flags = QueueFlags::None;
+	QueueEngine engineMask = QueueEngine::Any;
 
 	uint32_t submitQueueSize = DefaultQueueSize;
 	uint32_t completeQueueSize = 0; // or 0 for default size, based on submitQueueSize
@@ -127,11 +138,14 @@ public:
 
 	QueueFlags getFlags() const;
 
+	// Returns actual engine of the queue
+	QueueEngine getEngine() const;
+
 	// Schedule task for execution after current event
 	// Can be used only from within event processing, returns Declined otherwise
 	// Returns Ok if task was scheduled to execution successfully
 	Status performNext(Rc<thread::Task> &&);
-	Status performNext(mem_std::Function<void()> &&, Ref * = nullptr);
+	Status performNext(mem_std::Function<void()> &&, Ref * = nullptr, StringView tag = StringView());
 
 	using PoolObject::PoolObject;
 

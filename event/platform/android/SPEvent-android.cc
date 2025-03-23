@@ -107,9 +107,9 @@ bool Queue::Data::isValid() const {
 
 void Queue::Data::cancel() {
 	if (_epoll) {
-		return _epoll->cancel();
+		_epoll->cancel();
 	} else if (_alooper) {
-		return _alooper->cancel();
+		_alooper->cancel();
 	}
 	cleanup();
 }
@@ -126,22 +126,30 @@ Queue::Data::~Data() {
 }
 
 Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags) {
-	setupEpollHandleClass<TimerFdEPollHandle, TimerFdSource>(&_info, &_epollTimerFdClass, true);
-	setupEpollHandleClass<ThreadEPollHandle, EventFdSource>(&_info, &_epollThreadClass, true);
-	setupEpollHandleClass<EventFdEPollHandle, EventFdSource>(&_info, &_epollEventFdClass, true);
-	setupEpollHandleClass<SignalFdEPollHandle, SignalFdSource>(&_info, &_epollSignalFdClass, true);
-	setupEpollHandleClass<PollFdEPollHandle, PollFdSource>(&_info, &_epollPollFdClass, true);
+	if (hasFlag(info.engineMask, QueueEngine::EPoll)) {
+		setupEpollHandleClass<TimerFdEPollHandle, TimerFdSource>(&_info, &_epollTimerFdClass, true);
+		setupEpollHandleClass<ThreadEPollHandle, EventFdSource>(&_info, &_epollThreadClass, true);
+		setupEpollHandleClass<EventFdEPollHandle, EventFdSource>(&_info, &_epollEventFdClass, true);
+		setupEpollHandleClass<SignalFdEPollHandle, SignalFdSource>(&_info, &_epollSignalFdClass, true);
+		setupEpollHandleClass<PollFdEPollHandle, PollFdSource>(&_info, &_epollPollFdClass, true);
+	}
 
-	setupALooperHandleClass<TimerFdALooperHandle, TimerFdSource>(&_info, &_alooperTimerFdClass, true);
-	setupALooperHandleClass<ThreadALooperHandle, EventFdSource>(&_info, &_alooperThreadClass, true);
-	setupALooperHandleClass<EventFdALooperHandle, EventFdSource>(&_info, &_alooperEventFdClass, true);
-	setupALooperHandleClass<SignalFdALooperHandle, SignalFdSource>(&_info, &_alooperSignalFdClass, true);
-	setupALooperHandleClass<PollFdALooperHandle, PollFdSource>(&_info, &_alooperPollFdClass, true);
+	if (hasFlag(info.engineMask, QueueEngine::ALooper)) {
+		setupALooperHandleClass<TimerFdALooperHandle, TimerFdSource>(&_info, &_alooperTimerFdClass, true);
+		setupALooperHandleClass<ThreadALooperHandle, EventFdSource>(&_info, &_alooperThreadClass, true);
+		setupALooperHandleClass<EventFdALooperHandle, EventFdSource>(&_info, &_alooperEventFdClass, true);
+		setupALooperHandleClass<SignalFdALooperHandle, SignalFdSource>(&_info, &_alooperSignalFdClass, true);
+		setupALooperHandleClass<PollFdALooperHandle, PollFdSource>(&_info, &_alooperPollFdClass, true);
+	}
 
-	if (hasFlag(info.flags, QueueFlags::ThreadNative) && !hasFlag(info.flags, QueueFlags::Protected)) {
+	if (hasFlag(info.flags, QueueFlags::ThreadNative)
+			&& hasFlag(info.engineMask, QueueEngine::ALooper)
+			&& !hasFlag(info.flags, QueueFlags::Protected)) {
 		auto alooper = new (memory::pool::acquire()) ALooperData(_info.queue, this, info, SignalsToIntercept);
 		if (alooper->_looper != nullptr) {
 			_alooper = alooper;
+			_alooper->runInternalHandles();
+			_engine = QueueEngine::ALooper;
 			return;
 		} else {
 			alooper->~ALooperData();
@@ -149,11 +157,12 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 	}
 
 	// try epoll if failed with ALooper
-	if (!_alooper) {
+	if (!_alooper && hasFlag(info.engineMask, QueueEngine::EPoll)) {
 		auto epoll = new (memory::pool::acquire()) EPollData(_info.queue, this, info, SignalsToIntercept);
 		if (epoll->_epollFd >= 0) {
 			_epoll = epoll;
 			_epoll->runInternalHandles();
+			_engine = QueueEngine::EPoll;
 		} else {
 			epoll->~EPollData();
 		}

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 #if ANDROID
 
 #include "SPDso.h"
+#include "platform/SPJni.h"
 
 #include <unicode/uchar.h>
 #include <unicode/urename.h>
@@ -32,19 +33,14 @@
 
 #include <sys/random.h>
 
-#include <jni.h>
-
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
-	static std::mutex s_collatorMutex;
+static std::mutex s_collatorMutex;
 
 struct IcuJave {
-	bool attached = false;
-	JavaVM *vm = nullptr;
-	JNIEnv *env = nullptr;
-	jclass charClass = nullptr;
-
-	jclass collatorClass = nullptr;
+	jni::Env env;
+	jni::GlobalClass charClass = nullptr;
+	jni::GlobalClass collatorClass = nullptr;
 
 	jmethodID toLowerChar = nullptr;
 	jmethodID toUpperChar = nullptr;
@@ -64,47 +60,37 @@ struct IcuJave {
 	int QUATERNARY;
 
 	~IcuJave() {
-		if (env && collatorClass) {
-			env->DeleteGlobalRef(collatorClass);
-		}
-		if (env && charClass) {
-			env->DeleteGlobalRef(charClass);
-		}
-		if (attached) {
-			vm->DetachCurrentThread();
+		if (env) {
+			collatorClass = nullptr;
+			charClass = nullptr;
 		}
 	}
 
-	void init(JavaVM *v, JNIEnv *e, bool a) {
-		vm = v;
-		env = e;
-		attached = a;
+	void init(jni::Env &&e) {
+		env = move(e);
 
-		auto tmp = env->FindClass("android/icu/lang/UCharacter");
-		charClass = static_cast<jclass>(env->NewGlobalRef(static_cast<jobject>(tmp)));
-		toLowerChar = env->GetStaticMethodID(charClass, "toLowerCase", "(I)I");
-		toUpperChar = env->GetStaticMethodID(charClass, "toUpperCase", "(I)I");
-		toTitleChar = env->GetStaticMethodID(charClass, "toTitleCase", "(I)I");
+		charClass = env.findClass("android/icu/lang/UCharacter").getGlobal();
 
-		toLowerString = env->GetStaticMethodID(charClass, "toLowerCase", "(Ljava/lang/String;)Ljava/lang/String;");
-		toUpperString = env->GetStaticMethodID(charClass, "toUpperCase", "(Ljava/lang/String;)Ljava/lang/String;");
-		toTitleString = env->GetStaticMethodID(charClass, "toTitleCase", "(Ljava/lang/String;Landroid/icu/text/BreakIterator;)Ljava/lang/String;");
+		auto tmpClass = jni::RefClass(charClass, env);
 
-		jclass tmpCollator = env->FindClass("android/icu/text/Collator");
-		collatorClass = static_cast<jclass>(env->NewGlobalRef(static_cast<jobject>(tmpCollator)));
-		getInstance = env->GetStaticMethodID(tmpCollator, "getInstance", "()Landroid/icu/text/Collator;");
-		setStrength = env->GetMethodID(tmpCollator, "setStrength", "(I)V");
-		_compare = env->GetMethodID(tmpCollator, "compare", "(Ljava/lang/String;Ljava/lang/String;)I");
+		toLowerChar = tmpClass.getStaticMethodID("toLowerCase", "(I)I");
+		toUpperChar = tmpClass.getStaticMethodID("toUpperCase", "(I)I");
+		toTitleChar = tmpClass.getStaticMethodID("toTitleCase", "(I)I");
 
-		auto pField = env->GetStaticFieldID(tmpCollator, "PRIMARY", "I");
-		auto sField = env->GetStaticFieldID(tmpCollator, "SECONDARY", "I");
-		auto tField = env->GetStaticFieldID(tmpCollator, "TERTIARY", "I");
-		auto qField = env->GetStaticFieldID(tmpCollator, "QUATERNARY", "I");
+		toLowerString = tmpClass.getStaticMethodID("toLowerCase", "(Ljava/lang/String;)Ljava/lang/String;");
+		toUpperString = tmpClass.getStaticMethodID("toUpperCase", "(Ljava/lang/String;)Ljava/lang/String;");
+		toTitleString = tmpClass.getStaticMethodID("toTitleCase", "(Ljava/lang/String;Landroid/icu/text/BreakIterator;)Ljava/lang/String;");
 
-		PRIMARY = env->GetStaticIntField(tmpCollator, pField);
-		SECONDARY = env->GetStaticIntField(tmpCollator, sField);
-		TERTIARY = env->GetStaticIntField(tmpCollator, tField);
-		QUATERNARY = env->GetStaticIntField(tmpCollator, qField);
+		auto tmpCollatorClass = env.findClass("android/icu/text/Collator");
+		collatorClass = tmpCollatorClass;
+		getInstance = tmpCollatorClass.getStaticMethodID("getInstance", "()Landroid/icu/text/Collator;");
+		setStrength = tmpCollatorClass.getMethodID("setStrength", "(I)V");
+		_compare = tmpCollatorClass.getMethodID("compare", "(Ljava/lang/String;Ljava/lang/String;)I");
+
+		PRIMARY = tmpCollatorClass.getStaticField<jint>("PRIMARY");
+		SECONDARY = tmpCollatorClass.getStaticField<jint>("SECONDARY");
+		TERTIARY = tmpCollatorClass.getStaticField<jint>("TERTIARY");
+		QUATERNARY = tmpCollatorClass.getStaticField<jint>("QUATERNARY");
 	}
 
 	char32_t tolower(char32_t c) {
@@ -112,7 +98,7 @@ struct IcuJave {
 			return c;
 		}
 
-		return char32_t(env->CallStaticIntMethod(charClass, toLowerChar, jint(c)));
+		return char32_t(jni::RefClass(charClass, env).callStaticMethod<jint>(toLowerChar, jint(c)));
 	}
 
 	char32_t toupper(char32_t c) {
@@ -120,7 +106,7 @@ struct IcuJave {
 			return c;
 		}
 
-		return char32_t(env->CallStaticIntMethod(charClass, toUpperChar, jint(c)));
+		return char32_t(jni::RefClass(charClass, env).callStaticMethod<jint>(toUpperChar, jint(c)));
 	}
 
 	char32_t totitle(char32_t c) {
@@ -128,7 +114,7 @@ struct IcuJave {
 			return c;
 		}
 
-		return char32_t(env->CallStaticIntMethod(charClass, toTitleChar, jint(c)));
+		return char32_t(jni::RefClass(charClass, env).callStaticMethod<jint>(toTitleChar, jint(c)));
 	}
 
 	template <typename Interface>
@@ -137,16 +123,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto str = env->NewString((jchar *)data.data(), data.size());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toLowerString, str));
-		auto chars = env->GetStringChars(ret, nullptr);
-
-		auto result = typename Interface::WideStringType((char16_t *)chars, env->GetStringLength(ret));
-
-		env->ReleaseStringChars(ret, chars);
-		env->DeleteLocalRef(ret);
-		env->DeleteLocalRef(str);
-		return result;
+		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toLowerString, env.newString(data));
+		return ret.getWideString().str<Interface>();
 	}
 
 	template <typename Interface>
@@ -155,17 +133,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto str = data.terminated() ? env->NewStringUTF(data.data())
-				: env->NewStringUTF(data.str<memory::StandartInterface>().data());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toLowerString, str));
-		auto chars = (char *)env->GetStringUTFChars(ret, nullptr);
-
-		auto result = typename Interface::StringType(chars, env->GetStringUTFLength(ret));
-
-		env->ReleaseStringUTFChars(ret, chars);
-		env->DeleteLocalRef(ret);
-		env->DeleteLocalRef(str);
-		return result;
+		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toLowerString, env.newString(data));
+		return ret.getString().str<Interface>();
 	}
 
 	template <typename Interface>
@@ -174,16 +143,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto str = env->NewString((jchar *)data.data(), data.size());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toUpperString, str));
-		auto chars = env->GetStringChars(ret, nullptr);
-
-		auto result = typename Interface::WideStringType((char16_t *)chars, env->GetStringLength(ret));
-
-		env->ReleaseStringChars(ret, chars);
-		env->DeleteLocalRef(ret);
-		env->DeleteLocalRef(str);
-		return result;
+		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toUpperString, env.newString(data));
+		return ret.getWideString().str<Interface>();
 	}
 
 	template <typename Interface>
@@ -192,17 +153,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto str = data.terminated() ? env->NewStringUTF(data.data())
-									 : env->NewStringUTF(data.str<memory::StandartInterface>().data());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toUpperString, str));
-		auto chars = (char *)env->GetStringUTFChars(ret, nullptr);
-
-		auto result = typename Interface::StringType(chars, env->GetStringUTFLength(ret));
-
-		env->ReleaseStringUTFChars(ret, chars);
-		env->DeleteLocalRef(ret);
-		env->DeleteLocalRef(str);
-		return result;
+		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toUpperString, env.newString(data));
+		return ret.getString().str<Interface>();
 	}
 
 	template <typename Interface>
@@ -211,16 +163,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto str = env->NewString((jchar *)data.data(), data.size());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toTitleString, str, nullptr));
-		auto chars = env->GetStringChars(ret, nullptr);
-
-		auto result = typename Interface::WideStringType((char16_t *)chars, env->GetStringLength(ret));
-
-		env->ReleaseStringChars(ret, chars);
-		env->DeleteLocalRef(ret);
-		env->DeleteLocalRef(str);
-		return result;
+		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toTitleString, env.newString(data));
+		return ret.getWideString().str<Interface>();
 	}
 
 	template <typename Interface>
@@ -229,17 +173,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto str = data.terminated() ? env->NewStringUTF(data.data())
-									 : env->NewStringUTF(data.str<memory::StandartInterface>().data());
-		auto ret = static_cast<jstring>(env->CallStaticObjectMethod(charClass, toTitleString, str, nullptr));
-		auto chars = (char *)env->GetStringUTFChars(ret, nullptr);
-
-		auto result = typename Interface::StringType(chars, env->GetStringUTFLength(ret));
-
-		env->ReleaseStringUTFChars(ret, chars);
-		env->DeleteLocalRef(ret);
-		env->DeleteLocalRef(str);
-		return result;
+		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toTitleString, env.newString(data));
+		return ret.getString().str<Interface>();
 	}
 
 	int compare(StringView l, StringView r, bool caseInsensetive) {
@@ -248,22 +183,16 @@ struct IcuJave {
 		}
 
 		int ret = 0;
-		auto strL = l.terminated() ? env->NewStringUTF(l.data())
-								   : env->NewStringUTF(l.str<memory::StandartInterface>().data());
-		auto strR = r.terminated() ? env->NewStringUTF(r.data())
-								   : env->NewStringUTF(r.str<memory::StandartInterface>().data());
+		auto strL = env.newString(l);
+		auto strR = env.newString(r);
 
-		auto coll = env->CallStaticObjectMethod(collatorClass, getInstance);
+		auto coll = jni::RefClass(collatorClass, env).callStaticMethod<jobject>(getInstance);
 		if (coll) {
-			env->CallVoidMethod(coll, setStrength, caseInsensetive ? SECONDARY : TERTIARY);
-			ret = env->CallIntMethod(coll, _compare, strL, strR);
-			env->DeleteLocalRef(coll);
+			coll.callMethod<void>(setStrength, caseInsensetive ? SECONDARY : TERTIARY);
+			ret = coll.callMethod<jint>(_compare, strL, strR);
 		} else {
 			ret = string::detail::compare_c(l, r);
 		}
-
-		env->DeleteLocalRef(strL);
-		env->DeleteLocalRef(strR);
 		return ret;
 	}
 
@@ -273,20 +202,16 @@ struct IcuJave {
 		}
 
 		int ret = 0;
-		auto strL = env->NewString((jchar *)l.data(), l.size());
-		auto strR = env->NewString((jchar *)r.data(), r.size());
+		auto strL = env.newString(l);
+		auto strR = env.newString(r);
 
-		auto coll = env->CallStaticObjectMethod(collatorClass, getInstance);
+		auto coll = jni::RefClass(collatorClass, env).callStaticMethod<jobject>(getInstance);
 		if (coll) {
-			env->CallVoidMethod(coll, setStrength, caseInsensetive ? SECONDARY : TERTIARY);
-			ret = env->CallIntMethod(coll, _compare, strL, strR);
-			env->DeleteLocalRef(coll);
+			coll.callMethod<void>(setStrength, caseInsensetive ? SECONDARY : TERTIARY);
+			ret = coll.callMethod<jint>(_compare, strL, strR);
 		} else {
 			ret = string::detail::compare_c(l, r);
 		}
-
-		env->DeleteLocalRef(strL);
-		env->DeleteLocalRef(strR);
 		return ret;
 	}
 };
@@ -296,8 +221,6 @@ namespace i18n {
 	using case_cmp_fn =  int32_t (*) ( const char16_t *s1, int32_t length1, const char16_t *s2, int32_t length2,
 			uint32_t options, int *pErrorCode);
 
-	static JavaVM *s_vm = nullptr;
-	static int32_t s_sdk = 0;
 	static thread_local IcuJave tl_interface;
 	static Dso s_icu;
 
@@ -317,33 +240,14 @@ namespace i18n {
 	static cmp_fn u_strCompare = nullptr;
 	static case_cmp_fn u_strCaseCompare = nullptr;
 
-	static JNIEnv *getEnv() {
-		void *ret = nullptr;
-
-		s_vm->GetEnv(&ret, JNI_VERSION_1_6);
-		return reinterpret_cast<JNIEnv*>(ret);
-	}
-
 	static IcuJave *getInerface() {
 		if (!tl_interface.env) {
-			auto env = getEnv();
-			if (env) {
-				tl_interface.init(s_vm, env, false);
-			} else {
-				JNIEnv *env = nullptr;
-				s_vm->AttachCurrentThread(&env, nullptr);
-				if (env) {
-					tl_interface.init(s_vm, env, true);
-				}
-			}
+			tl_interface.init(jni::Env::getEnv());
 		}
 		return &tl_interface;
 	};
 
-	void loadJava(JavaVM *vm, int32_t sdk) {
-		s_vm = vm;
-		s_sdk = sdk;
-
+	void load(JavaVM *vm, int32_t sdk) {
 		s_icu = Dso("libicu.so");
 		if (s_icu) {
 			tolower_fn = s_icu.sym<decltype(tolower_fn)>("u_tolower");
@@ -358,8 +262,7 @@ namespace i18n {
 		}
 	}
 
-	void finalizeJava() {
-		s_vm = nullptr;
+	void finalize() {
 		s_icu.close();
 	}
 

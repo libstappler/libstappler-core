@@ -32,6 +32,7 @@ struct SP_PUBLIC LooperInfo {
 	StringView name = StringView("Main");
 	uint16_t workersCount = uint16_t(std::thread::hardware_concurrency()); // 0 if no workers required
 	thread::ThreadPoolFlags workersFlags = thread::ThreadPoolFlags::LazyInit;
+	QueueEngine engineMask = QueueEngine::Any;
 };
 
 /* Looper - common event processing primitive,
@@ -59,13 +60,14 @@ public:
 
 	// Perform function on this thread
 	// If current thread is looper thread - performs in place
-	Status performOnThread(mem_std::Function<void()> &&func, Ref *target = nullptr, bool immediate = false);
+	Status performOnThread(mem_std::Function<void()> &&func, Ref *target,
+			bool immediate = false, StringView tag = STAPPLER_LOCATION);
 
 	// Perform task in workers pool (if there is one)
 	Status performAsync(Rc<thread::Task> &&task, bool first = false);
 
 	// Perform function in workers pool (if there is one)
-	Status performAsync(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false);
+	Status performAsync(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false, StringView tag = STAPPLER_LOCATION);
 
 	// Perform Handle in queue (if supported)
 	Status performHandle(Handle *);
@@ -93,9 +95,11 @@ public:
 
 	uint16_t getWorkersCount() const;
 
-	memory::pool_t *getThreadPool() const;
+	memory::pool_t *getThreadMemPool() const;
 
 	const event::Queue *getQueue() const;
+
+	thread::ThreadPool *getThreadPool() const;
 
 	bool isOnThisThread() const;
 

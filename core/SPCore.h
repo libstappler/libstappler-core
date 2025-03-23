@@ -77,6 +77,10 @@ THE SOFTWARE.
 #include <variant>
 #include <chrono>
 
+#if __cplusplus >= 202002L
+#include <source_location>
+#endif
+
 // From C standard library:
 #include <stdint.h> // uint32_t, int32_t, etc
 #include <string.h> // memset, memcpy, memmove

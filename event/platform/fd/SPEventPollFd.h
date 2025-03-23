@@ -56,8 +56,11 @@ struct PollFdSource {
 
 class SP_PUBLIC PollFdHandle : public Handle {
 public:
-	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags, CompletionHandle<PollFdHandle> &&);
-	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags, mem_std::Function<void(int fd, PollFlags)> &&);
+	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags,
+			CompletionHandle<PollFdHandle> &&);
+
+	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags,
+			mem_std::Function<Status(int fd, PollFlags)> &&, Ref *ref);
 
 	virtual ~PollFdHandle() = default;
 

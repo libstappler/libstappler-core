@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2019 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SPMemPriorityQueue.h"
 #include "SPRef.h"
 #include "SPMemory.h"
+#include "SPStringView.h"
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
@@ -77,16 +78,22 @@ public:
 	virtual ~Task() = default;
 
 	/* creates empty task with only complete function to be used as callback from other thread */
-	bool init(const CompleteCallback &, Ref * = nullptr, TaskGroup * = nullptr);
-	bool init(CompleteCallback &&, Ref * = nullptr, TaskGroup * = nullptr);
+	bool init(const CompleteCallback &, Ref * = nullptr,
+			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
+	bool init(CompleteCallback &&, Ref * = nullptr,
+			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
 
 	/* creates regular async task without initialization phase */
-	bool init(const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr, TaskGroup * = nullptr);
-	bool init(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr, TaskGroup * = nullptr);
+	bool init(const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr,
+			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
+	bool init(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr,
+			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
 
 	/* creates regular async task with initialization phase */
-	bool init(const PrepareCallback &, const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr, TaskGroup * = nullptr);
-	bool init(PrepareCallback &&, ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr, TaskGroup * = nullptr);
+	bool init(const PrepareCallback &, const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr,
+			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
+	bool init(PrepareCallback &&, ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr,
+			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
 
 	/* adds one more function to be executed before task is added to queue, functions executed as FIFO */
 	void addPrepareCallback(const PrepareCallback &);
@@ -101,10 +108,10 @@ public:
 	void addCompleteCallback(CompleteCallback &&);
 
 	/* mark this task with tag */
-	void setTag(uint32_t tag) { _tag = tag; }
+	void setTag(StringView tag) { _tag = tag; }
 
 	/* returns tag */
-	uint32_t getTag()  const{ return _tag; }
+	StringView getTag()  const{ return _tag; }
 
 	/* set default task priority */
 	void setPriority(PriorityType::Type priority) { _priority = PriorityType(priority); }
@@ -142,7 +149,7 @@ public:
 protected:
 	// prepare/execute/handleCompleted marked as const to forbid task changes, but it can change state
 	mutable TaskState _state = TaskState::Initial;
-	uint32_t _tag = INVALID_TAG;
+	StringView _tag;
 	PriorityType _priority = PriorityType();
 
 	std::vector<Rc<Ref>> _refs;

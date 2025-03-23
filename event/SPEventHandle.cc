@@ -236,6 +236,10 @@ bool DirHandle::init(QueueRef *q, QueueData *d, OpenDirInfo &&info) {
 	return true;
 }*/
 
+ThreadHandle::~ThreadHandle() {
+	_engine->cleanup();
+}
+
 bool ThreadHandle::init(HandleClass *cl) {
 	if (!Handle::init(cl, CompletionHandle<void>())) {
 		return false;
@@ -273,13 +277,13 @@ uint32_t ThreadHandle::performAll(const Callback<void(uint32_t)> &unlockCallback
 		_engine->perform(move(it));
 	}
 	for (auto &it : callbacks) {
-		_engine->perform(sp::move(it.first), move(it.second));
+		_engine->perform(sp::move(it.fn), move(it.ref), it.tag);
 	}
 	for (auto &it : _unsafeQueue) {
 		_engine->perform(move(it));
 	}
 	for (auto &it : _unsafeCallbacks) {
-		_engine->perform(sp::move(it.first), move(it.second));
+		_engine->perform(sp::move(it.fn), move(it.ref), it.tag);
 	}
 
 	stack.clear();

@@ -266,21 +266,21 @@ Status ThreadUringHandle::perform(Rc<thread::Task> &&task) {
 	return Status::Ok;
 }
 
-Status ThreadUringHandle::perform(mem_std::Function<void()> &&func, Ref *target) {
+Status ThreadUringHandle::perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) {
 	auto source = reinterpret_cast<ThreadUringSource *>(_data);
 	if (std::this_thread::get_id() == source->thisThread) {
 		// Ensure that server will be notified by setting SIGNAL flag.
 		// Other thread will issue FITEX_WAKE, if we fail to lock, so
 		// just add task into non-protected queue
 		if (source->futex.client_try_lock()) {
-			_outputCallbacks.emplace_back(sp::move(func), target);
+			_outputCallbacks.emplace_back(CallbackInfo{sp::move(func), target, tag});
 			source->futex.client_unlock();
 		} else {
-			_unsafeCallbacks.emplace_back(sp::move(func), target);
+			_unsafeCallbacks.emplace_back(CallbackInfo{sp::move(func), target, tag});
 		}
 	} else {
 		source->futex.client_lock();
-		_outputCallbacks.emplace_back(sp::move(func), target);
+		_outputCallbacks.emplace_back(CallbackInfo{sp::move(func), target, tag});
 		if constexpr (URING_THREAD_DEBUG_SWITCH_TIMER) {
 			_switchTimer = sp::platform::nanoclock(ClockType::Monotonic);
 		}
@@ -434,9 +434,9 @@ Status ThreadEventFdHandle::perform(Rc<thread::Task> &&task) {
 	return Status::Ok;
 }
 
-Status ThreadEventFdHandle::perform(mem_std::Function<void()> &&func, Ref *target) {
+Status ThreadEventFdHandle::perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) {
 	std::unique_lock lock(_mutex);
-	_outputCallbacks.emplace_back(sp::move(func), target);
+	_outputCallbacks.emplace_back(CallbackInfo{sp::move(func), target, tag});
 
 	if constexpr (URING_THREAD_DEBUG_SWITCH_TIMER) {
 		_switchTimer = sp::platform::nanoclock(ClockType::Monotonic);

@@ -44,7 +44,7 @@ public:
 	void notify(ALooperData *, EventFdSource *, const NotifyData &);
 
 	virtual Status perform(Rc<thread::Task> &&task) override;
-	virtual Status perform(mem_std::Function<void()> &&func, Ref *target) override;
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) override;
 
 protected:
 	std::mutex _mutex;

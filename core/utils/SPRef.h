@@ -96,7 +96,6 @@ public:
 	virtual void release(uint64_t id);
 
 	void foreachBacktrace(const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &) const;
-
 #else
 	uint64_t retain(uint64_t value = maxOf<uint64_t>()) { (void)value; incrementReferenceCount(); return 0; }
 	void release(uint64_t id) { if (decrementReferenceCount()) { delete this; } }
@@ -156,6 +155,12 @@ public:
 	memory::allocator_t *getAllocator() const { return _allocator; }
 
 protected:
+#if SP_REF_DEBUG
+	virtual bool isRetainTrackerEnabled() const {
+		return true;
+	}
+#endif
+
 	SharedRef(SharedRefMode m, memory::allocator_t *, memory::pool_t *) noexcept;
 
 	memory::allocator_t *_allocator = nullptr;
@@ -792,7 +797,7 @@ inline auto Rc<_Base>::get() const noexcept -> _Base * {
 
 template <typename _Base>
 inline Rc<_Base>::operator _Base * () const noexcept {
-	return get();
+	return *this ? get() : nullptr;
 }
 
 template <typename _Base>

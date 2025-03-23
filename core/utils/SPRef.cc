@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -379,12 +379,16 @@ void foreachBacktrace(const Ref *ptr,
 	s_mutex.unlock();
 }
 
+}
+
+namespace STAPPLER_VERSIONIZED stappler {
+
 #if SP_REF_DEBUG
 
-uint64_t Ref::retain() {
+uint64_t Ref::retain(uint64_t value) {
 	incrementReferenceCount();
 	if (isRetainTrackerEnabled()) {
-		return memleak::retainBacktrace(this);
+		return memleak::retainBacktrace(this, value);
 	}
 	return 0;
 }
@@ -403,10 +407,6 @@ void Ref::foreachBacktrace(const Callback<void(uint64_t, Time, const std::vector
 }
 
 #endif
-
-}
-
-namespace STAPPLER_VERSIONIZED stappler {
 
 template <>
 SubscriptionId SubscriptionTemplate<memory::PoolInterface>::getNextId() {

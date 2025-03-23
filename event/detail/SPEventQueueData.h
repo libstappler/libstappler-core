@@ -36,6 +36,7 @@ struct SP_PUBLIC PerformEngine : public mem_pool::AllocBase {
 		Rc<thread::Task> task;
 		mem_std::Function<void()> fn;
 		Rc<Ref> ref;
+		StringView tag;
 	};
 
 	bool _performEnabled = false;
@@ -44,11 +45,16 @@ struct SP_PUBLIC PerformEngine : public mem_pool::AllocBase {
 	Block *_pendingBlocksFront = nullptr;
 	Block *_pendingBlocksTail = nullptr;
 	Block *_emptyBlocks = nullptr;
+	uint32_t _blocksAllocated = 0;
+	uint32_t _blocksWaiting = 0;
+	uint32_t _blocksFree = 0;
 
 	Status perform(Rc<thread::Task> &&);
-	Status perform(mem_std::Function<void()> &&, Ref * = nullptr);
+	Status perform(mem_std::Function<void()> &&, Ref * = nullptr, StringView tag = StringView());
 
 	uint32_t runAllTasks(memory::pool_t *);
+
+	void cleanup();
 
 	PerformEngine(memory::pool_t *);
 };
@@ -56,6 +62,7 @@ struct SP_PUBLIC PerformEngine : public mem_pool::AllocBase {
 struct SP_PUBLIC QueueData : public PerformEngine {
 	QueueHandleClassInfo _info;
 	QueueFlags _flags = QueueFlags::None;
+	QueueEngine _engine = QueueEngine::None;
 
 	bool _running = true;
 

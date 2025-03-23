@@ -54,11 +54,11 @@ Status ThreadPool::perform(Rc<Task> &&task, bool first) {
 	return _context.perform(move(task), first);
 }
 
-Status ThreadPool::perform(mem_std::Function<void()> &&cb, Ref *ref, bool first) {
+Status ThreadPool::perform(mem_std::Function<void()> &&cb, Ref *ref, bool first, StringView tag) {
 	return perform(Rc<Task>::create([fn = sp::move(cb)] (const Task &) -> bool {
 		fn();
 		return true;
-	}, nullptr, ref), first);
+	}, nullptr, ref, nullptr, tag), first);
 }
 
 Status ThreadPool::performCompleted(Rc<Task> &&task) {

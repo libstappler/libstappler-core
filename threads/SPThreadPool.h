@@ -62,7 +62,7 @@ public:
 	bool init(ThreadPoolInfo &&);
 
 	Status perform(Rc<Task> &&task, bool first = false);
-	Status perform(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false);
+	Status perform(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false, StringView tag = StringView());
 
 	Status performCompleted(Rc<Task> &&task);
 	Status performCompleted(mem_std::Function<void()> &&func, Ref * = nullptr);

@@ -81,10 +81,26 @@
 #define STAPPLER_VERSIONIZED_NAMESPACE ::STAPPLER_VERSION_PREFIX::stappler
 #endif
 
+
 #ifdef __cplusplus
+
 #define SP_EXTERN_C			extern "C"
+
+// Macro to print current active function context name
+// Available only from C++20
+// Widely used as 'tag' for async tasks
+//
+// Note that, not like `__func__`, this returns name by constructing argument
+// in place of a call, instead of macro substitution in place of occurrence
+#if __cplusplus >= 202002L
+#define STAPPLER_LOCATION (std::source_location::current().function_name())
+#else
+#define STAPPLER_LOCATION ("")
+#endif
+
 #else
 #define SP_EXTERN_C
+#define STAPPLER_LOCATION ("")
 #endif
 
 /*

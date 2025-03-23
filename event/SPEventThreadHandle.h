@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 
 class SP_PUBLIC ThreadHandle : public Handle, public thread::PerformInterface {
 public:
-	virtual ~ThreadHandle() = default;
+	virtual ~ThreadHandle();
 
 	bool init(HandleClass *);
 
@@ -41,18 +41,24 @@ public:
 	virtual Status perform(Rc<thread::Task> &&task) { return Status::ErrorNotImplemented; }
 
 	// Perform function on this event queue
-	virtual Status perform(mem_std::Function<void()> &&func, Ref *target = nullptr) { return Status::ErrorNotImplemented; }
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target = nullptr, StringView tag = STAPPLER_LOCATION) { return Status::ErrorNotImplemented; }
 
 protected:
 	uint32_t performAll(const Callback<void(uint32_t)> &unlockCallback);
 
+	struct CallbackInfo {
+		mem_std::Function<void()>fn;
+		Rc<Ref> ref;
+		StringView tag;
+	};
+
 	Rc<PoolRef> _pool;
 	PerformEngine *_engine = nullptr;
 	mem_std::Vector<Rc<thread::Task>> _outputQueue;
-	mem_std::Vector<Pair<mem_std::Function<void()>, Rc<Ref>>> _outputCallbacks;
+	mem_std::Vector<CallbackInfo> _outputCallbacks;
 
 	mem_std::Vector<Rc<thread::Task>> _unsafeQueue;
-	mem_std::Vector<Pair<mem_std::Function<void()>, Rc<Ref>>> _unsafeCallbacks;
+	mem_std::Vector<CallbackInfo> _unsafeCallbacks;
 
 	uint64_t _switchTimer = 0;
 };

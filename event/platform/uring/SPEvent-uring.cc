@@ -515,6 +515,10 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 		if (h->isResumable()) {
 			if ((h->getTimeline() & URING_USERDATA_SERIAL_MASK) != (userFlags & URING_USERDATA_SERIAL_MASK)) {
 				// messages from previous submission
+
+				if (retainedByRing && (flags & IORING_CQE_F_MORE) == 0) {
+					h->release(reinterpret_cast<uintptr_t>(this) ^ reinterpret_cast<uintptr_t>(h));
+				}
 				return;
 			}
 		}
@@ -522,8 +526,6 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 		uint64_t refId = 0;
 		if (!retainedByRing) {
 			refId = h->retain();
-		} else {
-			refId = reinterpret_cast<uintptr_t>(this) ^ reinterpret_cast<uintptr_t>(h);
 		}
 
 		NotifyData notifyData = {
@@ -532,13 +534,15 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 			.userFlags = static_cast<uint32_t>(userFlags)
 		};
 
-		memory::pool::perform_clear([&] {
-			_data->notify(h, notifyData);
-		}, _data->_tmpPool);
+		_data->notify(h, notifyData);
+
+		if (!retainedByRing) {
+			h->release(refId);
+		}
 
 		// do not release handles, if IORING_CQE_F_MORE flags is set, only release if it's last CQE
-		if (!retainedByRing || (flags & IORING_CQE_F_MORE) == 0) {
-			h->release(refId);
+		if (retainedByRing && (flags & IORING_CQE_F_MORE) == 0) {
+			h->release(reinterpret_cast<uintptr_t>(this) ^ reinterpret_cast<uintptr_t>(h));
 		}
 	} else {
 		log::info("URingData", "no userdata: ", res, " ", flags);

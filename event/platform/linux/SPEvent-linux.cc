@@ -135,9 +135,9 @@ bool Queue::Data::isValid() const {
 
 void Queue::Data::cancel() {
 	if (_uring) {
-		return _uring->cancel();
+		_uring->cancel();
 	} else if (_epoll) {
-		return _epoll->cancel();
+		_epoll->cancel();
 	}
 	cleanup();
 }
@@ -154,35 +154,41 @@ Queue::Data::~Data() {
 }
 
 Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags) {
-	setupUringHandleClass<TimerFdURingHandle, TimerFdSource>(&_info, &_uringTimerFdClass, true);
-	setupUringHandleClass<TimerURingHandle, TimerUringSource>(&_info, &_uringTimerClass, true);
-	setupUringHandleClass<ThreadEventFdHandle, EventFdSource>(&_info, &_uringThreadEventFdClass, true);
-	setupUringHandleClass<ThreadUringHandle, ThreadUringSource>(&_info, &_uringThreadFenceClass, true);
+	if (hasFlag(info.engineMask, QueueEngine::URing)) {
+		setupUringHandleClass<TimerFdURingHandle, TimerFdSource>(&_info, &_uringTimerFdClass, true);
+		setupUringHandleClass<TimerURingHandle, TimerUringSource>(&_info, &_uringTimerClass, true);
+		setupUringHandleClass<ThreadEventFdHandle, EventFdSource>(&_info, &_uringThreadEventFdClass, true);
+		setupUringHandleClass<ThreadUringHandle, ThreadUringSource>(&_info, &_uringThreadFenceClass, true);
 
-	setupUringHandleClass<EventFdURingHandle, EventFdSource>(&_info, &_uringEventFdClass, true);
-	setupUringHandleClass<SignalFdURingHandle, SignalFdSource>(&_info, &_uringSignalFdClass, true);
+		setupUringHandleClass<EventFdURingHandle, EventFdSource>(&_info, &_uringEventFdClass, true);
+		setupUringHandleClass<SignalFdURingHandle, SignalFdSource>(&_info, &_uringSignalFdClass, true);
 
-	setupUringHandleClass<PollFdURingHandle, PollFdSource>(&_info, &_uringPollFdClass, true);
+		setupUringHandleClass<PollFdURingHandle, PollFdSource>(&_info, &_uringPollFdClass, true);
+	}
 
-	setupEpollHandleClass<TimerFdEPollHandle, TimerFdSource>(&_info, &_epollTimerFdClass, true);
-	setupEpollHandleClass<ThreadEPollHandle, EventFdSource>(&_info, &_epollThreadClass, true);
-	setupEpollHandleClass<EventFdEPollHandle, EventFdSource>(&_info, &_epollEventFdClass, true);
-	setupEpollHandleClass<SignalFdEPollHandle, SignalFdSource>(&_info, &_epollSignalFdClass, true);
-	setupEpollHandleClass<PollFdEPollHandle, PollFdSource>(&_info, &_epollPollFdClass, true);
+	if (hasFlag(info.engineMask, QueueEngine::EPoll)) {
+		setupEpollHandleClass<TimerFdEPollHandle, TimerFdSource>(&_info, &_epollTimerFdClass, true);
+		setupEpollHandleClass<ThreadEPollHandle, EventFdSource>(&_info, &_epollThreadClass, true);
+		setupEpollHandleClass<EventFdEPollHandle, EventFdSource>(&_info, &_epollEventFdClass, true);
+		setupEpollHandleClass<SignalFdEPollHandle, SignalFdSource>(&_info, &_epollSignalFdClass, true);
+		setupEpollHandleClass<PollFdEPollHandle, PollFdSource>(&_info, &_epollPollFdClass, true);
+	}
 
-	if (URingData::checkSupport()) {
+	if (hasFlag(info.engineMask, QueueEngine::URing) && URingData::checkSupport()) {
 		auto uring = new (memory::pool::acquire()) URingData(_info.queue, this, info, SignalsToIntercept);
 		if (uring->_ringFd >= 0) {
 			_uring = uring;
 			_uring->runInternalHandles();
+			_engine = QueueEngine::URing;
 		} else {
 			uring->~URingData();
 		}
-	} else {
+	} else if (hasFlag(info.engineMask, QueueEngine::EPoll)) {
 		auto epoll = new (memory::pool::acquire()) EPollData(_info.queue, this, info, SignalsToIntercept);
 		if (epoll->_epollFd >= 0) {
 			_epoll = epoll;
 			_epoll->runInternalHandles();
+			_engine = QueueEngine::EPoll;
 		} else {
 			epoll->~EPollData();
 		}

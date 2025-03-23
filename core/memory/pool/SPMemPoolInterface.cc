@@ -520,6 +520,18 @@ pool_t *create_apr_tagged(const char *tag) {
 #endif
 
 void destroy(pool_t *p) {
+#if DEBUG
+	// Clearing or destruction of a pool, that currently on stack, is an error,
+	// That can not be tracked another way
+	foreach_info(p, [] (void *ptr, pool_t *p, uint32_t, const void *) {
+		if (ptr == p) {
+			log::error("memory", "pool::destroy was called on pool, that currently on stack/in use");
+			abort();
+		}
+		return true;
+	});
+#endif
+
 	popPoolInfo(p);
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(p)) {
@@ -533,6 +545,18 @@ void destroy(pool_t *p) {
 }
 
 void clear(pool_t *p) {
+#if DEBUG
+	// Clearing or destruction of a pool, that currently on stack, is an error,
+	// That can not be tracked another way
+	foreach_info(p, [] (void *ptr, pool_t *p, uint32_t, const void *) {
+		if (ptr == p) {
+			log::error("memory", "pool::clear was called on pool, that currently on stack/in use");
+			abort();
+		}
+		return true;
+	});
+#endif
+
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(p)) {
 			apr::pool::clear((apr::pool_t *)p);

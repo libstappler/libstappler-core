@@ -138,23 +138,29 @@ Status Queue::submitPending() {
 
 // non-blocking poll
 uint32_t Queue::poll() {
-	_data->resumeAll();
-	_data->submit();
-	return _data->poll();
+	return mem_pool::perform([&] {
+		_data->resumeAll();
+		_data->submit();
+		return _data->poll();
+	}, getPool());
 }
 
 // wait until next event or timeout
 uint32_t Queue::wait(TimeInterval ival) {
-	_data->resumeAll();
-	_data->submit();
-	return _data->wait(ival);
+	return mem_pool::perform([&] {
+		_data->resumeAll();
+		_data->submit();
+		return _data->wait(ival);
+	}, getPool());
 }
 
 // run for some time
 Status Queue::run(TimeInterval ival, QueueWakeupInfo &&info) {
-	_data->resumeAll();
-	_data->submit();
-	return _data->run(ival, move(info));
+	return mem_pool::perform([&] {
+		_data->resumeAll();
+		_data->submit();
+		return _data->run(ival, move(info));
+	}, getPool());
 }
 
 Status Queue::wakeup(QueueWakeupInfo &&info) {
@@ -171,12 +177,16 @@ QueueFlags Queue::getFlags() const {
 	return _data->_flags;
 }
 
+QueueEngine Queue::getEngine() const {
+	return _data->_engine;
+}
+
 Status Queue::performNext(Rc<thread::Task> &&task) {
 	return _data->perform(move(task));
 }
 
-Status Queue::performNext(mem_std::Function<void()> &&fn, Ref *ref) {
-	return _data->perform(sp::move(fn), ref);
+Status Queue::performNext(mem_std::Function<void()> &&fn, Ref *ref, StringView tag) {
+	return _data->perform(sp::move(fn), ref, tag);
 }
 
 }

@@ -31,15 +31,21 @@ Status PerformEngine::perform(Rc<thread::Task> &&task) {
 	}
 
 	mem_pool::perform([&] {
-		Block *next;
+		Block *next = nullptr;
 		if (_emptyBlocks) {
 			next = _emptyBlocks;
-			_emptyBlocks = _emptyBlocks->next;
+			_emptyBlocks = next->next;
+			-- _blocksFree;
 		} else {
+			++ _blocksAllocated;
 			next = new (_pool) Block;
 		}
 
 		next->task = move(task);
+		next->fn = nullptr;
+		next->ref = nullptr;
+		next->next = nullptr;
+		next->tag = next->task->getTag();
 
 		if (_pendingBlocksTail) {
 			_pendingBlocksTail->next = next;
@@ -47,27 +53,34 @@ Status PerformEngine::perform(Rc<thread::Task> &&task) {
 		} else {
 			_pendingBlocksFront = _pendingBlocksTail = next;
 		}
+		++ _blocksWaiting;
+		//log::debug("PerformEngine", this, " perform ", _blocksWaiting, " ", _blocksFree, " ", next->tag);
 	}, _pool);
 
 	return Status::Ok;
 }
 
-Status PerformEngine::perform(mem_std::Function<void()> &&fn, Ref *ref) {
+Status PerformEngine::perform(mem_std::Function<void()> &&fn, Ref *ref, StringView tag) {
 	if (!_performEnabled) {
 		return Status::Declined;
 	}
 
 	mem_pool::perform([&] {
-		Block *next;
+		Block *next = nullptr;
 		if (_emptyBlocks) {
 			next = _emptyBlocks;
-			_emptyBlocks = _emptyBlocks->next;
+			_emptyBlocks = next->next;
+			-- _blocksFree;
 		} else {
+			++ _blocksAllocated;
 			next = new (_pool) Block;
 		}
 
+		next->task = nullptr;
 		next->fn = sp::move(fn);
 		next->ref = ref;
+		next->next = nullptr;
+		next->tag = tag;
 
 		if (_pendingBlocksTail) {
 			_pendingBlocksTail->next = next;
@@ -75,6 +88,8 @@ Status PerformEngine::perform(mem_std::Function<void()> &&fn, Ref *ref) {
 		} else {
 			_pendingBlocksFront = _pendingBlocksTail = next;
 		}
+		++ _blocksWaiting;
+		//log::debug("PerformEngine", this, " perform ", _blocksWaiting, " ", _blocksFree, " ", next->tag);
 	}, _pool);
 
 	return Status::Ok;
@@ -86,11 +101,12 @@ uint32_t PerformEngine::runAllTasks(memory::pool_t *tmpPool) {
 	while (_pendingBlocksFront) {
 		auto next = _pendingBlocksFront;
 
-		if (_pendingBlocksFront == _pendingBlocksTail) {
-			_pendingBlocksFront = _pendingBlocksTail = nullptr;
-		} else {
-			_pendingBlocksFront = _pendingBlocksFront->next;
+		if (next == _pendingBlocksTail) {
+			_pendingBlocksTail = nullptr;
 		}
+		_pendingBlocksFront = next->next;
+
+		-- _blocksWaiting;
 
 		mem_pool::perform_clear([&] {
 			if (next->fn) {
@@ -106,13 +122,42 @@ uint32_t PerformEngine::runAllTasks(memory::pool_t *tmpPool) {
 			next->fn = nullptr;
 			next->task = nullptr;
 			next->ref = nullptr;
+			next->next = nullptr;
+			next->tag = StringView();
 		}, tmpPool);
 
 		next->next = _emptyBlocks;
 		_emptyBlocks = next;
+		++ _blocksFree;
 	}
 
+	//if (nevents > 0) {
+	//	log::debug("PerformEngine", this, " end runAllTasks ", nevents, " ", _blocksWaiting, " ", _blocksFree);
+	//}
 	return nevents;
+}
+
+void PerformEngine::cleanup() {
+	while (_pendingBlocksFront) {
+		auto next = _pendingBlocksFront;
+
+		if (next == _pendingBlocksTail) {
+			_pendingBlocksTail = nullptr;
+		}
+		_pendingBlocksFront = next->next;
+
+		-- _blocksWaiting;
+
+		next->fn = nullptr;
+		next->task = nullptr;
+		next->ref = nullptr;
+		next->next = nullptr;
+		next->tag = StringView();
+
+		next->next = _emptyBlocks;
+		_emptyBlocks = next;
+		++ _blocksFree;
+	}
 }
 
 PerformEngine::PerformEngine(memory::pool_t *pool)
@@ -197,6 +242,8 @@ void QueueData::cleanup() {
 
 	_suspendableHandles.clear();
 	_pendingHandles.clear();
+
+	PerformEngine::cleanup();
 }
 
 void QueueData::notify(Handle *handle, const NotifyData &data) {

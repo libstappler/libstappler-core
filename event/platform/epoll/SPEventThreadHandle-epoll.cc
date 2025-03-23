@@ -109,9 +109,9 @@ Status ThreadEPollHandle::perform(Rc<thread::Task> &&task) {
 	return Status::Ok;
 }
 
-Status ThreadEPollHandle::perform(mem_std::Function<void()> &&func, Ref *target) {
+Status ThreadEPollHandle::perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) {
 	std::unique_lock lock(_mutex);
-	_outputCallbacks.emplace_back(sp::move(func), target);
+	_outputCallbacks.emplace_back(CallbackInfo{sp::move(func), target, tag});
 
 	uint64_t value = 1;
 	::eventfd_write(reinterpret_cast<EventFdSource *>(_data)->fd, value);

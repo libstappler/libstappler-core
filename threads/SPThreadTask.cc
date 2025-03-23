@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2019 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,26 +26,28 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 /* creates empty task with only complete function to be used as callback from other thread */
-bool Task::init(const CompleteCallback &c, Ref *t, TaskGroup *g) {
+bool Task::init(const CompleteCallback &c, Ref *t, TaskGroup *g, StringView tag) {
 	addRef(t);
 	if (c) {
 		_complete.push_back(c);
 	}
 	_group = g;
+	_tag = tag;
 	return true;
 }
 
-bool Task::init(CompleteCallback &&c, Ref *t, TaskGroup *g) {
+bool Task::init(CompleteCallback &&c, Ref *t, TaskGroup *g, StringView tag) {
 	addRef(t);
 	if (c) {
 		_complete.emplace_back(sp::move(c));
 	}
 	_group = g;
+	_tag = tag;
 	return true;
 }
 
 /* creates regular async task without initialization phase */
-bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g) {
+bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g, StringView tag) {
 	addRef(t);
 	if (e) {
 		_execute.push_back(e);
@@ -54,10 +56,11 @@ bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t, Tas
 		_complete.push_back(c);
 	}
 	_group = g;
+	_tag = tag;
 	return true;
 }
 
-bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g) {
+bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g, StringView tag) {
 	addRef(t);
 	if (e) {
 		_execute.emplace_back(sp::move(e));
@@ -66,11 +69,12 @@ bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g)
 		_complete.emplace_back(sp::move(c));
 	}
 	_group = g;
+	_tag = tag;
 	return true;
 }
 
 /* creates regular async task with initialization phase */
-bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g) {
+bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g, StringView tag) {
 	addRef(t);
 	if (p) {
 		_prepare.push_back(p);
@@ -82,10 +86,11 @@ bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const Comple
 		_complete.push_back(c);
 	}
 	_group = g;
+	_tag = tag;
 	return true;
 }
 
-bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g) {
+bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g, StringView tag) {
 	addRef(t);
 	if (p) {
 		_prepare.emplace_back(sp::move(p));
@@ -97,6 +102,7 @@ bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, 
 		_complete.emplace_back(sp::move(c));
 	}
 	_group = g;
+	_tag = tag;
 	return true;
 }
 
@@ -152,8 +158,8 @@ void Task::run() const {
 bool Task::prepare() const {
 	if (_state == TaskState::Initial) {
 		if (!_prepare.empty()) {
-			for (auto i : _prepare) {
-				if (i && !i(*this)) {
+			for (auto &it : _prepare) {
+				if (it && !it(*this)) {
 					_state = TaskState::ExecutedFailed;
 					return false;
 				}
@@ -174,8 +180,8 @@ bool Task::prepare() const {
 bool Task::execute() const {
 	if (_state == TaskState::Prepared) {
 		if (!_execute.empty()) {
-			for (auto i : _execute) {
-				if (i && !i(*this)) {
+			for (auto &it : _execute) {
+				if (it && !it(*this)) {
 					_state = TaskState::ExecutedFailed;
 					return false;
 				}
@@ -195,8 +201,10 @@ void Task::handleCompleted() const {
 	case TaskState::ExecutedSuccessful:
 	case TaskState::ExecutedFailed:
 		if (!_complete.empty()) {
-			for (auto i : _complete) {
-				i(*this, isSuccessful());
+			for (auto &it : _complete) {
+				if (it) {
+					it(*this, isSuccessful());
+				}
 			}
 		}
 		if (_group) {

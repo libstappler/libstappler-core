@@ -105,7 +105,7 @@ public:
 	void notify(URingData *, ThreadUringSource *source, const NotifyData &);
 
 	virtual Status perform(Rc<thread::Task> &&task) override;
-	virtual Status perform(mem_std::Function<void()> &&func, Ref *target) override;
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) override;
 
 protected:
 	void rearmFailsafe(URingData *, ThreadUringSource *);
@@ -126,7 +126,7 @@ public:
 	void notify(URingData *, EventFdSource *, const NotifyData &);
 
 	virtual Status perform(Rc<thread::Task> &&task) override;
-	virtual Status perform(mem_std::Function<void()> &&func, Ref *target) override;
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) override;
 
 protected:
 	uint16_t _bufferGroup = 0;

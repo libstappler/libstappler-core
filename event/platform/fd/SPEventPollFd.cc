@@ -31,28 +31,38 @@ Rc<PollFdHandle> PollFdHandle::create(const Queue *q, int fd, PollFlags flags, C
 #ifdef SP_EVENT_URING
 	if (d->_uring) {
 		return Rc<PollFdURingHandle>::create(&d->_uringPollFdClass, fd, flags, move(c));
-	} else
+	}
 #endif
 	if (d->_epoll) {
 		return Rc<PollFdEPollHandle>::create(&d->_epollPollFdClass, fd, flags, move(c));
 	}
+#ifdef ANDROID
+	if (d->_alooper) {
+		return Rc<PollFdALooperHandle>::create(&d->_alooperPollFdClass, fd, flags, move(c));
+	}
+#endif
 	return nullptr;
 }
 
-Rc<PollFdHandle> PollFdHandle::create(const Queue *q, int fd, PollFlags flags, mem_std::Function<void(int fd, PollFlags)> &&cb) {
+Rc<PollFdHandle> PollFdHandle::create(const Queue *q, int fd, PollFlags flags,
+		mem_std::Function<Status(int fd, PollFlags)> &&cb, Ref *ref) {
 	struct PollData : public Ref {
 		int fd;
-		mem_std::Function<void(int fd, PollFlags)> cb;
+		mem_std::Function<Status(int fd, PollFlags)> cb;
+		Rc<Ref> ref;
 	};
 
 	auto data = Rc<PollData>::alloc();
 	data->fd = fd;
 	data->cb = sp::move(cb);
+	data->ref = ref;
 
 	auto h = create(q, fd, flags, CompletionHandle<PollFdHandle>::create<PollData>(data,
 			[] (PollData *data, PollFdHandle *handle, uint32_t value, Status st) {
 		if (st == Status::Ok) {
-			data->cb(data->fd, PollFlags(value));
+			if (data->cb(data->fd, PollFlags(value)) != Status::Ok) {
+				handle->cancel();
+			}
 		}
 	}));
 	h->setUserdata(data);
@@ -101,6 +111,7 @@ Status PollFdURingHandle::disarm(URingData *uring, PollFdSource *source) {
 	if (status == Status::Ok) {
 		uring->pushSqe({IORING_OP_POLL_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
 			sqe->fd = source->fd;
+			sqe->user_data = URING_USERDATA_IGNORED;
 		}, URingPushFlags::Submit);
 		++ _timeline;
 	}
@@ -179,10 +190,10 @@ Status PollFdALooperHandle::rearm(ALooperData *alooper, PollFdSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
 		int events = 0;
-		if (hasFlag(source->flags, PollFlags::In)) { source->event.events |= ALOOPER_EVENT_INPUT; }
-		if (hasFlag(source->flags, PollFlags::Out)) { source->event.events |= ALOOPER_EVENT_OUTPUT; }
-		if (hasFlag(source->flags, PollFlags::Err)) { source->event.events |= ALOOPER_EVENT_ERROR; }
-		if (hasFlag(source->flags, PollFlags::HungUp)) { source->event.events |= ALOOPER_EVENT_HANGUP; }
+		if (hasFlag(source->flags, PollFlags::In)) { events |= ALOOPER_EVENT_INPUT; }
+		if (hasFlag(source->flags, PollFlags::Out)) { events |= ALOOPER_EVENT_OUTPUT; }
+		if (hasFlag(source->flags, PollFlags::Err)) { events |= ALOOPER_EVENT_ERROR; }
+		if (hasFlag(source->flags, PollFlags::HungUp)) { events |= ALOOPER_EVENT_HANGUP; }
 
 		status = alooper->add(source->fd, events, this);
 	}
