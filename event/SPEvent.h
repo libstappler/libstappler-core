@@ -42,7 +42,7 @@ class FileHandle;
 class TimerHandle;
 class ThreadHandle;
 
-class BufferChain;
+struct BufferChain;
 
 using FileType = filesystem::FileType;
 using OpenFlags = filesystem::OpenFlags;

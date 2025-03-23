@@ -31,6 +31,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
 const BitmapFormat &getDefaultFormat(uint32_t);
+
 SPUNUSED static std::unique_lock<std::mutex> lockFormatList();
 SPUNUSED static void addCustomFormat(BitmapFormat &&fmt);
 SPUNUSED static const std::vector<BitmapFormat *> &getCustomFormats();

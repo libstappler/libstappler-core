@@ -245,7 +245,8 @@ Status URingData::pushSqe(std::initializer_list<uint8_t> ops,
 
 	auto size = uint32_t(ops.size());
 
-	Handle * handlesToRetain[size] = { nullptr };
+	Handle * handlesToRetain[size];
+	memset(handlesToRetain, 0, sizeof(handlesToRetain));
 
 	auto linked = hasFlag(flags, URingPushFlags::Linked);
 	auto sqe = getNextSqe(size);
