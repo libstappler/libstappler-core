@@ -165,35 +165,35 @@ inline constexpr double pi = pi_v<double>;
 }
 
 // used for naming/hashing (like "MyTag"_tag)
-constexpr uint32_t operator"" _hash ( const char* str, size_t len) {
+constexpr uint32_t operator""_hash ( const char* str, size_t len) {
 	return stappler::hash::hash32(str, uint32_t(len));
 }
-constexpr uint32_t operator"" _tag ( const char* str, size_t len) {
+constexpr uint32_t operator""_tag ( const char* str, size_t len) {
 	return stappler::hash::hash32(str, uint32_t(len));
 }
 
-constexpr uint64_t operator"" _hash64 ( const char* str, size_t len) {
+constexpr uint64_t operator""_hash64 ( const char* str, size_t len) {
 	return stappler::hash::hash64(str, len);
 }
-constexpr uint64_t operator"" _tag64 ( const char* str, size_t len) {
+constexpr uint64_t operator""_tag64 ( const char* str, size_t len) {
 	return stappler::hash::hash64(str, len);
 }
 
-constexpr long double operator"" _to_rad ( long double val ) { return val * numbers::pi / 180.0; }
-constexpr long double operator"" _to_rad ( unsigned long long int val ) { return val * numbers::pi / 180.0; }
+constexpr long double operator""_to_rad ( long double val ) { return val * numbers::pi / 180.0; }
+constexpr long double operator""_to_rad ( unsigned long long int val ) { return val * numbers::pi / 180.0; }
 
 // string length (useful for comparation: memcmp(str, "Test", "Test"_len) )
-constexpr size_t operator"" _length ( const char* str, size_t len) { return len; }
-constexpr size_t operator"" _length ( const char16_t* str, size_t len) { return len; }
-constexpr size_t operator"" _len ( const char* str, size_t len) { return len; }
-constexpr size_t operator"" _len ( const char16_t* str, size_t len) { return len; }
+constexpr size_t operator""_length ( const char* str, size_t len) { return len; }
+constexpr size_t operator""_length ( const char16_t* str, size_t len) { return len; }
+constexpr size_t operator""_len ( const char* str, size_t len) { return len; }
+constexpr size_t operator""_len ( const char16_t* str, size_t len) { return len; }
 
-constexpr unsigned long long int operator"" _GiB ( unsigned long long int val ) { return val * 1024 * 1024 * 1024; }
-constexpr unsigned long long int operator"" _MiB ( unsigned long long int val ) { return val * 1024 * 1024; }
-constexpr unsigned long long int operator"" _KiB ( unsigned long long int val ) { return val * 1024; }
+constexpr unsigned long long int operator""_GiB ( unsigned long long int val ) { return val * 1024 * 1024 * 1024; }
+constexpr unsigned long long int operator""_MiB ( unsigned long long int val ) { return val * 1024 * 1024; }
+constexpr unsigned long long int operator""_KiB ( unsigned long long int val ) { return val * 1024; }
 
-constexpr char16_t operator"" _c16 (unsigned long long int val) { return (char16_t)val; }
-constexpr char operator"" _c8 (unsigned long long int val) { return (char)val; }
+constexpr char16_t operator""_c16 (unsigned long long int val) { return (char16_t)val; }
+constexpr char operator""_c8 (unsigned long long int val) { return (char)val; }
 
 
 /*

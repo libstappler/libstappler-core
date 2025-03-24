@@ -225,7 +225,7 @@ static LARGE_INTEGER getFILETIMEoffset() {
 	return (t);
 }
 
-uint64_t clock(core::ClockType type) {
+uint64_t clock(ClockType type) {
 	LARGE_INTEGER t;
 	static LARGE_INTEGER offset;
 	static int64_t frequencyToMicroseconds;

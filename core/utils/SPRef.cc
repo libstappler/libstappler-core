@@ -38,6 +38,12 @@ struct RefAllocData {
 	std::forward_list<memory::pool_t *> delayedPools;
 	std::forward_list<memory::allocator_t *> delayedAllocs;
 
+	static RefAllocData *get() {
+		static thread_local RefAllocData tl_RefAllocData;
+
+		return &tl_RefAllocData;
+	}
+
 	~RefAllocData() {
 		clear();
 	}
@@ -59,51 +65,52 @@ struct RefAllocData {
 	}
 };
 
-static thread_local RefAllocData tl_RefAllocData;
-
 void * RefAlloc::operator new (size_t size, memory::pool_t* pool) noexcept {
 	SPASSERT(pool, "Context pool should be defined for allocation");
 
 	auto ptr = memory::pool::palloc(pool, size);
-	tl_RefAllocData.lastPtr = ptr;
+	RefAllocData::get()->lastPtr = ptr;
 	return ptr;
 }
 
 void RefAlloc::operator delete(void *ptr) noexcept {
-	if (ptr != tl_RefAllocData.lastPtr) {
+	auto d = RefAllocData::get();
+	if (ptr != d->lastPtr) {
 		AllocBaseType::operator delete(ptr);
 	}
-	tl_RefAllocData.lastPtr = nullptr;
-	tl_RefAllocData.clear();
+	d->lastPtr = nullptr;
+	d->clear();
 }
 
 void RefAlloc::operator delete(void *ptr, std::align_val_t al) noexcept {
-	if (ptr != tl_RefAllocData.lastPtr) {
+	auto d = RefAllocData::get();
+	if (ptr != d->lastPtr) {
 		AllocBaseType::operator delete(ptr, al);
 	}
-	tl_RefAllocData.lastPtr = nullptr;
-	tl_RefAllocData.clear();
+	d->lastPtr = nullptr;
+	d->clear();
 }
 
 RefAlloc::~RefAlloc() {
 	if ((_referenceCount.load() & PoolAllocBit) != 0) {
-		tl_RefAllocData.lastPtr = this;
+		RefAllocData::get()->lastPtr = this;
 	}
 }
 
 RefAlloc::RefAlloc() noexcept {
-	if (tl_RefAllocData.lastPtr == this) {
+	auto d = RefAllocData::get();
+	if (d->lastPtr == this) {
 		_referenceCount.fetch_or(PoolAllocBit);
 	}
-	tl_RefAllocData.lastPtr = nullptr;
+	d->lastPtr = nullptr;
 }
 
 void RefAlloc::destroySelfContained(memory::pool_t *pool) {
-	tl_RefAllocData.delayedPools.emplace_front(pool);
+	RefAllocData::get()->delayedPools.emplace_front(pool);
 }
 
 void RefAlloc::destroySelfContained(memory::allocator_t *alloc) {
-	tl_RefAllocData.delayedAllocs.emplace_front(alloc);
+	RefAllocData::get()->delayedAllocs.emplace_front(alloc);
 }
 
 }

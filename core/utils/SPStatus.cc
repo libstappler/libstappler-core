@@ -134,7 +134,7 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 
 	// Use callback-stream output
 	auto fn = [&] (StringView out) {
-		strncat(strerrBuffer, out.data(), out.size());
+		strncat_s(strerrBuffer, STATUS_DESC_BUFFER_SIZE, out.data(), out.size());
 	};
 
 	auto outCb = Callback<void(StringView)>(fn);
@@ -174,7 +174,7 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 			outCb << StringView(ptr, strlen(ptr));
 		}
 #else
-#error TODO
+		::strerror_s(target, STATUS_DESC_BUFFER_SIZE - len - 1, err);
 #endif
 
 	} else {

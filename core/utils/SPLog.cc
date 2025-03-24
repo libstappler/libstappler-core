@@ -128,20 +128,14 @@ static void DefaultLog(LogType type, const StringView &tag, CustomLog::Type t, C
 	}
 }
 
-struct CustomLogManager : Ref {
+struct CustomLogManager {
 	CustomLog::log_fn logFuncArr[MAX_LOG_FUNC] = { 0 };
 	std::atomic<int> logFuncCount;
 	std::mutex logFuncMutex;
 
-	static Rc<CustomLogManager> get() {
-		static std::mutex s_mutex;
-		static Rc<CustomLogManager> ptr;
-
-		std::unique_lock<std::mutex> lock(s_mutex);
-		if (!ptr) {
-			ptr = Rc<CustomLogManager>::alloc();
-		}
-		return ptr;
+	static CustomLogManager *get() {
+		static CustomLogManager ptr;
+		return &ptr;
 	}
 
 	void insert(CustomLog::log_fn fn) {
@@ -197,13 +191,13 @@ struct CustomLogManager : Ref {
 CustomLog::CustomLog(log_fn logfn) : fn(logfn) {
 	manager = CustomLogManager::get();
 	if (fn) {
-		static_cast<CustomLogManager *>(manager.get())->insert(fn);
+		reinterpret_cast<CustomLogManager *>(manager)->insert(fn);
 	}
 }
 
 CustomLog::~CustomLog() {
 	if (fn) {
-		static_cast<CustomLogManager *>(manager.get())->remove(fn);
+		reinterpret_cast<CustomLogManager *>(manager)->remove(fn);
 	}
 }
 
@@ -215,7 +209,7 @@ CustomLog::CustomLog(CustomLog && other) : fn(other.fn) {
 CustomLog& CustomLog::operator=(CustomLog && other) {
 	manager = CustomLogManager::get();
 	if (fn && fn != other.fn) {
-		static_cast<CustomLogManager *>(manager.get())->remove(fn);
+		reinterpret_cast<CustomLogManager *>(manager)->remove(fn);
 	}
 	fn = other.fn;
 	other.fn = nullptr;

@@ -68,7 +68,7 @@ struct SP_PUBLIC CustomLog {
 	CustomLog& operator=(CustomLog &&);
 
 	log_fn fn;
-	Rc<Ref> manager;
+	void *manager;
 };
 
 extern std::bitset<6> None;

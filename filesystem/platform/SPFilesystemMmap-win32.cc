@@ -43,17 +43,16 @@ uint32_t _getMemoryPageSize() {
 # define DWORD_HI(x) (x >> 32)
 # define DWORD_LO(x) ((x) & 0xffffffff)
 
-uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtectionFlags prot, size_t offset, size_t len) {
-
+uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot, size_t offset, size_t len) {
 	DWORD flProtect;
-	if ((prot & ProtectionFlags::Write) != ProtectionFlags::None) {
-		if ((prot & ProtectionFlags::Exec) != ProtectionFlags::None) {
+	if ((prot & ProtFlags::MapWrite) != ProtFlags::None) {
+		if ((prot & ProtFlags::MapExecute) != ProtFlags::None) {
 			flProtect = PAGE_EXECUTE_READWRITE;
 		} else {
 			flProtect = PAGE_READWRITE;
 		}
-	} else if ((prot & ProtectionFlags::Exec) != ProtectionFlags::None) {
-		if ((prot & ProtectionFlags::Read) != ProtectionFlags::None) {
+	} else if ((prot & ProtFlags::MapExecute) != ProtFlags::None) {
+		if ((prot & ProtFlags::MapRead) != ProtFlags::None) {
 			flProtect = PAGE_EXECUTE_READ;
 		} else {
 			flProtect = PAGE_EXECUTE;
@@ -67,17 +66,17 @@ uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, Protec
 	DWORD dwDesiredAccess = 0;
 	DWORD dwDesiredAccessMap = 0;
 	DWORD dwShareMode = 0;
-	if ((prot & ProtectionFlags::Read) != ProtectionFlags::None) {
+	if ((prot & ProtFlags::MapRead) != ProtFlags::None) {
 		dwDesiredAccessMap |= FILE_MAP_READ;
 		dwDesiredAccess |= GENERIC_READ;
 		dwShareMode |= FILE_SHARE_READ;
 	}
-	if ((prot & ProtectionFlags::Write) != ProtectionFlags::None) {
+	if ((prot & ProtFlags::MapWrite) != ProtFlags::None) {
 		dwDesiredAccessMap |= FILE_MAP_WRITE;
 		dwDesiredAccess |= GENERIC_WRITE;
 		dwShareMode = 0;
 	}
-	if ((prot & ProtectionFlags::Exec) != ProtectionFlags::None) {
+	if ((prot & ProtFlags::MapExecute) != ProtFlags::None) {
 		dwDesiredAccessMap |= FILE_MAP_EXECUTE;
 	}
 	if (type == MappingType::Private) {

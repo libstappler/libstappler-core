@@ -930,7 +930,7 @@ using weak_string = const string;
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-inline stappler::memory::basic_string<char> operator"" _weak ( const char* str, size_t len) {
+inline stappler::memory::basic_string<char> operator""_weak ( const char* str, size_t len) {
 	stappler::memory::basic_string<char> ret;
 	if (str) {
 		ret.assign_weak(str, len);

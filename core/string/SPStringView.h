@@ -78,7 +78,7 @@ public:
 	template <typename Interface, _CharType c, typename ... Args>
 	static auto merge(Args && ... args) -> typename Interface::template BasicStringType<CharType>;
 
-	constexpr StringViewBase();
+	constexpr StringViewBase() = default;
 	constexpr StringViewBase(const CharType *ptr, size_t len = maxOf<size_t>());
 	constexpr StringViewBase(const CharType *ptr, size_t pos, size_t len);
 	constexpr StringViewBase(const Self &, size_t pos, size_t len);
@@ -88,7 +88,7 @@ public:
 
 	Self & operator =(const PoolString &str);
 	Self & operator =(const StdString &str);
-	Self & operator =(const Self &str);
+	Self & operator =(const Self &str) = default;
 
 	Self & set(const PoolString &str);
 	Self & set(const StdString &str);
@@ -517,9 +517,6 @@ inline void StringViewBase<_CharType>::_mergeWithSep(Buf &buf, T &&t) {
 
 
 template <typename _CharType>
-inline constexpr StringViewBase<_CharType>::StringViewBase() : BytesReader<_CharType>(nullptr, 0) { }
-
-template <typename _CharType>
 inline constexpr StringViewBase<_CharType>::StringViewBase(const CharType *ptr, size_t len)
 : BytesReader<_CharType>(ptr, string::detail::length(ptr, len)) { }
 
@@ -551,12 +548,6 @@ auto StringViewBase<_CharType>::operator =(const PoolString &str) -> Self & {
 
 template <typename _CharType>
 auto StringViewBase<_CharType>::operator =(const StdString &str)-> Self & {
-	this->set(str);
-	return *this;
-}
-
-template <typename _CharType>
-auto StringViewBase<_CharType>::operator =(const Self &str)-> Self & {
 	this->set(str);
 	return *this;
 }

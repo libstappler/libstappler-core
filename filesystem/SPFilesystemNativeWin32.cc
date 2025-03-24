@@ -156,26 +156,15 @@ bool stat_fn(StringView path, Stat &stat) {
 	if( _wstat64((wchar_t *)str.c_str(), &s) == 0 ) {
 		stat.size = size_t(s.st_size);
 
-		if (S_ISBLK(s.st_mode)) { stat.type = FileType::BlockDevice; }
-		else if (S_ISCHR(s.st_mode)) { stat.type = FileType::CharDevice; }
-		else if (S_ISDIR(s.st_mode)) { stat.type = FileType::Dir; }
-		else if (S_ISFIFO(s.st_mode)) { stat.type = FileType::Pipe; }
-		else if (S_ISREG(s.st_mode)) { stat.type = FileType::File; }
-		else if (S_ISLNK(s.st_mode)) { stat.type = FileType::Link; }
-		else if (S_ISSOCK(s.st_mode)) { stat.type = FileType::Socket; }
+		if (hasFlag(s.st_mode, uint16_t(_S_IFCHR))) { stat.type = FileType::CharDevice; }
+		else if (hasFlag(s.st_mode, uint16_t(_S_IFDIR))) { stat.type = FileType::Dir; }
+		else if (hasFlag(s.st_mode, uint16_t(_S_IFIFO))) { stat.type = FileType::Pipe; }
+		else if (hasFlag(s.st_mode, uint16_t(_S_IFREG))) { stat.type = FileType::File; }
 		else { stat.type = FileType::Unknown; }
 
-		if (s.st_mode & S_IRUSR) { stat.prot |= ProtFlags::UserRead; }
-		if (s.st_mode & S_IWUSR) { stat.prot |= ProtFlags::UserWrite; }
-		if (s.st_mode & S_IXUSR) { stat.prot |= ProtFlags::UserExecute; }
-		if (s.st_mode & S_ISUID) { stat.prot |= ProtFlags::UserSetId; }
-		if (s.st_mode & S_IRGRP) { stat.prot |= ProtFlags::GroupRead; }
-		if (s.st_mode & S_IWGRP) { stat.prot |= ProtFlags::GroupWrite; }
-		if (s.st_mode & S_IXGRP) { stat.prot |= ProtFlags::GroupExecute; }
-		if (s.st_mode & S_ISGID) { stat.prot |= ProtFlags::GroupSetId; }
-		if (s.st_mode & S_IROTH) { stat.prot |= ProtFlags::AllRead; }
-		if (s.st_mode & S_IWOTH) { stat.prot |= ProtFlags::AllWrite; }
-		if (s.st_mode & S_IXOTH) { stat.prot |= ProtFlags::AllExecute; }
+		if (s.st_mode & _S_IREAD) { stat.prot |= ProtFlags::UserRead; }
+		if (s.st_mode & _S_IWRITE) { stat.prot |= ProtFlags::UserWrite; }
+		if (s.st_mode & _S_IEXEC) { stat.prot |= ProtFlags::UserExecute; }
 
 		stat.user = s.st_uid;
 		stat.group = s.st_gid;

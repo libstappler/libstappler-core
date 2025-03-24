@@ -275,9 +275,9 @@ protected:
     using TimeStorage::TimeStorage;
 };
 
-constexpr TimeInterval operator"" _sec ( unsigned long long int val ) { return TimeInterval::seconds((time_t)val); }
-constexpr TimeInterval operator"" _msec ( unsigned long long int val ) { return TimeInterval::milliseconds(val); }
-constexpr TimeInterval operator"" _mksec ( unsigned long long int val ) { return TimeInterval::microseconds(val); }
+constexpr TimeInterval operator""_sec ( unsigned long long int val ) { return TimeInterval::seconds((time_t)val); }
+constexpr TimeInterval operator""_msec ( unsigned long long int val ) { return TimeInterval::milliseconds(val); }
+constexpr TimeInterval operator""_mksec ( unsigned long long int val ) { return TimeInterval::microseconds(val); }
 
 
 inline const Time TimeInterval::operator+(const Time& v) const {

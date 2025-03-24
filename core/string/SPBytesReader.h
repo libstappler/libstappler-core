@@ -45,7 +45,7 @@ public:
 	template <typename ... Args>
 	using Compose = chars::Compose<CharType, Args ...>;
 
-	constexpr BytesReader() : ptr(nullptr), len(0) { }
+	constexpr BytesReader() = default;
 	constexpr BytesReader(const CharType *p, size_t l) : ptr(p), len(l) { }
 
 	BytesReader & set(const CharType *p, size_t l) { ptr = p; len = l; return *this; }
@@ -101,8 +101,8 @@ public:
 	bool terminated() const { return ptr[len] == 0; }
 
 protected:
-	const CharType *ptr;
-	size_t len;
+	const CharType *ptr = nullptr;
+	size_t len = 0;
 };
 
 template <typename CharType> inline size_t
