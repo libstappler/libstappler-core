@@ -25,6 +25,27 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
+
+bool TaskGroup::init(mem_std::Function<void(const TaskGroup &, const Task &)> &&fn) {
+	_notifyFn = sp::move(fn);
+	return true;
+}
+
+void TaskGroup::handleAdded(const Task *task) {
+	++ _added;
+}
+
+void TaskGroup::handleCompleted(const Task *task) {
+	++ _completed;
+	if (_notifyFn) {
+		_notifyFn(*this, *task);
+	}
+}
+
+Pair<size_t, size_t> TaskGroup::getCounters() const {
+	return pair(_completed.load(), _added.load());
+}
+
 /* creates empty task with only complete function to be used as callback from other thread */
 bool Task::init(const CompleteCallback &c, Ref *t, TaskGroup *g, StringView tag) {
 	addRef(t);
@@ -208,7 +229,7 @@ void Task::handleCompleted() const {
 			}
 		}
 		if (_group) {
-			_group->handlePerformed(this);
+			_group->handleCompleted(this);
 		}
 		break;
 	default:

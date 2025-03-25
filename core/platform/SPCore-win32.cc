@@ -26,6 +26,12 @@
 #include "SPMemory.h"
 #include "SPPlatformUnistd.h"
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
 class RandomSequence {
@@ -226,6 +232,10 @@ static LARGE_INTEGER getFILETIMEoffset() {
 }
 
 uint64_t clock(ClockType type) {
+	if (type == ClockType::Hardware) {
+		return __rdtsc();
+	}
+
 	LARGE_INTEGER t;
 	static LARGE_INTEGER offset;
 	static int64_t frequencyToMicroseconds;

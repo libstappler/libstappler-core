@@ -28,6 +28,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+struct PerformEngine;
+
 class SP_PUBLIC ThreadHandle : public Handle, public thread::PerformInterface {
 public:
 	virtual ~ThreadHandle();

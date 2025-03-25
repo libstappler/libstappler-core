@@ -50,6 +50,15 @@
 
 #endif
 
+#if WIN32
+
+#include "platform/windows/SPEvent-windows.cc"
+#include "platform/windows/SPEvent-iocp.cc"
+#include "platform/windows/SPEventTimerIocp.cc"
+#include "platform/windows/SPEventThreadIocp.cc"
+
+#endif
+
 #include "detail/SPEventHandleClass.cc"
 #include "detail/SPEventQueueData.cc"
 #include "SPEventBufferChain.cc"

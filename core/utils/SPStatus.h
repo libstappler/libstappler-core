@@ -33,7 +33,10 @@ namespace status {
 constexpr int STATUS_ERRNO_OFFSET = 0xFFFF;
 constexpr int STATUS_GENERIC_OFFSET = 0x1FFFF;
 constexpr int STATUS_GAPI_OFFSET = 0x2FFFF;
-constexpr int STATUS_END_OFFSET = 0x3FFFF;
+
+// WinAPI error space
+constexpr int STATUS_WINAPI_OFFSET = 0x100FFFF;
+constexpr int STATUS_END_OFFSET = 0x200FFFF;
 
 constexpr inline int ERRNO_ERROR_NUMBER(int __errno) {
 	return - STATUS_ERRNO_OFFSET - __errno;
@@ -45,6 +48,10 @@ constexpr inline int GENERIC_ERROR_NUMBER(int __errno) {
 
 constexpr inline int GAPI_ERROR_NUMBER(int __errno) {
 	return - STATUS_GAPI_OFFSET - __errno;
+}
+
+constexpr inline int WINAPI_ERROR_NUMBER(int __errno) {
+	return - STATUS_WINAPI_OFFSET - __errno;
 }
 
 }
@@ -144,7 +151,11 @@ constexpr inline int isGeneric(Status st) {
 }
 
 constexpr inline int isGApi(Status st) {
-	return toInt(st) <= -STATUS_GAPI_OFFSET && toInt(st) > -STATUS_END_OFFSET;
+	return toInt(st) <= -STATUS_GAPI_OFFSET && toInt(st) > -STATUS_WINAPI_OFFSET;
+}
+
+constexpr inline int isWinApi(Status st) {
+	return toInt(st) <= -STATUS_WINAPI_OFFSET && toInt(st) > -STATUS_END_OFFSET;
 }
 
 constexpr inline int toErrno(Status st) {
@@ -159,8 +170,16 @@ constexpr inline int toGApi(Status st) {
 	return isGApi(st) ? -toInt(st) - STATUS_GAPI_OFFSET : 0;
 }
 
+constexpr inline int toWinApi(Status st) {
+	return isWinApi(st) ? -toInt(st) - STATUS_WINAPI_OFFSET : 0;
+}
+
 constexpr inline Status errnoToStatus(int _errno) {
 	return Status(-STATUS_ERRNO_OFFSET - _errno);
+}
+
+constexpr inline Status lastErrorToStatus(int _GetLastErrorResult) {
+	return Status(-STATUS_WINAPI_OFFSET - _GetLastErrorResult);
 }
 
 }

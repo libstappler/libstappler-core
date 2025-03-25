@@ -46,10 +46,10 @@ class SP_PUBLIC TaskGroup : public Ref {
 public:
 	virtual ~TaskGroup() = default;
 
-	bool init(mem_std::Function<void()> &&);
+	bool init(mem_std::Function<void(const TaskGroup &, const Task &)> &&);
 
 	virtual void handleAdded(const Task *);
-	virtual void handlePerformed(const Task *);
+	virtual void handleCompleted(const Task *);
 
 	Pair<size_t, size_t> getCounters() const; // <completed, added>
 
@@ -57,7 +57,7 @@ protected:
 	std::atomic<size_t> _added = 0;
 	std::atomic<size_t> _completed = 0;
 
-	mem_std::Function<void()> _notifyFn;
+	mem_std::Function<void(const TaskGroup &, const Task &)> _notifyFn;
 };
 
 class SP_PUBLIC Task : public Ref {

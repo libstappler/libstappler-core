@@ -30,9 +30,9 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 struct QueueData;
 
 struct SP_PUBLIC NotifyData {
-	int32_t result;
-	uint32_t queueFlags;
-	uint32_t userFlags;
+	int32_t result = 0;
+	uint32_t queueFlags = 0;
+	uint32_t userFlags = 0;
 };
 
 struct SP_PUBLIC QueueHandleClassInfo {

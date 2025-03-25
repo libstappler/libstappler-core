@@ -20,39 +20,39 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_CORE_SPPLATFORM_H_
-#define CORE_CORE_SPPLATFORM_H_
+#ifndef CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTIMERIOCP_H_
+#define CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTIMERIOCP_H_
 
-#include "SPCore.h"
+#include "SPEventTimerHandle.h"
+#include "SPEvent-iocp.h"
 
-namespace STAPPLER_VERSIONIZED stappler {
+namespace STAPPLER_VERSIONIZED stappler::event {
 
-enum class ClockType {
-	Default,
-	Monotonic,
-	Realtime,
-	Process,
-	Thread,
-	// hardware clock tick counter with unknown monotonic resolution
-	// see `rdtsc`
-	Hardware
+struct SP_PUBLIC TimerIocpSource {
+	HANDLE handle = nullptr;
+	HANDLE event = nullptr;
+	TimeInterval interval;
+	uint32_t count = 0;
+	uint32_t value = 0;
+	bool subintervals = false;
+
+	bool init(const TimerInfo &info);
+	void reset();
+	void cancel();
+};
+
+class SP_PUBLIC TimerIocpHandle : public TimerHandle {
+public:
+	virtual ~TimerIocpHandle() = default;
+
+	bool init(HandleClass *, TimerInfo &&);
+
+	Status rearm(IocpData *, TimerIocpSource *);
+	Status disarm(IocpData *, TimerIocpSource *);
+
+	void notify(IocpData *, TimerIocpSource *source, const NotifyData &);
 };
 
 }
 
-namespace STAPPLER_VERSIONIZED stappler::platform {
-
-SP_PUBLIC size_t makeRandomBytes(uint8_t * buf, size_t count);
-
-// current time in microseconds
-SP_PUBLIC uint64_t clock(ClockType = ClockType::Default);
-
-// current time in nanoseconds
-SP_PUBLIC uint64_t nanoclock(ClockType = ClockType::Default);
-
-// sleep for the microseconds
-SP_PUBLIC void sleep(uint64_t microseconds);
-
-}
-
-#endif /* CORE_CORE_SPPLATFORM_H_ */
+#endif /* CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTIMERIOCP_H_ */

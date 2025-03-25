@@ -22,6 +22,8 @@
 
 #include "SPStatus.h"
 
+#include "SPPlatformUnistd.h"
+
 namespace STAPPLER_VERSIONIZED stappler {
 
 #define STATUS_DESC_BUFFER_SIZE 512
@@ -148,8 +150,10 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 			outCb << "Status::Errno(" << status::toErrno(st) << ")";
 		} else if (toInt(st) <= -status::STATUS_GENERIC_OFFSET && toInt(st) > -status::STATUS_GAPI_OFFSET) {
 			outCb << "Status::Generic(" << status::toGeneric(st) << ")";
-		} else if (toInt(st) <= -status::STATUS_GAPI_OFFSET && toInt(st) > -status::STATUS_END_OFFSET) {
-			outCb << "Status::Generic(" << status::toGApi(st) << ")";
+		} else if (toInt(st) <= -status::STATUS_GAPI_OFFSET && toInt(st) > -status::STATUS_WINAPI_OFFSET) {
+			outCb << "Status::GApi(" << status::toGApi(st) << ")";
+		} else if (toInt(st) <= -status::STATUS_WINAPI_OFFSET && toInt(st) > -status::STATUS_END_OFFSET) {
+			outCb << "Status::WinAPI(" << status::toWinApi(st) << ")";
 		} else {
 			outCb << "Status::Unknown(" << -toInt(st) << ")";
 		}
@@ -176,7 +180,19 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 #else
 		::strerror_s(target, STATUS_DESC_BUFFER_SIZE - len - 1, err);
 #endif
+#if WIN32
+	} else if (status::isWinApi(st)) {
+		outCb << ": ";
 
+		auto errorMessageID = status::toWinApi(st);
+
+		auto len = strlen(strerrBuffer);
+		auto target = &strerrBuffer[len];
+
+		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			target, STATUS_DESC_BUFFER_SIZE - len - 1, NULL);
+#endif
 	} else {
 		outCb << ": No description found";
 	}

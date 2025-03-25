@@ -27,6 +27,21 @@
 #include "SPPlatform.h"
 #include "SPPlatformUnistd.h"
 
+#if __SSE__
+#include <x86intrin.h>
+#define SP_HAS_RDTSC 1
+static inline uint64_t rdtsc() { return __rdtsc(); }
+#elif __aarch64__
+#define SP_HAS_RDTSC 1
+static inline uint64_t rdtsc() {
+    uint64_t cntvct;
+    asm volatile ("mrs %0, cntvct_el0; " : "=r"(cntvct) :: "memory");
+    return cntvct;
+}
+#else
+#define SP_HAS_RDTSC 0
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
 static uint64_t getStaticMinFrameTime() {
@@ -71,6 +86,14 @@ static void _clock(struct timespec *ts, ClockType type) {
 }
 
 uint64_t clock(ClockType type) {
+	if (type == ClockType::Hardware) {
+#if SP_HAS_RDTSC
+		return rdtsc();
+#else
+		type = ClockType::Monotonic;
+#endif
+	}
+
 	struct timespec ts;
 	_clock(&ts, type);
 	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1000'000) + static_cast<uint64_t>(ts.tv_nsec / 1000);

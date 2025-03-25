@@ -20,39 +20,43 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_CORE_SPPLATFORM_H_
-#define CORE_CORE_SPPLATFORM_H_
+#ifndef CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTHREADIOCP_H_
+#define CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTHREADIOCP_H_
 
-#include "SPCore.h"
+#include "SPEventThreadHandle.h"
+#include "SPEvent-iocp.h"
 
-namespace STAPPLER_VERSIONIZED stappler {
+namespace STAPPLER_VERSIONIZED stappler::event {
 
-enum class ClockType {
-	Default,
-	Monotonic,
-	Realtime,
-	Process,
-	Thread,
-	// hardware clock tick counter with unknown monotonic resolution
-	// see `rdtsc`
-	Hardware
+static constexpr bool IOCP_THREAD_NONBLOCK = false;
+
+struct SP_PUBLIC ThreadIocpSource {
+	HANDLE currentThread = nullptr;
+	HANDLE port = nullptr;
+
+	bool init();
+	void cancel();
+};
+
+// eventfd - based handler
+class SP_PUBLIC ThreadIocpHandle : public ThreadHandle {
+public:
+	virtual ~ThreadIocpHandle() = default;
+
+	bool init(HandleClass *);
+
+	Status rearm(IocpData *, ThreadIocpSource *);
+	Status disarm(IocpData *, ThreadIocpSource *);
+
+	void notify(IocpData *, ThreadIocpSource *, const NotifyData &);
+
+	virtual Status perform(Rc<thread::Task> &&task) override;
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) override;
+
+protected:
+	std::mutex _mutex;
 };
 
 }
 
-namespace STAPPLER_VERSIONIZED stappler::platform {
-
-SP_PUBLIC size_t makeRandomBytes(uint8_t * buf, size_t count);
-
-// current time in microseconds
-SP_PUBLIC uint64_t clock(ClockType = ClockType::Default);
-
-// current time in nanoseconds
-SP_PUBLIC uint64_t nanoclock(ClockType = ClockType::Default);
-
-// sleep for the microseconds
-SP_PUBLIC void sleep(uint64_t microseconds);
-
-}
-
-#endif /* CORE_CORE_SPPLATFORM_H_ */
+#endif /* CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTHREADIOCP_H_ */
