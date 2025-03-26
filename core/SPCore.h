@@ -756,57 +756,57 @@ auto each() -> detail::enum_wrapper<E, E(0), E(toInt(E::Max) - 1)> {
  * on this enum class
  */
 #define SP_DEFINE_ENUM_AS_MASK(Type) \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator | (const Type &l, const Type &r) { return Type(stappler::toInt(l) | stappler::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator & (const Type &l, const Type &r) { return Type(stappler::toInt(l) & stappler::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator ^ (const Type &l, const Type &r) { return Type(stappler::toInt(l) ^ stappler::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator |= (Type &l, const Type &r) { l = Type(stappler::toInt(l) | stappler::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator &= (Type &l, const Type &r) { l = Type(stappler::toInt(l) & stappler::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator ^= (Type &l, const Type &r) { l = Type(stappler::toInt(l) ^ stappler::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) == r; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const std::underlying_type<Type>::type &l, const Type &r) { return l == stappler::toInt(r); } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const Type &l, const std::underlying_type<Type>::type &r) { return stappler::toInt(l) != r; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const std::underlying_type<Type>::type &l, const Type &r) { return l != stappler::toInt(r); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator~(const Type &t) { return Type(~stappler::toInt(t)); }
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator | (const Type &l, const Type &r) { return Type(::sp::toInt(l) | ::sp::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator & (const Type &l, const Type &r) { return Type(::sp::toInt(l) & ::sp::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator ^ (const Type &l, const Type &r) { return Type(::sp::toInt(l) ^ ::sp::toInt(r)); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator |= (Type &l, const Type &r) { l = Type(::sp::toInt(l) | ::sp::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator &= (Type &l, const Type &r) { l = Type(::sp::toInt(l) & ::sp::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type & operator ^= (Type &l, const Type &r) { l = Type(::sp::toInt(l) ^ ::sp::toInt(r)); return l; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const Type &l, const std::underlying_type<Type>::type &r) { return ::sp::toInt(l) == r; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const std::underlying_type<Type>::type &l, const Type &r) { return l == ::sp::toInt(r); } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const Type &l, const std::underlying_type<Type>::type &r) { return ::sp::toInt(l) != r; } \
+	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const std::underlying_type<Type>::type &l, const Type &r) { return l != ::sp::toInt(r); } \
+	SP_COVERAGE_TRIVIAL constexpr inline Type operator~(const Type &t) { return Type(~::sp::toInt(t)); }
 
 /** SP_DEFINE_ENUM_AS_INCREMENTABLE adds operator++/operator-- for enumerations */
 #define SP_DEFINE_ENUM_AS_INCREMENTABLE(Type, First, Last) \
 	SP_COVERAGE_TRIVIAL inline constexpr Type& operator++(Type& a) { \
-		auto value = stappler::toInt(a); \
-		if (value >= stappler::toInt(Type::Last)) { value = stappler::toInt(Type::First); } else { ++ value; } \
+		auto value = ::sp::toInt(a); \
+		if (value >= ::sp::toInt(Type::Last)) { value = ::sp::toInt(Type::First); } else { ++ value; } \
 		::memcpy(&a, &value, sizeof(Type)); \
 		return a; \
 	} \
 	SP_COVERAGE_TRIVIAL inline constexpr Type& operator--(Type& a) { \
-		auto value = stappler::toInt(a); \
-		if (value <= stappler::toInt(Type::First)) { value = stappler::toInt(Type::Last); } else { -- value; } \
+		auto value = ::sp::toInt(a); \
+		if (value <= ::sp::toInt(Type::First)) { value = ::sp::toInt(Type::Last); } else { -- value; } \
 		::memcpy(&a, &value, sizeof(Type)); \
 		return a; \
 	} \
 	SP_COVERAGE_TRIVIAL inline constexpr Type operator++(Type& a, int) { \
-		auto value = stappler::toInt(a); auto result = value; \
-		if (value >= stappler::toInt(Type::Last)) { value = stappler::toInt(Type::First); } else { ++ value; } \
+		auto value = ::sp::toInt(a); auto result = value; \
+		if (value >= ::sp::toInt(Type::Last)) { value = ::sp::toInt(Type::First); } else { ++ value; } \
 		::memcpy(&a, &value, sizeof(Type)); \
 		return static_cast<Type>(result); \
 	} \
 	SP_COVERAGE_TRIVIAL inline constexpr Type operator--(Type& a, int) { \
-		auto value = stappler::toInt(a); auto result = value; \
-		if (value <= stappler::toInt(Type::First)) { value = stappler::toInt(Type::Last); } else { -- value; } \
+		auto value = ::sp::toInt(a); auto result = value; \
+		if (value <= ::sp::toInt(Type::First)) { value = ::sp::toInt(Type::Last); } else { -- value; } \
 		::memcpy(&a, &value, sizeof(Type)); \
 		return static_cast<Type>(result); \
 	} \
 	SP_COVERAGE_TRIVIAL inline constexpr Type operator+(const Type &a, const typename std::underlying_type<Type>::type &b) { \
-		return Type(stappler::math::add_cyclic(stappler::toInt(a), b, stappler::toInt(Type::First), stappler::toInt(Type::Last))); \
+		return Type(::sp::math::add_cyclic(::sp::toInt(a), b, ::sp::toInt(Type::First), ::sp::toInt(Type::Last))); \
 	} \
 	SP_COVERAGE_TRIVIAL inline constexpr Type operator+=(Type &a, const typename std::underlying_type<Type>::type &b) { \
-		auto value = stappler::math::add_cyclic(stappler::toInt(a), b, stappler::toInt(Type::First), stappler::toInt(Type::Last)); \
+		auto value = ::sp::math::add_cyclic(::sp::toInt(a), b, ::sp::toInt(Type::First), ::sp::toInt(Type::Last)); \
 		::memcpy(&a, &value, sizeof(Type)); \
 		return a; \
 	} \
 	SP_COVERAGE_TRIVIAL inline constexpr Type operator-(const Type &a, const typename std::underlying_type<Type>::type &b) { \
-		return Type(stappler::math::sub_cyclic(stappler::toInt(a), b, stappler::toInt(Type::First), stappler::toInt(Type::Last))); \
+		return Type(::sp::math::sub_cyclic(::sp::toInt(a), b, ::sp::toInt(Type::First), ::sp::toInt(Type::Last))); \
 	} \
 	SP_COVERAGE_TRIVIAL inline constexpr Type operator-=(Type &a, const typename std::underlying_type<Type>::type &b) { \
-		auto value = stappler::math::sub_cyclic(stappler::toInt(a), b, stappler::toInt(Type::First), stappler::toInt(Type::Last)); \
+		auto value = ::sp::math::sub_cyclic(::sp::toInt(a), b, ::sp::toInt(Type::First), ::sp::toInt(Type::Last)); \
 		::memcpy(&a, &value, sizeof(Type)); \
 		return a; \
 	}

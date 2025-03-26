@@ -102,7 +102,7 @@ namespace STAPPLER_VERSIONIZED stappler {
 #pragma clang diagnostic ignored "-Wgnu-string-literal-operator-template"
 #endif
 
-template <typename CharType, CharType ... Chars> auto operator "" _meta() {
+template <typename CharType, CharType ... Chars> auto operator ""_meta() {
 	return metastring::metastring<Chars ...>();
 }
 

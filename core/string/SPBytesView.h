@@ -41,7 +41,7 @@ public:
 	using PoolBytes = typename memory::PoolInterface::BytesType;
 	using StdBytes = typename memory::StandartInterface::BytesType;
 
-	constexpr BytesViewTemplate();
+	constexpr BytesViewTemplate() = default;
 	constexpr BytesViewTemplate(const uint8_t *p, size_t l);
 	constexpr BytesViewTemplate(StringView);
 
@@ -50,6 +50,8 @@ public:
 
 	template <size_t Size>
 	constexpr BytesViewTemplate(const std::array<uint8_t, Size> &arr);
+
+	constexpr BytesViewTemplate(const Self &vec) = default;
 
 	template<Endian OtherEndianess>
 	constexpr BytesViewTemplate(const BytesViewTemplate<OtherEndianess> &vec);
@@ -130,9 +132,6 @@ public:
 using BytesView = BytesViewTemplate<Endian::Host>;
 using BytesViewNetwork = BytesViewTemplate<Endian::Network>;
 using BytesViewHost = BytesViewTemplate<Endian::Host>;
-
-template <Endian Endianess>
-inline constexpr BytesViewTemplate<Endianess>::BytesViewTemplate() { }
 
 template <Endian Endianess>
 inline constexpr BytesViewTemplate<Endianess>::BytesViewTemplate(const uint8_t *p, size_t l)

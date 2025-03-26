@@ -88,7 +88,7 @@ bool PollFdHandle::init(HandleClass *cl, int fd, PollFlags flags, CompletionHand
 		return false;
 	}
 
-	auto source = reinterpret_cast<PollFdSource *>(_data);
+	auto source = new (_data) PollFdSource;
 	return source->init(fd, flags);
 }
 

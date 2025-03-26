@@ -29,6 +29,8 @@
 
 #include "detail/SPEventQueueData.h"
 
+#if SP_POSIX_FD
+
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
 #include <linux/stat.h>
@@ -136,5 +138,7 @@ inline void setNanoTimespec(TimeSpec &ts, TimeInterval ival) {
 }
 
 }
+
+#endif // SP_POSIX_FD
 
 #endif /* CORE_EVENT_SPEVENT_FD_H_ */

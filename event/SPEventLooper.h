@@ -40,13 +40,15 @@ struct SP_PUBLIC LooperInfo {
  *
  * Only one Looper per thread is allowed
  */
-class SP_PUBLIC Looper final : public Ref {
+class SP_PUBLIC Looper final {
 public:
 	// acquire looper for a current thread
 	// LooperInfo will be assigned to Looper only on first call
 	static Looper *acquire(LooperInfo && = LooperInfo());
 
 	static Looper *acquire(LooperInfo &&, QueueInfo &&);
+
+	static Looper *getIfExists();
 
 	~Looper();
 

@@ -26,6 +26,7 @@
 #include "SPEvent-windows.h"
 #include "SPEventTimerIocp.h"
 #include "SPEventThreadIocp.h"
+#include "SPEventPollIocp.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -100,6 +101,7 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 	if (hasFlag(info.engineMask, QueueEngine::IOCP)) {
 		setupIocpHandleClass<TimerIocpHandle, TimerIocpSource>(&_info, &_iocpTimerClass, true);
 		setupIocpHandleClass<ThreadIocpHandle, ThreadIocpSource>(&_info, &_iocpThreadClass, true);
+		setupIocpHandleClass<PollHandle, PollSource>(&_info, &_iocpPollClass, true);
 	}
 
 	if (hasFlag(info.engineMask, QueueEngine::IOCP)) {

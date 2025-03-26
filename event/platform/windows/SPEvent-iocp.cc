@@ -28,6 +28,7 @@
 #include <errhandlingapi.h>
 #include <handleapi.h>
 #include <minwinbase.h>
+#include <winerror.h>
 #include <winternl.h>
 #include <ntstatus.h>
 
@@ -134,6 +135,30 @@ BOOL CancelEventCompletion(HANDLE hWait, BOOL cancel) {
 	}
 }
 
+void IocpData::pollMessages() {
+	_data->_performEnabled = true;
+
+	auto tmpPool = memory::pool::create(_data->_tmpPool);
+
+	MSG msg = { };
+	BOOL hasMessage = 1;
+	while (hasMessage) {
+		mem_pool::perform_clear([&] {
+			hasMessage = PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE);
+			if (hasMessage) {
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}, tmpPool);
+
+		_data->runAllTasks(tmpPool);
+	}
+
+	memory::pool::destroy(tmpPool);
+
+	_data->_performEnabled = false;
+}
+
 Status IocpData::runPoll(TimeInterval ival, bool infinite) {
 	if (_processedEvents < _receivedEvents) {
 		return Status::Ok;
@@ -141,9 +166,20 @@ Status IocpData::runPoll(TimeInterval ival, bool infinite) {
 
 	ULONG nevents = 0;
 
+	MsgWaitForMultipleObjectsEx(1, &_port, infinite ? INFINITE : ival.toMillis(),
+		QS_ALLINPUT, MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
+
+	pollMessages();
+
 	if (!GetQueuedCompletionStatusEx(_port,  _events.data(), _events.size(),
-		&nevents, infinite ? INFINITE : ival.toMillis(), 1)) {
-		return status::lastErrorToStatus(GetLastError());
+		&nevents, 0, 1)) {
+		auto err = GetLastError();
+		if (err == WAIT_TIMEOUT) {
+			_processedEvents = 0;
+			_receivedEvents = 0;
+			return Status::Ok;
+		}
+		return status::lastErrorToStatus(err);
 	}
 
 	_processedEvents = 0;
@@ -152,7 +188,7 @@ Status IocpData::runPoll(TimeInterval ival, bool infinite) {
 	if (nevents >= 0) {
 		return Status::Ok;
 	} else {
-		return status::errnoToStatus(errno);
+		return status::lastErrorToStatus(GetLastError());
 	}
 }
 
@@ -224,10 +260,10 @@ Status IocpData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval wa
 
 	ctx.shouldWakeup.test_and_set();
 
-	std::unique_lock lock(_runMutex);
+	_runMutex.lock();
 	ctx.prev = _runContext;
 	_runContext = &ctx;
-	lock.unlock();
+	_runMutex.unlock();
 
 	while (ctx.shouldWakeup.test_and_set()) {
 		auto status = runPoll(ival, true);
@@ -245,15 +281,15 @@ Status IocpData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval wa
 		timerHandle->cancel();
 	}
 
-	lock.lock();
+	_runMutex.lock();
 	_runContext = ctx.prev;
-	lock.unlock();
+	_runMutex.unlock();
 
 	return ctx.wakeupStatus;
 }
 
 Status IocpData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
-	std::unique_lock lock(_runMutex);
+	_runMutex.lock();
 	if (auto v = _runContext) {
 		v->wakeupFlags |= toInt(flags);
 		v->wakeupTimeout = gracefulTimeout.toMicros();

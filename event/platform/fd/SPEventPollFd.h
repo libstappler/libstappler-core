@@ -26,6 +26,8 @@
 #include "SPEventFd.h"
 #include "detail/SPEventHandleClass.h"
 
+#if SP_POSIX_FD
+
 #include <poll.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
@@ -102,5 +104,7 @@ public:
 #endif
 
 }
+
+#endif
 
 #endif /* CORE_EVENT_PLATFORM_FD_SPEVENTPOLLFD_H_ */

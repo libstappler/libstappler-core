@@ -20,43 +20,45 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTIMERIOCP_H_
-#define CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTIMERIOCP_H_
+#ifndef CORE_EVENT_PLATFORM_WINDOWS_SPEVENTPOLLIOCP_H_
+#define CORE_EVENT_PLATFORM_WINDOWS_SPEVENTPOLLIOCP_H_
 
-#include "SPEventTimerHandle.h"
+#include "SPEventHandle.h"
+
+#if WIN32
+
 #include "SPEvent-iocp.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-struct SP_PUBLIC TimerIocpSource {
+struct PollSource {
 	HANDLE handle = nullptr;
 	HANDLE event = nullptr;
-	TimeInterval interval;
-	uint32_t count = 0;
-	uint32_t value = 0;
-	bool subintervals = false;
-	bool active = false;
-
-	bool init(const TimerInfo &info);
-
-	bool start();
-	void stop();
-	void reset();
+	
+	bool init(HANDLE);
 	void cancel();
 };
 
-class SP_PUBLIC TimerIocpHandle : public TimerHandle {
+class SP_PUBLIC PollHandle : public Handle {
 public:
-	virtual ~TimerIocpHandle() = default;
+	static Rc<PollHandle> create(const Queue *, HANDLE,
+			CompletionHandle<PollHandle> &&);
 
-	bool init(HandleClass *, TimerInfo &&);
+	static Rc<PollHandle> create(const Queue *, HANDLE,
+			mem_std::Function<Status(HANDLE)> &&, Ref *ref);
 
-	Status rearm(IocpData *, TimerIocpSource *);
-	Status disarm(IocpData *, TimerIocpSource *);
+	virtual ~PollHandle() = default;
 
-	void notify(IocpData *, TimerIocpSource *source, const NotifyData &);
+	bool init(HandleClass *, HANDLE, CompletionHandle<PollHandle> &&);
+
+	Status rearm(IocpData *, PollSource *);
+	Status disarm(IocpData *, PollSource *);
+
+	void notify(IocpData *, PollSource *, const NotifyData &);
 };
 
 }
 
-#endif /* CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTIMERIOCP_H_ */
+#endif
+
+#endif /* CORE_EVENT_PLATFORM_WINDOWS_SPEVENTPOLLIOCP_H_ */

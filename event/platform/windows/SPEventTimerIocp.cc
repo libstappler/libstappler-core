@@ -45,6 +45,7 @@ bool TimerIocpSource::init(const TimerInfo &info) {
 
 	BOOL result = 1;
 	LARGE_INTEGER dueDate;
+	timeToFileTime(dueDate, info.timeout);
 
 	if (interval.toMicros() < 1000) {
 		subintervals = true;
@@ -52,10 +53,8 @@ bool TimerIocpSource::init(const TimerInfo &info) {
 
 	if (info.count == 1) {
 		// oneshot timer
-		timeToFileTime(dueDate, info.timeout);
 		result = SetWaitableTimerEx (handle, &dueDate, 0, 0, 0, 0, 0);
 	} else if (!subintervals) {
-		timeToFileTime(dueDate, info.timeout);
 		result = SetWaitableTimerEx (handle, &dueDate, interval.toMillis(), 0, 0, 0, 0);
 	} else {
 		result = SetWaitableTimerEx (handle, &dueDate, 0, 0, 0, 0, 0);
@@ -63,7 +62,45 @@ bool TimerIocpSource::init(const TimerInfo &info) {
 	if (!result) {
 		log::error("event::Queue", "Fail to create WaitableTimer: ", status::lastErrorToStatus(GetLastError()));
 	}
+	
+	active = true;
 	return result;
+}
+
+bool TimerIocpSource::start() {
+	if (!handle) {
+		handle = CreateWaitableTimerEx(0, 0, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+		active = false;
+	}
+
+	BOOL result = 1;
+	if (!active) {
+		LARGE_INTEGER dueDate;
+		timeToFileTime(dueDate, interval);
+		if (!subintervals) {
+			result = SetWaitableTimerEx (handle, &dueDate, interval.toMillis(), 0, 0, 0, 0);
+		} else {
+			result = SetWaitableTimerEx (handle, &dueDate, 0, 0, 0, 0, 0);
+		}
+		if (result) {
+			active = true;
+		}
+	}
+	return result;
+}
+
+void TimerIocpSource::stop() {
+	active = false;
+
+	if (event) {
+		CancelEventCompletion(event, true);
+		event = nullptr;
+	}
+
+	if (handle && active) {
+		CancelWaitableTimer(handle);
+		active = false;
+	}
 }
 
 void TimerIocpSource::reset() {
@@ -75,8 +112,16 @@ void TimerIocpSource::reset() {
 }
 
 void TimerIocpSource::cancel() {
+	active = false;
+
+	if (event) {
+		CancelEventCompletion(event, true);
+		event = nullptr;
+	}
+
 	if (handle) {
 		CancelWaitableTimer(handle);
+		CloseHandle(handle);
 		handle = nullptr;
 	}	
 }
@@ -101,14 +146,19 @@ bool TimerIocpHandle::init(HandleClass *cl, TimerInfo &&info) {
 Status TimerIocpHandle::rearm(IocpData *iocp, TimerIocpSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		if (!source->event) {
-			source->event = ReportEventAsCompletion(iocp->_port, source->handle, 0,
-				reinterpret_cast<uintptr_t>(this), nullptr);
-				if (!source->event) {
-					return status::lastErrorToStatus(GetLastError());
-				}
+		if (!source->active) {
+			source->start();
 		} else {
-			if (!RestartEventCompletion(source->event, iocp->_port, source->handle,0, reinterpret_cast<uintptr_t>(this), nullptr)) {
+			source->reset();
+		}
+		if (!source->event) {
+			source->event = ReportEventAsCompletion(iocp->_port, source->handle, _timeline,
+				reinterpret_cast<uintptr_t>(this), nullptr);
+			if (!source->event) {
+				return status::lastErrorToStatus(GetLastError());
+			}
+		} else {
+			if (!RestartEventCompletion(source->event, iocp->_port, source->handle,_timeline, reinterpret_cast<uintptr_t>(this), nullptr)) {
 				return status::lastErrorToStatus(GetLastError());
 			}
 		}
@@ -119,10 +169,7 @@ Status TimerIocpHandle::rearm(IocpData *iocp, TimerIocpSource *source) {
 Status TimerIocpHandle::disarm(IocpData *iocp, TimerIocpSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
-		if (source->event) {
-			CancelEventCompletion(source->event, true);
-			source->event = nullptr;
-		}
+		source->stop();
 		++ _timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
@@ -141,16 +188,10 @@ void TimerIocpHandle::notify(IocpData *iocp, TimerIocpSource *source, const Noti
 	auto count = source->count;
 	auto current = source->value;
 
-	bool isFirst = (current == 0);
-
 	++ current;
 	source->value = current;
 
 	if (count == TimerInfo::Infinite || current < count) {
-		if (source->subintervals) {
-			source->reset();
-		}
-
 		rearm(iocp, source);
 	} else {
 		cancel(Status::Done, source->value);

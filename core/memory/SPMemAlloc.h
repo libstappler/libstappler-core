@@ -411,7 +411,7 @@ inline void Allocator<T>::move(T *dest, T *source, size_t count) noexcept {
 	if constexpr (std::is_trivially_copyable<T>::value) {
 		memmove(dest, source, count * sizeof(T));
 	} else if constexpr(std::is_trivially_move_constructible<T>::value) {
-		memmove(dest, source, count * sizeof(T));
+		memmove((void *)dest, source, count * sizeof(T));
 	} else {
 		if (dest == source) {
 			return;

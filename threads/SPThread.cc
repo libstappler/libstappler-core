@@ -22,6 +22,7 @@
 
 #include "SPThread.h"
 #include "SPLog.h"
+#include "SPMemPoolInterface.h"
 #include "SPThreadTaskQueue.h"
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
@@ -91,6 +92,19 @@ void ThreadInfo::setThreadInfo(StringView n, uint32_t w, bool m) {
 	tl_threadInfo.workerId = w;
 	tl_threadInfo.name = n;
 	tl_threadInfo.managed = m;
+}
+
+bool ThreadInfo::setThreadPool(memory::pool_t *pool) {
+	if (tl_threadInfo.threadPool) {
+		return false;
+	}
+
+	tl_threadInfo.threadPool = pool;
+	memory::pool::cleanup_register(pool, nullptr, [] (void *ptr) -> memory::status_t {
+		tl_threadInfo.threadPool = nullptr;
+		return 0;
+	});
+	return true;
 }
 
 void Thread::workerThread(Thread *tm) {

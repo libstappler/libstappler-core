@@ -282,6 +282,8 @@ using iter_reference_t = typename T::reference;
 // Actually, windows-specific includes should be only in SPPlatformUnistd.h with proper filters for macro leaking
 #if WIN32
 
+#define SP_POSIX_FD 0
+
 #if XWIN
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonportable-include-path"
@@ -298,6 +300,10 @@ using iter_reference_t = typename T::reference;
 #define WIN32_LEAN_AND_MEAN
 #define UNICODE
 #define _UNICODE
+
+#else
+
+#define SP_POSIX_FD 1
 
 #endif
 

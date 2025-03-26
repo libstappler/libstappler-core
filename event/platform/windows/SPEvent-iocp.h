@@ -98,6 +98,8 @@ struct SP_PUBLIC IocpData : public mem_pool::AllocBase {
 	RunContext *_runContext = nullptr;
 	std::mutex _runMutex;
 
+	void pollMessages();
+
 	Status runPoll(TimeInterval, bool infinite = false);
 	uint32_t processEvents();
 

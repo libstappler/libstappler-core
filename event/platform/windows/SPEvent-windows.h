@@ -39,6 +39,7 @@ struct SP_PUBLIC Queue::Data : public QueueData {
 
 	HandleClass _iocpThreadClass;
 	HandleClass _iocpTimerClass;
+	HandleClass _iocpPollClass;
 
 	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
 	Rc<ThreadHandle> addThreadHandle();

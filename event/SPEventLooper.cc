@@ -21,6 +21,7 @@
  **/
 
 #include "SPEventLooper.h"
+#include "SPMemPoolInterface.h"
 #include "SPThread.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event::platform {
@@ -31,7 +32,7 @@ Rc<QueueRef> getThreadQueue(QueueInfo &&);
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-static thread_local Rc<Looper> tl_looper;
+static thread_local Looper *tl_looper;
 
 struct Looper::Data : public memory::AllocPool {
 	thread::ThreadPoolInfo threadPoolInfo;
@@ -49,6 +50,44 @@ struct Looper::Data : public memory::AllocPool {
 			threadPool = Rc<thread::ThreadPool>::create(thread::ThreadPoolInfo(threadPoolInfo));
 		}
 		return threadPool;
+	}
+
+	void cleanup() {
+		if (!queue) {
+			return;
+		}
+
+		auto q = queue;
+		if (threadPool) {
+			threadPool->cancel();
+			threadPool = nullptr;
+		}
+
+		threadPoolInfo.ref = nullptr;
+
+		if (threadHandle) {
+			threadHandle->cancel();
+			threadHandle = nullptr;
+		}
+		queue = nullptr; // this possibly destroys Queue with it's pool and _data
+
+		q->cancel();
+#if SP_REF_DEBUG
+		if (q->getRef()->getReferenceCount() > 1) {
+			auto tmp = q->getRef();
+			q = nullptr;
+
+			tmp->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+				mem_std::StringStream stream;
+				stream << "[" << id << ":" << time.toHttp<memory::StandartInterface>() << "]:\n";
+				for (auto &it : vec) {
+					stream << "\t" << it << "\n";
+				}
+				log::debug("event::Queue", stream.str());
+			});
+		}
+		queue = nullptr;
+#endif
 	}
 };
 
@@ -75,45 +114,19 @@ Looper *Looper::acquire(LooperInfo &&info, QueueInfo &&qinfo) {
 		return nullptr;
 	}
 
-	tl_looper = Rc<Looper>::alloc(move(info), move(q));
+	tl_looper = new Looper(move(info), move(q));
 
+	return tl_looper;
+}
+
+Looper *Looper::getIfExists() {
 	return tl_looper;
 }
 
 Looper::~Looper() {
 	if (_data) {
-		auto queue = _data->queue;
-		if (_data->threadPool) {
-			_data->threadPool->cancel();
-			_data->threadPool = nullptr;
-		}
-
-		_data->threadPoolInfo.ref = nullptr;
-
-		if (_data->threadHandle) {
-			_data->threadHandle->cancel();
-			_data->threadHandle = nullptr;
-		}
-		_data->queue = nullptr; // this possibly destroys Queue with it's pool and _data
+		_data->cleanup();
 		_data = nullptr;
-
-		queue->cancel();
-#if SP_REF_DEBUG
-		if (queue->getRef()->getReferenceCount() > 1) {
-			auto tmp = queue->getRef();
-			queue = nullptr;
-
-			tmp->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
-				mem_std::StringStream stream;
-				stream << "[" << id << ":" << time.toHttp<memory::StandartInterface>() << "]:\n";
-				for (auto &it : vec) {
-					stream << "\t" << it << "\n";
-				}
-				log::debug("event::Queue", stream.str());
-			});
-		}
-		queue = nullptr;
-#endif
 	}
 }
 
@@ -236,6 +249,13 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 			_data->threadMemPool = pool;
 		} else {
 			_data->threadMemPool = _data->threadInfo->threadPool;
+			memory::pool::cleanup_register(_data->threadMemPool, this, [] (void *d) -> memory::status_t {
+				auto l = (Looper *)d;
+				l->_data->cleanup();
+				l->_data = nullptr;
+				tl_looper = nullptr;
+				return 0;
+			});
 		}
 
 		_data->thisThreadId = std::this_thread::get_id();

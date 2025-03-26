@@ -35,6 +35,16 @@ struct SP_PUBLIC ThreadInfo {
 
 	static void setThreadInfo(StringView, uint32_t worker = DetachedWorker, bool managed = true);
 
+	// Associate thread pool with current thread
+	// Thread must not perform any actions after this pool destroyed
+	// Association is permatent, returns false when thread already linked with pool
+	// Threads, that was created by stappler_thread module already has internally associated pool,
+	// only main and external threads has no initial pool association
+	//
+	// Some thread-bound utils, like event::Looper, uses thread memory pool as a lifetime definition,
+	// and destroyed when thread's pool is destroyed
+	static bool setThreadPool(memory::pool_t *);
+
 	uint32_t workerId = 0;
 	StringView name;
 	bool managed = false;

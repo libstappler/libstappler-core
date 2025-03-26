@@ -36,7 +36,7 @@ public:
 	using iterator = memory::pointer_iterator<const Type, const Type *, const Type &>;
 	using reverse_iterator = std::reverse_iterator<iterator>;
 
-	constexpr SpanView() : ptr(nullptr), len(0) { }
+	constexpr SpanView() = default;
 	constexpr SpanView(const Type *p, size_t l) : ptr(p), len(l) { }
 	constexpr SpanView(const Type *begin, const Type *end) : ptr(begin), len(end - begin) { }
 
@@ -67,7 +67,7 @@ public:
 	template <size_t Size>
 	SpanView(const std::array<Type, Size> &arr) : ptr(arr.data()), len(arr.size()) { }
 
-	SpanView(const Self &v) : ptr(v.data()), len(v.size()) { }
+	SpanView(const Self &v) = default;
 	SpanView(const Self &v, size_t len) : ptr(v.data()), len(std::min(len, v.size())) { }
 	SpanView(const Self &v, size_t pos, size_t len) : ptr(v.data() + pos), len(std::min(len, v.size() - pos)) { }
 
@@ -76,7 +76,7 @@ public:
 
 	template <size_t Size>
 	Self &operator=(const std::array<Type, Size> &arr) { ptr = arr.data(); len = arr.size(); return *this; }
-	Self &operator=(const Self &v) { ptr = v.data(); len = v.size(); return *this; }
+	constexpr Self &operator=(const Self &v) = default;
 
 	Self & set(const Type *p, size_t l) { ptr = p; len = l; return *this; }
 
@@ -133,7 +133,7 @@ public:
 			p = memory::pool::acquire();
 		}
 		auto buf = (Type *)memory::pool::palloc(p, this->size() * sizeof(Type));
-		memcpy(buf, this->data(), this->size() * sizeof(Type));
+		memcpy((void *)buf, this->data(), this->size() * sizeof(Type));
 		return Self(buf, this->size());
 	}
 

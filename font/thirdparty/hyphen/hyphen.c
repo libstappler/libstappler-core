@@ -38,9 +38,10 @@
  *
  */
 
-#if XWIN
+#if WIN32
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wignored-attributes"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 #include <stdlib.h> /* for NULL, malloc */
@@ -1373,6 +1374,6 @@ int hnj_hyphen_hyphenate3 (HyphenDict *dict,
   return 0;
 }
 
-#if XWIN
+#if WIN32
 #pragma clang diagnostic pop
 #endif
