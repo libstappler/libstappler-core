@@ -209,6 +209,23 @@ StringView root(StringView path) {
 	}
 }
 
+StringView root(StringView path, uint32_t levels) {
+	while (levels > 0 && !path.empty() && path != StringView("/")) {
+		size_t pos = path.rfind('/');
+		if (pos == maxOf<size_t>()) {
+			return StringView();
+		} else {
+			if (pos == 0) {
+				path = StringView("/");
+			} else {
+				path = path.sub(0, pos);
+			}
+		}
+		-- levels;
+	}
+	return path;
+}
+
 StringView lastComponent(StringView path) {
 	size_t pos = path.rfind('/');
 	if (pos != maxOf<size_t>()) {

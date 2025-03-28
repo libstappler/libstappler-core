@@ -36,7 +36,7 @@ struct StatResult {
 	uint64_t atime;
 	uint64_t ctime;
 	uint64_t mtime;
-	uint64_t isDir;
+	uint64_t type;
 };
 
 static void StapplerFilesystemStat(wasm_exec_env_t exec_env, char *ptr, uint32_t size, StatResult *res) {
@@ -47,7 +47,7 @@ static void StapplerFilesystemStat(wasm_exec_env_t exec_env, char *ptr, uint32_t
 		res->atime = stat.atime.toMicros();
 		res->ctime = stat.ctime.toMicros();
 		res->mtime = stat.mtime.toMicros();
-		res->isDir = stat.isDir;
+		res->type = toInt(stat.type);
 	} else {
 		res->success = false;
 	}

@@ -40,11 +40,15 @@ bool TimerFdSource::init(const TimerInfo &info) {
 		clockid = CLOCK_REALTIME;
 		break;
 	case ClockType::Process:
-		log::error("event::Queue", "ClockType::Thread is not supported for a timer on this system");
+		log::error("event::Queue", "ClockType::Process is not supported for a timer on this system");
 		return false;
 		break;
 	case ClockType::Thread:
 		log::error("event::Queue", "ClockType::Thread is not supported for a timer on this system");
+		return false;
+		break;
+	case ClockType::Hardware:
+		log::error("event::Queue", "ClockType::Hardware is not supported for a timer on this system");
 		return false;
 		break;
 	}

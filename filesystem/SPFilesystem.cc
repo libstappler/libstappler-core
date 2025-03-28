@@ -371,6 +371,10 @@ MemoryMappedRegion::MemoryMappedRegion(PlatformStorage &&storage, uint8_t *ptr, 
 : _storage(move(storage)), _region(ptr), _type(t), _prot(p) { }
 
 bool exists(StringView ipath) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	if (filepath::isAbsolute(ipath)) {
 		return filesystem::native::access_fn(ipath, Access::Exists);
 	} else if (filepath::isBundled(ipath)) {
@@ -384,6 +388,10 @@ bool exists(StringView ipath) {
 }
 
 bool stat(StringView ipath, Stat &stat) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	if (filepath::isAbsolute(ipath)) {
 		return filesystem::native::stat_fn(ipath, stat);
 	} else if (filepath::isBundled(ipath)) {
@@ -397,6 +405,10 @@ bool stat(StringView ipath, Stat &stat) {
 }
 
 bool remove(StringView ipath, bool recursive, bool withDirs) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	if (filepath::inAppBundle(ipath)) {
 		return false;
 	}
@@ -415,6 +427,10 @@ bool remove(StringView ipath, bool recursive, bool withDirs) {
 }
 
 bool touch(StringView ipath) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
 	if (filepath::isBundled(path)) {
 		return false;
@@ -423,11 +439,19 @@ bool touch(StringView ipath) {
 }
 
 bool mkdir(StringView ipath) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
 	return filesystem::native::mkdir_fn(path);
 }
 
 bool mkdir_recursive(StringView ipath, bool appWide) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
 
 	memory::StandartInterface::StringType appWideLimit;
@@ -485,6 +509,10 @@ bool mkdir_recursive(StringView ipath, bool appWide) {
 }
 
 void ftw(StringView ipath, const Callback<void(StringView path, bool isFile)> &callback, int depth, bool dir_first) {
+	if (ipath.empty()) {
+		return;
+	}
+
 	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
 	if (filepath::isBundled(path)) {
 		filesystem::platform::_ftw(path, callback, depth, dir_first);
@@ -494,6 +522,10 @@ void ftw(StringView ipath, const Callback<void(StringView path, bool isFile)> &c
 }
 
 bool ftw_b(StringView ipath, const Callback<bool(StringView path, bool isFile)> &callback, int depth, bool dir_first) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
 	if (filepath::isBundled(path)) {
 		return filesystem::platform::_ftw_b(path, callback, depth, dir_first);
@@ -503,6 +535,10 @@ bool ftw_b(StringView ipath, const Callback<bool(StringView path, bool isFile)> 
 }
 
 bool move(StringView isource, StringView idest) {
+	if (isource.empty() || idest.empty()) {
+		return false;
+	}
+
 	auto source = filepath::absolute<memory::StandartInterface>(isource, true);
 	auto dest = filepath::absolute<memory::StandartInterface>(idest, true);
 
@@ -539,6 +575,10 @@ static bool isdir(StringView path) {
 }
 
 bool copy(StringView isource, StringView idest, bool stopOnError) {
+	if (isource.empty() || idest.empty()) {
+		return false;
+	}
+
 	auto source = filepath::absolute<memory::StandartInterface>(isource, true);
 	auto dest = filepath::absolute<memory::StandartInterface>(idest, true);
 	if (dest.back() == '/') {
@@ -574,6 +614,10 @@ bool copy(StringView isource, StringView idest, bool stopOnError) {
 }
 
 bool write(StringView ipath, const unsigned char *data, size_t len) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
 	return filesystem::native::write_fn(path, data, len);
 }
@@ -591,6 +635,10 @@ File openForReading(StringView ipath) {
 }
 
 bool readIntoBuffer(uint8_t *buf, StringView ipath, size_t off, size_t size) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	auto f = openForReading(ipath);
 	if (f) {
 		size_t fsize = f.size();
@@ -614,6 +662,10 @@ bool readIntoBuffer(uint8_t *buf, StringView ipath, size_t off, size_t size) {
 }
 
 bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, StringView ipath, size_t off, size_t size) {
+	if (ipath.empty()) {
+		return false;
+	}
+
 	auto f = openForReading(ipath);
 	if (f) {
 		size_t fsize = f.size();

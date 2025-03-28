@@ -68,6 +68,9 @@ SP_PUBLIC auto canonical(StringView path) -> typename Interface::StringType;
 // extract root from path by removing last component (/dir/file.tar.bz -> /dir)
 SP_PUBLIC StringView root(StringView path);
 
+// extract root from path by removing <levels> last components
+SP_PUBLIC StringView root(StringView path, uint32_t levels);
+
 // extract last component (/dir/file.tar.bz -> file.tar.bz)
 SP_PUBLIC StringView lastComponent(StringView path);
 SP_PUBLIC StringView lastComponent(StringView path, size_t allowedComponents);

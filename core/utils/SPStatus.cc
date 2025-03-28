@@ -134,9 +134,14 @@ static StringView getInternalDescription(Status st) {
 void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 	char strerrBuffer[STATUS_DESC_BUFFER_SIZE] = { 0 };
 
+	char *strTarget = strerrBuffer;
+
 	// Use callback-stream output
 	auto fn = [&] (StringView out) {
-		strncat_s(strerrBuffer, STATUS_DESC_BUFFER_SIZE, out.data(), out.size());
+		if (strTarget + out.size() < &strerrBuffer[STATUS_DESC_BUFFER_SIZE]) {
+			memcpy(strTarget, out.data(), out.size());
+			strTarget += out.size();
+		}
 	};
 
 	auto outCb = Callback<void(StringView)>(fn);

@@ -82,6 +82,7 @@ static void _clock(struct timespec *ts, ClockType type) {
 	case ClockType::Realtime: ::clock_gettime(CLOCK_REALTIME, ts); break;
 	case ClockType::Process: ::clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ts); break;
 	case ClockType::Thread: ::clock_gettime(CLOCK_THREAD_CPUTIME_ID, ts); break;
+	case ClockType::Hardware: break;
 	}
 }
 
