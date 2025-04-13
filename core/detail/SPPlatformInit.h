@@ -20,8 +20,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_CORE_SPPLATFORMDETECTION_H_
-#define CORE_CORE_SPPLATFORMDETECTION_H_
+#ifndef CORE_CORE_DETAIL_SPPLATFORMDETECTION_H_
+#define CORE_CORE_DETAIL_SPPLATFORMDETECTION_H_
 
 /*
  * General section
@@ -307,6 +307,4 @@ using iter_reference_t = typename T::reference;
 
 #endif
 
-#include "SPPlatformCleanup.h"
-
-#endif /* CORE_CORE_SPPLATFORMDETECTION_H_ */
+#endif /* CORE_CORE_DETAIL_SPPLATFORMDETECTION_H_ */

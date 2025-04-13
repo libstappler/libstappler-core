@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,9 +29,95 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-using FilePath = ValueWrapper<StringView, class FilePathTag>;
+struct FileInfo {
+	// From most common to most concrete
+	enum FileCategory {
+		Exec, // user or system executable from PATH
+		Library, // user or system dynamic shared library
+	
+		// Based on xdg-user-dirs
+		// https://www.freedesktop.org/wiki/Software/xdg-user-dirs/
+		UserHome,
+		UserDesktop,
+		UserDownload,
+		UserTemplates,
+		UserPublicshare,
+		UserDocuments,
+		UserMusic,
+		UserPictures,
+		UserVideos,
+	
+		// Based on XDG Base Directory spec
+		// https://specifications.freedesktop.org/basedir-spec/latest/
+	
+		// Common<X> is a base dirs, as defined directly by XDG spec or similar OS spec
+		// SDK assumes, that this dirs is read-only
+		CommonData,
+		CommonConfig,
+		CommonState,
+		CommonCache,
+		CommonRuntime,
+	
+		// App<X> targets app-specific dir within specific common location
+		// It can match Common<X> on some OS and sandboxes
+		// SDK assumes, that this dirs is read-write
+		AppData,
+		AppConfig,
+		AppState,
+		AppCache,
+		AppRuntime,
+	
+		Bundled, // some files, bundled with app executable
+	
+		Max, // can be absolute or cwd-relative path
+		Custom = Max
+	};
+
+	StringView path;
+	FileCategory category = FileCategory::Custom;
+
+	FileInfo(StringView _path) : path(_path) { }
+	FileInfo(StringView _path, FileCategory cat) : path(_path), category(cat) { }
+
+	bool operator==(const FileInfo &) const = default;
+	auto operator<=>(const FileInfo &) const = default;
+};
+
+using FileCategory = FileInfo::FileCategory;
+
+enum class FileType : uint16_t {
+	File,
+	Dir,
+	BlockDevice,
+	CharDevice,
+	Pipe,
+	Socket,
+	Link,
+	Unknown
+};
+
+SP_PUBLIC std::ostream &operator<<(std::ostream &, FileCategory);
+SP_PUBLIC std::ostream &operator<<(std::ostream &, FileType);
+SP_PUBLIC std::ostream &operator<<(std::ostream &, const FileInfo &);
 
 }
+
+
+namespace STAPPLER_VERSIONIZED stappler::filesystem {
+
+enum Access {
+	None,
+	Exists = 1 << 0,
+	Read = 1 << 1,
+	Write = 1 << 2,
+	Execute = 1 << 3,
+	Empty = 1 << 4 // check if path is empty, do not use in with other flags
+};
+
+SP_DEFINE_ENUM_AS_MASK(Access)
+
+}
+
 
 namespace STAPPLER_VERSIONIZED stappler::filepath {
 
@@ -44,7 +130,10 @@ SP_PUBLIC bool isCanonical(StringView path);
 SP_PUBLIC bool isBundled(StringView path);
 
 // check if filepath above it's current root
+// Like: dir/../..
 SP_PUBLIC bool isAboveRoot(StringView path);
+
+SP_PUBLIC bool isEmpty(StringView path);
 
 // check for ".", ".." and double slashes in path
 SP_PUBLIC bool validatePath(StringView path);
@@ -53,17 +142,13 @@ SP_PUBLIC bool validatePath(StringView path);
 template <typename Interface>
 SP_PUBLIC auto reconstructPath(StringView path) -> typename Interface::StringType;
 
-// returns current absolute path for file (canonical prefix will be decoded), this path should not be cached
-// if writable flag is false, platform path will be returned with canonical prefix %PLATFORM%
-// if writable flag is true, system should resolve platform prefix to absolute path, if possible
-// if platform path can not be resolved (etc, it's in archive or another FS), empty string will be returned
-template <typename Interface>
-SP_PUBLIC auto absolute(StringView, bool writable = false) -> typename Interface::StringType;
-
 // encodes path for long-term storage (default application dirs will be replaced with canonical prefix,
 // like %CACHE%/dir)
 template <typename Interface>
 SP_PUBLIC auto canonical(StringView path) -> typename Interface::StringType;
+
+template <typename Interface>
+SP_PUBLIC auto canonical(const FileInfo &) -> typename Interface::StringType;
 
 // extract root from path by removing last component (/dir/file.tar.bz -> /dir)
 SP_PUBLIC StringView root(StringView path);
@@ -73,6 +158,7 @@ SP_PUBLIC StringView root(StringView path, uint32_t levels);
 
 // extract last component (/dir/file.tar.bz -> file.tar.bz)
 SP_PUBLIC StringView lastComponent(StringView path);
+
 SP_PUBLIC StringView lastComponent(StringView path, size_t allowedComponents);
 
 // extract full filename extension (/dir/file.tar.gz -> tar.gz)
@@ -93,8 +179,15 @@ SP_PUBLIC auto split(StringView) -> typename Interface::template VectorType<Stri
 SP_PUBLIC void split(StringView, const Callback<void(StringView)> &);
 
 // merges two path component, removes or adds '/' where needed
-template <typename Interface>
-SP_PUBLIC auto _merge(StringView root, StringView path) -> typename Interface::StringType;
+
+SP_PUBLIC void merge(const Callback<void(StringView)> &cb, SpanView<std::string>);
+
+SP_PUBLIC void merge(const Callback<void(StringView)> &cb, SpanView<memory::string>);
+
+SP_PUBLIC void merge(const Callback<void(StringView)> &cb, SpanView<StringView>);
+
+template <class... Args>
+SP_PUBLIC auto merge(const Callback<void(StringView)> &, StringView root, Args&&... args);
 
 template <typename Interface>
 SP_PUBLIC auto merge(SpanView<std::string>) -> typename Interface::StringType;
@@ -112,9 +205,7 @@ template <typename Interface>
 SP_PUBLIC auto merge(stappler::memory::PoolInterface::StringType &&str) -> typename Interface::StringType;
 
 template <typename Interface, class... Args>
-SP_PUBLIC inline auto merge(StringView root, StringView path, Args&&... args) -> typename Interface::StringType {
-	return merge<Interface>(_merge<Interface>(root, path), std::forward<Args>(args)...);
-}
+SP_PUBLIC auto merge(StringView root, StringView path, Args&&... args) -> typename Interface::StringType;
 
 // translate some MIME Content-Type to common extensions
 SP_PUBLIC StringView extensionForContentType(StringView type);
@@ -126,7 +217,86 @@ SP_PUBLIC StringView extensionForContentType(StringView type);
 template <typename Interface>
 SP_PUBLIC auto replace(StringView path, StringView source, StringView dest) -> typename Interface::StringType;
 
+}
+
+
 // Implementation
+
+namespace STAPPLER_VERSIONIZED stappler::filepath {
+
+SP_PUBLIC inline bool isAbsolute(const FileInfo &path) {
+	if (path.category == FileCategory::Custom) {
+		return isAbsolute(path.path);
+	}
+	return false;
+}
+
+SP_PUBLIC inline bool isAboveRoot(const FileInfo &path) {
+	return isAboveRoot(path.path);
+}
+
+SP_PUBLIC inline bool isEmpty(const FileInfo &path) {
+	return isEmpty(path.path);
+}
+
+SP_PUBLIC inline bool validatePath(const FileInfo &path) {
+	return validatePath(path.path);
+}
+
+SP_PUBLIC inline StringView root(const FileInfo &path) {
+	return root(path.path);
+}
+
+SP_PUBLIC inline StringView root(const FileInfo &path, uint32_t levels) {
+	return root(path.path, levels);
+}
+
+SP_PUBLIC inline StringView lastComponent(const FileInfo &path) {
+	return lastComponent(path.path);
+}
+
+SP_PUBLIC inline StringView lastComponent(const FileInfo &path, size_t allowedComponents) {
+	return lastComponent(path.path, allowedComponents);
+}
+
+SP_PUBLIC inline StringView fullExtension(const FileInfo &path) {
+	return fullExtension(path.path);
+}
+
+SP_PUBLIC inline StringView lastExtension(const FileInfo &path) {
+	return lastExtension(path.path);
+}
+
+SP_PUBLIC inline StringView name(const FileInfo &path) {
+	return name(path.path);
+}
+
+SP_PUBLIC inline size_t extensionCount(const FileInfo &path) {
+	return extensionCount(path.path);
+}
+
+template <typename Interface>
+SP_PUBLIC auto _merge(StringView root, StringView path) -> typename Interface::StringType;
+
+SP_PUBLIC void _merge(const Callback<void(StringView)> &cb, bool init, StringView root);
+SP_PUBLIC void _merge(const Callback<void(StringView)> &cb, StringView root);
+
+template <typename Interface, class... Args>
+SP_PUBLIC inline auto merge(StringView root, StringView path, Args&&... args) -> typename Interface::StringType {
+	return merge<Interface>(_merge<Interface>(root, path), std::forward<Args>(args)...);
+}
+
+template <class... Args>
+SP_PUBLIC inline auto _merge(const Callback<void(StringView)> &cb, StringView root, Args&&... args) {
+	_merge(cb, false, root);
+	_merge(cb, std::forward<Args>(args)...);
+}
+
+template <class... Args>
+SP_PUBLIC inline auto merge(const Callback<void(StringView)> &cb, StringView root, Args&&... args) {
+	_merge(cb, true, root);
+	_merge(cb, std::forward<Args>(args)...);
+}
 
 template <typename Interface>
 SP_PUBLIC auto reconstructPath(StringView path) -> typename Interface::StringType {

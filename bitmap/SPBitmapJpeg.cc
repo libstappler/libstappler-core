@@ -251,10 +251,17 @@ struct JpegWriteStruct {
 		valid = true;
 	}
 
-	JpegWriteStruct(const StringView &filename) : JpegWriteStruct() {
-		fp = filesystem::native::fopen_fn(filename, "wb");
+	JpegWriteStruct(const FileInfo &filename) : JpegWriteStruct() {
+		filesystem::enumerateWritablePaths(filename, filesystem::Access::None, [&] (StringView str) {
+			fp = filesystem::native::fopen_fn(str, "wb");
+			if (fp) {
+				return false;
+			}
+			return true;
+		});
+
 		if (!fp) {
-			log::format(log::Error, "Bitmap", "fail to open file '%s' to write jpeg data", filename.data());
+			log::error("Bitmap", "fail to open file ", filename, " to write jpeg data");
 			valid = false;
 			return;
 		}
@@ -327,7 +334,7 @@ static bool loadJpg(const uint8_t *inputData, size_t size, BitmapWriter &outputD
 	return jpegStruct.init(inputData, size) && jpegStruct.load(outputData);
 }
 
-static bool saveJpeg(StringView filename, const uint8_t *data, BitmapWriter &state, bool invert) {
+static bool saveJpeg(const FileInfo &filename, const uint8_t *data, BitmapWriter &state, bool invert) {
 	JpegWriteStruct s(filename);
 	return s.write(data, state, invert);
 }

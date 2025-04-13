@@ -31,27 +31,9 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
-enum Access {
-	Exists,
-	Read,
-	Write,
-	Execute
-};
-
 enum class MappingType {
 	Private,
 	Shared
-};
-
-enum class FileType : uint16_t {
-	File,
-	Dir,
-	BlockDevice,
-	CharDevice,
-	Pipe,
-	Socket,
-	Link,
-	Unknown
 };
 
 enum class ProtFlags : uint16_t {
@@ -74,6 +56,10 @@ enum class ProtFlags : uint16_t {
 	MapExecute = AllExecute,
 
 	Default = 0x0FFF,
+	MkdirDefault =
+			UserRead | UserWrite | UserExecute | GroupRead | GroupExecute | AllRead | AllExecute,
+	WriteDefault =
+			UserRead | UserWrite | UserExecute | GroupRead | GroupExecute | AllRead | AllExecute,
 	MapMask = ProtFlags::MapRead | ProtFlags::MapWrite | ProtFlags::MapExecute,
 };
 
@@ -124,10 +110,10 @@ public:
 	~File();
 
 	File(File &&);
-	File & operator=(File &&);
+	File &operator=(File &&);
 
 	File(const File &) = delete;
-	File & operator=(const File &) = delete;
+	File &operator=(const File &) = delete;
 
 	size_t read(uint8_t *buf, size_t nbytes);
 	size_t seek(int64_t offset, io::Seek s);
@@ -138,14 +124,14 @@ public:
 	int_type xsgetc();
 	int_type xsputc(int_type c);
 
-	streamsize xsputn(const char* s, streamsize n);
-	streamsize xsgetn(char* s, streamsize n);
+	streamsize xsputn(const char *s, streamsize n);
+	streamsize xsgetn(char *s, streamsize n);
 
 	bool eof() const;
 	void close();
 	void close_remove();
 
-	bool close_rename(StringView);
+	bool close_rename(const FileInfo &);
 
 	bool is_open() const;
 	explicit operator bool() const { return is_open(); }
@@ -158,7 +144,7 @@ protected:
 	bool _isBundled = false;
 	size_t _size = 0;
 	Flags _flags = Flags::None;
-	char _buf[256] = { 0 };
+	char _buf[256] = {0};
 	union {
 		FILE *_nativeFile;
 		void *_platformFile;
@@ -169,21 +155,21 @@ class MemoryMappedRegion final {
 public:
 	using PlatformStorage = std::array<uint8_t, 16>;
 
-	static MemoryMappedRegion mapFile(StringView, MappingType, ProtFlags,
-			size_t offset = 0, size_t len = maxOf<size_t>());
+	static MemoryMappedRegion mapFile(StringView, MappingType, ProtFlags, size_t offset = 0,
+			size_t len = maxOf<size_t>());
 
 	~MemoryMappedRegion();
 
 	MemoryMappedRegion(MemoryMappedRegion &&);
-	MemoryMappedRegion & operator=(MemoryMappedRegion &&);
+	MemoryMappedRegion &operator=(MemoryMappedRegion &&);
 
 	MemoryMappedRegion(const MemoryMappedRegion &) = delete;
-	MemoryMappedRegion & operator=(const MemoryMappedRegion &) = delete;
+	MemoryMappedRegion &operator=(const MemoryMappedRegion &) = delete;
 
 	MappingType getType() const { return _type; }
 	ProtFlags getProtectionFlags() const { return _prot; }
 
-	uint8_t * getRegion() const { return _region; }
+	uint8_t *getRegion() const { return _region; }
 
 	operator bool() const { return _region != nullptr; }
 
@@ -200,119 +186,142 @@ protected:
 };
 
 // Check if file at path exists
-SP_PUBLIC bool exists(StringView path);
+SP_PUBLIC bool exists(const FileInfo &);
 
-SP_PUBLIC bool stat(StringView path, Stat &);
+SP_PUBLIC bool stat(const FileInfo &, Stat &);
 
 // create dir at path (just mkdir, not mkdir -p)
-SP_PUBLIC bool mkdir(StringView path);
+SP_PUBLIC bool mkdir(const FileInfo &);
 
-// mkdir -p (
-SP_PUBLIC bool mkdir_recursive(StringView path, bool appWide = true);
+// mkdir -p
+SP_PUBLIC bool mkdir_recursive(const FileInfo &);
 
 // touch (set mtime to now) file
-SP_PUBLIC bool touch(StringView path);
+SP_PUBLIC bool touch(const FileInfo &);
 
 // move file from source to dest (tries to rename file, then copy-remove, rename will be successful only if both path is on single physical drive)
-SP_PUBLIC bool move(StringView source, StringView dest);
+SP_PUBLIC bool move(const FileInfo &source, const FileInfo &dest);
 
 // copy file or directory to dest; use ftw_b for dirs, no directory tree check
-SP_PUBLIC bool copy(StringView source, StringView dest, bool stopOnError = true);
+SP_PUBLIC bool copy(const FileInfo &source, const FileInfo &dest, bool stopOnError = true);
 
 // remove file or directory
 // if not recursive, only single file or empty dir will be removed
 // if withDirs == false, only file s in directory tree will be removed
-SP_PUBLIC bool remove(StringView path, bool recursive = false, bool withDirs = false);
+SP_PUBLIC bool remove(const FileInfo &, bool recursive = false, bool withDirs = false);
 
 // file-tree-walk, walk across directory tree at path, callback will be called for each file or directory
-// path in callback is absolute
+// path in callback is fixed with resource origin or absolute for Custom category
 // depth = -1 - unlimited
 // dirFirst == true - directory will be shown before files inside them, useful for listings and copy
 // dirFirst == false - directory will be shown after files, useful for remove
-SP_PUBLIC void ftw(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth = -1, bool dirFirst = false);
-
-// same as ftw, but iteration can be stopped by returning false from callback
-SP_PUBLIC bool ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth = -1, bool dirFirst = false);
-
-// returns application writable path (or path inside writable dir, if path is set
-// if relative == false - do not merge paths, if provided path is absolute
-//
-// Writable path should be used for sharable, but not valuable contents,
-// or caches, that should not be removed, when application is running or in background
-// On android, writable path is on same drive or device, that used for application file
-// This library use writable path to store fonts, icons caches and assets
-template <typename Interface>
-SP_PUBLIC auto writablePath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto writablePathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
-
-// returns application documents path (or path inside documents dir, if path is set
-// if relative == false - do not merge paths, if provided path is absolute
-//
-// Documents path should be used for valuable data, like documents, created by user,
-// or content, that will be hard to recreate
-// This library stores StoreKit and purchases data in documents dir
-template <typename Interface>
-SP_PUBLIC auto documentsPath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto documentsPathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC bool ftw(const FileInfo &, const Callback<bool(const FileInfo &, FileType)> &,
+		int depth = -1, bool dirFirst = false);
 
 // returns application current work dir from getcwd (or path inside current dir, if path is set
 // if relative == false - do not merge paths, if provided path is absolute
 //
-// Current work dir is technical concept. Use it only if there is good reason for it
+// Current work dir is technical concept. Use it only if there is a good reason for it
 template <typename Interface>
-SP_PUBLIC auto currentDir(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+SP_PUBLIC auto currentDir(StringView = StringView(), bool relative = false) ->
+		typename Interface::StringType;
 
-// returns application caches dir (or path inside caches dir, if path is set
-// if relative == false - do not merge paths, if provided path is absolute
-//
-// Caches dir used to store caches or content, that can be easily recreated,
-// and that can be removed/erased, when application is active or in background
-// On android, caches will be placed on SD card, if it's available
-template <typename Interface>
-SP_PUBLIC auto cachesPath(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto cachesPathReadOnly(StringView path = StringView(), bool relative = false) -> typename Interface::StringType;
+// Resource paths API
+// use this to load/save application resources, instead of direct read/write with custom paths
 
 // returns path, from which loadable resource can be read (from application bundle or dedicated resource directory)
 template <typename Interface>
-SP_PUBLIC auto loadableResourcePath(StringView path) -> typename Interface::StringType;
+SP_PUBLIC auto findReadablePath(StringView path, FileCategory = FileCategory::Custom,
+		Access = Access::None) -> typename Interface::StringType;
 
 template <typename Interface>
-SP_PUBLIC auto loadableResourcePath(FilePath path) -> typename Interface::StringType;
+SP_PUBLIC auto findReadablePath(const FileInfo &, Access = Access::None) ->
+		typename Interface::StringType;
 
+// returns path, into which specific resource can be written (possibly creates some dirs for it)
+template <typename Interface>
+SP_PUBLIC auto findWritablePath(StringView path, FileCategory, Access = Access::None) ->
+		typename Interface::StringType;
+
+template <typename Interface>
+SP_PUBLIC auto findWritablePath(const FileInfo &, Access = Access::None) ->
+		typename Interface::StringType;
+
+// Returns most prioritized path to search for a resources of specific types
+// For the Bundled type, returns path to the app bundle itself
+template <typename Interface>
+SP_PUBLIC auto findBasePath(FileCategory) -> typename Interface::StringType;
+
+// Is it possible for the app to create/write a resource with specific type
+SP_PUBLIC bool isResourceTypeWritable(FileCategory);
+
+// enumerate all paths, that will be used to find a resource of specific types
+SP_PUBLIC void enumeratePaths(FileCategory, const Callback<bool(StringView)> &);
+
+// Enumerate all candidate paths, on which specific resource can be found
+// File on candidate path should be accessable with Access mask
+// If Access::None specified, all potential locations (empty too) will be returned
+// Resource type location will not be initialized, if it was not initialized before
+SP_PUBLIC void enumerateReadablePaths(StringView path, FileCategory, Access,
+		const Callback<bool(StringView)> &);
+SP_PUBLIC void enumerateReadablePaths(StringView path, FileCategory,
+		const Callback<bool(StringView)> &);
+
+SP_PUBLIC void enumerateReadablePaths(const FileInfo &, Access, const Callback<bool(StringView)> &);
+SP_PUBLIC void enumerateReadablePaths(const FileInfo &, const Callback<bool(StringView)> &);
+
+SP_PUBLIC bool enumeratePrefixedPath(StringView, Access a, const Callback<bool(StringView)> &cb);
+SP_PUBLIC bool enumeratePrefixedPath(StringView, const Callback<bool(StringView)> &cb);
+
+// Enumerate all candidate paths, on which specific resource can be written
+// File on candidate path should be accessable with Access mask or not existed
+// If Access::None specified, all potential locations (empty too) will be returned
+// Resource type location will be initialized (created) if it's required
+SP_PUBLIC void enumerateWritablePaths(StringView path, FileCategory, Access,
+		const Callback<bool(StringView)> &);
+SP_PUBLIC void enumerateWritablePaths(StringView path, FileCategory,
+		const Callback<bool(StringView)> &);
+
+SP_PUBLIC void enumerateWritablePaths(const FileInfo &, Access, const Callback<bool(StringView)> &);
+SP_PUBLIC void enumerateWritablePaths(const FileInfo &, const Callback<bool(StringView)> &);
+
+// Search for a ResourceType for absolute path
+// optionally - returns prefixed path for in in callback
+FileCategory detectResourceCategory(StringView, const Callback<void(StringView)> &cb = nullptr);
+FileCategory detectResourceCategory(const FileInfo &,
+		const Callback<void(StringView)> &cb = nullptr);
 
 // write data into file on path
-SP_PUBLIC bool write(StringView path, const uint8_t *data, size_t len);
+SP_PUBLIC bool write(const FileInfo &, const uint8_t *data, size_t len, bool _override = true);
 
 template <typename BytesView>
-inline bool write(StringView path, const BytesView &view) {
-	return write(path, reinterpret_cast<const uint8_t *>(view.data()), size_t(view.size()));
+inline bool write(const FileInfo &info, const BytesView &view) {
+	return write(info, reinterpret_cast<const uint8_t *>(view.data()), size_t(view.size()));
 }
 
-SP_PUBLIC File openForReading(StringView path);
+SP_PUBLIC File openForReading(const FileInfo &);
 
 // read file to string (if it was a binary file, string will be invalid)
 template <typename Interface>
-SP_PUBLIC auto readTextFile(StringView path) -> typename Interface::StringType;
+SP_PUBLIC auto readTextFile(const FileInfo &) -> typename Interface::StringType;
 
-SP_PUBLIC bool readIntoBuffer(uint8_t *buf, StringView path, size_t off = 0, size_t size = maxOf<size_t>());
-SP_PUBLIC bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, StringView path, size_t off, size_t size);
+SP_PUBLIC bool readIntoBuffer(uint8_t *buf, const FileInfo &, size_t off = 0,
+		size_t size = maxOf<size_t>());
+
+SP_PUBLIC bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize,
+		const FileInfo &, size_t off, size_t size);
 
 template <size_t Buffer = 1_KiB>
-bool readWithConsumer(const io::Consumer &stream, StringView path,
-		size_t off = 0, size_t size = maxOf<size_t>()) {
+bool readWithConsumer(const io::Consumer &stream, const FileInfo &info, size_t off = 0,
+		size_t size = maxOf<size_t>()) {
 	uint8_t b[Buffer];
-	return readWithConsumer(stream, b, Buffer, path, off, size);
+	return readWithConsumer(stream, b, Buffer, info, off, size);
 }
 
 template <typename Interface>
-auto readIntoMemory(StringView ipath, size_t off = 0, size_t size = maxOf<size_t>()) -> typename Interface::BytesType {
-	auto f = openForReading(ipath);
+auto readIntoMemory(const FileInfo &info, size_t off = 0, size_t size = maxOf<size_t>()) ->
+		typename Interface::BytesType {
+	auto f = openForReading(info);
 	if (f) {
 		auto fsize = f.size();
 		if (fsize <= off) {
@@ -322,7 +331,8 @@ auto readIntoMemory(StringView ipath, size_t off = 0, size_t size = maxOf<size_t
 		if (fsize - off < size) {
 			size = fsize - off;
 		}
-		typename Interface::BytesType ret; ret.resize(size);
+		typename Interface::BytesType ret;
+		ret.resize(size);
 		f.seek(off, io::Seek::Set);
 		f.read(ret.data(), size);
 		f.close();
@@ -333,18 +343,18 @@ auto readIntoMemory(StringView ipath, size_t off = 0, size_t size = maxOf<size_t
 
 SP_PUBLIC StringView detectMimeType(StringView path);
 
-std::ostream &operator<<(std::ostream &, FileType);
-std::ostream &operator<<(std::ostream &, ProtFlags);
-std::ostream &operator<<(std::ostream &, const Stat &);
+SP_PUBLIC std::ostream &operator<<(std::ostream &, ProtFlags);
+SP_PUBLIC std::ostream &operator<<(std::ostream &, const Stat &);
 
-}
+} // namespace stappler::filesystem
 
 // *::platform::* functions handles some FS actions in platform-specific way
 // (like inside Android apk or MacOS app bundle)
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 #if ANDROID
-SP_PUBLIC void Android_initializeFilesystem(void *assetManager, StringView filesDir, StringView cachesDir, StringView apkPath);
+SP_PUBLIC void Android_initializeFilesystem(void *assetManager, StringView filesDir,
+		StringView cachesDir, StringView apkPath);
 SP_PUBLIC void Android_terminateFilesystem();
 SP_PUBLIC StringView Android_getApkPath();
 #endif
@@ -352,17 +362,8 @@ SP_PUBLIC StringView Android_getApkPath();
 template <typename Interface>
 SP_PUBLIC auto _getApplicationPath() -> typename Interface::StringType;
 
-template <typename Interface>
-SP_PUBLIC auto _getWritablePath(bool readOnly) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto _getDocumentsPath(bool readOnly) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto _getCachesPath(bool readOnly) -> typename Interface::StringType;
-
-SP_PUBLIC bool _exists(StringView path, bool assetsRoot = true);
-SP_PUBLIC bool _stat(StringView path, Stat &, bool assetsRoot = true);
+SP_PUBLIC bool _exists(StringView path);
+SP_PUBLIC bool _stat(StringView path, Stat &);
 
 SP_PUBLIC File _openForReading(StringView);
 SP_PUBLIC size_t _read(void *, uint8_t *buf, size_t nbytes);
@@ -371,16 +372,16 @@ SP_PUBLIC size_t _tell(void *);
 SP_PUBLIC bool _eof(void *);
 SP_PUBLIC void _close(void *);
 
-SP_PUBLIC void _ftw(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
-
-SP_PUBLIC bool _ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth, bool dirFirst, bool assetsRoot = true);
+SP_PUBLIC Status _ftw(StringView path, const Callback<bool(StringView, FileType)> &, int depth,
+		bool dirFirst);
 
 SP_PUBLIC uint32_t _getMemoryPageSize();
-SP_PUBLIC uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot, size_t offset, size_t len);
+SP_PUBLIC uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot,
+		size_t offset, size_t len);
 SP_PUBLIC bool _unmapFile(uint8_t *region, uint8_t storage[16]);
 SP_PUBLIC bool _syncMappedRegion(uint8_t *region, uint8_t storage[16]);
 
-}
+} // namespace stappler::filesystem::platform
 
 // *::native::* functions (in contrast with ::platform::) works with native platform filesystem directly
 // (so, not in bundle or archive)
@@ -401,103 +402,37 @@ SP_PUBLIC auto posixToNative(StringView path) -> typename Interface::StringType;
 template <typename Interface>
 SP_PUBLIC auto getcwd_fn() -> typename Interface::StringType;
 
-SP_PUBLIC bool remove_fn(StringView path);
-SP_PUBLIC bool unlink_fn(StringView path);
-SP_PUBLIC bool mkdir_fn(StringView path);
+SP_PUBLIC Status remove_fn(StringView path);
+SP_PUBLIC Status unlink_fn(StringView path);
+SP_PUBLIC Status mkdir_fn(StringView path, ProtFlags = ProtFlags::MkdirDefault);
 
-SP_PUBLIC bool access_fn(StringView path, Access mode);
+SP_PUBLIC Status access_fn(StringView path, Access mode);
 
-SP_PUBLIC bool stat_fn(StringView path, Stat &);
+SP_PUBLIC Status stat_fn(StringView path, Stat &);
 
-SP_PUBLIC bool touch_fn(StringView path);
+SP_PUBLIC Status touch_fn(StringView path);
 
-SP_PUBLIC void ftw_fn(StringView path, const Callback<void(StringView path, bool isFile)> &, int depth, bool dirFirst);
-SP_PUBLIC bool ftw_b_fn(StringView path, const Callback<bool(StringView path, bool isFile)> &, int depth, bool dirFirst);
+// Callback returns relative paths, not absolute
+SP_PUBLIC Status ftw_fn(StringView path, const Callback<bool(StringView, FileType)> &, int depth,
+		bool dirFirst);
 
-SP_PUBLIC bool rename_fn(StringView source, StringView dest);
+SP_PUBLIC Status rename_fn(StringView source, StringView dest);
 
 SP_PUBLIC FILE *fopen_fn(StringView, StringView mode);
 
-SP_PUBLIC bool write_fn(StringView, const unsigned char *data, size_t len);
+SP_PUBLIC Status write_fn(StringView, const unsigned char *data, size_t len,
+		ProtFlags = ProtFlags::WriteDefault);
 
-}
+} // namespace stappler::filesystem::native
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
 template <typename Interface>
-SP_PUBLIC inline auto writablePath(StringView path, bool relative) -> typename Interface::StringType {
-	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
-		return path.str<Interface>();
-	}
-	auto wpath =  filesystem::platform::_getWritablePath<Interface>(true);
-	if (path.empty()) {
-		return wpath;
-	}
-	return filepath::merge<Interface>(wpath, path);
-}
-
-template <typename Interface>
-SP_PUBLIC inline auto writablePathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
-	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
-		return path.str<Interface>();
-	}
-	auto wpath =  filesystem::platform::_getWritablePath<Interface>(false);
-	if (path.empty()) {
-		return wpath;
-	}
-	return filepath::merge<Interface>(wpath, path);
-}
-
-template <typename Interface>
-SP_PUBLIC inline auto cachesPath(StringView path, bool relative) -> typename Interface::StringType {
-	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
-		return path.str<Interface>();
-	}
-	auto cpath =  filesystem::platform::_getCachesPath<Interface>(true);
-	if (path.empty()) {
-		return cpath;
-	}
-	return filepath::merge<Interface>(cpath, path);
-}
-
-template <typename Interface>
-SP_PUBLIC inline auto cachesPathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
-	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
-		return path.str<Interface>();
-	}
-	auto cpath =  filesystem::platform::_getCachesPath<Interface>(false);
-	if (path.empty()) {
-		return cpath;
-	}
-	return filepath::merge<Interface>(cpath, path);
-}
-
-template <typename Interface>
-SP_PUBLIC inline auto documentsPath(StringView path, bool relative) -> typename Interface::StringType {
-	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
-		return path.str<Interface>();
-	}
-	auto dpath =  filesystem::platform::_getDocumentsPath<Interface>(true);
-	if (path.empty()) {
-		return dpath;
-	}
-	return filepath::merge<Interface>(dpath, path);
-}
-
-template <typename Interface>
-SP_PUBLIC inline auto documentsPathReadOnly(StringView path, bool relative) -> typename Interface::StringType {
-	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
-		return path.str<Interface>();
-	}
-	auto dpath =  filesystem::platform::_getDocumentsPath<Interface>(false);
-	if (path.empty()) {
-		return dpath;
-	}
-	return filepath::merge<Interface>(dpath, path);
-}
-
-template <typename Interface>
 SP_PUBLIC inline auto currentDir(StringView path, bool relative) -> typename Interface::StringType {
+	if (filepath::isAboveRoot(path)) {
+		typename Interface::StringType();
+	}
+
 	if (!path.empty() && !relative && filepath::isAbsolute(path)) {
 		return path.str<Interface>();
 	}
@@ -506,66 +441,61 @@ SP_PUBLIC inline auto currentDir(StringView path, bool relative) -> typename Int
 		if (path.empty()) {
 			return cwd;
 		} else {
-			return filepath::merge<Interface>(cwd, path);
+			return filepath::reconstructPath<Interface>(filepath::merge<Interface>(cwd, path));
 		}
 	}
 	return typename Interface::StringType();
 }
 
 template <typename Interface>
-SP_PUBLIC inline auto loadableResourcePath(StringView path) -> typename Interface::StringType {
-	if (filepath::isAbsolute(path)) {
-		// absolute path handled by native functions
-		if (filesystem::native::access_fn(path, Access::Exists)) {
-			return path.str<Interface>();
-		}
-	} else if (filepath::isBundled(path) && filesystem::platform::_exists(path)) {
-		// path forced to be bundled via %PLATFORM% prefix
-		return path.str<Interface>();
-	} else if (!filepath::isAboveRoot(path)) {
-		if (filesystem::platform::_exists(path)) {
-			// path can be found within bundle
-			return "%PLATFORM%:" + path.str<Interface>();
-		} else {
-			typename Interface::StringType npath;
-
-			// Try application-bin-relative
-			// On windows desktop apps it conventionally like app bundle
-			npath = filepath::merge<Interface>(filesystem::platform::_getApplicationPath<Interface>(), path);
-			if (filesystem::exists(npath)) {
-				return npath;
-			}
-
-			// Try writable path
-			npath = filesystem::writablePathReadOnly<Interface>(path);
-			if (filesystem::exists(npath)) {
-				return npath;
-			}
-
-			// Try current-dir relative
-			npath = filesystem::currentDir<Interface>(path);
-			if (filesystem::exists(npath)) {
-				return npath;
-			}
-		}
-	}
-
-	log::warn("filesystem", "No path found for resource: ", path);
-	// not a loadable resource path
-	return typename Interface::StringType();
+SP_PUBLIC inline auto findReadablePath(StringView path, FileCategory type, Access a) ->
+		typename Interface::StringType {
+	typename Interface::StringType npath;
+	enumerateReadablePaths(path, type, a, [&](StringView p) {
+		npath = p.str<Interface>();
+		return false;
+	});
+	return npath;
 }
 
 template <typename Interface>
-SP_PUBLIC auto loadableResourcePath(FilePath path) -> typename Interface::StringType {
-	return loadableResourcePath<Interface>(path.get());
+SP_PUBLIC auto findReadablePath(const FileInfo &info, Access a) -> typename Interface::StringType {
+	return findReadablePath<Interface>(info.path, info.category, a);
 }
 
 template <typename Interface>
-SP_PUBLIC auto readTextFile(StringView ipath) -> typename Interface::StringType {
-	auto f = openForReading(ipath);
+SP_PUBLIC auto findWritablePath(StringView path, FileCategory type, Access a) ->
+		typename Interface::StringType {
+	typename Interface::StringType npath;
+	enumerateWritablePaths(path, type, a, [&](StringView p) {
+		npath = p.str<Interface>();
+		return false;
+	});
+	return npath;
+}
+
+template <typename Interface>
+SP_PUBLIC auto findWritablePath(const FileInfo &info, Access a) -> typename Interface::StringType {
+	return findWritablePath<Interface>(info.path, info.category, a);
+}
+
+template <typename Interface>
+SP_PUBLIC auto findBasePath(FileCategory type) -> typename Interface::StringType {
+	typename Interface::StringType npath;
+	enumeratePaths(type, [&](StringView p) {
+		npath = p.str<Interface>();
+		return false;
+	});
+	return npath;
+}
+
+template <typename Interface>
+SP_PUBLIC auto readTextFile(const FileInfo &info) -> typename Interface::StringType {
+	auto f = openForReading(info);
 	if (f) {
 		auto fsize = f.size();
-		typename Interface::StringType ret; ret.resize(fsize);
+		typename Interface::StringType ret;
+		ret.resize(fsize);
 		f.read((uint8_t *)ret.data(), fsize);
 		f.close();
 		return ret;
@@ -573,7 +503,7 @@ SP_PUBLIC auto readTextFile(StringView ipath) -> typename Interface::StringType 
 	return typename Interface::StringType();
 }
 
-}
+} // namespace stappler::filesystem
 
 namespace STAPPLER_VERSIONIZED stappler::io {
 
@@ -587,11 +517,9 @@ struct ProducerTraits<filesystem::File> {
 	static size_t SeekFn(void *ptr, int64_t offset, Seek s) {
 		return ((type *)ptr)->seek(offset, s);
 	}
-	static size_t TellFn(void *ptr) {
-		return ((type *)ptr)->tell();
-	}
+	static size_t TellFn(void *ptr) { return ((type *)ptr)->tell(); }
 };
 
-}
+} // namespace stappler::io
 
 #endif /* STAPPLER_FILESYSTEM_SPFILESYSTEM_H_ */

@@ -153,7 +153,7 @@ auto read(const StringType &data, const StringView &key = StringView()) -> Value
 
 #ifdef MODULE_STAPPLER_FILESYSTEM
 template <typename Interface>
-auto readFile(StringView filename, const StringView &key = StringView()) -> ValueTemplate<Interface> {
+auto readFile(const FileInfo &filename, const StringView &key = StringView()) -> ValueTemplate<Interface> {
 	return read<Interface>(filesystem::readIntoMemory<Interface>(filename));
 }
 #endif

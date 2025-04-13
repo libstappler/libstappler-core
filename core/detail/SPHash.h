@@ -21,10 +21,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_CORE_STRING_SPHASH_H_
-#define STAPPLER_CORE_STRING_SPHASH_H_
+#ifndef STAPPLER_CORE_DETAIL_SPHASH_H_
+#define STAPPLER_CORE_DETAIL_SPHASH_H_
 
-#include "SPCore.h"
+#include "SPPlatformInit.h"
+#include <stdint.h>
+#include <string.h>
+
+// A part of SPCore.h, DO NOT include this directly
 
 // Based on XXH (https://cyan4973.github.io/xxHash/#benchmarks)
 // constexpr implementation from https://github.com/ekpyron/xxhashct
@@ -191,4 +195,23 @@ inline constexpr size_t hashSize(const char* str, size_t len, uint64_t seed = 0)
 
 }
 
-#endif /* LIBSTAPPLER_COMMON_STRING_SPHASH_H_ */
+namespace STAPPLER_VERSIONIZED stappler {
+	
+// used for naming/hashing (like "MyTag"_tag)
+constexpr uint32_t operator""_hash ( const char* str, size_t len) {
+	return stappler::hash::hash32(str, uint32_t(len));
+}
+constexpr uint32_t operator""_tag ( const char* str, size_t len) {
+	return stappler::hash::hash32(str, uint32_t(len));
+}
+
+constexpr uint64_t operator""_hash64 ( const char* str, size_t len) {
+	return stappler::hash::hash64(str, len);
+}
+constexpr uint64_t operator""_tag64 ( const char* str, size_t len) {
+	return stappler::hash::hash64(str, len);
+}
+
+}
+
+#endif /* LIBSTAPPLER_COMMON_DETAIL_SPHASH_H_ */

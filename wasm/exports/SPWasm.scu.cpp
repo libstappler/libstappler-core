@@ -184,12 +184,12 @@ bool Module::init(StringView name, Bytes &&data) {
 	return true;
 }
 
-bool Module::init(StringView name, FilePath path) {
+bool Module::init(StringView name, const FileInfo &path) {
 	char errorBuf[128] = { 0 };
-	_data = filesystem::readIntoMemory<Interface>(path.get());
+	_data = filesystem::readIntoMemory<Interface>(path);
 
 	if (_data.empty()) {
-		log::error("wasm::Module", "Fail to open file: ", path.get());
+		log::error("wasm::Module", "Fail to open file: ", path);
 		return false;
 	}
 
@@ -197,7 +197,7 @@ bool Module::init(StringView name, FilePath path) {
 
 	auto mod = wasm_runtime_load(const_cast<uint8_t *>(_data.data()), static_cast<uint32_t>(_data.size()), errorBuf, sizeof(errorBuf));
 	if (!mod) {
-		log::error("wasm::Module", "Fail to load module '", path.get(), "': ", errorBuf);
+		log::error("wasm::Module", "Fail to load module '", path, "': ", errorBuf);
 		return false;
 	}
 
@@ -205,7 +205,7 @@ bool Module::init(StringView name, FilePath path) {
 	_module = mod;
 
 	if (!wasm_runtime_register_module(_name.data(), _module, errorBuf, sizeof(errorBuf))) {
-		log::error("wasm::Module", "Fail to register module '", path.get(), "': ", errorBuf);
+		log::error("wasm::Module", "Fail to register module '", path, "': ", errorBuf);
 		return false;
 	}
 

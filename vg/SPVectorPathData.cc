@@ -53,8 +53,8 @@ public:
 		return false;
 	}
 
-	static bool readFile(PathWriter *p, const StringView &str) {
-		if (!str.empty()) {
+	static bool readFile(PathWriter *p, const FileInfo &str) {
+		if (!str.path.empty()) {
 			auto content = filesystem::readTextFile<memory::StandartInterface>(str);
 			return readFileContent(p, content);
 		}
@@ -773,7 +773,7 @@ bool PathWriter::readFromFileContent(StringView str) {
 	return true;
 }
 
-bool PathWriter::readFromFile(StringView str) {
+bool PathWriter::readFromFile(const FileInfo &str) {
 	commands.clear();
 	uvPoints.clear();
 	points.clear();

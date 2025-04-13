@@ -27,6 +27,8 @@ THE SOFTWARE.
 #include "SPMemInterface.h"
 #include "SPBytesReader.h"
 #include "SPUnicode.h"
+#include "SPStatus.h"
+#include <compare>
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -342,7 +344,17 @@ protected: // char-matching inline functions
 using StringView = StringViewBase<char>;
 using WideStringView = StringViewBase<char16_t>;
 
+SP_PUBLIC StringView getStatusName(Status);
+
+// Returns status description (strerror), thread-safe
+// Callback will be called exactly one time, do not store StringView from it directly!
+SP_PUBLIC void getStatusDescription(Status, const Callback<void(StringView)> &cb);
+
 }
+
+//
+// Implementation
+//
 
 #include "SPStringDetail.h"
 
@@ -389,6 +401,22 @@ SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, memory::StandartInterface::BasicSt
 
 SP_STRINGVIEW_COMPARE_OP_UTF8(memory::PoolInterface::BasicStringType<char>, StringViewUtf8)
 SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, memory::PoolInterface::BasicStringType<char>)
+
+template <typename C> inline std::weak_ordering
+operator<=>(const StringViewBase<C> &l, const StringViewBase<C> &r) {
+	auto c = string::detail::compare_c(l, r);
+	if (c == 0) { return std::weak_ordering::equivalent; }
+	else if (c < 0) { return std::weak_ordering::less; }
+	else { return std::weak_ordering::greater; }
+}
+
+template <typename C> inline std::weak_ordering
+operator<=>(const StringViewUtf8 &l, const StringViewUtf8 &r) {
+	auto c = string::detail::compare_c(l, r);
+	if (c == 0) { return std::weak_ordering::equivalent; }
+	else if (c < 0) { return std::weak_ordering::less; }
+	else { return std::weak_ordering::greater; }
+}
 
 template <typename C> inline bool operator == (const StringViewBase<C> &l, const C *r) { return string::detail::compare_c(l, StringViewBase<C>(r)) == 0; }
 template <typename C> inline bool operator != (const StringViewBase<C> &l, const C *r) { return string::detail::compare_c(l, StringViewBase<C>(r)) != 0; }

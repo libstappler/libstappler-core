@@ -23,6 +23,7 @@
 #include "SPFilesystem.h"
 #include "SPString.h"
 #include "SPSharedModule.h"
+#include "stappler-buildconfig.h"
 
 #if MODULE_STAPPLER_BITMAP
 #include "SPBitmap.h"
@@ -30,8 +31,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
-const char * MIME_TYPES =
-R"(application/andrew-inset			ez
+const char *MIME_TYPES =
+		R"(application/andrew-inset			ez
 application/applixware				aw
 application/atom+xml				atom
 application/atomcat+xml				atomcat
@@ -811,7 +812,8 @@ struct MimeDetector {
 				str.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				if (!str.empty()) {
 					while (!str.empty()) {
-						auto value = str.readUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
+						auto value =
+								str.readUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 						if (!value.empty()) {
 							extToMime.emplace(value, type);
 							mimeToExt.emplace(type, value);
@@ -838,23 +840,24 @@ StringView detectMimeType(StringView path) {
 	}
 
 #if MODULE_STAPPLER_BITMAP
-	Pair<bitmap::FileFormat, StringView> (*bitmap_detectFormat) (StringView);
-	StringView (*bitmap_getMimeType1) (bitmap::FileFormat);
-	StringView (*bitmap_getMimeType2) (StringView);
+	decltype(static_cast<Pair<bitmap::FileFormat, StringView> (*)(const FileInfo &)>(
+			bitmap::detectFormat)) bitmap_detectFormat;
 
-#if STAPPLER_SHARED
-	bitmap_detectFormat = (decltype(bitmap_detectFormat))SharedModule::acquireSymbol("bitmap", "detectFormat(StringView)");
-	bitmap_getMimeType1 = (decltype(bitmap_getMimeType1))SharedModule::acquireSymbol("bitmap", "getMimeType(FileFormat)");
-	bitmap_getMimeType2 = (decltype(bitmap_getMimeType2))SharedModule::acquireSymbol("bitmap", "getMimeType(StringView)");
+	decltype(static_cast<StringView (*)(bitmap::FileFormat)>(
+			bitmap::getMimeType)) bitmap_getMimeType1;
+	decltype(static_cast<StringView (*)(StringView)>(bitmap::getMimeType)) bitmap_getMimeType2;
+
+	bitmap_detectFormat = SharedModule::acquireTypedSymbol<decltype(bitmap_detectFormat)>(
+			buildconfig::MODULE_STAPPLER_BITMAP_NAME, "detectFormat");
+	bitmap_getMimeType1 = SharedModule::acquireTypedSymbol<decltype(bitmap_getMimeType1)>(
+			buildconfig::MODULE_STAPPLER_BITMAP_NAME, "getMimeType");
+	bitmap_getMimeType2 = SharedModule::acquireTypedSymbol<decltype(bitmap_getMimeType2)>(
+			buildconfig::MODULE_STAPPLER_BITMAP_NAME, "getMimeType");
 	if (!bitmap_detectFormat || !bitmap_getMimeType1 || !bitmap_getMimeType2) {
-		log::error("filesystem", "Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
+		log::error("filesystem",
+				"Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
 		return StringView();
 	}
-#else
-	bitmap_detectFormat = &bitmap::detectFormat;
-	bitmap_getMimeType1 = &bitmap::getMimeType;
-	bitmap_getMimeType2 = &bitmap::getMimeType;
-#endif
 
 	// try image format
 	auto fmt = bitmap_detectFormat(StringView(path));
@@ -867,4 +870,4 @@ StringView detectMimeType(StringView path) {
 	return StringView();
 }
 
-}
+} // namespace stappler::filesystem

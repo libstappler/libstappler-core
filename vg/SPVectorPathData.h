@@ -126,7 +126,7 @@ struct SP_PUBLIC PathWriter {
 
 	bool readFromPathString(StringView);
 	bool readFromFileContent(StringView);
-	bool readFromFile(StringView);
+	bool readFromFile(const FileInfo &);
 	bool readFromBytes(BytesView);
 
 	PathWriter &moveTo(float x, float y, float u = nan(), float v = nan());

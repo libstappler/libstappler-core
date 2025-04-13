@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,9 @@
 #ifndef CORE_CORE_SPPLATFORMUNISTD_H_
 #define CORE_CORE_SPPLATFORMUNISTD_H_
 
-#include "SPPlatformInit.h"
+// Platform-dependent implementation for some unistd.h POSIX utils
+
+#include "detail/SPPlatformInit.h"
 
 #if WIN32
 
@@ -82,9 +84,10 @@ using pid_t = DWORD;
 
 #include <dirent.h>
 #include <utime.h>
-#include <unistd.h>
+#include <fcntl.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #define SP_POSIX_MAPPED_FILES _POSIX_MAPPED_FILES
 
@@ -93,5 +96,7 @@ using pid_t = DWORD;
 #if XWIN
 #pragma clang diagnostic pop
 #endif
+
+#include "detail/SPPlatformCleanup.h"
 
 #endif /* CORE_CORE_SPPLATFORMUNISTD_H_ */

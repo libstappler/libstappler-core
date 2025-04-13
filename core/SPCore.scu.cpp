@@ -28,6 +28,7 @@ THE SOFTWARE.
 #include "SPMemPoolApr.cc"
 #include "SPMemPoolHash.cc"
 #include "SPMemPoolInterface.cc"
+#include "SPMemPoolInterface.h"
 #include "SPMemPoolPool.cc"
 #include "SPMemPoolUtils.cc"
 #include "SPMemAlloc.cc"
@@ -60,47 +61,143 @@ THE SOFTWARE.
 #include "SPCommandLineParser.cc"
 #include "SPStatus.cc"
 
+#include "SPMetastring.h"
+
+#include <list>
+
 #define STAPPLER_VERSION_VARIANT 0
-
-#ifndef STAPPLER_VERSION_API
-#define STAPPLER_VERSION_API 0
-#endif
-
-#ifndef STAPPLER_VERSION_REV
-#define STAPPLER_VERSION_REV 0
-#endif
-
-#ifndef STAPPLER_VERSION_BUILD
-#define STAPPLER_VERSION_BUILD 0
-#endif
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
+struct Initializer {
+	void *userdata;
+	void (*init)(void *);
+	void (*term)(void *);
+};
 
-const char * getStapplerVersionString() {
-	return TOSTRING(STAPPLER_VERSION_VARIANT) "." TOSTRING(STAPPLER_VERSION_API) "." TOSTRING(STAPPLER_VERSION_REV) "." TOSTRING(STAPPLER_VERSION_BUILD);
+struct InitializerManager {
+	static InitializerManager &get();
+
+	InitializerManager &operator=(const InitializerManager &) = delete;
+
+	std::mutex mutex;
+	std::list<Initializer> list;
+	bool initialized = false;
+};
+
+InitializerManager &InitializerManager::get() {
+	static InitializerManager im;
+	return im;
+}
+
+void initialize() {
+	auto &m = InitializerManager::get();
+	std::unique_lock lock(m.mutex);
+	m.initialized = true;
+	memory::pool::initialize();
+
+	for (auto &it : m.list) { it.init(it.userdata); }
+}
+
+void terminate() {
+	auto &m = InitializerManager::get();
+	std::unique_lock lock(m.mutex);
+
+	// terminate in reverse oder
+	for (auto it = m.list.rbegin(); it != m.list.rend(); ++it) { it->term(it->userdata); }
+
+	memory::pool::terminate();
+	m.list.clear();
+}
+
+bool addInitializer(void *ptr, NotNull<void (*)(void *)> init, NotNull<void (*)(void *)> term) {
+	auto &m = InitializerManager::get();
+	std::unique_lock lock(m.mutex);
+	if (m.initialized) {
+		init.get()(ptr);
+	}
+	m.list.emplace_back(Initializer{ptr, init, term});
+	return !m.initialized;
+}
+
+const char *getStapplerVersionString() {
+	static auto versionString = metastring::merge(
+			metastring::numeric<size_t(STAPPLER_VERSION_VARIANT)>(), metastring::metastring<'.'>(),
+			metastring::numeric<size_t(buildconfig::STAPPLER_VERSION_API)>(),
+			metastring::metastring<'.'>(),
+			metastring::numeric<size_t(buildconfig::STAPPLER_VERSION_REV)>(),
+			metastring::metastring<'.'>(),
+			metastring::numeric<size_t(buildconfig::STAPPLER_VERSION_BUILD)>(),
+			metastring::metastring<char(0)>())
+										.to_array();
+
+	return versionString.data();
 }
 
 uint32_t getStapplerVersionIndex() {
-	return SP_MAKE_API_VERSION(STAPPLER_VERSION_VARIANT, STAPPLER_VERSION_API, STAPPLER_VERSION_REV, STAPPLER_VERSION_BUILD);
+	return SP_MAKE_API_VERSION(STAPPLER_VERSION_VARIANT, buildconfig::STAPPLER_VERSION_API,
+			buildconfig::STAPPLER_VERSION_REV, buildconfig::STAPPLER_VERSION_BUILD);
 }
 
-uint32_t getStapplerVersionVariant() {
-	return STAPPLER_VERSION_VARIANT;
+uint32_t getStapplerVersionVariant() { return STAPPLER_VERSION_VARIANT; }
+
+uint32_t getStapplerVersionApi() { return buildconfig::STAPPLER_VERSION_API; }
+
+uint32_t getStapplerVersionRev() { return buildconfig::STAPPLER_VERSION_REV; }
+
+uint32_t getStapplerVersionBuild() { return buildconfig::STAPPLER_VERSION_BUILD; }
+
+
+SP_PUBLIC const char *getAppconfigBundleName() {
+	return SharedModule::acquireTypedSymbol<const char *>(buildconfig::MODULE_APPCONFIG_NAME,
+			"APPCONFIG_BUNDLE_NAME");
 }
 
-uint32_t getStapplerVersionApi() {
-	return STAPPLER_VERSION_API;
+const char *getAppconfigAppName() {
+	return SharedModule::acquireTypedSymbol<const char *>(buildconfig::MODULE_APPCONFIG_NAME,
+			"APPCONFIG_APP_NAME");
 }
 
-uint32_t getStapplerVersionRev() {
-	return STAPPLER_VERSION_REV;
+uint32_t getAppconfigVersionIndex() {
+	return SP_MAKE_API_VERSION(getAppconfigVersionVariant(), getAppconfigVersionApi(),
+			getAppconfigVersionRev(), getAppconfigVersionBuild());
 }
 
-uint32_t getStapplerVersionBuild() {
-	return STAPPLER_VERSION_BUILD;
+uint32_t getAppconfigVersionVariant() {
+	auto num = SharedModule::acquireTypedSymbol<const int *>(buildconfig::MODULE_APPCONFIG_NAME,
+			"APPCONFIG_VERSION_VARIANT");
+	if (num) {
+		return uint32_t(*num);
+	}
+	return 0;
 }
 
+uint32_t getAppconfigVersionApi() {
+	auto num = SharedModule::acquireTypedSymbol<const int *>(buildconfig::MODULE_APPCONFIG_NAME,
+			"APPCONFIG_VERSION_API");
+	if (num) {
+		return uint32_t(*num);
+	}
+	return 0;
 }
+
+uint32_t getAppconfigVersionRev() {
+	auto num = SharedModule::acquireTypedSymbol<const int *>(buildconfig::MODULE_APPCONFIG_NAME,
+			"APPCONFIG_VERSION_REV");
+	if (num) {
+		return uint32_t(*num);
+	}
+	return 0;
+}
+
+uint32_t getAppconfigVersionBuild() {
+	auto num = SharedModule::acquireTypedSymbol<const int *>(buildconfig::MODULE_APPCONFIG_NAME,
+			"APPCONFIG_VERSION_BUILD");
+	if (num) {
+		return uint32_t(*num);
+	}
+	return 0;
+}
+
+
+} // namespace STAPPLER_VERSIONIZED stappler

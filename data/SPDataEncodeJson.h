@@ -266,18 +266,22 @@ inline auto write(const ValueTemplate<Interface> &val, bool pretty = false, bool
 
 #if MODULE_STAPPLER_FILESYSTEM
 template <typename Interface>
-bool save(const ValueTemplate<Interface> &val, StringView ipath, bool pretty, bool timeMarkers = false) {
-	auto path = filesystem::native::posixToNative<Interface>(ipath);
-	std::ofstream stream(path.data());
-	if (stream.is_open()) {
-		write([&] (StringView str) {
-			stream.write(str.data(), str.size());
-		}, val, pretty, timeMarkers);
-		stream.flush();
-		stream.close();
-		return true;
-	}
-	return false;
+bool save(const ValueTemplate<Interface> &val, const FileInfo &info, bool pretty, bool timeMarkers = false) {
+	bool success = false;
+	filesystem::enumerateWritablePaths(info, filesystem::Access::None, [&] (StringView ipath) {
+		auto path = filesystem::native::posixToNative<Interface>(ipath);
+		std::ofstream stream(path.data());
+		if (stream.is_open()) {
+			write([&] (StringView str) {
+				stream.write(str.data(), str.size());
+			}, val, pretty, timeMarkers);
+			stream.flush();
+			stream.close();
+			success = true;
+		}
+		return false;
+	});
+	return success;
 }
 #endif
 

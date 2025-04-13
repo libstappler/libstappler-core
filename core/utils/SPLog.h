@@ -30,16 +30,6 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::log {
 
-enum LogType {
-	Verbose,
-	Debug,
-	Info,
-	Warn,
-	Error,
-	Fatal,
-	Default = Debug,
-};
-
 struct SP_PUBLIC CustomLog {
 	union VA {
 		StringView text;
@@ -114,17 +104,6 @@ template <typename ... Args>
 void fatal(const StringView &tag, Args && ... args) {
 	text(LogType::Fatal, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
 }
-
-#if DEBUG
-#define SPASSERT(cond, msg) do { \
-	if (!(cond)) { \
-		if (strlen(msg)) { STAPPLER_VERSIONIZED_NAMESPACE::log::format(STAPPLER_VERSIONIZED_NAMESPACE::log::LogType::Fatal, "Assert", "%s", msg);} \
-		assert(cond); \
-	} \
-} while (0)
-#else
-#define SPASSERT(cond, msg)
-#endif
 
 }
 

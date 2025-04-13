@@ -24,6 +24,10 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_SPCOMMON_H_
 #define STAPPLER_CORE_SPCOMMON_H_
 
+// Basic precompiled header of SDK
+// Should be included as a first header in translation unit (first in SCU, not single file)
+// Use it instead of SPCore.h to enable precompiled headers
+
 #include "SPCore.h"
 #include "SPMemInterface.h"
 #include "SPMemUuid.h"

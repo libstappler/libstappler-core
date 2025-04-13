@@ -24,38 +24,31 @@
 #define CORE_CORE_UTILS_SPSTATUS_H_
 
 #include "SPCore.h"
-#include "SPStringView.h"
+#include <cerrno>
 
 namespace STAPPLER_VERSIONIZED stappler {
 
 namespace status {
 
 constexpr int STATUS_ERRNO_OFFSET = 0xFFFF;
-constexpr int STATUS_GENERIC_OFFSET = 0x1FFFF;
-constexpr int STATUS_GAPI_OFFSET = 0x2FFFF;
+constexpr int STATUS_GENERIC_OFFSET = 0x1'FFFF;
+constexpr int STATUS_GAPI_OFFSET = 0x2'FFFF;
 
 // WinAPI error space
-constexpr int STATUS_WINAPI_OFFSET = 0x100FFFF;
-constexpr int STATUS_END_OFFSET = 0x200FFFF;
+constexpr int STATUS_WINAPI_OFFSET = 0x100'FFFF;
+constexpr int STATUS_END_OFFSET = 0x200'FFFF;
 
-constexpr inline int ERRNO_ERROR_NUMBER(int __errno) {
-	return - STATUS_ERRNO_OFFSET - __errno;
-}
+constexpr inline int ERRNO_ERROR_NUMBER(int __errno) { return -STATUS_ERRNO_OFFSET - __errno; }
 
-constexpr inline int GENERIC_ERROR_NUMBER(int __errno) {
-	return - STATUS_GENERIC_OFFSET - __errno;
-}
+constexpr inline int GENERIC_ERROR_NUMBER(int __errno) { return -STATUS_GENERIC_OFFSET - __errno; }
 
-constexpr inline int GAPI_ERROR_NUMBER(int __errno) {
-	return - STATUS_GAPI_OFFSET - __errno;
-}
+constexpr inline int GAPI_ERROR_NUMBER(int __errno) { return -STATUS_GAPI_OFFSET - __errno; }
 
-constexpr inline int WINAPI_ERROR_NUMBER(int __errno) {
-	return - STATUS_WINAPI_OFFSET - __errno;
-}
+constexpr inline int WINAPI_ERROR_NUMBER(int __errno) { return -STATUS_WINAPI_OFFSET - __errno; }
 
-}
+} // namespace status
 
+// clang-format off
 enum class Status : int32_t {
 	// general return values
 	Ok = 0,
@@ -84,6 +77,7 @@ enum class Status : int32_t {
 	ErrorAgain =				status::ERRNO_ERROR_NUMBER(11), // EAGAIN
 	ErrorOutOfHostMemory =		status::ERRNO_ERROR_NUMBER(12), // ENOMEM, VK_ERROR_OUT_OF_HOST_MEMORY
 	ErrorBusy =					status::ERRNO_ERROR_NUMBER(16), // EBUSY
+	ErrorFileExists =			status::ERRNO_ERROR_NUMBER(17), // EEXIST
 	ErrorIncompatibleDevice =	status::ERRNO_ERROR_NUMBER(18), // EXDEV, VK_ERROR_INCOMPATIBLE_DRIVER
 	ErrorInvalidArguemnt =		status::ERRNO_ERROR_NUMBER(22), // EINVAL, VK_ERROR_INITIALIZATION_FAILED
 	ErrorOutOfDeviceMemory =	status::ERRNO_ERROR_NUMBER(28), // ENOSPC, VK_ERROR_OUT_OF_DEVICE_MEMORY
@@ -115,28 +109,73 @@ enum class Status : int32_t {
 	ErrorInvalidShader =			status::GAPI_ERROR_NUMBER(14),
 	ErrorInvalidDrmFormat =			status::GAPI_ERROR_NUMBER(15),
 	ErrorFullscreenLost =			status::GAPI_ERROR_NUMBER(16),
-
+ 
 	ErrorUnknown = ErrorNumber,
 };
+// clang-format on
 
 static constexpr bool isSuccessful(Status st) {
 	switch (st) {
 	case Status::Ok:
 	case Status::Done:
-	case Status::Suspended:
-		return true;
-		break;
-	default:
-		break;
+	case Status::Suspended: return true; break;
+	default: break;
 	}
 	return false;
 }
 
+/** Result is a helper class for functions, that returns some result
+ * or fails and returns nothing. It defines several mechanisms to handle
+ * error state:
+ * - get with default value in case of failure (`get`)
+ * - grab value into object, provided by reference, if value is valid (`grab`)
+ * - call a callback with value, if it's valid (`unwrap`)
+ */
+template <typename T>
+struct Result {
+	Status status = Status::ErrorUnknown;
+	T result;
+
+	static Result<T> error() { return Result(); }
+	static Result<T> error(Status st) { return Result {st}; }
+
+	Result(T &&t) noexcept : status(Status::Ok), result(move(t)) { }
+	Result(const T &t) noexcept : status(Status::Ok), result(t) { }
+
+	Result() noexcept = default;
+	Result(const Result &) noexcept = default;
+	Result(Result &&) noexcept = default;
+	Result &operator=(const Result &) noexcept = default;
+	Result &operator=(Result &&) noexcept = default;
+
+	bool valid() const { return isSuccessful(status); }
+
+	explicit operator bool() const { return valid(); }
+
+	template <typename Callback>
+	bool unwrap(const Callback &cb) const {
+		if (isSuccessful(status)) {
+			cb(result);
+			return true;
+		}
+		return false;
+	}
+
+	bool grab(T &value) {
+		if (isSuccessful(status)) {
+			value = move(result);
+			return true;
+		}
+		return false;
+	}
+
+	const T &get() const { return result; }
+	const T &get(const T &def) const { return (isSuccessful(status)) ? result : def; }
+};
+
 namespace status {
 
-constexpr inline int isApplicationDefined(Status st) {
-	return toInt(st) < 0;
-}
+constexpr inline int isApplicationDefined(Status st) { return toInt(st) < 0; }
 
 constexpr inline int isOperational(Status st) {
 	return toInt(st) <= 0 && toInt(st) > STATUS_ERRNO_OFFSET;
@@ -166,32 +205,22 @@ constexpr inline int toGeneric(Status st) {
 	return isGeneric(st) ? -toInt(st) - STATUS_GENERIC_OFFSET : 0;
 }
 
-constexpr inline int toGApi(Status st) {
-	return isGApi(st) ? -toInt(st) - STATUS_GAPI_OFFSET : 0;
-}
+constexpr inline int toGApi(Status st) { return isGApi(st) ? -toInt(st) - STATUS_GAPI_OFFSET : 0; }
 
 constexpr inline int toWinApi(Status st) {
 	return isWinApi(st) ? -toInt(st) - STATUS_WINAPI_OFFSET : 0;
 }
 
-constexpr inline Status errnoToStatus(int _errno) {
-	return Status(-STATUS_ERRNO_OFFSET - _errno);
-}
+constexpr inline Status errnoToStatus(int _errno) { return Status(-STATUS_ERRNO_OFFSET - _errno); }
 
 constexpr inline Status lastErrorToStatus(int _GetLastErrorResult) {
 	return Status(-STATUS_WINAPI_OFFSET - _GetLastErrorResult);
 }
 
-}
+} // namespace status
 
-StringView getStatusName(Status);
+SP_PUBLIC std::ostream &operator<<(std::ostream &, Status);
 
-// Returns status description (strerror), thread-safe
-// Callback will be called exactly one time, do not store StringView from it directly!
-void getStatusDescription(Status, const Callback<void(StringView)> &cb);
-
-std::ostream &operator<<(std::ostream &, Status);
-
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* CORE_CORE_UTILS_SPSTATUS_H_ */

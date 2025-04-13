@@ -158,7 +158,7 @@ public:
 	static bool isSvg(BytesView);
 
 #if MODULE_STAPPLER_FILESYSTEM
-	static bool isSvg(FilePath);
+	static bool isSvg(const FileInfo &);
 #endif
 #endif // MODULE_STAPPLER_BITMAP
 
@@ -171,7 +171,7 @@ public:
 	bool init(BytesView);
 
 #if MODULE_STAPPLER_FILESYSTEM
-	bool init(FilePath);
+	bool init(const FileInfo &);
 #endif
 
 	void setImageSize(const Size2 &);

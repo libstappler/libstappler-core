@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -38,12 +38,12 @@ static constexpr auto DefaultCertPath = "";
 #endif
 
 enum class Method {
-    Unknown,
-    Get,
-    Post,
-    Put,
-    Delete,
-    Head,
+	Unknown,
+	Get,
+	Post,
+	Put,
+	Delete,
+	Head,
 	Smtp
 };
 
@@ -59,10 +59,10 @@ template <typename Interface>
 struct SP_PUBLIC AuthData {
 	using String = typename Interface::StringType;
 
-	std::variant<
-		Pair<String, String>, // user, password
-		String // keySign
-	> data;
+	std::variant< Pair<String, String>, // user, password
+			String // keySign
+			>
+			data;
 
 	String proxyAddress;
 	String proxyAuth;
@@ -84,12 +84,11 @@ struct SP_PUBLIC SendData {
 	using Bytes = typename Interface::BytesType;
 	using IOCallback = Function<size_t(char *data, size_t size)>;
 
-	using DataSource = std::variant<
-		std::monostate,
-		String, // filename
-		Bytes, // data
-		IOCallback // data callback
-	>;
+	using DataSource = std::variant< std::monostate,
+			String, // filename
+			Bytes, // data
+			IOCallback // data callback
+			>;
 
 	Map<String, String> headers;
 	String url;
@@ -159,11 +158,10 @@ struct SP_PUBLIC ReceiveData {
 	using IOCallback = Function<size_t(char *data, size_t size)>;
 	using HeaderCallback = Function<void(StringView, StringView)>;
 
-	using DataSource = std::variant<
-		std::monostate,
-		String, // filename
-		IOCallback // data callback
-	>;
+	using DataSource = std::variant< std::monostate,
+			String, // filename
+			IOCallback // data callback
+			>;
 
 	Vector<String> headers;
 	Map<String, String> parsed;
@@ -210,7 +208,7 @@ struct SP_PUBLIC HandleData : Interface::AllocBaseType {
 	long getErrorCode() const;
 	StringView getError() const;
 
-	void setCookieFile(StringView str);
+	void setCookieFile(const FileInfo &str);
 	void setUserAgent(StringView str);
 	void setUrl(StringView str);
 
@@ -222,20 +220,21 @@ struct SP_PUBLIC HandleData : Interface::AllocBaseType {
 	void clearMailTo();
 	void addMailTo(StringView to);
 
-	void setAuthority(StringView user, StringView passwd = StringView(), AuthMethod method = AuthMethod::Basic);
+	void setAuthority(StringView user, StringView passwd = StringView(),
+			AuthMethod method = AuthMethod::Basic);
 	bool setPrivateKeyAuth(BytesView priv);
 	bool setPrivateKeyAuth(const crypto::PrivateKey &priv);
 
 	void setProxy(StringView proxy, StringView auth);
 
-	void setReceiveFile(StringView str, bool resumeDownload);
+	void setReceiveFile(const FileInfo &str, bool resumeDownload);
 	void setReceiveCallback(IOCallback &&cb);
 	void setResumeDownload(bool value);
 	void setResumeOffset(uint64_t);
 	const typename ReceiveData<Interface>::DataSource &getReceiveDataSource() const;
 
 	void setSendSize(size_t size);
-	void setSendFile(StringView str, StringView type = StringView());
+	void setSendFile(const FileInfo &str, StringView type = StringView());
 
 	void setSendCallback(IOCallback &&cb, size_t outSize, StringView type = StringView());
 	void setSendData(StringView data, StringView type = StringView());
@@ -273,6 +272,6 @@ struct SP_PUBLIC HandleData : Interface::AllocBaseType {
 	void setVerifyTls(bool);
 };
 
-}
+} // namespace stappler::network
 
 #endif /* STAPPLER_NETWORK_SPNETWORKHANDLEDATA_H_ */

@@ -23,6 +23,7 @@
 #ifndef CORE_WASM_SPWASM_H_
 #define CORE_WASM_SPWASM_H_
 
+#include "SPFilepath.h"
 #include "SPMemory.h"
 #include "SPRef.h"
 
@@ -76,7 +77,7 @@ public:
 
 	bool init(StringView name, BytesView);
 	bool init(StringView name, Bytes &&);
-	bool init(StringView name, FilePath);
+	bool init(StringView name, const FileInfo &);
 
 	StringView getName() const { return _name; }
 	wasm_module_t getModule() const { return _module; }

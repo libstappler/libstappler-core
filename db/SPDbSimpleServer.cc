@@ -21,6 +21,8 @@
  **/
 
 #include "SPDbSimpleServer.h"
+#include "SPFilepath.h"
+#include "SPFilesystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
@@ -50,7 +52,8 @@ SimpleServer::SimpleServer() {
 	}, pool);
 }
 
-bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role, SpanView<const db::Scheme *> schemes) {
+bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
+		SpanView<const db::Scheme *> schemes) {
 	db::Map<StringView, StringView> initParams;
 
 	mem_pool::perform([&, this] {
@@ -78,7 +81,7 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 
 	mem_pool::perform([&, this] {
 		if (root.empty()) {
-			_data->documentRoot = filesystem::writablePath<db::Interface>();
+			_data->documentRoot = filesystem::findBasePath<db::Interface>(FileCategory::AppData);
 		} else {
 			_data->documentRoot = root.str<Interface>();
 		}
@@ -87,9 +90,7 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 
 		if (!_data->handle.get()) {
 			db::StringStream out;
-			for (auto &it : initParams) {
-				out << "\n\t" << it.first << ": " << it.second;
-			}
+			for (auto &it : initParams) { out << "\n\t" << it.first << ": " << it.second; }
 			log::error("db::SimpleServer", "Fail to initialize DB with params: ", out.str());
 		}
 	}, _data->staticPool);
@@ -101,16 +102,14 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 	mem_pool::perform([&, this] {
 		_data->driver->init(_data->handle, db::Vector<db::StringView>());
 
-		_data->driver->performWithStorage(_data->handle, [&, this] (const db::Adapter &adapter) {
+		_data->driver->performWithStorage(_data->handle, [&, this](const db::Adapter &adapter) {
 			db::Map<StringView, const db::Scheme *> predefinedSchemes;
 
 			predefinedSchemes.emplace(_data->users.getName(), &_data->users);
 			predefinedSchemes.emplace(_data->files.getName(), &_data->files);
 			predefinedSchemes.emplace(_data->errors.getName(), &_data->errors);
 
-			for (auto &it : schemes) {
-				predefinedSchemes.emplace(it->getName(), it);
-			}
+			for (auto &it : schemes) { predefinedSchemes.emplace(it->getName(), it); }
 
 			db::Scheme::initSchemes(predefinedSchemes);
 
@@ -124,7 +123,8 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 	return true;
 }
 
-void SimpleServer::scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const {
+void SimpleServer::scheduleAyncDbTask(
+		const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const {
 	pool::context<pool_t *> ctx(_data->updatePool, pool::context<pool_t *>::conditional);
 
 	if (!_data->asyncTasks) {
@@ -133,17 +133,11 @@ void SimpleServer::scheduleAyncDbTask(const Callback<Function<void(const Transac
 	_data->asyncTasks->emplace_back(setupCb(_data->updatePool));
 }
 
-StringView SimpleServer::getDocumentRoot() const {
-	return _data->documentRoot;
-}
+StringView SimpleServer::getDocumentRoot() const { return _data->documentRoot; }
 
-const Scheme *SimpleServer::getFileScheme() const {
-	return &_data->files;
-}
+const Scheme *SimpleServer::getFileScheme() const { return &_data->files; }
 
-const Scheme *SimpleServer::getUserScheme() const {
-	return &_data->users;
-}
+const Scheme *SimpleServer::getUserScheme() const { return &_data->users; }
 
 void SimpleServer::pushErrorMessage(Value &&value) const {
 	log::error("db::SimpleServer", data::EncodeFormat::Pretty, value);
@@ -153,13 +147,9 @@ void SimpleServer::pushDebugMessage(Value &&value) const {
 	log::debug("db::SimpleServer", data::EncodeFormat::Pretty, value);
 }
 
-StringView SimpleServer::getDatabaseName() const {
-	return _data->interfaceConfig.name;
-}
+StringView SimpleServer::getDatabaseName() const { return _data->interfaceConfig.name; }
 
-void SimpleServer::initTransaction(Transaction &t) const {
-	t.setRole(_data->defaultRole);
-}
+void SimpleServer::initTransaction(Transaction &t) const { t.setRole(_data->defaultRole); }
 
 void SimpleServer::update() {
 	mem_pool::perform([&, this] {
@@ -167,11 +157,9 @@ void SimpleServer::update() {
 			auto tmp = _data->asyncTasks;
 			_data->asyncTasks = nullptr;
 
-			_data->driver->performWithStorage(_data->handle, [&] (const db::Adapter &adapter) {
-				adapter.performWithTransaction([&] (const db::Transaction &t) {
-					for (auto &it : *tmp) {
-						it(t);
-					}
+			_data->driver->performWithStorage(_data->handle, [&](const db::Adapter &adapter) {
+				adapter.performWithTransaction([&](const db::Transaction &t) {
+					for (auto &it : *tmp) { it(t); }
 					return true;
 				});
 			});
@@ -182,13 +170,11 @@ void SimpleServer::update() {
 
 void SimpleServer::perform(const Callback<bool(const Transaction &)> &cb) {
 	mem_pool::perform([&, this] {
-		_data->driver->performWithStorage(_data->handle, [&] (const db::Adapter &adapter) {
-			adapter.performWithTransaction([&] (const db::Transaction &t) {
-				return cb(t);
-			});
+		_data->driver->performWithStorage(_data->handle, [&](const db::Adapter &adapter) {
+			adapter.performWithTransaction([&](const db::Transaction &t) { return cb(t); });
 		});
 	}, _data->contextPool);
 	memory::pool::clear(_data->contextPool);
 }
 
-}
+} // namespace stappler::db

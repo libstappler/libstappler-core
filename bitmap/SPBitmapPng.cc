@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPBitmapFormat.h"
+#include "SPFilepath.h"
 #include "SPLog.h"
 #include "SPFilesystem.h"
 #include "png.h"
@@ -235,10 +236,17 @@ struct PngWriteStruct {
 		valid = true;
 	}
 
-	PngWriteStruct(StringView filename) : PngWriteStruct() {
-		fp = filesystem::native::fopen_fn(filename, "wb");
+	PngWriteStruct(const FileInfo &filename) : PngWriteStruct() {
+		filesystem::enumerateWritablePaths(filename, filesystem::Access::None, [&] (StringView str) {
+			fp = filesystem::native::fopen_fn(str, "wb");
+			if (fp) {
+				return false;
+			}
+			return true;
+		});
+
 		if (!fp) {
-			log::error("libpng", "fail to open file '%s' to write png data", filename.data());
+			log::error("Bitmap", "fail to open file ", filename, " to write png data");
 			valid = false;
 			return;
 		}
@@ -320,7 +328,7 @@ static bool loadPng(const uint8_t *inputData, size_t size, BitmapWriter &outputD
 	return pngStruct.init(inputData, size) && pngStruct.load(outputData);
 }
 
-static bool savePng(StringView filename, const uint8_t *data, BitmapWriter &state, bool invert) {
+static bool savePng(const FileInfo &filename, const uint8_t *data, BitmapWriter &state, bool invert) {
 	PngWriteStruct s(filename);
 	return s.write(data, state, invert);
 }

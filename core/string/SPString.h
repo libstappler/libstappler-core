@@ -27,6 +27,35 @@ THE SOFTWARE.
 #include "SPCoreCrypto.h"
 #include "SPStringStream.h"
 
+namespace STAPPLER_VERSIONIZED stappler {
+
+inline uint32_t SP_MAKE_API_VERSION(StringView version) {
+	uint32_t ver[4];
+	uint32_t i = 0;
+	version.split<StringView::Chars<'.'>>([&] (StringView str) {
+		if (i < 4) {
+			ver[i++] = uint32_t(str.readInteger(10).get(0));
+		}
+	});
+
+	uint32_t verCode = 0;
+	switch (i) {
+	case 0: verCode = SP_MAKE_API_VERSION(0, 0, 1, 0); break;
+	case 1: verCode = SP_MAKE_API_VERSION(0, ver[0], 0, 0); break;
+	case 2: verCode = SP_MAKE_API_VERSION(0, ver[0], ver[1], 0); break;
+	case 3: verCode = SP_MAKE_API_VERSION(0, ver[0], ver[1], ver[2]); break;
+	case 4: verCode = SP_MAKE_API_VERSION(ver[0], ver[1], ver[2], ver[3]); break;
+	}
+	return verCode;
+}
+
+template <typename Interface>
+inline auto getVersionDescription(uint32_t version) {
+	return string::toString<Interface>(version >> 29, ".", version >> 22, ".", (version >> 12) & 0b11'1111'1111, ".", version & 0b1111'1111'1111);
+}
+
+}
+
 namespace STAPPLER_VERSIONIZED stappler::string {
 
 inline size_t getUtf16Length(char32_t c) { return unicode::utf16EncodeLength(c); }

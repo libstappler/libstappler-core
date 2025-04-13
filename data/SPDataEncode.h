@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SPDataEncodeCbor.h"
 #include "SPDataEncodeJson.h"
 #include "SPDataEncodeSerenity.h"
+#include "SPFilepath.h"
 
 #ifdef MODULE_STAPPLER_FILESYSTEM
 #include "SPFilesystem.h"
@@ -184,10 +185,9 @@ struct EncodeTraits {
 	}
 
 #ifdef MODULE_STAPPLER_FILESYSTEM
-	static bool save(const ValueType &data, const StringView &file, EncodeFormat fmt) {
-		auto path = filepath::absolute<Interface>(file, true);
+	static bool save(const ValueType &data, const FileInfo &info, EncodeFormat fmt) {
 		if (fmt.format == EncodeFormat::DefaultFormat) {
-			auto ext = filepath::lastExtension(path);
+			auto ext = filepath::lastExtension(info.path);
 			if (ext == "json") {
 				fmt.format = EncodeFormat::Json;
 			} else {
@@ -196,20 +196,20 @@ struct EncodeTraits {
 		}
 		if (fmt.isRaw()) {
 			switch (fmt.format) {
-			case EncodeFormat::Json: return json::save(data, path, false); break;
-			case EncodeFormat::Pretty: return json::save(data, path, true); break;
-			case EncodeFormat::PrettyTime: return json::save(data, path, true, true); break;
+			case EncodeFormat::Json: return json::save(data, info, false); break;
+			case EncodeFormat::Pretty: return json::save(data, info, true); break;
+			case EncodeFormat::PrettyTime: return json::save(data, info, true, true); break;
 			case EncodeFormat::Cbor:
 			case EncodeFormat::DefaultFormat:
-				return cbor::save(data, path);
+				return cbor::save(data, info);
 				break;
-			case EncodeFormat::Serenity: return serenity::save(data, path, false); break;
-			case EncodeFormat::SerenityPretty: return serenity::save(data, path, true); break;
+			case EncodeFormat::Serenity: return serenity::save(data, info, false); break;
+			case EncodeFormat::SerenityPretty: return serenity::save(data, info, true); break;
 			}
 		} else {
 			auto ret = write(data, fmt);
 			if (!ret.empty()) {
-				filesystem::write(path, ret);
+				filesystem::write(info, ret);
 				return true;
 			}
 			return false;
@@ -230,7 +230,7 @@ write(const Callback<void(StringView)> &stream, const ValueTemplate<Interface> &
 }
 
 template <typename Interface> inline bool
-save(const ValueTemplate<Interface> &data, const StringView &file, EncodeFormat fmt = EncodeFormat()) {
+save(const ValueTemplate<Interface> &data, const FileInfo &file, EncodeFormat fmt = EncodeFormat()) {
 	return EncodeTraits<Interface>::save(data, file, fmt);
 }
 

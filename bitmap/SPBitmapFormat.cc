@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "SPBitmapFormat.h"
 #include "SPBytesView.h"
+#include "SPFilepath.h"
 #include "SPFilesystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::bitmap {
@@ -120,15 +121,15 @@ bool BitmapFormat::write(const uint8_t *data, BitmapWriter &state, bool invert) 
 	return false;
 }
 
-bool BitmapFormat::save(StringView path, const uint8_t *data, BitmapWriter &state, bool invert) const {
+bool BitmapFormat::save(const FileInfo &path, const uint8_t *data, BitmapWriter &state, bool invert) const {
 	if (save_ptr) {
 		return save_ptr(path, data, state, invert);
 	}
 	return false;
 }
 
-bool getImageSize(StringView path, uint32_t &width, uint32_t &height) {
-	auto file = filesystem::openForReading(path);
+bool getImageSize(const FileInfo &fileInfo, uint32_t &width, uint32_t &height) {
+	auto file = filesystem::openForReading(fileInfo);
 	return getImageSize(file, width, height);
 }
 
@@ -199,7 +200,7 @@ bool getImageInfo(BytesView data, ImageInfo &info) {
 	return false;
 }
 
-bool isImage(StringView path, bool readable) {
+bool isImage(const FileInfo &path, bool readable) {
 	auto file = filesystem::openForReading(path);
 	return isImage(file, readable);
 }
@@ -242,7 +243,7 @@ bool isImage(const uint8_t * data, size_t dataLen, bool readable) {
 	return false;
 }
 
-Pair<FileFormat, StringView> detectFormat(StringView path) {
+Pair<FileFormat, StringView> detectFormat(const FileInfo &path) {
 	auto file = filesystem::openForReading(path);
 	return detectFormat(file);
 }

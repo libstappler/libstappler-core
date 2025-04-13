@@ -26,22 +26,21 @@
 namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
 static SharedSymbol s_bitmapSharedSymbols[] = {
-	SharedSymbol{"detectFormat(StringView)",
-		(void *)static_cast<Pair<FileFormat, StringView> (*) (StringView)>(detectFormat)},
-	SharedSymbol{"detectFormat(io::Producer const&)",
-		(void *)static_cast<Pair<FileFormat, StringView> (*) (io::Producer const&)>(detectFormat)},
-	SharedSymbol{"detectFormat(uint8_t const*, size_t)",
-		(void *)static_cast<Pair<FileFormat, StringView> (*) (uint8_t const*, size_t)>(detectFormat)},
-	SharedSymbol{"getMimeType(FileFormat)",
-		(void *)static_cast<StringView (*) (FileFormat)>(getMimeType)},
-	SharedSymbol{"getMimeType(StringView)",
-		(void *)static_cast<StringView (*) (StringView)>(getMimeType)},
-	SharedSymbol{"getImageSize(io::Producer const&,uint32_t&,uint32_t&)",
-		(void *)static_cast<bool (*) (io::Producer const&,uint32_t&,uint32_t&)>(getImageSize)},
-	SharedSymbol{"getImageSize(StringView,uint32_t&,uint32_t&)",
-		(void *)static_cast<bool (*) (StringView,uint32_t&,uint32_t&)>(getImageSize)},
+	SharedSymbol{"detectFormat",
+		static_cast<Pair<FileFormat, StringView> (*)(const FileInfo &)>(detectFormat)},
+	SharedSymbol{"detectFormat",
+		static_cast<Pair<FileFormat, StringView> (*)(io::Producer const &)>(detectFormat)},
+	SharedSymbol{"detectFormat",
+		static_cast<Pair<FileFormat, StringView> (*)(uint8_t const *, size_t)>(detectFormat)},
+	SharedSymbol{"getMimeType", static_cast<StringView (*)(FileFormat)>(getMimeType)},
+	SharedSymbol{"getMimeType", static_cast<StringView (*)(StringView)>(getMimeType)},
+	SharedSymbol{"getImageSize",
+		static_cast<bool (*)(io::Producer const &, uint32_t &, uint32_t &)>(getImageSize)},
+	SharedSymbol{"getImageSize",
+		static_cast<bool (*)(const FileInfo &, uint32_t &, uint32_t &)>(getImageSize)},
 };
 
-static SharedModule s_bitmapSharedModule("bitmap", s_bitmapSharedSymbols, sizeof(s_bitmapSharedSymbols) / sizeof(SharedSymbol));
+static SharedModule s_bitmapSharedModule(buildconfig::MODULE_STAPPLER_BITMAP_NAME,
+		s_bitmapSharedSymbols, sizeof(s_bitmapSharedSymbols) / sizeof(SharedSymbol));
 
-}
+} // namespace stappler::bitmap

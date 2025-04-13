@@ -122,9 +122,9 @@ public:
 	FileFormat getOriginalFormat() const { return _originalFormat; }
 	StringView getOriginalFormatName() const { return _originalFormatName; }
 
-	bool save(StringView, bool invert = false);
-	bool save(FileFormat, StringView, bool invert = false);
-	bool save(StringView name, StringView path, bool invert = false);
+	bool save(const FileInfo &, bool invert = false);
+	bool save(FileFormat, const FileInfo &, bool invert = false);
+	bool save(StringView name, const FileInfo &, bool invert = false);
 
 	auto write(FileFormat = FileFormat::Png, bool invert = false) -> typename Interface::BytesType;
 	auto write(StringView name, bool invert = false) -> typename Interface::BytesType;
@@ -413,9 +413,9 @@ size_t BitmapTemplate<Interface>::convertWithTarget(uint8_t *target, PixelFormat
 }
 
 template <typename Interface>
-bool BitmapTemplate<Interface>::save(StringView path, bool invert) {
+bool BitmapTemplate<Interface>::save(const FileInfo &path, bool invert) {
 	FileFormat fmt = FileFormat::Png;
-	auto ext = filepath::lastExtension(path);
+	auto ext = filepath::lastExtension(path.path);
 	if (ext == "png") {
 		fmt = FileFormat::Png;
 	} else if (ext == "jpeg" || ext == "jpg") {

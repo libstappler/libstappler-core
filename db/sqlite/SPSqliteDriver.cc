@@ -22,6 +22,7 @@
  **/
 
 #include "SPSqliteDriver.h"
+#include "SPFilepath.h"
 #include "SPSqliteHandle.h"
 #include "SPDbFieldExtensions.h"
 #include "sqlite3.h"
@@ -126,15 +127,12 @@ Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path) {
 	return nullptr;
 }
 
-Driver::~Driver() {
-	_handle->_shutdown();
-}
+Driver::~Driver() { _handle->_shutdown(); }
 
-bool Driver::init(Handle handle, const Vector<StringView> &) {
-	return true;
-}
+bool Driver::init(Handle handle, const Vector<StringView> &) { return true; }
 
-void Driver::performWithStorage(Handle handle, const Callback<void(const db::Adapter &)> &cb) const {
+void Driver::performWithStorage(Handle handle,
+		const Callback<void(const db::Adapter &)> &cb) const {
 	auto targetPool = pool::acquire();
 
 	db::sqlite::Handle h(this, handle);
@@ -143,7 +141,8 @@ void Driver::performWithStorage(Handle handle, const Callback<void(const db::Ada
 
 	cb(storage);
 
-	auto stack = stappler::memory::pool::get<db::Transaction::Stack>(targetPool, config::STORAGE_TRANSACTION_STACK_KEY);
+	auto stack = stappler::memory::pool::get<db::Transaction::Stack>(targetPool,
+			config::STORAGE_TRANSACTION_STACK_KEY);
 	if (stack) {
 		for (auto &it : stack->stack) {
 			if (it->adapter == storage) {
@@ -158,9 +157,7 @@ void Driver::performWithStorage(Handle handle, const Callback<void(const db::Ada
 
 BackendInterface *Driver::acquireInterface(Handle handle, pool_t *pool) const {
 	BackendInterface *ret = nullptr;
-	pool::perform_conditional([&] {
-		ret = new (pool) db::sqlite::Handle(this, handle);
-	}, pool);
+	pool::perform_conditional([&] { ret = new (pool) db::sqlite::Handle(this, handle); }, pool);
 	return ret;
 }
 
@@ -201,9 +198,13 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 		if (auto app = d->getApplicationInterface()) {
 			dbname = StringView(filepath::merge<Interface>(app->getDocumentRoot(), dbname)).pdup();
 		} else {
-			dbname = StringView(filesystem::writablePath<Interface>(dbname)).pdup();
+			filesystem::enumerateWritablePaths(FileInfo{dbname, stappler::FileCategory::AppData},
+					[&](StringView path) {
+				dbname = path.pdup();
+				return false;
+			});
 		}
-		stappler::filesystem::mkdir(stappler::filepath::root(dbname));
+		stappler::filesystem::mkdir(stappler::filepath::root(FileInfo{dbname}));
 	}
 #if WIN32
 	dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
@@ -215,7 +216,8 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 
 		if (!journal.empty()) {
 			auto m = stappler::string::toupper<Interface>(journal);
-			auto mode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, "PRAGMA journal_mode;"));
+			auto mode = stappler::string::toupper<Interface>(
+					Driver_exec(_handle, p, db, "PRAGMA journal_mode;"));
 			if (mode.empty()) {
 				_handle->close(db);
 				return Driver::Handle(nullptr);
@@ -223,7 +225,8 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 
 			if (mode != m) {
 				auto query = toString("PRAGMA journal_mode = ", m);
-				auto cmode = stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, query));
+				auto cmode =
+						stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, query));
 				if (mode.empty() || cmode != m) {
 					log::error("sqlite::Driver", "fail to enable journal_mode '", m, "'");
 					_handle->close(db);
@@ -245,7 +248,8 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 			}
 
 			sqlite3_stmt *stmt = nullptr;
-			auto err = _handle->prepare(db, nextQuery.data(), int(nextQuery.size()), 0, &stmt, &outPtr);
+			auto err = _handle->prepare(db, nextQuery.data(), int(nextQuery.size()), 0, &stmt,
+					&outPtr);
 			if (err != SQLITE_OK) {
 				auto len = outPtr - nextQuery.data();
 				StringView performedQuery(nextQuery.data(), len);
@@ -277,7 +281,8 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 		auto h = new (mem) DriverHandle;
 		h->pool = p;
 		h->driver = d;
-		h->sym = _handle;;
+		h->sym = _handle;
+		;
 		h->conn = db;
 		h->name = dbname.pdup(p);
 		h->ctime = Time::now();
@@ -286,31 +291,40 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 		do {
 			StringView getStmt("SELECT \"__oid\" FROM \"__objects\" WHERE \"control\" = 0;");
 			sqlite3_stmt *gstmt = nullptr;
-			auto err = _handle->prepare(db, getStmt.data(), int(getStmt.size()), 0, &gstmt, nullptr);
+			auto err =
+					_handle->prepare(db, getStmt.data(), int(getStmt.size()), 0, &gstmt, nullptr);
 			err = _handle->step(gstmt);
 			if (err == SQLITE_DONE) {
-				StringView createStmt("INSERT OR IGNORE INTO \"__objects\" (\"__oid\") VALUES (0);");
+				StringView createStmt(
+						"INSERT OR IGNORE INTO \"__objects\" (\"__oid\") VALUES (0);");
 				sqlite3_stmt *cstmt = nullptr;
-				err = _handle->prepare(db, createStmt.data(), int(createStmt.size()), 0, &cstmt, nullptr);
+				err = _handle->prepare(db, createStmt.data(), int(createStmt.size()), 0, &cstmt,
+						nullptr);
 				err = _handle->step(cstmt);
 				_handle->finalize(cstmt);
 			}
 			_handle->finalize(gstmt);
 
-			StringView oidStmt("UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE \"control\" = 0 RETURNING \"__oid\";");
+			StringView oidStmt(
+					"UPDATE OR IGNORE \"__objects\" SET \"__oid\" = \"__oid\" + 1 WHERE "
+					"\"control\" = 0 RETURNING \"__oid\";");
 
 			sqlite3_stmt *stmt = nullptr;
-			err = _handle->prepare(db, oidStmt.data(), int(oidStmt.size()), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+			err = _handle->prepare(db, oidStmt.data(), int(oidStmt.size()),
+					SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
 			if (err == SQLITE_OK) {
 				h->oidQuery = stmt;
 			}
 		} while (0);
 
 		do {
-			StringView str("INSERT INTO \"__words\"(\"id\",\"word\") VALUES(?1, ?2) ON CONFLICT(id) DO UPDATE SET word=word RETURNING \"id\", \"word\";");
+			StringView
+					str("INSERT INTO \"__words\"(\"id\",\"word\") VALUES(?1, ?2) ON CONFLICT(id) "
+						"DO " "UPDATE SET word=word RETURNING \"id\", \"word\";");
 
 			sqlite3_stmt *stmt = nullptr;
-			auto err = _handle->prepare(db, str.data(), int(str.size()), SQLITE_PREPARE_PERSISTENT, &stmt, nullptr);
+			auto err = _handle->prepare(db, str.data(), int(str.size()), SQLITE_PREPARE_PERSISTENT,
+					&stmt, nullptr);
 			if (err == SQLITE_OK) {
 				h->wordsQuery = stmt;
 			}
@@ -325,8 +339,8 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 
 		_handle->_create_function_v2(db, "sp_ts_update", 6, SQLITE_UTF8, (void *)h,
 				sp_ts_update_xFunc, nullptr, nullptr, nullptr);
-		_handle->_create_function_v2(db, "sp_ts_rank", 3, SQLITE_UTF8, (void *)h,
-				sp_ts_rank_xFunc, nullptr, nullptr, nullptr);
+		_handle->_create_function_v2(db, "sp_ts_rank", 3, SQLITE_UTF8, (void *)h, sp_ts_rank_xFunc,
+				nullptr, nullptr, nullptr);
 		_handle->_create_function_v2(db, "sp_ts_query_valid", 2, SQLITE_UTF8, (void *)h,
 				sp_ts_query_valid_xFunc, nullptr, nullptr, nullptr);
 
@@ -374,7 +388,8 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 			} else if (it.first == "threading") {
 				if (it.second == "serialized") {
 					flags |= SQLITE_OPEN_FULLMUTEX;
-				} else if (it.second == "multi" || it.second == "multithread" || it.second == "multithreaded") {
+				} else if (it.second == "multi" || it.second == "multithread"
+						|| it.second == "multithreaded") {
 					flags |= SQLITE_OPEN_NOMUTEX;
 				}
 			} else if (it.first == "journal") {
@@ -384,7 +399,8 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 				}
 			} else if (it.first != "driver" && it.first == "nmin" && it.first == "nkeep"
 					&& it.first == "nmax" && it.first == "exptime" && it.first == "persistent") {
-				log::error("sqlite::Driver", "unknown connection parameter: ", it.first, "=", it.second);
+				log::error("sqlite::Driver", "unknown connection parameter: ", it.first, "=",
+						it.second);
 			}
 		}
 
@@ -425,17 +441,11 @@ Driver::Connection Driver::getConnection(Handle h) const {
 	return Driver::Connection(db->conn);
 }
 
-bool Driver::isValid(Handle) const {
-	return true;
-}
+bool Driver::isValid(Handle) const { return true; }
 
-bool Driver::isValid(Connection) const {
-	return true;
-}
+bool Driver::isValid(Connection) const { return true; }
 
-bool Driver::isIdle(Connection) const {
-	return true;
-}
+bool Driver::isIdle(Connection) const { return true; }
 
 Time Driver::getConnectionTime(Handle handle) const {
 	auto db = (DriverHandle *)handle.get();
@@ -473,7 +483,8 @@ uint64_t Driver::insertWord(Handle h, StringView word) const {
 
 		auto err = _handle->step(data->wordsQuery);
 		if (err == SQLITE_ROW) {
-			auto w = StringView((const char *)_handle->_column_text(data->wordsQuery, 1), _handle->_column_bytes(data->wordsQuery, 1));
+			auto w = StringView((const char *)_handle->_column_text(data->wordsQuery, 1),
+					_handle->_column_bytes(data->wordsQuery, 1));
 			if (w == word) {
 				success = true;
 				_handle->reset(data->wordsQuery);
@@ -483,7 +494,7 @@ uint64_t Driver::insertWord(Handle h, StringView word) const {
 			}
 		}
 		_handle->reset(data->wordsQuery);
-		++ hash;
+		++hash;
 	}
 
 	return hash;
@@ -527,13 +538,9 @@ bool ResultCursor::statusIsSuccess(int x) {
 ResultCursor::ResultCursor(const Driver *d, Driver::Connection conn, Driver::Result res, int status)
 : driver(d), conn(conn), result(res), err(status) { }
 
-ResultCursor::~ResultCursor() {
-	clear();
-}
+ResultCursor::~ResultCursor() { clear(); }
 
-bool ResultCursor::isBinaryFormat(size_t field) const {
-	return true;
-}
+bool ResultCursor::isBinaryFormat(size_t field) const { return true; }
 
 BackendInterface::StorageType ResultCursor::getType(size_t field) const {
 	auto t = driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), int(field));
@@ -549,28 +556,33 @@ BackendInterface::StorageType ResultCursor::getType(size_t field) const {
 }
 
 bool ResultCursor::isNull(size_t field) const {
-	return driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), int(field)) == SQLITE_NULL;
+	return driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), int(field))
+			== SQLITE_NULL;
 }
 
 StringView ResultCursor::toString(size_t field) const {
 	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), int(field))) {
 	case SQLITE_INTEGER:
-		return StringView(toString(driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), int(field)))).pdup();
+		return StringView(toString(driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(),
+								  int(field))))
+				.pdup();
 		break;
 	case SQLITE_FLOAT:
-		return StringView(toString(driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), int(field)))).pdup();
+		return StringView(toString(driver->getHandle()->_column_double((sqlite3_stmt *)result.get(),
+								  int(field))))
+				.pdup();
 		break;
 	case SQLITE_TEXT:
-		return StringView((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), int(field)),
+		return StringView((const char *)driver->getHandle()->_column_text(
+								  (sqlite3_stmt *)result.get(), int(field)),
 				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)));
 		break;
 	case SQLITE_BLOB:
-		return StringView((const char *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), int(field)),
+		return StringView((const char *)driver->getHandle()->_column_blob(
+								  (sqlite3_stmt *)result.get(), int(field)),
 				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)));
 		break;
-	case SQLITE_NULL:
-		return StringView("(null)");
-		break;
+	case SQLITE_NULL: return StringView("(null)"); break;
 	}
 
 	return StringView();
@@ -579,26 +591,28 @@ StringView ResultCursor::toString(size_t field) const {
 BytesView ResultCursor::toBytes(size_t field) const {
 	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), int(field))) {
 	case SQLITE_INTEGER: {
-		int64_t value = driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), int(field));
+		int64_t value =
+				driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), int(field));
 		return BytesView((const uint8_t *)&value, sizeof(int64_t)).pdup();
 		break;
 	}
 	case SQLITE_FLOAT: {
-		double value = driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), int(field));
+		double value =
+				driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), int(field));
 		return BytesView((const uint8_t *)&value, sizeof(int64_t)).pdup();
 		break;
 	}
 	case SQLITE_TEXT:
-		return BytesView((const uint8_t *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), int(field)),
+		return BytesView((const uint8_t *)driver->getHandle()->_column_text(
+								 (sqlite3_stmt *)result.get(), int(field)),
 				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)));
 		break;
 	case SQLITE_BLOB:
-		return BytesView((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), int(field)),
+		return BytesView((const uint8_t *)driver->getHandle()->_column_blob(
+								 (sqlite3_stmt *)result.get(), int(field)),
 				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)));
 		break;
-	case SQLITE_NULL:
-		return BytesView();
-		break;
+	case SQLITE_NULL: return BytesView(); break;
 	}
 
 	return BytesView();
@@ -610,18 +624,23 @@ int64_t ResultCursor::toInteger(size_t field) const {
 		return driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), int(field));
 		break;
 	case SQLITE_FLOAT:
-		return int64_t(driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), int(field)));
+		return int64_t(
+				driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), int(field)));
 		break;
 	case SQLITE_TEXT:
-		return StringView((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), int(field)),
-				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field))).readInteger(10).get(0);
+		return StringView((const char *)driver->getHandle()->_column_text(
+								  (sqlite3_stmt *)result.get(), int(field)),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)))
+				.readInteger(10)
+				.get(0);
 		break;
 	case SQLITE_BLOB:
-		return int64_t(BytesView((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), int(field)),
-				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field))).readUnsigned64());
+		return int64_t(BytesView((const uint8_t *)driver->getHandle()->_column_blob(
+										 (sqlite3_stmt *)result.get(), int(field)),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)))
+						.readUnsigned64());
 		break;
-	case SQLITE_NULL:
-		break;
+	case SQLITE_NULL: break;
 	}
 
 	return 0;
@@ -636,15 +655,19 @@ double ResultCursor::toDouble(size_t field) const {
 		return driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), int(field));
 		break;
 	case SQLITE_TEXT:
-		return StringView((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), int(field)),
-				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field))).readDouble().get(0);
+		return StringView((const char *)driver->getHandle()->_column_text(
+								  (sqlite3_stmt *)result.get(), int(field)),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)))
+				.readDouble()
+				.get(0);
 		break;
 	case SQLITE_BLOB:
-		return BytesView((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), int(field)),
-				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field))).readFloat64();
+		return BytesView((const uint8_t *)driver->getHandle()->_column_blob(
+								 (sqlite3_stmt *)result.get(), int(field)),
+				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)))
+				.readFloat64();
 		break;
-	case SQLITE_NULL:
-		break;
+	case SQLITE_NULL: break;
 	}
 
 	return 0.0;
@@ -658,7 +681,8 @@ bool ResultCursor::toBool(size_t field) const {
 		return driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), int(field)) != 0.0;
 		break;
 	case SQLITE_TEXT: {
-		StringView data((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), int(field)),
+		StringView data((const char *)driver->getHandle()->_column_text(
+								(sqlite3_stmt *)result.get(), int(field)),
 				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)));
 		if (data == "1" || data == "true" || data == "TRUE") {
 			return true;
@@ -666,7 +690,8 @@ bool ResultCursor::toBool(size_t field) const {
 		break;
 	}
 	case SQLITE_BLOB: {
-		BytesView data((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), int(field)),
+		BytesView data((const uint8_t *)driver->getHandle()->_column_blob(
+							   (sqlite3_stmt *)result.get(), int(field)),
 				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field)));
 		if (data.empty()) {
 			return false;
@@ -675,8 +700,7 @@ bool ResultCursor::toBool(size_t field) const {
 		}
 		break;
 	}
-	case SQLITE_NULL:
-		break;
+	case SQLITE_NULL: break;
 	}
 
 	return false;
@@ -684,21 +708,23 @@ bool ResultCursor::toBool(size_t field) const {
 Value ResultCursor::toTypedData(size_t field) const {
 	switch (driver->getHandle()->_column_type((sqlite3_stmt *)result.get(), int(field))) {
 	case SQLITE_INTEGER:
-		return Value(int64_t(driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), int(field))));
+		return Value(int64_t(
+				driver->getHandle()->_column_int64((sqlite3_stmt *)result.get(), int(field))));
 		break;
 	case SQLITE_FLOAT:
 		return Value(driver->getHandle()->_column_double((sqlite3_stmt *)result.get(), int(field)));
 		break;
 	case SQLITE_TEXT:
-		return Value(StringView((const char *)driver->getHandle()->_column_text((sqlite3_stmt *)result.get(), int(field)),
+		return Value(StringView((const char *)driver->getHandle()->_column_text(
+										(sqlite3_stmt *)result.get(), int(field)),
 				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field))));
 		break;
 	case SQLITE_BLOB:
-		return Value(BytesView((const uint8_t *)driver->getHandle()->_column_blob((sqlite3_stmt *)result.get(), int(field)),
+		return Value(BytesView((const uint8_t *)driver->getHandle()->_column_blob(
+									   (sqlite3_stmt *)result.get(), int(field)),
 				driver->getHandle()->_column_bytes((sqlite3_stmt *)result.get(), int(field))));
 		break;
-	case SQLITE_NULL:
-		break;
+	case SQLITE_NULL: break;
 	}
 
 	return Value();
@@ -712,33 +738,23 @@ Value ResultCursor::toCustomData(size_t field, const FieldCustom *f) const {
 	return info->readFromStorage(*f, *this, field);
 }
 
-int64_t ResultCursor::toId() const {
-	return toInteger(0);
-}
+int64_t ResultCursor::toId() const { return toInteger(0); }
 StringView ResultCursor::getFieldName(size_t field) const {
 	if (auto ptr = driver->getHandle()->_column_name((sqlite3_stmt *)result.get(), int(field))) {
 		return StringView(ptr);
 	}
 	return StringView();
 }
-bool ResultCursor::isSuccess() const {
-	return result.get() && statusIsSuccess(err);
-}
-bool ResultCursor::isEmpty() const {
-	return err != SQLITE_ROW;
-}
-bool ResultCursor::isEnded() const {
-	return err == SQLITE_DONE;
-}
+bool ResultCursor::isSuccess() const { return result.get() && statusIsSuccess(err); }
+bool ResultCursor::isEmpty() const { return err != SQLITE_ROW; }
+bool ResultCursor::isEnded() const { return err == SQLITE_DONE; }
 size_t ResultCursor::getFieldsCount() const {
 	return driver->getHandle()->_column_count((sqlite3_stmt *)result.get());
 }
 size_t ResultCursor::getAffectedRows() const {
 	return driver->getHandle()->_changes((sqlite3 *)conn.get());
 }
-size_t ResultCursor::getRowsHint() const {
-	return 0;
-}
+size_t ResultCursor::getRowsHint() const { return 0; }
 Value ResultCursor::getInfo() const {
 	return Value({
 		stappler::pair("error", Value(err)),
@@ -770,8 +786,6 @@ void ResultCursor::clear() {
 	}
 }
 
-int ResultCursor::getError() const {
-	return err;
-}
+int ResultCursor::getError() const { return err; }
 
-}
+} // namespace stappler::db::sqlite

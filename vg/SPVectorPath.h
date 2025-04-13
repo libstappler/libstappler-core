@@ -56,7 +56,7 @@ public:
 
 	bool init();
 	bool init(StringView);
-	bool init(FilePath &&);
+	bool init(const FileInfo &);
 	bool init(BytesView);
 
 	bool init(const PathData<memory::StandartInterface> &);

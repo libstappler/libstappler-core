@@ -26,6 +26,9 @@
 
 namespace stappler::wasm {
 
+// Temporary disabled
+#if 0
+
 static uint32_t StapplerFilesystemExists(wasm_exec_env_t exec_env, char *ptr, uint32_t size) {
 	return filesystem::exists(StringView(ptr, size)) ? 1 : 0;
 }
@@ -389,4 +392,6 @@ static NativeSymbol stapper_filesystem_symbols[] = {
 
 static NativeModule s_filesystemModule("stappler:wasm/filesystem", stapper_filesystem_symbols, sizeof(stapper_filesystem_symbols) / sizeof(NativeSymbol));
 
-}
+#endif
+
+} // namespace stappler::wasm

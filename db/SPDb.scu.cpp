@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include "SPDbContinueToken.cc"
 
 #include "SPDbFieldExtensions.cc"
+#include "SPFilepath.h"
 #include "SPPqDriver.cc"
 #include "SPPqHandle.cc"
 #include "SPPqHandleInit.cc"
@@ -54,39 +55,39 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-InputFile::InputFile(String &&name, String && type, String && enc, String && orig, size_t s, int64_t id)
-: name(sp::move(name)), type(sp::move(type)), encoding(sp::move(enc))
-, original(sp::move(orig)), writeSize(0), headerSize(s), id(id) {
+InputFile::InputFile(String &&name, String &&type, String &&enc, String &&orig, size_t s,
+		int64_t id)
+: name(sp::move(name))
+, type(sp::move(type))
+, encoding(sp::move(enc))
+, original(sp::move(orig))
+, writeSize(0)
+, headerSize(s)
+, id(id) {
 	file = filesystem::File::open_tmp(config::UPLOAD_TMP_FILE_PREFIX, false);
 	path = file.path();
 }
 
-InputFile::~InputFile() {
-	close();
-}
+InputFile::~InputFile() { close(); }
 
-bool InputFile::isOpen() const {
-	return file.is_open();
-}
+bool InputFile::isOpen() const { return file.is_open(); }
 
 size_t InputFile::write(const char *s, size_t n) {
 	auto tmp = s;
-	for (size_t i = 0; i < n; ++ i) {
+	for (size_t i = 0; i < n; ++i) {
 		if (*tmp == 0) {
 			isBinary = true;
 		}
-		++ tmp;
+		++tmp;
 	}
 	writeSize += n;
 	return file.xsputn(s, n);
 }
 
-void InputFile::close() {
-	file.close_remove();
-}
+void InputFile::close() { file.close_remove(); }
 
-bool InputFile::save(const StringView &ipath) const {
-	return const_cast<filesystem::File &>(file).close_rename(filesystem::cachesPath<Interface>(ipath).data());
+bool InputFile::save(const FileInfo &ipath) const {
+	return const_cast<filesystem::File &>(file).close_rename(ipath);
 }
 
 Bytes InputFile::readBytes() {
@@ -111,17 +112,10 @@ String InputFile::readText() {
 
 InputValue::InputValue(InputValue &&other) : type(other.type) {
 	switch (type) {
-	case Type::Value:
-		new (&value) db::Value(move(other.value));
-		break;
-	case Type::File:
-		file = other.file;
-		break;
-	case Type::TSV:
-		new (&tsv) FullTextVector(move(other.tsv));
-		break;
-	case Type::None:
-		break;
+	case Type::Value: new (&value) db::Value(move(other.value)); break;
+	case Type::File: file = other.file; break;
+	case Type::TSV: new (&tsv) FullTextVector(move(other.tsv)); break;
+	case Type::None: break;
 	}
 	other.clear();
 }
@@ -130,17 +124,10 @@ InputValue &InputValue::operator=(InputValue &&other) {
 	clear();
 	type = other.type;
 	switch (type) {
-	case Type::Value:
-		new (&value) db::Value(move(other.value));
-		break;
-	case Type::File:
-		file = other.file;
-		break;
-	case Type::TSV:
-		new (&tsv) FullTextVector(move(other.tsv));
-		break;
-	case Type::None:
-		break;
+	case Type::Value: new (&value) db::Value(move(other.value)); break;
+	case Type::File: file = other.file; break;
+	case Type::TSV: new (&tsv) FullTextVector(move(other.tsv)); break;
+	case Type::None: break;
 	}
 	other.clear();
 	return *this;
@@ -148,17 +135,10 @@ InputValue &InputValue::operator=(InputValue &&other) {
 
 InputValue::InputValue(const InputValue &other) : type(other.type) {
 	switch (type) {
-	case Type::Value:
-		new (&value) db::Value(other.value);
-		break;
-	case Type::File:
-		file = other.file;
-		break;
-	case Type::TSV:
-		new (&tsv) FullTextVector(other.tsv);
-		break;
-	case Type::None:
-		break;
+	case Type::Value: new (&value) db::Value(other.value); break;
+	case Type::File: file = other.file; break;
+	case Type::TSV: new (&tsv) FullTextVector(other.tsv); break;
+	case Type::None: break;
 	}
 }
 
@@ -166,41 +146,25 @@ InputValue &InputValue::operator=(const InputValue &other) {
 	clear();
 	type = other.type;
 	switch (type) {
-	case Type::Value:
-		new (&value) db::Value(other.value);
-		break;
-	case Type::File:
-		file = other.file;
-		break;
-	case Type::TSV:
-		new (&tsv) FullTextVector(other.tsv);
-		break;
-	case Type::None:
-		break;
+	case Type::Value: new (&value) db::Value(other.value); break;
+	case Type::File: file = other.file; break;
+	case Type::TSV: new (&tsv) FullTextVector(other.tsv); break;
+	case Type::None: break;
 	}
 	return *this;
 }
 
 void InputValue::clear() {
 	switch (type) {
-	case Type::Value:
-		value.~Value();
-		break;
-	case Type::File:
-		file = nullptr;
-		break;
-	case Type::TSV:
-		tsv.~SearchVector();
-		break;
-	case Type::None:
-		break;
+	case Type::Value: value.~Value(); break;
+	case Type::File: file = nullptr; break;
+	case Type::TSV: tsv.~SearchVector(); break;
+	case Type::None: break;
 	}
 	type = Type::None;
 }
 
-InputValue::~InputValue() {
-	clear();
-}
+InputValue::~InputValue() { clear(); }
 
 static size_t processExtraVarSize(const FieldExtra *s) {
 	size_t ret = 256;
@@ -225,7 +189,8 @@ static size_t updateFieldLimits(const Map<String, Field> &vec) {
 			auto f = static_cast<const FieldText *>(it.second.getSlot());
 			ret += std::max(f->maxLength, f->inputSizeHint);
 		} else if (t == Type::Data || t == Type::Array) {
-			ret += std::max(config::FIELD_EXTRA_DEFAULT_HINT_SIZE, it.second.getSlot()->inputSizeHint);
+			ret += std::max(config::FIELD_EXTRA_DEFAULT_HINT_SIZE,
+					it.second.getSlot()->inputSizeHint);
 		} else if (t == Type::Extra) {
 			auto f = static_cast<const FieldExtra *>(it.second.getSlot());
 			ret += updateFieldLimits(f->fields) + f->fields.size() * 8;
@@ -257,7 +222,8 @@ void InputConfig::updateLimits(const Map<String, Field> &fields) {
 			maxVarSize = std::max(std::max(f->maxLength, f->inputSizeHint), maxVarSize);
 			maxRequestSize += std::max(f->maxLength, f->inputSizeHint);
 		} else if (t == Type::Data || t == Type::Array) {
-			maxRequestSize += std::max(config::FIELD_EXTRA_DEFAULT_HINT_SIZE, it.second.getSlot()->inputSizeHint);
+			maxRequestSize += std::max(config::FIELD_EXTRA_DEFAULT_HINT_SIZE,
+					it.second.getSlot()->inputSizeHint);
 		} else if (t == Type::Extra) {
 			auto f = static_cast<const FieldExtra *>(it.second.getSlot());
 			maxRequestSize += updateFieldLimits(f->fields) + f->fields.size() * 8;
@@ -266,4 +232,4 @@ void InputConfig::updateLimits(const Map<String, Field> &fields) {
 	}
 }
 
-}
+} // namespace stappler::db

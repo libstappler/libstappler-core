@@ -23,6 +23,8 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
+#include "detail/SPFilesystemResourceData.cc"
+
 #include "SPFilepath.cc"
 #include "SPFilesystem.cc"
 #include "SPFilesystemMime.cc"

@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "SPBitmap.h"
 #include "SPBytesView.h"
+#include "SPFilepath.h"
 #include "SPString.h"
 #include "SPBuffer.h"
 #include "SPLog.h"
@@ -193,7 +194,7 @@ bool BitmapTemplate<memory::StandartInterface>::loadData(const uint8_t * data, s
 }
 
 template <>
-bool BitmapTemplate<memory::StandartInterface>::save(FileFormat fmt, StringView path, bool invert) {
+bool BitmapTemplate<memory::StandartInterface>::save(FileFormat fmt, const FileInfo &path, bool invert) {
 	BitmapWriter w;
 	_makeBitmapWriter(w, nullptr, *this);
 	auto &support = getDefaultFormat(toInt(fmt));
@@ -208,7 +209,7 @@ bool BitmapTemplate<memory::StandartInterface>::save(FileFormat fmt, StringView 
 }
 
 template <>
-bool BitmapTemplate<memory::PoolInterface>::save(FileFormat fmt, StringView path, bool invert) {
+bool BitmapTemplate<memory::PoolInterface>::save(FileFormat fmt, const FileInfo &path, bool invert) {
 	BitmapWriter w;
 	_makeBitmapWriter(w, nullptr, *this);
 	auto &support = getDefaultFormat(toInt(fmt));
@@ -223,7 +224,7 @@ bool BitmapTemplate<memory::PoolInterface>::save(FileFormat fmt, StringView path
 }
 
 template <>
-bool BitmapTemplate<memory::StandartInterface>::save(StringView name, StringView path, bool invert) {
+bool BitmapTemplate<memory::StandartInterface>::save(StringView name, const FileInfo &path, bool invert) {
 	BitmapFormat::save_fn fn = nullptr;
 
 	auto lock = lockFormatList();
@@ -245,7 +246,7 @@ bool BitmapTemplate<memory::StandartInterface>::save(StringView name, StringView
 }
 
 template <>
-bool BitmapTemplate<memory::PoolInterface>::save(StringView name, StringView path, bool invert) {
+bool BitmapTemplate<memory::PoolInterface>::save(StringView name, const FileInfo &path, bool invert) {
 	BitmapFormat::save_fn fn = nullptr;
 
 	auto lock = lockFormatList();

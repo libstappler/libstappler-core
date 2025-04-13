@@ -20,8 +20,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_CORE_SPPLATFORMCLEANUP_H_
-#define CORE_CORE_SPPLATFORMCLEANUP_H_
+#ifndef CORE_CORE_DETAIL_SPPLATFORMCLEANUP_H_
+#define CORE_CORE_DETAIL_SPPLATFORMCLEANUP_H_
 
 // suppress common macro leak
 #if WIN32
@@ -74,18 +74,4 @@ _LIBCPP_END_NAMESPACE_STD
 #define SPINLINE __attribute__((always_inline))
 #endif // __CDT_PARSER__
 
-// GCC-specific formatting attribute
-#if defined(__GNUC__) && (__GNUC__ >= 4)
-#define SPPRINTF(formatPos, argPos) __attribute__((__format__(printf, formatPos, argPos)))
-#define SP_COVERAGE_TRIVIAL __attribute__ ((no_profile_instrument_function))
-#elif defined(__has_attribute)
-#if __has_attribute(format)
-#define SPPRINTF(formatPos, argPos) __attribute__((__format__(printf, formatPos, argPos)))
-#endif // __has_attribute(format)
-#define SP_COVERAGE_TRIVIAL
-#else
-#define SPPRINTF(formatPos, argPos)
-#define SP_COVERAGE_TRIVIAL
-#endif
-
-#endif // CORE_CORE_SPPLATFORMCLEANUP_H_
+#endif // CORE_CORE_DETAIL_SPPLATFORMCLEANUP_H_

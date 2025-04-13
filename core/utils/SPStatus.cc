@@ -53,6 +53,7 @@ StringView getStatusName(Status status) {
 	case Status::ErrorAgain: return "Status::ErrorAgain"; break;
 	case Status::ErrorOutOfHostMemory: return "Status::ErrorOutOfHostMemory"; break;
 	case Status::ErrorBusy: return "Status::ErrorBusy"; break;
+	case Status::ErrorFileExists: return "Status::ErrorFileExists"; break;
 	case Status::ErrorIncompatibleDevice: return "Status::ErrorIncompatibleDevice"; break;
 	case Status::ErrorInvalidArguemnt: return "Status::ErrorInvalidArguemnt"; break;
 	case Status::ErrorOutOfDeviceMemory: return "Status::ErrorOutOfDeviceMemory"; break;
@@ -209,23 +210,6 @@ std::ostream &operator<<(std::ostream &stream, Status st) {
 	getStatusDescription(st, [&] (StringView str) {
 		stream << str;
 	});
-	/*auto name = getStatusName(st);
-	if (!name.empty()) {
-		stream << name;
-	} else {
-
-		if (toInt(st) > 0) {
-			stream << "Status::Application(" << toInt(st) << ")";
-		} else if (toInt(st) <= -status::STATUS_ERRNO_OFFSET && toInt(st) > -status::STATUS_GENERIC_OFFSET) {
-			stream << "Status::Errno(" << status::toErrno(st) << ")";
-		} else if (toInt(st) <= -status::STATUS_GENERIC_OFFSET && toInt(st) > -status::STATUS_GAPI_OFFSET) {
-			stream << "Status::Generic(" << status::toGeneric(st) << ")";
-		} else if (toInt(st) <= -status::STATUS_GAPI_OFFSET && toInt(st) > -status::STATUS_END_OFFSET) {
-			stream << "Status::Generic(" << status::toGApi(st) << ")";
-		} else {
-			stream << "Status::Unknown(" << -toInt(st) << ")";
-		}
-	}*/
 	return stream;
 }
 

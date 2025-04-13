@@ -419,16 +419,6 @@ Status Pool::userdata_get(void **data, const char *key, size_t klen) {
     return SUCCESS;
 }
 
-struct StaticHolder {
-	StaticHolder() {
-		initialize();
-	}
-
-	~StaticHolder() {
-		terminate();
-	}
-} s_global_holder;
-
 void initialize() {
 	// We do not know, what thread calls this first!
 	if (s_global_init.fetch_add(1) == 0) {
@@ -451,6 +441,9 @@ Pool *create(Pool *p) {
 	if (p) {
 		return p->make_child();
 	} else {
+#if DEBUG
+		assert(s_global_pool);
+#endif
 		return s_global_pool->make_child();
 	}
 }

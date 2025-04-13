@@ -24,6 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_DB_SPDB_H_
 #define STAPPLER_DB_SPDB_H_
 
+#include "SPFilepath.h"
 #include "SPMemUserData.h"
 #include "SPMemory.h"
 #include "SPData.h"
@@ -115,7 +116,7 @@ struct SP_PUBLIC InputFile : public AllocBase {
 	size_t headerSize;
 	int64_t id;
 
-	InputFile(String && name, String && type, String && enc, String && orig, size_t s, int64_t id);
+	InputFile(String &&name, String &&type, String &&enc, String &&orig, size_t s, int64_t id);
 	~InputFile();
 
 	bool isOpen() const;
@@ -123,11 +124,11 @@ struct SP_PUBLIC InputFile : public AllocBase {
 	size_t write(const char *, size_t);
 	void close();
 
-	bool save(const StringView &) const;
+	bool save(const FileInfo &) const;
 	Bytes readBytes();
 	String readText();
 
-	int64_t negativeId() const { return - id - 1; }
+	int64_t negativeId() const { return -id - 1; }
 
 	InputFile(const InputFile &) = delete;
 	InputFile(InputFile &&) = default;
@@ -151,9 +152,7 @@ struct SP_PUBLIC InputValue {
 		FullTextVector tsv;
 	};
 
-	bool hasValue() const {
-		return type == Type::Value && !value.empty();
-	}
+	bool hasValue() const { return type == Type::Value && !value.empty(); }
 
 	InputValue() : type(Type::None) { }
 	InputValue(Value &&val) : type(Type::Value), value(move(val)) { }
@@ -184,6 +183,6 @@ struct SP_PUBLIC InputRow {
 	InputRow() = default;
 };
 
-}
+} // namespace stappler::db
 
 #endif /* STAPPLER_DB_SPDB_H_ */

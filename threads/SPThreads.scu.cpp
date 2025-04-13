@@ -23,6 +23,8 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
+#include "SPCore.h"
+#include "SPMemPoolInterface.h"
 #include "SPThread.cc"
 #include "platform/SPThreads-android.cc"
 #include "platform/SPThreads-linux.cc"
@@ -31,3 +33,35 @@ THE SOFTWARE.
 #include "SPThreadTask.cc"
 #include "SPThreadPool.cc"
 #include "SPThreadTaskQueue.cc"
+
+#include "SPSharedModule.h"
+#include "stappler-buildconfig.h"
+
+namespace STAPPLER_VERSIONIZED stappler::thread {
+
+static SharedSymbol s_threadSharedSymbols[] = {
+	SharedSymbol{"ThreadInfo::setThreadInfo",
+		(void *)static_cast<void (*)(StringView, uint32_t, bool)>(&ThreadInfo::setThreadInfo)},
+	SharedSymbol{"ThreadInfo::setThreadPool",
+		(void *)static_cast<bool (*)(memory::pool_t *)>(&ThreadInfo::setThreadPool)},
+};
+
+static SharedModule s_threadSharedModule(buildconfig::MODULE_STAPPLER_THREADS_NAME,
+		s_threadSharedSymbols, sizeof(s_threadSharedSymbols) / sizeof(SharedSymbol));
+
+struct ThreadInitializer {
+	static void init(void *ptr) {
+		auto pool = memory::pool::acquire();
+
+		ThreadInfo::setThreadInfo("Main");
+		ThreadInfo::setThreadPool(pool);
+	}
+
+	static void term(void *ptr) { }
+
+	ThreadInitializer() { addInitializer(this, &init, &term); }
+};
+
+static ThreadInitializer s_threadInit;
+
+} // namespace stappler::thread

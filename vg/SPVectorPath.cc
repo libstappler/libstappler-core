@@ -23,6 +23,7 @@ THE SOFTWARE.
 
 #include "SPVectorPath.h"
 #include "SPData.h"
+#include "SPFilepath.h"
 #include "SPMemory.h"
 
 namespace STAPPLER_VERSIONIZED stappler::vg {
@@ -43,10 +44,10 @@ bool VectorPath::init(StringView path) {
 	return _data.getWriter().readFromPathString(path);
 }
 
-bool VectorPath::init(FilePath &&str) {
+bool VectorPath::init(const FileInfo &str) {
 	_data.clear();
 
-	return _data.getWriter().readFromFile(str.get());
+	return _data.getWriter().readFromFile(str);
 }
 
 bool VectorPath::init(BytesView data) {

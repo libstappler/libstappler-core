@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 #include "SPIO.h"
 #include "SPBytesView.h"
+#include "SPFilepath.h"
 
 namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
@@ -69,16 +70,16 @@ struct ImageInfo {
 
 using StrideFn = Callback<uint32_t(PixelFormat, uint32_t)>;
 
-SP_PUBLIC bool getImageSize(StringView file, uint32_t &width, uint32_t &height);
+SP_PUBLIC bool getImageSize(const FileInfo &, uint32_t &width, uint32_t &height);
 SP_PUBLIC bool getImageSize(const io::Producer &file, uint32_t &width, uint32_t &height);
 
 SP_PUBLIC bool getImageInfo(BytesView, ImageInfo &);
 
-SP_PUBLIC bool isImage(StringView file, bool readable = true);
+SP_PUBLIC bool isImage(const FileInfo &, bool readable = true);
 SP_PUBLIC bool isImage(const io::Producer &file, bool readable = true);
 SP_PUBLIC bool isImage(const uint8_t * data, size_t dataLen, bool readable = true);
 
-SP_PUBLIC Pair<FileFormat, StringView> detectFormat(StringView file);
+SP_PUBLIC Pair<FileFormat, StringView> detectFormat(const FileInfo &);
 SP_PUBLIC Pair<FileFormat, StringView> detectFormat(const io::Producer &file);
 SP_PUBLIC Pair<FileFormat, StringView> detectFormat(const uint8_t * data, size_t dataLen);
 
@@ -142,7 +143,7 @@ public:
 	using info_fn = bool (*) (const uint8_t *data, size_t size, ImageInfo &);
 	using load_fn = bool (*) (const uint8_t *data, size_t size, BitmapWriter &);
 	using write_fn = bool (*) (const uint8_t *data, BitmapWriter &, bool invert);
-	using save_fn = bool (*) (StringView, const uint8_t *data, BitmapWriter &, bool invert);
+	using save_fn = bool (*) (const FileInfo &, const uint8_t *data, BitmapWriter &, bool invert);
 
 	static void add(BitmapFormat &&);
 
@@ -171,7 +172,7 @@ public:
 
 	bool write(const uint8_t *data, BitmapWriter &, bool invert) const;
 
-	bool save(StringView, const uint8_t *data,  BitmapWriter &, bool invert) const;
+	bool save(const FileInfo &, const uint8_t *data,  BitmapWriter &, bool invert) const;
 
 	check_fn getCheckFn() const { return check_ptr; }
 	size_fn getSizeFn() const { return size_ptr; }

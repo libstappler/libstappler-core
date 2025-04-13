@@ -1,6 +1,6 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
+#include "SPCore.h"
 #include "SPFilesystem.h"
 #include "SPPlatformUnistd.h"
+#include "SPStatus.h"
+#include <dirent.h>
+#include <fcntl.h>
 
 #ifndef WIN32
 
@@ -68,33 +72,118 @@ memory::StandartInterface::StringType getcwd_fn<memory::StandartInterface>() {
 
 #define SP_TERMINATED_DATA(view) (view.terminated()?view.data():view.str<memory::StandartInterface>().data())
 
-bool remove_fn(StringView path) {
-	return ::remove(SP_TERMINATED_DATA(path)) == 0;
+static ProtFlags getProtFlagsFromMode (mode_t m) {
+	ProtFlags flags = ProtFlags::None;
+	if (m & S_IRUSR) { flags |= ProtFlags::UserRead; }
+	if (m & S_IWUSR) { flags |= ProtFlags::UserWrite; }
+	if (m & S_IXUSR) { flags |= ProtFlags::UserExecute; }
+	if (m & S_ISUID) { flags |= ProtFlags::UserSetId; }
+	if (m & S_IRGRP) { flags |= ProtFlags::GroupRead; }
+	if (m & S_IWGRP) { flags |= ProtFlags::GroupWrite; }
+	if (m & S_IXGRP) { flags |= ProtFlags::GroupExecute; }
+	if (m & S_ISGID) { flags |= ProtFlags::GroupSetId; }
+	if (m & S_IROTH) { flags |= ProtFlags::AllRead; }
+	if (m & S_IWOTH) { flags |= ProtFlags::AllWrite; }
+	if (m & S_IXOTH) { flags |= ProtFlags::AllExecute; }
+	return flags;
 }
 
-bool unlink_fn(StringView path) {
-	return ::unlink(SP_TERMINATED_DATA(path)) == 0;
+static mode_t getModeFormProtFlags(ProtFlags flags) {
+	mode_t ret = 0;
+	if (hasFlag(flags, ProtFlags::UserRead)) { ret |= S_IRUSR; }
+	if (hasFlag(flags, ProtFlags::UserWrite)) { ret |= S_IWUSR; }
+	if (hasFlag(flags, ProtFlags::UserExecute)) { ret |= S_IXUSR; }
+	if (hasFlag(flags, ProtFlags::UserSetId)) { ret |= S_ISUID; }
+	if (hasFlag(flags, ProtFlags::GroupRead)) { ret |= S_IRGRP; }
+	if (hasFlag(flags, ProtFlags::GroupWrite)) { ret |= S_IWGRP; }
+	if (hasFlag(flags, ProtFlags::GroupExecute)) { ret |= S_IXGRP; }
+	if (hasFlag(flags, ProtFlags::GroupSetId)) { ret |= S_ISGID; }
+	if (hasFlag(flags, ProtFlags::AllRead)) { ret |= S_IROTH; }
+	if (hasFlag(flags, ProtFlags::AllWrite)) { ret |= S_IWOTH; }
+	if (hasFlag(flags, ProtFlags::AllExecute)) { ret |= S_IXOTH; }
+	return ret;
 }
 
-bool mkdir_fn(StringView path) {
-    mode_t process_mask = ::umask(0);
-	bool ret = ::mkdir(SP_TERMINATED_DATA(path), (mode_t)(S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) == 0;
-    ::umask(process_mask);
+Status remove_fn(StringView path) {
+	if (!path.starts_with("/")) {
+		log::error("filesystem", "filesystem::native::remove_fn should be used with absolute paths");
+		return Status::Declined;
+	}
+
+	if (::remove(SP_TERMINATED_DATA(path)) == 0) {
+		return Status::Ok;
+	}
+	return status::errnoToStatus(errno);
+}
+
+Status unlink_fn(StringView path) {
+	if (!path.starts_with("/")) {
+		log::error("filesystem", "filesystem::native::unlink_fn should be used with absolute paths");
+		return Status::Declined;
+	}
+
+	if (::unlink(SP_TERMINATED_DATA(path)) == 0) {
+		return Status::Ok;
+	}
+	return status::errnoToStatus(errno);
+}
+
+Status mkdir_fn(StringView path, ProtFlags flags) {
+	if (!path.starts_with("/")) {
+		log::error("filesystem", "filesystem::native::mkdir_fn should be used with absolute paths");
+		return Status::Declined;
+	}
+
+	Status ret = Status::Ok;
+	if (::mkdir(SP_TERMINATED_DATA(path), getModeFormProtFlags(flags)) == 0) {
+		ret = Status::Ok;
+	} else {
+		ret = status::errnoToStatus(errno);
+	}
     return ret;
 }
 
-bool access_fn(StringView path, Access mode) {
-	int m = 0;
-	switch (mode) {
-	case Access::Execute: m = X_OK; break;
-	case Access::Exists: m = F_OK; break;
-	case Access::Read: m = R_OK; break;
-	case Access::Write: m = W_OK; break;
+Status access_fn(StringView path, Access mode) {
+	if (!path.starts_with("/")) {
+		log::error("filesystem", "filesystem::native::access_fn should be used with absolute paths");
+		return Status::Declined;
 	}
-	return ::access(SP_TERMINATED_DATA(path), m) == 0;
+
+	int m = 0;
+	if (hasFlag(mode, Access::Execute)) { m |= X_OK; }
+	if (hasFlag(mode, Access::Exists)) { m |= F_OK; }
+	if (hasFlag(mode, Access::Read)) { m |= R_OK; }
+	if (hasFlag(mode, Access::Write)) { m |= W_OK; }
+
+	if (hasFlag(mode, Access::Empty)) {
+		if (m != 0) {
+			return Status::ErrorInvalidArguemnt;
+		}
+		
+		m |= F_OK;
+	}
+
+	auto st = ::faccessat(-1, SP_TERMINATED_DATA(path), m, AT_EACCESS);
+	if (st == 0) {
+		if (hasFlag(mode, Access::Empty)) {
+			return Status::Declined; // file exists
+		} else {
+			return Status::Ok;
+		}
+	}
+
+	if (hasFlag(mode, Access::Empty) && errno == ENOENT) {
+		return Status::Ok;
+	}
+	return status::errnoToStatus(errno);
 }
 
-bool stat_fn(StringView path, Stat &stat) {
+Status stat_fn(StringView path, Stat &stat) {
+	if (!path.starts_with("/")) {
+		log::error("filesystem", "filesystem::native::stat_fn should be used with absolute paths");
+		return Status::Declined;
+	}
+
 	struct stat s;
 	if(::stat(SP_TERMINATED_DATA(path), &s) == 0 ) {
 		stat.size = size_t(s.st_size);
@@ -108,17 +197,7 @@ bool stat_fn(StringView path, Stat &stat) {
 		else if (S_ISSOCK(s.st_mode)) { stat.type = FileType::Socket; }
 		else { stat.type = FileType::Unknown; }
 
-		if (s.st_mode & S_IRUSR) { stat.prot |= ProtFlags::UserRead; }
-		if (s.st_mode & S_IWUSR) { stat.prot |= ProtFlags::UserWrite; }
-		if (s.st_mode & S_IXUSR) { stat.prot |= ProtFlags::UserExecute; }
-		if (s.st_mode & S_ISUID) { stat.prot |= ProtFlags::UserSetId; }
-		if (s.st_mode & S_IRGRP) { stat.prot |= ProtFlags::GroupRead; }
-		if (s.st_mode & S_IWGRP) { stat.prot |= ProtFlags::GroupWrite; }
-		if (s.st_mode & S_IXGRP) { stat.prot |= ProtFlags::GroupExecute; }
-		if (s.st_mode & S_ISGID) { stat.prot |= ProtFlags::GroupSetId; }
-		if (s.st_mode & S_IROTH) { stat.prot |= ProtFlags::AllRead; }
-		if (s.st_mode & S_IWOTH) { stat.prot |= ProtFlags::AllWrite; }
-		if (s.st_mode & S_IXOTH) { stat.prot |= ProtFlags::AllExecute; }
+		stat.prot = getProtFlagsFromMode(s.st_mode);
 
 		stat.user = s.st_uid;
 		stat.group = s.st_gid;
@@ -133,97 +212,159 @@ bool stat_fn(StringView path, Stat &stat) {
 		stat.ctime = Time::seconds(s.st_ctime);
 		stat.mtime = Time::seconds(s.st_mtime);
 #endif
-		return true;
-	} else {
-		return false;
+		return Status::Ok;
 	}
+	return status::errnoToStatus(errno);
 }
 
-bool touch_fn(StringView path) {
-	return ::utime(SP_TERMINATED_DATA(path), NULL) == 0;
+Status touch_fn(StringView path) {
+	if (!path.starts_with("/")) {
+		log::error("filesystem", "filesystem::native::touch_fn should be used with absolute paths");
+		return Status::Declined;
+	}
+
+	if (::utime(SP_TERMINATED_DATA(path), NULL) == 0) {
+		return Status::Ok;
+	}
+	return status::errnoToStatus(errno);
 }
 
-void ftw_fn(StringView path, const Callback<void(StringView path, bool isFile)> &callback, int depth, bool dirFirst) {
-	auto dp = ::opendir(SP_TERMINATED_DATA(path));
-	if (dp == NULL) {
-		if (access(SP_TERMINATED_DATA(path), F_OK) != -1) {
-			callback(path, true);
+static constexpr int OpenDirFlags = O_DIRECTORY | O_RDONLY | O_NDELAY | O_LARGEFILE | O_CLOEXEC;
+
+
+static Status _ftw_fn(int dirfd, StringView path,  const Callback<bool(StringView, FileType)> &callback, int depth, bool dirFirst) {
+	memory::StandartInterface::StringType newPath;
+
+	struct Dir {
+		Dir(int dirfd) : dp(::fdopendir(dirfd)) { }
+		~Dir() { if (dp) { ::closedir(dp); } }
+
+		struct dirent *read() { return ::readdir(dp); }
+
+		int getFd() { return ::dirfd(dp); }
+
+		explicit operator bool() const { return dp != nullptr; }
+
+		DIR *dp = nullptr;
+	};
+
+	Dir dp(dirfd);
+	if (!dp) {
+		::close(dirfd);
+		auto result = status::errnoToStatus(errno);
+		if (callback(path, FileType::File)) {
+			return Status::Ok;
+		} else {
+			return Status::Suspended;
 		}
+		return result;
 	} else {
 		if (dirFirst) {
-			callback(path, false);
+			if (!callback(path, FileType::Dir)) {
+				return Status::Suspended;
+			}
 		}
 		if (depth < 0 || depth > 0) {
 			struct dirent *entry;
-			while ((entry = ::readdir(dp))) {
-				if (strcmp(entry->d_name, "..") != 0 && strcmp(entry->d_name, ".") != 0) {
-					auto newPath = filepath::merge<memory::StandartInterface>(path, entry->d_name);
-					ftw_fn(newPath, callback, depth - 1, dirFirst);
+			while ((entry = dp.read())) {
+				FileType type = FileType::Unknown;
+				switch (entry->d_type) {
+				case DT_BLK: type = FileType::BlockDevice; break;
+				case DT_CHR: type = FileType::CharDevice; break;
+				case DT_FIFO: type = FileType::Pipe; break;
+				case DT_LNK: type = FileType::Link; break;
+				case DT_REG: type = FileType::File; break;
+				case DT_DIR: type = FileType::Dir; break;
+				case DT_SOCK: type = FileType::Socket; break;
+				default: break;
 				}
-			}
-		}
-		if (!dirFirst) {
-			callback(path, false);
-		}
-		::closedir(dp);
-	}
-}
-bool ftw_b_fn(StringView path, const Callback<bool(StringView path, bool isFile)> &callback, int depth, bool dirFirst) {
-	auto dp = ::opendir(SP_TERMINATED_DATA(path));
-	if (dp == NULL) {
-		if (access(SP_TERMINATED_DATA(path), F_OK) != -1) {
-			return callback(path, true);
-		}
-	} else {
-		if (dirFirst) {
-			if (!callback(path, false)) {
-				::closedir(dp);
-				return false;
-			}
-		}
-		if (depth < 0 || depth > 0) {
-			struct dirent *entry;
-			while ((entry = ::readdir(dp))) {
+
 				if (strcmp(entry->d_name, "..") != 0 && strcmp(entry->d_name, ".") != 0) {
-					auto newPath = filepath::merge<memory::StandartInterface>(path, entry->d_name);
-					if (!ftw_b_fn(newPath, callback, depth - 1, dirFirst)) {
-						::closedir(dp);
-						return false;
+					if (path.empty()) {
+						newPath = entry->d_name;
+					} else {
+						newPath = filepath::merge<memory::StandartInterface>(path, entry->d_name);
+					}
+					if (type == FileType::Unknown || type == FileType::Dir) {
+						auto newDirfd = ::openat(dp.getFd(), entry->d_name, OpenDirFlags);
+						if (newDirfd < 0) {
+							if (!callback(newPath, FileType::File)) {
+								return Status::Suspended;
+							}
+						} else {
+							if (depth == 1) {
+								::close(newDirfd);
+								if (!callback(newPath, FileType::Dir)) {
+									return Status::Suspended;
+								}
+							} else {
+								auto status = _ftw_fn(newDirfd, newPath, callback, depth - 1, dirFirst);
+								if (status != Status::Ok) {
+									return status;
+								}
+							}
+						}
+					} else {
+						if (!callback(newPath, type)) {
+							return Status::Suspended;
+						}
 					}
 				}
 			}
 		}
 		if (!dirFirst) {
-			if (!callback(path, false)) {
-				::closedir(dp);
-				return false;
+			if (!callback(path, FileType::Dir)) {
+				return Status::Suspended;
 			}
 		}
-		::closedir(dp);
 	}
-	return true;
+	return Status::Ok;
 }
 
-bool rename_fn(StringView source, StringView dest) {
-	return ::rename(SP_TERMINATED_DATA(source), SP_TERMINATED_DATA(dest)) == 0;
+Status ftw_fn(StringView path, const Callback<bool(StringView, FileType)> &callback, int depth, bool dirFirst) {
+	if (!path.starts_with("/")) {
+		log::error("filesystem", "filesystem::native::ftw_fn should be used with absolute paths");
+		return Status::Declined;
+	}
+
+	auto dirfd = ::openat(-1, SP_TERMINATED_DATA(path), OpenDirFlags);
+	if (dirfd < 0) {
+		return status::errnoToStatus(errno);
+	}
+
+	return _ftw_fn(dirfd, StringView(), callback, depth, dirFirst);
+}
+
+Status rename_fn(StringView source, StringView dest) {
+	if (::rename(SP_TERMINATED_DATA(source), SP_TERMINATED_DATA(dest)) == 0) {
+		return Status::Ok;
+	}
+	return status::errnoToStatus(errno);
 }
 
 FILE *fopen_fn(StringView path, StringView mode) {
 	return ::fopen(SP_TERMINATED_DATA(path), SP_TERMINATED_DATA(mode));
 }
 
-bool write_fn(StringView path, const unsigned char *data, size_t len) {
-	std::ofstream f(SP_TERMINATED_DATA(path));
-	if (f.is_open()) {
-		f.write((const char *)data, len);
-		f.close();
-		return true;
+Status write_fn(StringView path, const unsigned char *data, size_t len, ProtFlags flags) {
+	auto fd = ::open(SP_TERMINATED_DATA(path), O_WRONLY | O_CREAT | O_TRUNC, getModeFormProtFlags(flags));
+	if (fd < 0) {
+		return status::errnoToStatus(errno);
 	}
-	return false;
+
+	Status result = Status::Ok;
+	auto ret = ::write(fd, data, len);
+	if (ret < 0) {
+		result = status::errnoToStatus(errno);
+	} else if (ret != ssize_t(len)) {
+		result = Status::Incomplete;
+	}
+	::close(fd);
+	return result;
 }
 
 #undef SP_TERMINATED_DATA
 
 }
-
+ 
 #endif

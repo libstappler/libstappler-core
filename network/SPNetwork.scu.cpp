@@ -176,49 +176,6 @@ uint32_t getActiveHandles() {
 	return CurlHandle::getActiveHandles();
 }
 
-#ifdef LINUX
-
-static bool network_setUserAttributes(FILE *file, const StringView &str, Time mtime) {
-	if (int fd = fileno(file)) {
-		auto err = fsetxattr(fd, "user.mime_type", str.data(), str.size(), XATTR_CREATE);
-		if (err != 0) {
-			err = fsetxattr(fd, "user.mime_type", str.data(), str.size(), XATTR_REPLACE);
-			if (err != 0) {
-				log::error("network", "Fail to set mime type attribute (", err, ")");
-				return false;
-			}
-		}
-
-		if (mtime != nullptr) {
-			struct timespec times[2];
-			times[0].tv_nsec = UTIME_OMIT;
-
-			times[1].tv_sec = time_t(mtime.sec());
-			times[1].tv_nsec = (mtime.toMicroseconds() - Time::seconds(mtime.sec()).toMicroseconds()) * 1000;
-			futimens(fd, times);
-		}
-
-		return true;
-	}
-	return false;
-}
-
-template <typename Interface>
-static auto network_getUserMime(const StringView &filename) -> typename Interface::StringType {
-	auto path = filepath::absolute<Interface>(filename);
-
-	char buf[1_KiB] = { 0 };
-	auto vallen = getxattr(path.data(), "user.mime_type", buf, 1_KiB);
-	if (vallen == -1) {
-		return typename Interface::StringType();
-	}
-
-	return StringView(buf, vallen).str<Interface>();
-}
-
-#endif
-
-
 }
 
 #include "SPNetworkCABundle.cc"

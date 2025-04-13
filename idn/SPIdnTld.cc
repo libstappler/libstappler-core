@@ -28,7 +28,7 @@ namespace STAPPLER_VERSIONIZED stappler::idn {
 
 // from https://data.iana.org/TLD/tlds-alpha-by-domain.txt
 static constexpr StringView s_IdnTld =
-R"(# Version 2024083000, Last Updated Fri Aug 30 07:07:01 2024 UTC
+		R"(# Version 2024083000, Last Updated Fri Aug 30 07:07:01 2024 UTC
 AAA
 AARP
 ABB
@@ -1491,7 +1491,8 @@ struct TldList {
 	}
 
 	bool has(StringView val) {
-		std::string str; str.assign(val.data(), val.size());
+		std::string str;
+		str.assign(val.data(), val.size());
 		string::apply_toupper_c(str);
 
 		auto it = values.find(str);
@@ -1525,10 +1526,10 @@ bool isKnownTld(StringView data) {
 }
 
 static SharedSymbol s_idnSharedSymbols[] = {
-	SharedSymbol{"isKnownTld(StringView)",
-		(void *)static_cast<bool(*)(StringView)>(isKnownTld)},
+	SharedSymbol{"isKnownTld", static_cast<bool (*)(StringView)>(isKnownTld)},
 };
 
-static SharedModule s_idnSharedModule("data", s_idnSharedSymbols, sizeof(s_idnSharedSymbols) / sizeof(SharedSymbol));
+static SharedModule s_idnSharedModule(buildconfig::MODULE_STAPPLER_IDN_NAME, s_idnSharedSymbols,
+		sizeof(s_idnSharedSymbols) / sizeof(SharedSymbol));
 
-}
+} // namespace stappler::idn

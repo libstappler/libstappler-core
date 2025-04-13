@@ -129,12 +129,15 @@ bool mkdir_fn(StringView path) {
 bool access_fn(StringView path, Access mode) {
 	// https://learn.microsoft.com/ru-ru/cpp/c-runtime-library/reference/access-waccess?view=msvc-170
 	int m = 0;
-	switch (mode) {
-	case Access::Execute: m = 00; break;
-	case Access::Exists: m = 00; break;
-	case Access::Read: m = 02; break;
-	case Access::Write: m = 04; break;
+	if (hasFlag(mode, Access::Execute)) { m = X_OK; }
+	if (hasFlag(mode, Access::Exists)) { m = F_OK; }
+	if (hasFlag(mode, Access::Read)) { m = R_OK; }
+	if (hasFlag(mode, Access::Write)) { m = W_OK; }
+
+	if (m == 0) {
+		return false;
 	}
+
 	memory::StandartInterface::WideStringType str = string::toUtf16<memory::StandartInterface>(posixToNative<memory::StandartInterface>(path));
 	return _waccess((wchar_t *)str.c_str(), m) == 0;
 }

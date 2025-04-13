@@ -407,7 +407,7 @@ Value SqlHandle::getHistory(const Scheme &scheme, const stappler::Time &time, bo
 						case DeltaAction::Update: d.setString("update", "action"); break;
 						case DeltaAction::Delete: d.setString("delete", "action"); break;
 						case DeltaAction::Append: d.setString("append", "action"); break;
-						case DeltaAction::Erase:d.setString("erase", "action");  break;
+						case DeltaAction::Erase: d.setString("erase", "action");  break;
 						default: break;
 						}
 					} else if (name == "time") {

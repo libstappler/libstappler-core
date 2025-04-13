@@ -244,6 +244,17 @@ std::bitset<6> getlogFilterMask() {
 	return s_logMask;
 }
 
+void format(LogType type, const char *tag, const char *fmt, ...) {
+	CustomLog::VA va;
+    va_start(va.format.args, fmt);
+    va.format.format = fmt;
+
+    auto m = CustomLogManager::get();
+	m->log(type, tag, CustomLog::Format, va);
+
+    va_end(va.format.args);
+}
+
 void format(LogType type, const StringView &tag, const char *fmt, ...) {
 	CustomLog::VA va;
     va_start(va.format.args, fmt);
@@ -253,6 +264,13 @@ void format(LogType type, const StringView &tag, const char *fmt, ...) {
 	m->log(type, tag, CustomLog::Format, va);
 
     va_end(va.format.args);
+}
+
+void text(LogType type, const char *tag, const char *text) {
+	CustomLog::VA va;
+	va.text = StringView(text);
+    auto m = CustomLogManager::get();
+	m->log(type, tag, CustomLog::Text, va);
 }
 
 void text(LogType type, const StringView &tag, const StringView &text) {

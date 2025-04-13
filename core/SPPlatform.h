@@ -33,6 +33,7 @@ enum class ClockType {
 	Realtime,
 	Process,
 	Thread,
+
 	// hardware clock tick counter with unknown monotonic resolution
 	// see `rdtsc`
 	Hardware

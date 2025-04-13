@@ -35,8 +35,8 @@ bool HyphenMap::init() {
 	return true;
 }
 
-void HyphenMap::addHyphenDict(CharGroupId id, FilePath file) {
-	auto data = filesystem::readTextFile<Interface>(file.get());
+void HyphenMap::addHyphenDict(CharGroupId id, const FileInfo &file) {
+	auto data = filesystem::readTextFile<Interface>(file);
 	if (!data.empty()) {
 		auto dict = hnj_hyphen_load_data(data.data(), data.size());
 		if (dict) {

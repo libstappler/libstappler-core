@@ -24,6 +24,7 @@ THE SOFTWARE.
 #include "SPDbFile.h"
 
 #include "SPDbAdapter.h"
+#include "SPFilepath.h"
 #include "SPIO.h"
 #include "SPDbField.h"
 #include "SPDbScheme.h"
@@ -42,24 +43,20 @@ String File::getFilesystemPath(const ApplicationInterface *app, uint64_t oid) {
 }
 
 static bool File_isImage(const StringView &type) {
-	return type == "image/gif"
-			|| type == "image/jpeg"
-			|| type == "image/pjpeg"
-			|| type == "image/png"
-			|| type == "image/tiff"
-			|| type == "image/webp"
+	return type == "image/gif" || type == "image/jpeg" || type == "image/pjpeg"
+			|| type == "image/png" || type == "image/tiff" || type == "image/webp"
 			|| type == "image/svg+xml";
 }
 
-static bool File_validateFileField(const ApplicationInterface *app, const Field &field, size_t writeSize, const StringView &type) {
+static bool File_validateFileField(const ApplicationInterface *app, const Field &field,
+		size_t writeSize, const StringView &type) {
 	auto ffield = static_cast<const FieldFile *>(field.getSlot());
 	// check size
 	if (writeSize > ffield->maxSize) {
-		app->error("Storage", "File is larger then max file size in field", Value {
-			std::make_pair("field", Value(field.getName())),
-			std::make_pair("max", Value((int64_t)ffield->maxSize)),
-			std::make_pair("size", Value((int64_t)writeSize))
-		});
+		app->error("Storage", "File is larger then max file size in field",
+				Value{std::make_pair("field", Value(field.getName())),
+					std::make_pair("max", Value((int64_t)ffield->maxSize)),
+					std::make_pair("size", Value((int64_t)writeSize))});
 		return false;
 	}
 
@@ -74,38 +71,37 @@ static bool File_validateFileField(const ApplicationInterface *app, const Field 
 			}
 		}
 		if (!ret) {
-			app->error("Storage", "Invalid file type for field", Value {
-				std::make_pair("field", Value(field.getName())),
-				std::make_pair("type", Value(type))
-			});
+			app->error("Storage", "Invalid file type for field",
+					Value{std::make_pair("field", Value(field.getName())),
+						std::make_pair("type", Value(type))});
 			return false;
 		}
 	}
 	return true;
 }
 
-static bool File_validateImageField(const ApplicationInterface *app, const Field &field, size_t writeSize, StringView type, stappler::io::Producer file) {
+static bool File_validateImageField(const ApplicationInterface *app, const Field &field,
+		size_t writeSize, StringView type, stappler::io::Producer file) {
 #ifndef MODULE_STAPPLER_BITMAP
-	app->error("Storage", "MODULE_STAPPLER_BITMAP was not enabled to support bitmaps within storage");
+	app->error("Storage",
+			"MODULE_STAPPLER_BITMAP was not enabled to support bitmaps within storage");
 	return false;
 #else
 	auto ffield = static_cast<const FieldImage *>(field.getSlot());
 
 	// check size
 	if (writeSize > ffield->maxSize) {
-		app->error("Storage", "File is larger then max file size in field", Value{
-			std::make_pair("field", Value(field.getName())),
-			std::make_pair("max", Value((int64_t)ffield->maxSize)),
-			std::make_pair("size", Value((int64_t)writeSize))
-		});
+		app->error("Storage", "File is larger then max file size in field",
+				Value{std::make_pair("field", Value(field.getName())),
+					std::make_pair("max", Value((int64_t)ffield->maxSize)),
+					std::make_pair("size", Value((int64_t)writeSize))});
 		return false;
 	}
 
 	if (!File_isImage(type)) {
-		app->error("Storage", "Unknown image type for field", Value {
-			std::make_pair("field", Value(field.getName())),
-			std::make_pair("type", Value(type))
-		});
+		app->error("Storage", "Unknown image type for field",
+				Value{std::make_pair("field", Value(field.getName())),
+					std::make_pair("type", Value(type))});
 		return false;
 	}
 
@@ -120,10 +116,9 @@ static bool File_validateImageField(const ApplicationInterface *app, const Field
 			}
 		}
 		if (!ret) {
-			app->error("Storage", "Invalid file type for field", Value{
-				std::make_pair("field", Value(field.getName())),
-				std::make_pair("type", Value(type))
-			});
+			app->error("Storage", "Invalid file type for field",
+					Value{std::make_pair("field", Value(field.getName())),
+						std::make_pair("type", Value(type))});
 			return false;
 		}
 	}
@@ -136,32 +131,28 @@ static bool File_validateImageField(const ApplicationInterface *app, const Field
 
 	if (ffield->minImageSize.policy == ImagePolicy::Reject) {
 		if (ffield->minImageSize.width > width || ffield->minImageSize.height > height) {
-			app->error("Storage", "Image is to small, rejected by policy rule", Value{
-				std::make_pair("min", Value {
-					std::make_pair("width", Value(ffield->minImageSize.width)),
-					std::make_pair("height", Value(ffield->minImageSize.height))
-				}),
-				std::make_pair("current", Value{
-					std::make_pair("width", Value(width)),
-					std::make_pair("height", Value(height))
-				})
-			});
+			app->error("Storage", "Image is to small, rejected by policy rule",
+					Value{
+						std::make_pair("min",
+								Value{std::make_pair("width", Value(ffield->minImageSize.width)),
+									std::make_pair("height", Value(ffield->minImageSize.height))}),
+						std::make_pair("current",
+								Value{std::make_pair("width", Value(width)),
+									std::make_pair("height", Value(height))})});
 			return false;
 		}
 	}
 
 	if (ffield->maxImageSize.policy == ImagePolicy::Reject) {
 		if (ffield->maxImageSize.width < width || ffield->maxImageSize.height < height) {
-			app->error("Storage", "Image is to large, rejected by policy rule", Value{
-				std::make_pair("max", Value {
-					std::make_pair("width", Value(ffield->maxImageSize.width)),
-					std::make_pair("height", Value(ffield->maxImageSize.height))
-				}),
-				std::make_pair("current", Value{
-					std::make_pair("width", Value(width)),
-					std::make_pair("height", Value(height))
-				})
-			});
+			app->error("Storage", "Image is to large, rejected by policy rule",
+					Value{
+						std::make_pair("max",
+								Value{std::make_pair("width", Value(ffield->maxImageSize.width)),
+									std::make_pair("height", Value(ffield->maxImageSize.height))}),
+						std::make_pair("current",
+								Value{std::make_pair("width", Value(width)),
+									std::make_pair("height", Value(height))})});
 			return false;
 		}
 	}
@@ -169,7 +160,8 @@ static bool File_validateImageField(const ApplicationInterface *app, const Field
 #endif
 }
 
-bool File::validateFileField(const ApplicationInterface *app, const Field &field, const InputFile &file) {
+bool File::validateFileField(const ApplicationInterface *app, const Field &field,
+		const InputFile &file) {
 	if (field.getType() == db::Type::File) {
 		return File_validateFileField(app, field, file.writeSize, file.type);
 	} else if (field.getType() == db::Type::Image) {
@@ -178,7 +170,8 @@ bool File::validateFileField(const ApplicationInterface *app, const Field &field
 	return true;
 }
 
-bool File::validateFileField(const ApplicationInterface *app, const Field &field, const StringView &type, const BytesView &data) {
+bool File::validateFileField(const ApplicationInterface *app, const Field &field,
+		const StringView &type, const BytesView &data) {
 	if (field.getType() == db::Type::File) {
 		return File_validateFileField(app, field, data.size(), type);
 	} else if (field.getType() == db::Type::Image) {
@@ -208,7 +201,8 @@ Value File::createFile(const Transaction &t, const Field &f, InputFile &file) {
 	fileData = Worker(*scheme, t).create(fileData, true);
 	if (fileData && fileData.isInteger("__oid")) {
 		auto id = fileData.getInteger("__oid");
-		if (file.save(File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id))) {
+		if (file.save(FileInfo{
+				File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id)})) {
 			return Value(id);
 		}
 	}
@@ -217,7 +211,8 @@ Value File::createFile(const Transaction &t, const Field &f, InputFile &file) {
 	return Value();
 }
 
-Value File::createFile(const Transaction &t, const StringView &type, const StringView &path, int64_t mtime) {
+Value File::createFile(const Transaction &t, const StringView &type, const StringView &path,
+		int64_t mtime) {
 	auto scheme = t.getAdapter().getApplicationInterface()->getFileScheme();
 	Value fileData;
 	filesystem::Stat stat;
@@ -253,7 +248,8 @@ Value File::createFile(const Transaction &t, const StringView &type, const Strin
 	fileData = Worker(*scheme, t).create(fileData, true);
 	if (fileData && fileData.isInteger("__oid")) {
 		auto id = fileData.getInteger("__oid");
-		if (stappler::filesystem::move(path, File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id))) {
+		auto filePath = File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id);
+		if (stappler::filesystem::move(path, FileInfo{filePath})) {
 			return Value(id);
 		} else {
 			Worker(*scheme, t).remove(fileData.getInteger("__oid"));
@@ -264,7 +260,8 @@ Value File::createFile(const Transaction &t, const StringView &type, const Strin
 	return Value();
 }
 
-Value File::createFile(const Transaction &t, const StringView &type, const BytesView &data, int64_t mtime) {
+Value File::createFile(const Transaction &t, const StringView &type, const BytesView &data,
+		int64_t mtime) {
 	auto scheme = t.getAdapter().getApplicationInterface()->getFileScheme();
 	auto size = data.size();
 
@@ -288,7 +285,8 @@ Value File::createFile(const Transaction &t, const StringView &type, const Bytes
 	fileData = Worker(*scheme, t).create(fileData, true);
 	if (fileData && fileData.isInteger("__oid")) {
 		auto id = fileData.getInteger("__oid");
-		if (stappler::filesystem::write(File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id), data)) {
+		auto filePath = File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id);
+		if (stappler::filesystem::write(FileInfo{filePath}, data)) {
 			return Value(id);
 		} else {
 			Worker(*scheme, t).remove(fileData.getInteger("__oid"));
@@ -299,8 +297,8 @@ Value File::createFile(const Transaction &t, const StringView &type, const Bytes
 }
 
 #if MODULE_STAPPLER_BITMAP
-static bool getTargetImageSize(uint32_t W, uint32_t H, const MinImageSize &min, const MaxImageSize &max
-		, uint32_t &tW, uint32_t &tH) {
+static bool getTargetImageSize(uint32_t W, uint32_t H, const MinImageSize &min,
+		const MaxImageSize &max, uint32_t &tW, uint32_t &tH) {
 
 	if (min.width > W || min.height > H) {
 		float scale = 0.0f;
@@ -311,7 +309,8 @@ static bool getTargetImageSize(uint32_t W, uint32_t H, const MinImageSize &min, 
 		} else {
 			scale = std::min((float)min.width / (float)W, (float)min.height / (float)H);
 		}
-		tW = W * scale; tH = H * scale;
+		tW = W * scale;
+		tH = H * scale;
 		return true;
 	}
 
@@ -324,11 +323,13 @@ static bool getTargetImageSize(uint32_t W, uint32_t H, const MinImageSize &min, 
 		} else {
 			scale = std::min((float)max.width / (float)W, (float)max.height / (float)H);
 		}
-		tW = (size_t)W * scale; tH = (size_t)H * scale;
+		tW = (size_t)W * scale;
+		tH = (size_t)H * scale;
 		return true;
 	}
 
-	tW = W; tH = H;
+	tW = W;
+	tH = H;
 	return false;
 }
 
@@ -341,9 +342,9 @@ static String saveImage(Bitmap &bmp) {
 		bool ret = false;
 		auto fmt = bmp.getOriginalFormat();
 		if (fmt == bitmap::FileFormat::Custom) {
-			ret = bmp.save(bmp.getOriginalFormatName(), path);
+			ret = bmp.save(bmp.getOriginalFormatName(), FileInfo{path});
 		} else {
-			ret = bmp.save(bmp.getOriginalFormat(), path);
+			ret = bmp.save(bmp.getOriginalFormat(), FileInfo{path});
 		}
 
 		if (ret) {
@@ -351,19 +352,20 @@ static String saveImage(Bitmap &bmp) {
 		}
 	}
 
-    return String();
+	return String();
 }
 
 static String resizeImage(Bitmap &bmp, uint32_t width, uint32_t height) {
 	auto newImage = bmp.resample(width, height);
-    if (newImage) {
-    	return saveImage(newImage);
-    }
+	if (newImage) {
+		return saveImage(newImage);
+	}
 
-    return String();
+	return String();
 }
 
-static Map<String, String> writeImages(const ApplicationInterface *app, const Field &f, InputFile &file) {
+static Map<String, String> writeImages(const ApplicationInterface *app, const Field &f,
+		InputFile &file) {
 	auto field = static_cast<const FieldImage *>(f.getSlot());
 
 	uint32_t width = 0, height = 0;
@@ -374,7 +376,8 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 
 	Map<String, String> ret;
 
-	bool needResize = getTargetImageSize(width, height, field->minImageSize, field->maxImageSize, targetWidth, targetHeight);
+	bool needResize = getTargetImageSize(width, height, field->minImageSize, field->maxImageSize,
+			targetWidth, targetHeight);
 	if (needResize || field->thumbnails.size() > 0) {
 		BufferTemplate<Interface> data(file.writeSize);
 		stappler::io::Producer prod(file.file);
@@ -382,30 +385,30 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 		prod.read(data, file.writeSize);
 
 		Bitmap bmp(data.data(), data.size());
-	    if (!bmp) {
-	    	app->error("Storage", "Fail to open image");
-	    } else {
-		    if (needResize) {
-		    	auto fpath = resizeImage(bmp, targetWidth, targetHeight);
-		    	if (!fpath.empty()) {
-		    		ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
-		    	}
-		    } else {
-		    	ret.emplace(f.getName().str<Interface>(), file.file.path());
-		    }
+		if (!bmp) {
+			app->error("Storage", "Fail to open image");
+		} else {
+			if (needResize) {
+				auto fpath = resizeImage(bmp, targetWidth, targetHeight);
+				if (!fpath.empty()) {
+					ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
+				}
+			} else {
+				ret.emplace(f.getName().str<Interface>(), file.file.path());
+			}
 
-		    if (field->thumbnails.size() > 0) {
-		    	for (auto &it : field->thumbnails) {
-			    	getTargetImageSize(width, height, MinImageSize(), MaxImageSize(it.width, it.height),
-			    			targetWidth, targetHeight);
+			if (field->thumbnails.size() > 0) {
+				for (auto &it : field->thumbnails) {
+					getTargetImageSize(width, height, MinImageSize(),
+							MaxImageSize(it.width, it.height), targetWidth, targetHeight);
 
-			    	auto fpath = resizeImage(bmp, targetWidth, targetHeight);
-			    	if (!fpath.empty()) {
-			    		ret.emplace(it.name, sp::move(fpath));
-			    	}
-		    	}
-		    }
-	    }
+					auto fpath = resizeImage(bmp, targetWidth, targetHeight);
+					if (!fpath.empty()) {
+						ret.emplace(it.name, sp::move(fpath));
+					}
+				}
+			}
+		}
 	} else {
 		ret.emplace(f.getName().str<Interface>(), file.path);
 	}
@@ -413,7 +416,8 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 	return ret;
 }
 
-static Map<String, String> writeImages(const ApplicationInterface *app, const Field &f, const StringView &type, const BytesView &data) {
+static Map<String, String> writeImages(const ApplicationInterface *app, const Field &f,
+		const StringView &type, const BytesView &data) {
 	auto field = static_cast<const FieldImage *>(f.getSlot());
 
 	uint32_t width = 0, height = 0;
@@ -425,36 +429,37 @@ static Map<String, String> writeImages(const ApplicationInterface *app, const Fi
 
 	Map<String, String> ret;
 
-	bool needResize = getTargetImageSize(width, height, field->minImageSize, field->maxImageSize, targetWidth, targetHeight);
+	bool needResize = getTargetImageSize(width, height, field->minImageSize, field->maxImageSize,
+			targetWidth, targetHeight);
 	if (needResize || field->thumbnails.size() > 0) {
 		Bitmap bmp(data);
-	    if (!bmp) {
-	    	app->error("Storage", "Fail to open image");
-	    } else {
-		    if (needResize) {
-		    	auto fpath = resizeImage(bmp, targetWidth, targetHeight);
-		    	if (!fpath.empty()) {
-		    		ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
-		    	}
-		    } else {
-		    	auto fpath = saveImage(bmp);
-		    	if (!fpath.empty()) {
-		    		ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
-		    	}
-		    }
+		if (!bmp) {
+			app->error("Storage", "Fail to open image");
+		} else {
+			if (needResize) {
+				auto fpath = resizeImage(bmp, targetWidth, targetHeight);
+				if (!fpath.empty()) {
+					ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
+				}
+			} else {
+				auto fpath = saveImage(bmp);
+				if (!fpath.empty()) {
+					ret.emplace(f.getName().str<Interface>(), sp::move(fpath));
+				}
+			}
 
-		    if (field->thumbnails.size() > 0) {
-		    	for (auto &it : field->thumbnails) {
-			    	getTargetImageSize(width, height, MinImageSize(), MaxImageSize(it.width, it.height),
-			    			targetWidth, targetHeight);
+			if (field->thumbnails.size() > 0) {
+				for (auto &it : field->thumbnails) {
+					getTargetImageSize(width, height, MinImageSize(),
+							MaxImageSize(it.width, it.height), targetWidth, targetHeight);
 
-			    	auto fpath = resizeImage(bmp, targetWidth, targetHeight);
-			    	if (!fpath.empty()) {
-			    		ret.emplace(it.name, sp::move(fpath));
-			    	}
-		    	}
-		    }
-	    }
+					auto fpath = resizeImage(bmp, targetWidth, targetHeight);
+					if (!fpath.empty()) {
+						ret.emplace(it.name, sp::move(fpath));
+					}
+				}
+			}
+		}
 	} else {
 		filesystem::File file = filesystem::File::open_tmp(config::UPLOAD_TMP_IMAGE_PREFIX, false);
 		file.xsputn((const char *)data.data(), data.size());
@@ -471,7 +476,7 @@ Value File::createImage(const Transaction &t, const Field &f, InputFile &file) {
 
 #if MODULE_STAPPLER_BITMAP
 	auto files = writeImages(t.getAdapter().getApplicationInterface(), f, file);
-	for (auto & it : files) {
+	for (auto &it : files) {
 		if (it.first == f.getName() && it.second == file.path) {
 			auto val = createFile(t, f, file);
 			if (val.isInteger()) {
@@ -491,12 +496,13 @@ Value File::createImage(const Transaction &t, const Field &f, InputFile &file) {
 	return ret;
 }
 
-Value File::createImage(const Transaction &t, const Field &f, const StringView &type, const BytesView &data, int64_t mtime) {
+Value File::createImage(const Transaction &t, const Field &f, const StringView &type,
+		const BytesView &data, int64_t mtime) {
 	Value ret;
 
 #if MODULE_STAPPLER_BITMAP
 	auto files = writeImages(t.getAdapter().getApplicationInterface(), f, type, data);
-	for (auto & it : files) {
+	for (auto &it : files) {
 		auto &field = it.first;
 		auto &filePath = it.second;
 
@@ -521,7 +527,8 @@ bool File::removeFile(const ApplicationInterface *app, const Value &val) {
 }
 bool File::removeFile(const ApplicationInterface *app, int64_t id) {
 	if (id) {
-		filesystem::remove(File::getFilesystemPath(app, id));
+		auto filePath = File::getFilesystemPath(app, id);
+		filesystem::remove(FileInfo{filePath});
 		return true;
 	}
 
@@ -542,7 +549,8 @@ bool File::purgeFile(const Transaction &t, int64_t id) {
 	if (id) {
 		if (auto scheme = t.getAdapter().getApplicationInterface()->getFileScheme()) {
 			Worker(*scheme, t).remove(id);
-			filesystem::remove(File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id));
+			auto filePath = File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id);
+			filesystem::remove(FileInfo{filePath});
 			return true;
 		}
 	}
@@ -562,4 +570,4 @@ void File::setData(const Transaction &t, uint64_t id, const Value &val) {
 	}
 }
 
-}
+} // namespace stappler::db

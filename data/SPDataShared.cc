@@ -26,12 +26,15 @@
 namespace STAPPLER_VERSIONIZED stappler::data {
 
 static SharedSymbol s_dataSharedSymbols[] = {
-	SharedSymbol{"readUrlencoded<PoolInterface>(StringView,size_t)",
-		(void *)static_cast<ValueTemplate<memory::PoolInterface>(*)(StringView,size_t)>(readUrlencoded<memory::PoolInterface>)},
-	SharedSymbol{"readUrlencoded<StandartInterface>(StringView,size_t)",
-		(void *)static_cast<ValueTemplate<memory::StandartInterface>(*)(StringView,size_t)>(readUrlencoded<memory::StandartInterface>)},
+	SharedSymbol{"readUrlencoded",
+		static_cast<ValueTemplate<memory::PoolInterface> (*)(StringView, size_t)>(
+				readUrlencoded<memory::PoolInterface>)},
+	SharedSymbol{"readUrlencoded",
+		static_cast<ValueTemplate<memory::StandartInterface> (*)(StringView, size_t)>(
+				readUrlencoded<memory::StandartInterface>)},
 };
 
-static SharedModule s_dataSharedModule("data", s_dataSharedSymbols, sizeof(s_dataSharedSymbols) / sizeof(SharedSymbol));
+static SharedModule s_dataSharedModule(buildconfig::MODULE_STAPPLER_DATA_NAME, s_dataSharedSymbols,
+		sizeof(s_dataSharedSymbols) / sizeof(SharedSymbol));
 
-}
+} // namespace stappler::data

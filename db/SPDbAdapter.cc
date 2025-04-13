@@ -24,6 +24,8 @@ THE SOFTWARE.
 #include "SPDbAdapter.h"
 #include "SPDbScheme.h"
 #include "SPDbFieldExtensions.h"
+#include "SPFilepath.h"
+#include "SPFilesystem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
@@ -105,7 +107,12 @@ void ApplicationInterface::scheduleAyncDbTask(const Callback<Function<void(const
 }
 
 StringView ApplicationInterface::getDocumentRoot() const {
-	return filesystem::writablePath<Interface>();
+	StringView ret;
+	filesystem::enumeratePaths(FileCategory::AppData, [&] (StringView path) {
+		ret = path;
+		return false;
+	});
+	return ret;
 }
 
 void ApplicationInterface::pushErrorMessage(Value &&val) const {
@@ -118,9 +125,9 @@ void ApplicationInterface::pushDebugMessage(Value &&val) const {
 
 void ApplicationInterface::reportDbUpdate(StringView data, bool successful) {
 	auto dir = filepath::merge<Interface>(getDocumentRoot(), ".reports");
-	filesystem::mkdir(dir);
+	filesystem::mkdir(FileInfo{dir});
 	auto path = toString(dir, "/update.", stappler::Time::now().toMilliseconds(), ".sql");
-	stappler::filesystem::write(path, (const uint8_t *)data.data(), data.size());
+	stappler::filesystem::write(FileInfo{path}, (const uint8_t *)data.data(), data.size());
 }
 
 Adapter Adapter::FromContext(const ApplicationInterface *app) {

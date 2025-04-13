@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 #include "SPDataCbor.h"
 #include "SPDataValue.h"
+#include "SPFilepath.h"
 
 #if MODULE_STAPPLER_FILESYSTEM
 #include "SPFilesystem.h"
@@ -63,12 +64,15 @@ struct Encoder : public Interface::AllocBaseType {
 	}
 
 #if MODULE_STAPPLER_FILESYSTEM
-	Encoder(StringView filename) : type(File) {
-		auto path = filesystem::native::posixToNative<Interface>(filename);
-		file = new std::ofstream(path.data(), std::ios::binary);
-		if (isOpen()) {
-			cbor::_writeId(*this);
-		}
+	Encoder(const FileInfo &info) : type(File) {
+		filesystem::enumerateWritablePaths(info, filesystem::Access::None, [&] (StringView filename) {
+			auto path = filesystem::native::posixToNative<Interface>(filename);
+			file = new std::ofstream(path.data(), std::ios::binary);
+			if (isOpen()) {
+				cbor::_writeId(*this);
+			}
+			return false;
+		});
 	}
 #endif
 
@@ -222,8 +226,9 @@ inline bool write(const Callback<void(BytesView)> &stream, const ValueTemplate<I
 	return false;
 }
 
+#if MODULE_STAPPLER_FILESYSTEM
 template <typename Interface>
-inline bool save(const ValueTemplate<Interface> &data, StringView file) {
+inline bool save(const ValueTemplate<Interface> &data, const FileInfo &file) {
 	Encoder<Interface> enc(file);
 	if (enc.isOpen()) {
 		data.encode(enc);
@@ -231,6 +236,7 @@ inline bool save(const ValueTemplate<Interface> &data, StringView file) {
 	}
 	return false;
 }
+#endif
 
 }
 

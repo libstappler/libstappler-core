@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPBitmapFormat.h"
+#include "SPFilepath.h"
 #include "SPLog.h"
 #include "SPFilesystem.h"
 #include "webp/decode.h"
@@ -216,10 +217,17 @@ struct WebpStruct {
 		out = v;
 	}
 
-	WebpStruct(const StringView &filename, bool lossless) : WebpStruct(lossless) {
-	    fp = filesystem::native::fopen_fn(filename, "wb");
+	WebpStruct(const FileInfo &filename, bool lossless) : WebpStruct(lossless) {
+		filesystem::enumerateWritablePaths(filename, filesystem::Access::None, [&] (StringView str) {
+			fp = filesystem::native::fopen_fn(str, "wb");
+			if (fp) {
+				return false;
+			}
+			return true;
+		});
+
 	    if (!fp) {
-			log::format(log::Error, "Bitmap", "fail to open file '%s' to write png data", filename.data());
+			log::error("Bitmap", "fail to open file ", filename, " to write webp data");
 			valid = false;
 			return;
 	    }
@@ -288,7 +296,7 @@ struct WebpStruct {
 	}
 };
 
-static bool saveWebpLossless(StringView filename, const uint8_t *data, BitmapWriter &state, bool invert) {
+static bool saveWebpLossless(const FileInfo &filename, const uint8_t *data, BitmapWriter &state, bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color)) {
 		return false;
 	}
@@ -311,7 +319,7 @@ static bool writeWebpLossless(const uint8_t *data, BitmapWriter &state, bool inv
 	return coder.write(data, state);
 }
 
-static bool saveWebpLossy(StringView filename, const uint8_t *data, BitmapWriter &state, bool invert) {
+static bool saveWebpLossy(const FileInfo &filename, const uint8_t *data, BitmapWriter &state, bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color) || invert) {
 		if (invert) { log::error("Bitmap", "Inverted output is not supported for webp"); }
 		return false;

@@ -35,7 +35,7 @@ public:
 	virtual ~HyphenMap();
 	bool init();
 
-	void addHyphenDict(CharGroupId id, FilePath file);
+	void addHyphenDict(CharGroupId id, const FileInfo &file);
 	void addHyphenDict(CharGroupId id, BytesView data);
 	Vector<uint8_t> makeWordHyphens(const char16_t *ptr, size_t len);
 	Vector<uint8_t> makeWordHyphens(const WideStringView &);

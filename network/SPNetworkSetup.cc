@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
+#include "SPFilepath.h"
+#include "SPFilesystem.h"
 #include "SPNetworkContext.h"
 #include "SPNetworkData.h"
 #include "curl/curl.h"
@@ -33,22 +35,24 @@ namespace STAPPLER_VERSIONIZED stappler::network {
 
 #define SP_TERMINATED_DATA(view) (view.terminated()?view.data():view.str<Interface>().data())
 
-static constexpr auto SP_NETWORK_PROGRESS_TIMEOUT = TimeInterval::microseconds(250000ull);
+static constexpr auto SP_NETWORK_PROGRESS_TIMEOUT = TimeInterval::microseconds(250'000ull);
 static constexpr auto s_UserAgent = "Stappler/1 CURL";
 
 struct CurlHandle;
 
 SPUNUSED static StringView getCABundle();
 
-SPUNUSED static CURL * CurlHandle_getHandle(bool reuse, memory::pool_t *pool);
-SPUNUSED static void CurlHandle_releaseHandle(CURL *curl, bool reuse, bool success, memory::pool_t *pool);
+SPUNUSED static CURL *CurlHandle_getHandle(bool reuse, memory::pool_t *pool);
+SPUNUSED static void CurlHandle_releaseHandle(CURL *curl, bool reuse, bool success,
+		memory::pool_t *pool);
 
 static size_t _writeDummy(const void *data, size_t size, size_t nmemb, void *userptr) {
 	return size * nmemb;
 }
 
 template <typename Interface>
-static size_t _writeDebug(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr) {
+static size_t _writeDebug(CURL *handle, curl_infotype type, char *data, size_t size,
+		void *userptr) {
 	auto task = static_cast<HandleData<Interface> *>(userptr);
 	task->process.debugData.write(data, size);
 	return size;
@@ -58,7 +62,7 @@ template <typename Interface>
 static size_t _writeData(char *data, size_t size, size_t nmemb, void *userptr) {
 	auto task = static_cast<HandleData<Interface> *>(userptr);
 
-	return std::visit([&] (auto &&arg) {
+	return std::visit([&](auto &&arg) {
 		using T = std::decay_t<decltype(arg)>;
 		if constexpr (std::is_same_v<T, typename HandleData<Interface>::IOCallback>) {
 			return arg(data, size * nmemb);
@@ -76,7 +80,7 @@ static size_t _writeHeaders(char *data, size_t size, size_t nmemb, void *userptr
 		if (task->send.method != Method::Smtp) {
 			if (!reader.is("HTTP/")) {
 				auto name = reader.readUntil<StringView::Chars<':'>>();
-				reader ++;
+				reader++;
 
 				name.trimChars<StringView::WhiteSpace>();
 				reader.trimChars<StringView::WhiteSpace>();
@@ -91,16 +95,15 @@ static size_t _writeHeaders(char *data, size_t size, size_t nmemb, void *userptr
 			} else {
 				reader.skipUntil<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				reader.skipUntil<StringView::CharGroup<CharGroupId::Numbers>>();
-				reader.readInteger().unwrap([&] (int64_t code) {
-					task->process.responseCode = code;
-				});
+				reader.readInteger().unwrap(
+						[&](int64_t code) { task->process.responseCode = code; });
 			}
 		}
 
 		task->receive.headers.emplace_back(StringView(data, size).str<Interface>());
 	}
 
-    return size * nmemb;
+	return size * nmemb;
 }
 
 template <typename Interface>
@@ -108,7 +111,7 @@ static size_t _readData(char *data, size_t size, size_t nmemb, void *userptr) {
 	if (userptr != NULL) {
 		auto task = static_cast<HandleData<Interface> *>(userptr);
 
-		return std::visit([&] (auto &&arg) {
+		return std::visit([&](auto &&arg) {
 			using T = std::decay_t<decltype(arg)>;
 			if constexpr (std::is_same_v<T, typename HandleData<Interface>::IOCallback>) {
 				return arg(data, size * nmemb);
@@ -132,13 +135,16 @@ static size_t _readData(char *data, size_t size, size_t nmemb, void *userptr) {
 }
 
 template <typename Interface>
-static int _progress(void *userptr, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+static int _progress(void *userptr, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal,
+		curl_off_t ulnow) {
 	auto task = static_cast<HandleData<Interface> *>(userptr);
 	auto timing = Time::now();
 
 	int uProgress = 0;
 	if (task->process.uploadProgress && ulnow != task->process.uploadProgressValue
-			&& (!task->process.uploadProgressTiming || (timing - task->process.uploadProgressTiming > SP_NETWORK_PROGRESS_TIMEOUT))) {
+			&& (!task->process.uploadProgressTiming
+					|| (timing - task->process.uploadProgressTiming
+							> SP_NETWORK_PROGRESS_TIMEOUT))) {
 		task->process.uploadProgressValue = ulnow;
 		task->process.uploadProgressTiming = timing;
 		uProgress = task->process.uploadProgress(ultotal, ulnow);
@@ -146,10 +152,13 @@ static int _progress(void *userptr, curl_off_t dltotal, curl_off_t dlnow, curl_o
 
 	int dProgress = 0;
 	if (task->process.downloadProgress && dlnow != task->process.downloadProgressValue
-			&& (!task->process.downloadProgressTiming || (timing - task->process.downloadProgressTiming > SP_NETWORK_PROGRESS_TIMEOUT))) {
+			&& (!task->process.downloadProgressTiming
+					|| (timing - task->process.downloadProgressTiming
+							> SP_NETWORK_PROGRESS_TIMEOUT))) {
 		task->process.downloadProgressValue = dlnow;
 		task->process.downloadProgressTiming = timing;
-		return task->process.downloadProgress(dltotal + task->receive.offset, dlnow + task->receive.offset);
+		return task->process.downloadProgress(dltotal + task->receive.offset,
+				dlnow + task->receive.offset);
 	}
 
 	if (ultotal == ulnow || ultotal == 0) {
@@ -160,31 +169,42 @@ static int _progress(void *userptr, curl_off_t dltotal, curl_off_t dlnow, curl_o
 }
 
 template <typename Interface>
-Pair<FILE *, uint64_t> _openFile(const StringView &filename, bool readOnly, bool resume = false) {
+Pair<FILE *, uint64_t> _openFile(const FileInfo &filename, bool readOnly, bool resume = false) {
 	uint64_t pos = 0;
 	FILE *file = nullptr;
-	auto path = filepath::absolute<Interface>(filename);
-	if (filesystem::exists(path)) {
+	if (filesystem::exists(filename)) {
 		filesystem::Stat stat;
-		if (filesystem::stat(path, stat) && stat.size) {
+		if (filesystem::stat(filename, stat) && stat.size) {
 			pos = stat.size;
 			if (!readOnly) {
-				if (!resume) {
-					filesystem::remove(path);
-					file = filesystem::native::fopen_fn(path, "w+b");
-				} else {
-					file = filesystem::native::fopen_fn(path, "a+b");
-				}
+				filesystem::enumerateWritablePaths(filename, filesystem::Access::None,
+						[&](StringView path) {
+					if (!resume) {
+						filesystem::remove(filename);
+						file = filesystem::native::fopen_fn(path, "w+b");
+					} else {
+						file = filesystem::native::fopen_fn(path, "a+b");
+					}
+					return false;
+				});
 			} else {
-				file = filesystem::native::fopen_fn(path, "rb");
+				filesystem::enumerateReadablePaths(filename, filesystem::Access::None,
+						[&](StringView path) {
+					file = filesystem::native::fopen_fn(path, "rb");
+					return false;
+				});
 			}
 		}
 	} else {
 		if (!readOnly) {
-			file = filesystem::native::fopen_fn(path, "w+b");
+			filesystem::enumerateWritablePaths(filename, filesystem::Access::None,
+					[&](StringView path) {
+				file = filesystem::native::fopen_fn(path, "w+b");
+				return false;
+			});
 		}
 	}
-    return pair(file, pos);
+	return pair(file, pos);
 }
 
 template <typename K, typename T>
@@ -208,7 +228,7 @@ static bool _setupCurl(const HandleData<Interface> &iface, CURL *curl, char *err
 	bool check = true;
 
 	auto CABundle = getCABundle();
-	static struct curl_blob blob { (void *)CABundle.data(), CABundle.size(), CURL_BLOB_NOCOPY };
+	static struct curl_blob blob{(void *)CABundle.data(), CABundle.size(), CURL_BLOB_NOCOPY};
 
 	SetOpt(check, curl, CURLOPT_CAINFO_BLOB, &blob);
 
@@ -267,7 +287,8 @@ static bool _setupHeaders(const HandleData<Interface> &iface, Context<Interface>
 
 	ctx->headersData.reserve(vec.size());
 	for (auto &it : vec) {
-		if (iface.send.method == Method::Get || iface.send.method == Method::Head || iface.send.method == Method::Delete) {
+		if (iface.send.method == Method::Get || iface.send.method == Method::Head
+				|| iface.send.method == Method::Delete) {
 			if (it.first == "Content-Type") {
 				continue;
 			}
@@ -280,12 +301,11 @@ static bool _setupHeaders(const HandleData<Interface> &iface, Context<Interface>
 
 	if (!keySign.empty()) {
 		ctx->headersData.emplace_back(string::toString<Interface>("Authorization: pkey ", keySign));
-		*headers = curl_slist_append(*headers, string::toString<Interface>("Authorization: pkey ", keySign).data());
+		*headers = curl_slist_append(*headers,
+				string::toString<Interface>("Authorization: pkey ", keySign).data());
 	}
 
-	for (auto &it : ctx->headersData) {
-		*headers = curl_slist_append(*headers, it.data());
-	}
+	for (auto &it : ctx->headersData) { *headers = curl_slist_append(*headers, it.data()); }
 
 	if (!ctx->headersData.empty() || *headers) {
 		SetOpt(check, ctx->curl, CURLOPT_HTTPHEADER, *headers);
@@ -298,7 +318,8 @@ static bool _setupHeaders(const HandleData<Interface> &iface, Context<Interface>
 }
 
 template <typename Interface>
-static bool _setupUserAgent(const HandleData<Interface> &iface, CURL *curl, const StringView &agent) {
+static bool _setupUserAgent(const HandleData<Interface> &iface, CURL *curl,
+		const StringView &agent) {
 	bool check = true;
 	if (!agent.empty()) {
 		SetOpt(check, curl, CURLOPT_USERAGENT, SP_TERMINATED_DATA(agent));
@@ -309,20 +330,14 @@ static bool _setupUserAgent(const HandleData<Interface> &iface, CURL *curl, cons
 }
 
 template <typename Interface>
-static bool _setupUser(const HandleData<Interface> &iface, CURL *curl,
-		const StringView &user, const StringView &password, AuthMethod m) {
+static bool _setupUser(const HandleData<Interface> &iface, CURL *curl, const StringView &user,
+		const StringView &password, AuthMethod m) {
 	bool check = true;
 	if (!user.empty()) {
 		switch (m) {
-		case AuthMethod::Basic:
-			SetOpt(check, curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-			break;
-		case AuthMethod::Digest:
-			SetOpt(check, curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
-			break;
-		default:
-			return false;
-			break;
+		case AuthMethod::Basic: SetOpt(check, curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC); break;
+		case AuthMethod::Digest: SetOpt(check, curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST); break;
+		default: return false; break;
 		}
 		SetOpt(check, curl, CURLOPT_USERNAME, SP_TERMINATED_DATA(user));
 		if (!password.empty()) {
@@ -341,12 +356,11 @@ static bool _setupFrom(const HandleData<Interface> &iface, CURL *curl, const Str
 
 template <typename Interface>
 static bool _setupRecv(const HandleData<Interface> &iface, CURL *curl,
-		const typename Interface::template VectorType<typename Interface::StringType> &vec, curl_slist **mailTo) {
+		const typename Interface::template VectorType<typename Interface::StringType> &vec,
+		curl_slist **mailTo) {
 	bool check = true;
 	if (vec.size() > 0) {
-		for (const auto &str : vec) {
-			*mailTo = curl_slist_append(*mailTo, str.c_str());
-		}
+		for (const auto &str : vec) { *mailTo = curl_slist_append(*mailTo, str.c_str()); }
 		SetOpt(check, curl, CURLOPT_MAIL_RCPT, *mailTo);
 	}
 	return check;
@@ -355,7 +369,8 @@ static bool _setupRecv(const HandleData<Interface> &iface, CURL *curl,
 template <typename Interface>
 static bool _setupProgress(const HandleData<Interface> &iface, CURL *curl) {
 	bool check = true;
-	if (iface.send.method != Method::Head && (iface.process.uploadProgress || iface.process.downloadProgress)) {
+	if (iface.send.method != Method::Head
+			&& (iface.process.uploadProgress || iface.process.downloadProgress)) {
 		SetOpt(check, curl, CURLOPT_NOPROGRESS, 0);
 	} else {
 		SetOpt(check, curl, CURLOPT_NOPROGRESS, 1);
@@ -366,7 +381,8 @@ static bool _setupProgress(const HandleData<Interface> &iface, CURL *curl) {
 }
 
 template <typename Interface>
-static bool _setupCookies(const HandleData<Interface> &iface, CURL *curl, const StringView &cookiePath) {
+static bool _setupCookies(const HandleData<Interface> &iface, CURL *curl,
+		const StringView &cookiePath) {
 	bool check = true;
 	if (!cookiePath.empty()) {
 		SetOpt(check, curl, CURLOPT_COOKIEFILE, SP_TERMINATED_DATA(cookiePath));
@@ -376,7 +392,8 @@ static bool _setupCookies(const HandleData<Interface> &iface, CURL *curl, const 
 }
 
 template <typename Interface>
-static bool _setupProxy(const HandleData<Interface> &iface, CURL *curl, const StringView &proxy, const StringView &auth) {
+static bool _setupProxy(const HandleData<Interface> &iface, CURL *curl, const StringView &proxy,
+		const StringView &auth) {
 	bool check = true;
 	if (!proxy.empty()) {
 		SetOpt(check, curl, CURLOPT_PROXY, SP_TERMINATED_DATA(proxy));
@@ -394,14 +411,16 @@ static bool _setupProxy(const HandleData<Interface> &iface, CURL *curl, const St
 }
 
 template <typename Interface>
-static bool _setupReceive(HandleData<Interface> &iface, CURL *curl, FILE * & inputFile, uint64_t &inputPos) {
+static bool _setupReceive(HandleData<Interface> &iface, CURL *curl, FILE *&inputFile,
+		uint64_t &inputPos) {
 	bool check = true;
 	if (iface.send.method != Method::Head) {
-        std::visit([&] (auto &&arg) {
+		std::visit([&](auto &&arg) {
 			using T = std::decay_t<decltype(arg)>;
 			if constexpr (std::is_same_v<T, typename HandleData<Interface>::String>) {
 				iface.receive.offset = 0;
-				std::tie(inputFile, inputPos) = _openFile<Interface>(arg, false, iface.receive.resumeDownload);
+				std::tie(inputFile, inputPos) =
+						_openFile<Interface>(FileInfo{arg}, false, iface.receive.resumeDownload);
 				if (inputFile) {
 					SetOpt(check, curl, CURLOPT_WRITEFUNCTION, (void *)NULL);
 					SetOpt(check, curl, CURLOPT_WRITEDATA, inputFile);
@@ -425,69 +444,70 @@ static bool _setupReceive(HandleData<Interface> &iface, CURL *curl, FILE * & inp
 template <typename Interface>
 static bool _setupMethodGet(const HandleData<Interface> &iface, CURL *curl) {
 	bool check = true;
-    SetOpt(check, curl, CURLOPT_HTTPGET, 1);
-    SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
+	SetOpt(check, curl, CURLOPT_HTTPGET, 1);
+	SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
 	return check;
 }
 
 template <typename Interface>
 static bool _setupMethodHead(const HandleData<Interface> &iface, CURL *curl) {
 	bool check = true;
-    SetOpt(check, curl, CURLOPT_HTTPGET, 1);
-    SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
-    SetOpt(check, curl, CURLOPT_NOBODY, 1);
+	SetOpt(check, curl, CURLOPT_HTTPGET, 1);
+	SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
+	SetOpt(check, curl, CURLOPT_NOBODY, 1);
 	return check;
 }
 
 template <typename Interface>
-static void _setupSendData(bool &check, const HandleData<Interface> &iface, CURL *curl, FILE * & outputFile) {
-    std::visit([&] (auto &&arg) {
+static void _setupSendData(bool &check, const HandleData<Interface> &iface, CURL *curl,
+		FILE *&outputFile) {
+	std::visit([&](auto &&arg) {
 		using T = std::decay_t<decltype(arg)>;
 		if constexpr (std::is_same_v<T, typename HandleData<Interface>::String>) {
 			size_t size;
-			std::tie(outputFile, size) = _openFile<Interface>(arg, true);
+			std::tie(outputFile, size) = _openFile<Interface>(FileInfo{arg}, true);
 			if (outputFile) {
-	            SetOpt(check, curl, CURLOPT_READFUNCTION, (void *)NULL);
-	            SetOpt(check, curl, CURLOPT_READDATA, outputFile);
-	            SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, size);
-		        SetOpt(check, curl, CURLOPT_INFILESIZE, size);
+				SetOpt(check, curl, CURLOPT_READFUNCTION, (void *)NULL);
+				SetOpt(check, curl, CURLOPT_READDATA, outputFile);
+				SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, size);
+				SetOpt(check, curl, CURLOPT_INFILESIZE, size);
 			}
 		} else if constexpr (std::is_same_v<T, typename HandleData<Interface>::IOCallback>) {
 			SetOpt(check, curl, CURLOPT_READFUNCTION, _readData<Interface>);
 			SetOpt(check, curl, CURLOPT_READDATA, &iface);
 			SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, iface.send.size);
-            SetOpt(check, curl, CURLOPT_INFILESIZE, iface.send.size);
+			SetOpt(check, curl, CURLOPT_INFILESIZE, iface.send.size);
 		} else if constexpr (std::is_same_v<T, typename HandleData<Interface>::Bytes>) {
 			SetOpt(check, curl, CURLOPT_POSTFIELDS, arg.data());
 			SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, arg.size());
-            SetOpt(check, curl, CURLOPT_INFILESIZE, arg.size());
+			SetOpt(check, curl, CURLOPT_INFILESIZE, arg.size());
 		}
 	}, iface.send.data);
 }
 
 
 template <typename Interface>
-static bool _setupMethodPost(const HandleData<Interface> &iface, CURL *curl, FILE * & outputFile) {
+static bool _setupMethodPost(const HandleData<Interface> &iface, CURL *curl, FILE *&outputFile) {
 	bool check = true;
-    SetOpt(check, curl, CURLOPT_POST, 1);
+	SetOpt(check, curl, CURLOPT_POST, 1);
 
 	SetOpt(check, curl, CURLOPT_READFUNCTION, (void *)NULL);
 	SetOpt(check, curl, CURLOPT_READDATA, (void *)NULL);
-    SetOpt(check, curl, CURLOPT_POSTFIELDS, (void *)NULL);
-    SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, 0);
+	SetOpt(check, curl, CURLOPT_POSTFIELDS, (void *)NULL);
+	SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, 0);
 
-    _setupSendData(check, iface, curl, outputFile);
+	_setupSendData(check, iface, curl, outputFile);
 
 	return check;
 }
 
 template <typename Interface>
-static bool _setupMethodPut(const HandleData<Interface> &iface, CURL *curl, FILE * & outputFile) {
+static bool _setupMethodPut(const HandleData<Interface> &iface, CURL *curl, FILE *&outputFile) {
 	bool check = true;
 
 	SetOpt(check, curl, CURLOPT_UPLOAD, 1);
-	SetOpt(check, curl, CURLOPT_READFUNCTION, (void*) NULL);
-	SetOpt(check, curl, CURLOPT_READDATA, (void*) NULL);
+	SetOpt(check, curl, CURLOPT_READFUNCTION, (void *)NULL);
+	SetOpt(check, curl, CURLOPT_READDATA, (void *)NULL);
 	SetOpt(check, curl, CURLOPT_CUSTOMREQUEST, "PUT");
 
 	_setupSendData(check, iface, curl, outputFile);
@@ -504,22 +524,23 @@ static bool _setupMethodDelete(const HandleData<Interface> &iface, CURL *curl) {
 }
 
 template <typename Interface>
-static bool _setupMethodSmpt(const HandleData<Interface> &iface, CURL *curl, FILE * & outputFile) {
+static bool _setupMethodSmpt(const HandleData<Interface> &iface, CURL *curl, FILE *&outputFile) {
 	bool check = true;
 
-    SetOpt(check, curl, CURLOPT_UPLOAD, 1);
+	SetOpt(check, curl, CURLOPT_UPLOAD, 1);
 	SetOpt(check, curl, CURLOPT_READFUNCTION, (void *)NULL);
 	SetOpt(check, curl, CURLOPT_READDATA, (void *)NULL);
-    SetOpt(check, curl, CURLOPT_INFILESIZE, 0);
+	SetOpt(check, curl, CURLOPT_INFILESIZE, 0);
 
-    _setupSendData(check, iface, curl, outputFile);
+	_setupSendData(check, iface, curl, outputFile);
 
-    SetOpt(check, curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
+	SetOpt(check, curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
 	return check;
 }
 
 template <typename Interface>
-bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx, const Callback<bool(CURL *)> &onBeforePerform) {
+bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx,
+		const Callback<bool(CURL *)> &onBeforePerform) {
 	if (iface.process.debug) {
 		iface.process.debugData = typename Interface::StringStreamType();
 	}
@@ -536,10 +557,14 @@ bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx, const Callba
 	} else if (iface.process.shared) {
 		if (!iface.process.sharedHandle) {
 			iface.process.sharedHandle = curl_share_init();
-			curl_share_setopt((CURLSH *)iface.process.sharedHandle, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
-			curl_share_setopt((CURLSH *)iface.process.sharedHandle, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
-			curl_share_setopt((CURLSH *)iface.process.sharedHandle, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
-			curl_share_setopt((CURLSH *)iface.process.sharedHandle, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+			curl_share_setopt((CURLSH *)iface.process.sharedHandle, CURLSHOPT_SHARE,
+					CURL_LOCK_DATA_COOKIE);
+			curl_share_setopt((CURLSH *)iface.process.sharedHandle, CURLSHOPT_SHARE,
+					CURL_LOCK_DATA_DNS);
+			curl_share_setopt((CURLSH *)iface.process.sharedHandle, CURLSHOPT_SHARE,
+					CURL_LOCK_DATA_SSL_SESSION);
+			curl_share_setopt((CURLSH *)iface.process.sharedHandle, CURLSHOPT_SHARE,
+					CURL_LOCK_DATA_CONNECT);
 		}
 		SetOpt(check, ctx->curl, CURLOPT_COOKIEFILE, "/undefined");
 		SetOpt(check, ctx->curl, CURLOPT_SHARE, iface.process.sharedHandle);
@@ -551,37 +576,33 @@ bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx, const Callba
 	check = (check) ? _setupDebug(iface, ctx->curl, iface.process.debug) : false;
 	check = (check) ? _setupHeaders(iface, ctx, iface.send.headers, &ctx->headers) : false;
 	check = (check) ? _setupUserAgent(iface, ctx->curl, iface.send.userAgent) : false;
-	if (auto u = std::get_if<Pair<typename HandleData<Interface>::String, typename HandleData<Interface>::String>>(&iface.auth.data)) {
-		check = (check) ? _setupUser(iface, ctx->curl, u->first, u->second, iface.auth.authMethod) : false;
+	if (auto u = std::get_if<Pair<typename HandleData<Interface>::String,
+					typename HandleData<Interface>::String>>(&iface.auth.data)) {
+		check = (check) ? _setupUser(iface, ctx->curl, u->first, u->second, iface.auth.authMethod)
+						: false;
 	}
 	check = (check) ? _setupProgress(iface, ctx->curl) : false;
 	check = (check) ? _setupCookies(iface, ctx->curl, iface.process.cookieFile) : false;
-	check = (check) ? _setupProxy(iface, ctx->curl, iface.auth.proxyAddress, iface.auth.proxyAuth) : false;
+	check = (check) ? _setupProxy(iface, ctx->curl, iface.auth.proxyAddress, iface.auth.proxyAuth)
+					: false;
 	check = (check) ? _setupReceive(iface, ctx->curl, ctx->inputFile, ctx->inputPos) : false;
 
 	switch (iface.send.method) {
-		case Method::Get:
-			check = (check) ? _setupMethodGet(iface, ctx->curl) : false;
-			break;
-		case Method::Head:
-			check = (check) ? _setupMethodHead(iface, ctx->curl) : false;
-			break;
-		case Method::Post:
-			check = (check) ? _setupMethodPost(iface, ctx->curl, ctx->outputFile) : false;
-			break;
-		case Method::Put:
-			check = (check) ? _setupMethodPut(iface, ctx->curl, ctx->outputFile) : false;
-			break;
-		case Method::Delete:
-			check = (check) ? _setupMethodDelete(iface, ctx->curl) : false;
-			break;
-		case Method::Smtp:
-			check = (check) ? _setupRecv(iface, ctx->curl, iface.send.recipients, &ctx->mailTo) : false;
-			check = (check) ? _setupFrom(iface, ctx->curl, iface.send.from) : false;
-			check = (check) ? _setupMethodSmpt(iface, ctx->curl, ctx->outputFile) : false;
-			break;
-		default:
-			break;
+	case Method::Get: check = (check) ? _setupMethodGet(iface, ctx->curl) : false; break;
+	case Method::Head: check = (check) ? _setupMethodHead(iface, ctx->curl) : false; break;
+	case Method::Post:
+		check = (check) ? _setupMethodPost(iface, ctx->curl, ctx->outputFile) : false;
+		break;
+	case Method::Put:
+		check = (check) ? _setupMethodPut(iface, ctx->curl, ctx->outputFile) : false;
+		break;
+	case Method::Delete: check = (check) ? _setupMethodDelete(iface, ctx->curl) : false; break;
+	case Method::Smtp:
+		check = (check) ? _setupRecv(iface, ctx->curl, iface.send.recipients, &ctx->mailTo) : false;
+		check = (check) ? _setupFrom(iface, ctx->curl, iface.send.from) : false;
+		check = (check) ? _setupMethodSmpt(iface, ctx->curl, ctx->outputFile) : false;
+		break;
+	default: break;
 	}
 
 	if (!check) {
@@ -607,7 +628,8 @@ bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx, const Callba
 }
 
 template <typename Interface>
-bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callback<bool(CURL *)> &onAfterPerform) {
+bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx,
+		const Callback<bool(CURL *)> &onAfterPerform) {
 	iface.process.errorCode = ctx->code;
 	if (ctx->headers) {
 		curl_slist_free_all(ctx->headers);
@@ -640,26 +662,19 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callb
 			curl_easy_getinfo(ctx->curl, CURLINFO_CONTENT_TYPE, &ct);
 			if (ct) {
 				iface.receive.contentType = ct;
-#if LINUX
-				if (ctx->inputFile && !iface.receive.contentType.empty()) {
-					fflush(ctx->inputFile);
-					network_setUserAttributes(ctx->inputFile, iface.receive.contentType, Time::microseconds(iface.getReceivedHeaderInt("X-FileModificationTime")));
-					fclose(ctx->inputFile);
-					ctx->inputFile = nullptr;
-				}
-#endif
 			}
 
-			iface.process.responseCode = (long) code;
+			iface.process.responseCode = (long)code;
 
-			SP_NETWORK_LOG("performed: %d %s %ld", (int) _method, _url.c_str(), _responseCode);
+			SP_NETWORK_LOG("performed: %d %s %ld", (int)_method, _url.c_str(), _responseCode);
 
 			if (iface.process.responseCode == 416) {
 				size_t allowedRange = size_t(iface.getReceivedHeaderInt("X-Range"));
 				if (allowedRange == ctx->inputPos) {
 					iface.process.responseCode = 200;
 					if (!iface.process.silent) {
-						log::warn("CURL", iface.send.url, ": Get 0-range is not an error, fixed response code to 200");
+						log::warn("CURL", iface.send.url,
+								": Get 0-range is not an error, fixed response code to 200");
 					}
 				}
 			}
@@ -674,11 +689,12 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callb
 		}
 	} else {
 		if (!iface.process.silent) {
-			log::format(log::Error, "CURL", "fail to perform %s: (%ld) %s", iface.send.url.data(), iface.process.errorCode, ctx->error.data());
+			log::format(log::Error, "CURL", "fail to perform %s: (%ld) %s", iface.send.url.data(),
+					iface.process.errorCode, ctx->error.data());
 		}
 		iface.process.error = ctx->error.data();
 		if (iface.process.debug) {
-	        std::visit([&] (auto &&arg) {
+			std::visit([&](auto &&arg) {
 				using T = std::decay_t<decltype(arg)>;
 				if constexpr (std::is_same_v<T, typename HandleData<Interface>::String>) {
 					log::debug("CURL", "Input file: ", arg);
@@ -715,7 +731,8 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx, const Callb
 
 template <typename Interface>
 static bool _perform(Context<Interface> &ctx, HandleData<Interface> &iface,
-		const Callback<bool(CURL *)> &onBeforePerform, const Callback<bool(CURL *)> &onAfterPerform) {
+		const Callback<bool(CURL *)> &onBeforePerform,
+		const Callback<bool(CURL *)> &onAfterPerform) {
 
 	iface.process.performed = false;
 	iface.process.errorCode = CURLE_OK;
@@ -734,22 +751,28 @@ static bool _perform(Context<Interface> &ctx, HandleData<Interface> &iface,
 }
 
 template <>
-bool perform(HandleData<memory::PoolInterface> &iface, const Callback<bool(CURL *)> &onBeforePerform, const Callback<bool(CURL *)> &onAfterPerform) {
+bool perform(HandleData<memory::PoolInterface> &iface,
+		const Callback<bool(CURL *)> &onBeforePerform,
+		const Callback<bool(CURL *)> &onAfterPerform) {
 	auto p = memory::pool::acquire();
 	Context<memory::PoolInterface> ctx;
 	ctx.curl = CurlHandle_getHandle(iface.process.reuse, p);
 	auto ret = _perform<memory::PoolInterface>(ctx, iface, onBeforePerform, onAfterPerform);
-	CurlHandle_releaseHandle(ctx.curl, iface.process.reuse, !iface.process.invalidate && ctx.code == CURLE_OK, p);
+	CurlHandle_releaseHandle(ctx.curl, iface.process.reuse,
+			!iface.process.invalidate && ctx.code == CURLE_OK, p);
 	return ret;
 }
 
 template <>
-bool perform(HandleData<memory::StandartInterface> &iface, const Callback<bool(CURL *)> &onBeforePerform, const Callback<bool(CURL *)> &onAfterPerform) {
+bool perform(HandleData<memory::StandartInterface> &iface,
+		const Callback<bool(CURL *)> &onBeforePerform,
+		const Callback<bool(CURL *)> &onAfterPerform) {
 	Context<memory::StandartInterface> ctx;
 	ctx.curl = CurlHandle_getHandle(iface.process.reuse, nullptr);
 	auto ret = _perform<memory::StandartInterface>(ctx, iface, onBeforePerform, onAfterPerform);
-	CurlHandle_releaseHandle(ctx.curl, iface.process.reuse, !iface.process.invalidate && ctx.code == CURLE_OK, nullptr);
+	CurlHandle_releaseHandle(ctx.curl, iface.process.reuse,
+			!iface.process.invalidate && ctx.code == CURLE_OK, nullptr);
 	return ret;
 }
 
-}
+} // namespace stappler::network

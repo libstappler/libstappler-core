@@ -22,13 +22,10 @@ THE SOFTWARE.
 **/
 
 #include "SPFilesystem.h"
+#include "SPFilepath.h"
+#include "SPMemInterface.h"
 #include "SPPlatformUnistd.h"
-
-namespace STAPPLER_VERSIONIZED stappler::filepath {
-
-SPUNUSED static bool inAppBundle(StringView path);
-
-}
+#include "SPStatus.h"
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
@@ -268,12 +265,12 @@ void File::close_remove() {
 	}
 }
 
-bool File::close_rename(StringView path) {
+bool File::close_rename(const FileInfo &info) {
 	if (is_open()) {
 		if (!_isBundled && _buf[0] != 0) {
 			fclose(_nativeFile);
 			_nativeFile = nullptr;
-			if (move(_buf, path)) {
+			if (move(FileInfo{StringView(_buf)}, info)) {
 				memset(_buf, 0, 256);
 				return true;
 			} else {
@@ -307,7 +304,7 @@ MemoryMappedRegion MemoryMappedRegion::mapFile(StringView path, MappingType type
 	}
 
 	Stat stat;
-	if (!native::stat_fn(path, stat)) {
+	if (native::stat_fn(path, stat) != Status::Ok) {
 		log::error("filesystem", "Fail to get stat for a file: ", path);
 		return MemoryMappedRegion();
 	}
@@ -370,275 +367,330 @@ MemoryMappedRegion::MemoryMappedRegion() : _region(nullptr), _type(MappingType::
 MemoryMappedRegion::MemoryMappedRegion(PlatformStorage &&storage, uint8_t *ptr, MappingType t, ProtFlags p)
 : _storage(move(storage)), _region(ptr), _type(t), _prot(p) { }
 
-bool exists(StringView ipath) {
-	if (ipath.empty()) {
+bool exists(const FileInfo &info) {
+	if (info.path.empty()) {
 		return false;
 	}
 
-	if (filepath::isAbsolute(ipath)) {
-		return filesystem::native::access_fn(ipath, Access::Exists);
-	} else if (filepath::isBundled(ipath)) {
-		return filesystem::platform::_exists(ipath);
-	} else if (!filepath::isAboveRoot(ipath) && filesystem::platform::_exists(ipath)) {
-		return true;
-	} else {
-		auto path = filepath::absolute<memory::StandartInterface>(ipath);
-		return filesystem::native::access_fn(path, Access::Exists);
-	}
-}
-
-bool stat(StringView ipath, Stat &stat) {
-	if (ipath.empty()) {
-		return false;
-	}
-
-	if (filepath::isAbsolute(ipath)) {
-		return filesystem::native::stat_fn(ipath, stat);
-	} else if (filepath::isBundled(ipath)) {
-		return filesystem::platform::_stat(ipath, stat);
-	} else if (!filepath::isAboveRoot(ipath) && filesystem::platform::_stat(ipath, stat)) {
-		return true;
-	} else {
-		auto path = filepath::absolute<memory::StandartInterface>(ipath);
-		return filesystem::native::stat_fn(path, stat);
-	}
-}
-
-bool remove(StringView ipath, bool recursive, bool withDirs) {
-	if (ipath.empty()) {
-		return false;
-	}
-
-	if (filepath::inAppBundle(ipath)) {
-		return false;
-	}
-
-	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
-	if (!recursive) {
-		return filesystem::native::remove_fn(path);
-	} else {
-		return ftw_b(path, [withDirs] (const StringView &fpath, bool isFile) -> bool {
-			if (isFile || withDirs) {
-				return remove(fpath);
-			}
+	if (info.category == FileCategory::Bundled) {
+		if (!filepath::isAboveRoot(info.path) && filesystem::platform::_exists(info.path)) {
 			return true;
-		});
-	}
-}
-
-bool touch(StringView ipath) {
-	if (ipath.empty()) {
-		return false;
-	}
-
-	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
-	if (filepath::isBundled(path)) {
-		return false;
-	}
-	return filesystem::native::touch_fn(path);
-}
-
-bool mkdir(StringView ipath) {
-	if (ipath.empty()) {
-		return false;
-	}
-
-	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
-	return filesystem::native::mkdir_fn(path);
-}
-
-bool mkdir_recursive(StringView ipath, bool appWide) {
-	if (ipath.empty()) {
-		return false;
-	}
-
-	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
-
-	memory::StandartInterface::StringType appWideLimit;
-	if (appWide) {
-		do {
-			auto testPath = cachesPath<memory::StandartInterface>();
-			if (path.compare(0, std::min(path.size(), testPath.size()), testPath) == 0) {
-				appWideLimit = sp::move(testPath);
-				break;
-			}
-
-			testPath = writablePath<memory::StandartInterface>();
-			if (path.compare(0, std::min(path.size(), testPath.size()), testPath) == 0) {
-				appWideLimit = sp::move(testPath);
-				break;
-			}
-
-			testPath = documentsPath<memory::StandartInterface>();
-			if (path.compare(0, std::min(path.size(), testPath.size()), testPath) == 0) {
-				appWideLimit = sp::move(testPath);
-				break;
-			}
-
-			testPath = currentDir<memory::StandartInterface>();
-			if (path.compare(0, std::min(path.size(), testPath.size()), testPath) == 0) {
-				appWideLimit = sp::move(testPath);
-				break;
-			}
-		} while (0);
-
-		if (appWideLimit.empty()) {
-			return false;
 		}
+		return false;
 	}
 
-	auto components = filepath::split<memory::StandartInterface>(path);
-	if (!components.empty()) {
-		bool control = false;
-		memory::StandartInterface::StringType construct("/");
-		for (auto &it : components) {
-			construct.append(it.data(), it.size());
-			if (!appWide || construct.compare(0, std::min(construct.size(), appWideLimit.size()), appWideLimit) == 0) {
-				Stat stat;
-				if (control || !filesystem::native::stat_fn(path, stat)) {
-					control = true;
-					filesystem::native::mkdir_fn(construct);
-				} else if (stat.type != FileType::Dir) {
+	bool found = false;
+	enumerateReadablePaths(info, Access::Exists, [&] (StringView str) {
+		found = true;
+		return false;
+	});
+	return found;
+}
+
+bool stat(const FileInfo &info, Stat &stat) {
+	if (info.path.empty()) {
+		return false;
+	}
+
+	if (info.category == FileCategory::Bundled) {
+		if (!filepath::isAboveRoot(info.path) && filesystem::platform::_stat(info.path, stat)) {
+			return true;
+		}
+		return false;
+	}
+
+	bool found = false;
+	enumerateReadablePaths(info, Access::Exists, [&] (StringView str) {
+		found = filesystem::native::stat_fn(str, stat) == Status::Ok;
+		return false;
+	});
+	return found;
+}
+
+bool remove(const FileInfo &info, bool recursive, bool withDirs) {
+	if (info.path.empty()) {
+		return false;
+	}
+
+	if (info.category == FileCategory::Bundled) {
+		return false; // we can not remove anything from bundle
+	}
+
+	if (!recursive) {
+		bool found = false;
+		enumerateWritablePaths(info, Access::Exists, [&] (StringView str) {
+			found = filesystem::native::remove_fn(str) == Status::Ok;
+			return false;
+		});
+		return found;
+	} else {
+		bool success = true;
+		ftw(info, [&] (const FileInfo &path, FileType type) -> bool {
+			if (type != FileType::Dir || withDirs) {
+				if (!remove(path)) {
+					success = false;
 					return false;
 				}
 			}
-			construct.append("/");
+			return true;
+		}, -1, false);
+		return success;
+	}
+}
+
+bool touch(const FileInfo &info) {
+	if (info.path.empty()) {
+		return false;
+	}
+
+	if (info.category == FileCategory::Bundled) {
+		return false; // we can not remove anything from bundle
+	}
+
+	bool found = false;
+	enumerateWritablePaths(info, Access::None, [&] (StringView str) {
+		found = filesystem::native::touch_fn(str) == Status::Ok;
+		return false;
+	});
+	return found;
+}
+
+bool mkdir(const FileInfo &info) {
+	if (info.path.empty()) {
+		return false;
+	}
+
+	bool found = false;
+	enumerateWritablePaths(info, Access::None, [&] (StringView str) {
+		found = filesystem::native::mkdir_fn(str) == Status::Ok;
+		return false;
+	});
+	return found;
+}
+
+// We need FileResourceInfo for root constraints
+static bool _mkdir_recursive(StringView path, const FileInfo &info) {
+	if (info.path.empty()) {
+		return false;
+	}
+	
+	// check if root dir exists
+	auto root = filepath::root(path);
+	auto rootInfo = info;
+	rootInfo.path = filepath::root(info.path);
+
+	if (filesystem::native::access_fn(root, Access::Exists) != Status::Ok) {
+		if (!_mkdir_recursive(filepath::root(path), rootInfo)) {
+			return false;
 		}
+	}
+	
+	return filesystem::native::mkdir_fn(path) == Status::Ok;
+}
+
+bool mkdir_recursive(const FileInfo &info) {
+	if (info.path.empty()) {
+		return false;
+	}
+
+	bool found = false;
+	enumerateWritablePaths(info, Access::None, [&] (StringView str) {
+		found =  _mkdir_recursive(str, info);
+		return false;
+	});
+	return found;
+}
+
+bool ftw(const FileInfo &info, const Callback<bool(const FileInfo &, FileType)> &cb,
+		int depth, bool dirFirst) {
+	if (filepath::isEmpty(info)) {
+		return false;
+	}
+
+	auto fn = [&] (StringView p, FileType t) {
+		auto tmpPath = filepath::merge<memory::StandartInterface>(info.path, p);
+		FileInfo newInfo = info;
+		newInfo.path = tmpPath;
+		return cb(newInfo, t);
+	};
+
+	if (info.category == FileCategory::Bundled) {
+		return filesystem::platform::_ftw(info.path, fn, depth, dirFirst) == Status::Ok;
+	} else {
+		bool found = false;
+		enumerateReadablePaths(info, Access::None, [&] (StringView str) {
+			found = filesystem::native::ftw_fn(str, fn, depth, dirFirst) == Status::Ok;
+			return false;
+		});
+		return found;
+	}
+}
+
+bool move(const FileInfo &isource, const FileInfo &idest) {
+	if (isource.path.empty() || idest.path.empty()) {
+		return false;
+	}
+
+	memory::StandartInterface::StringType source;
+	memory::StandartInterface::StringType dest;
+
+	enumerateWritablePaths(isource, Access::Exists, [&] (StringView str) {
+		source = str.str<memory::StandartInterface>();
+		return false;
+	});
+
+	if (source.empty()) {
+		return false;
+	}
+
+	enumerateWritablePaths(idest, Access::None, [&] (StringView str) {
+		dest = str.str<memory::StandartInterface>();
+		return false;
+	});
+
+	if (dest.empty()) {
+		return false;
+	}
+
+	if (filesystem::native::rename_fn(source, dest) != Status::Ok) {
+		if (copy(isource, idest)) {
+			return remove(isource, true, true);
+		}
+		return false;
 	}
 	return true;
 }
 
-void ftw(StringView ipath, const Callback<void(StringView path, bool isFile)> &callback, int depth, bool dir_first) {
-	if (ipath.empty()) {
-		return;
-	}
+// Copy single file
+static bool performCopy(const FileInfo &source, const FileInfo &dest) {
+	remove(dest); 
 
-	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
-	if (filepath::isBundled(path)) {
-		filesystem::platform::_ftw(path, callback, depth, dir_first);
-	} else {
-		filesystem::native::ftw_fn(path, callback, depth, dir_first);
-	}
-}
+	memory::StandartInterface::StringType absdest;
 
-bool ftw_b(StringView ipath, const Callback<bool(StringView path, bool isFile)> &callback, int depth, bool dir_first) {
-	if (ipath.empty()) {
+	enumerateWritablePaths(dest, Access::None, [&] (StringView str) {
+		absdest = str.str<memory::StandartInterface>();
+		return false;
+	});
+
+	if (absdest.empty()) {
 		return false;
 	}
 
-	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
-	if (filepath::isBundled(path)) {
-		return filesystem::platform::_ftw_b(path, callback, depth, dir_first);
-	} else {
-		return filesystem::native::ftw_b_fn(path, callback, depth, dir_first);
-	}
-}
-
-bool move(StringView isource, StringView idest) {
-	if (isource.empty() || idest.empty()) {
-		return false;
-	}
-
-	auto source = filepath::absolute<memory::StandartInterface>(isource, true);
-	auto dest = filepath::absolute<memory::StandartInterface>(idest, true);
-
-	if (!filesystem::native::rename_fn(source, dest)) {
-		if (copy(source, dest)) {
-			return remove(source);
+	std::ofstream destStream(absdest.data(), std::ios::binary);
+	auto f = openForReading(source);
+	if (f && destStream.is_open()) {
+		if (io::read(f, io::Consumer(destStream)) > 0) {
+			destStream.flush();
+			destStream.close();
+			return true;
 		}
-		return false;
 	}
-	return true;
-}
 
-static bool performCopy(StringView source, StringView dest) {
-	if (stappler::filesystem::exists(dest)) {
-		stappler::filesystem::remove(dest);
-	}
-	if (!stappler::filesystem::exists(dest)) {
-		std::ofstream destStream(dest.data(), std::ios::binary);
-		auto f = openForReading(source);
-		if (f && destStream.is_open()) {
-			if (io::read(f, io::Consumer(destStream)) > 0) {
-				return true;
-			}
-		}
-		destStream.close();
-	}
+	destStream.close();
 	return false;
 }
 
-static bool isdir(StringView path) {
-	Stat stat;
-	native::stat_fn(path, stat);
-	return stat.type == FileType::Dir;
+static bool isdir(const FileInfo &path) {
+	Stat s;
+	stat(path, s);
+	return s.type == FileType::Dir;
 }
 
-bool copy(StringView isource, StringView idest, bool stopOnError) {
-	if (isource.empty() || idest.empty()) {
+// TODO implement 'force' flag
+bool copy(const FileInfo &isource, const FileInfo &idest, bool stopOnError) {
+	if (filepath::isEmpty(isource.path)) {
 		return false;
 	}
 
-	auto source = filepath::absolute<memory::StandartInterface>(isource, true);
-	auto dest = filepath::absolute<memory::StandartInterface>(idest, true);
-	if (dest.back() == '/') {
-		dest = filepath::merge<memory::StandartInterface>(dest, filepath::lastComponent(source));
-	} else if (isdir(dest) && filepath::lastComponent(source) != filepath::lastComponent(dest)) {
-		dest = filepath::merge<memory::StandartInterface>(dest, filepath::lastComponent(source));
+	auto sourceLastComponent = filepath::lastComponent(isource.path);
+	if (sourceLastComponent.empty()) {
+		return false;
 	}
-	if (!isdir(source)) {
-		return performCopy(source, dest);
+
+	memory::StandartInterface::StringType dest;
+
+	if (idest.path.back() == '/') {
+		// cp sourcedir targetdir/
+		// extend dest with the first source component
+		dest = filepath::merge<memory::StandartInterface>(idest.path, sourceLastComponent);
+	} else if (isdir(idest) && sourceLastComponent != filepath::lastComponent(idest.path)) {
+		dest = filepath::merge<memory::StandartInterface>(idest.path, sourceLastComponent);
+	} else if (!filepath::isEmpty(idest)) {
+		dest = idest.path.str<memory::StandartInterface>();
 	} else {
-		return ftw_b(source, [source, dest, stopOnError] (StringView path, bool isFile) -> bool {
-			if (!isFile) {
-				if (path == source) {
-					mkdir(filepath::replace<memory::StandartInterface>(path, source, dest));
+		return false;
+	}
+
+	if (!isdir(isource)) {
+		return performCopy(isource, FileInfo{dest, idest.category});
+	} else {
+		return ftw(isource, [&] (const FileInfo &source, FileType type) -> bool {
+			auto tmpPath = filepath::replace<memory::StandartInterface>(source.path, isource.path, dest);
+			auto targetInfo = FileInfo{
+					tmpPath,
+					idest.category};
+			if (type == FileType::Dir) {
+				if (isource.path == source.path) {
+					// root dir
+					mkdir(FileInfo{dest, idest.category});
 					return true;
 				}
-				bool ret = mkdir(filepath::replace<memory::StandartInterface>(path, source, dest));
+
+				bool ret = mkdir(targetInfo);
 				if (stopOnError) {
 					return ret;
 				} else {
 					return true;
 				}
-			} else {
-				bool ret = performCopy(path, filepath::replace<memory::StandartInterface>(path, source, dest));
+			} else if (type == FileType::File) {
+				bool ret = performCopy(source, targetInfo);
 				if (stopOnError) {
 					return ret;
 				} else {
 					return true;
 				}
 			}
+			return true;
 		}, -1, true);
 	}
 }
 
-bool write(StringView ipath, const unsigned char *data, size_t len) {
-	if (ipath.empty()) {
+bool write(const FileInfo &ipath, const unsigned char *data, size_t len, bool _override) {
+	if (ipath.path.empty()) {
 		return false;
 	}
 
-	auto path = filepath::absolute<memory::StandartInterface>(ipath, true);
-	return filesystem::native::write_fn(path, data, len);
-}
-
-File openForReading(StringView ipath) {
-	if (filepath::inAppBundle(ipath)) {
-		return filesystem::platform::_openForReading(ipath);
-	}
-	auto path = filepath::absolute<memory::StandartInterface>(ipath);
-	auto f = filesystem::native::fopen_fn(path, "rb");
-	if (f) {
-		return File(f);
-	}
-	return File();
-}
-
-bool readIntoBuffer(uint8_t *buf, StringView ipath, size_t off, size_t size) {
-	if (ipath.empty()) {
+	bool success = false;
+	enumerateWritablePaths(ipath, _override ? Access::None : Access::Empty, [&] (StringView str) {
+		success = filesystem::native::write_fn(str, data, len) == Status::Ok;
 		return false;
+	});
+
+	return success;
+}
+
+File openForReading(const FileInfo &ipath) {
+	if (ipath.path.empty()) {
+		return File();
 	}
 
+	File ret;
+
+	if (ipath.category == FileCategory::Bundled) {
+		return filesystem::platform::_openForReading(ipath.path);
+	}
+
+	enumerateReadablePaths(ipath, Access::Read, [&] (StringView str) {
+		auto f = filesystem::native::fopen_fn(str, "rb");
+		if (f) {
+			ret = File(f);
+		}
+		return false;
+	});
+	return ret;
+}
+
+bool readIntoBuffer(uint8_t *buf, const FileInfo &ipath, size_t off, size_t size) {
 	auto f = openForReading(ipath);
 	if (f) {
 		size_t fsize = f.size();
@@ -661,11 +713,7 @@ bool readIntoBuffer(uint8_t *buf, StringView ipath, size_t off, size_t size) {
 	return false;
 }
 
-bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, StringView ipath, size_t off, size_t size) {
-	if (ipath.empty()) {
-		return false;
-	}
-
+bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, const FileInfo &ipath, size_t off, size_t size) {
 	auto f = openForReading(ipath);
 	if (f) {
 		size_t fsize = f.size();
@@ -693,20 +741,6 @@ bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, St
 		return ret;
 	}
 	return false;
-}
-
-std::ostream &operator<<(std::ostream &stream, FileType type) {
-	switch (type) {
-	case FileType::File: stream << "FileType::File"; break;
-	case FileType::Dir: stream << "FileType::Dir"; break;
-	case FileType::BlockDevice: stream << "FileType::BlockDevice"; break;
-	case FileType::CharDevice: stream << "FileType::CharDevice"; break;
-	case FileType::Pipe: stream << "FileType::Pipe"; break;
-	case FileType::Socket: stream << "FileType::Socket"; break;
-	case FileType::Link: stream << "FileType::Link"; break;
-	case FileType::Unknown: stream << "FileType::Unknown"; break;
-	}
-	return stream;
 }
 
 std::ostream &operator<<(std::ostream &stream, ProtFlags flags) {

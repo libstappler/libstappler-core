@@ -32,20 +32,21 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::idn {
 
-bool isKnownTld(StringView) {
-	return true;
-}
+bool isKnownTld(StringView) { return true; }
 
-}
+} // namespace stappler::idn
 
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-using Scheme =  chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>, chars::Chars<char, '+', '-', '.'>>;
-using Ipv6 =  chars::Compose<char, chars::CharGroup<char, CharGroupId::Hexadecimial>, chars::Chars<char, ':'>>;
+using Scheme = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+		chars::Chars<char, '+', '-', '.'>>;
+using Ipv6 = chars::Compose<char, chars::CharGroup<char, CharGroupId::Hexadecimial>,
+		chars::Chars<char, ':'>>;
 
-using Unreserved = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>, chars::Chars<char, '-', '.', '_', '~', '%'>>;
+using Unreserved = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+		chars::Chars<char, '-', '.', '_', '~', '%'>>;
 using SubDelim = chars::Chars<char, '!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '='>;
 using GenDelim = chars::Chars<char, ':', '/', '?', '#', '[', ']', '@'>;
 
@@ -53,8 +54,9 @@ using UnreservedUni = chars::Compose<char, Unreserved, chars::UniChar>;
 
 bool UrlView::validateScheme(const StringView &r) {
 	auto cpy = r;
-	if (cpy.is<StringView::Compose<StringView::CharGroup<CharGroupId::Alphanumeric>, StringView::Chars<'.'>>>()) {
-		cpy ++;
+	if (cpy.is<StringView::Compose<StringView::CharGroup<CharGroupId::Alphanumeric>,
+					StringView::Chars<'.'>>>()) {
+		cpy++;
 		cpy.skipChars<Scheme>();
 		if (cpy.empty()) {
 			return true;
@@ -70,10 +72,10 @@ bool UrlView::validateHost(StringView &r) {
 	auto cpy = r;
 	if (cpy.is('[')) {
 		// check ipv6
-		++ cpy;
+		++cpy;
 		cpy.skipChars<Ipv6>();
 		if (cpy.is(']')) {
-			cpy ++;
+			cpy++;
 			if (cpy.empty()) {
 				return true;
 			}
@@ -86,7 +88,8 @@ bool UrlView::validateHost(StringView &r) {
 				r = r.sub(0, r.size() - 1);
 				c = r.sub(r.size() - 1, 1);
 			}
-			if (c.is<StringView::Compose<StringView::CharGroup<CharGroupId::Alphanumeric>, chars::UniChar>>()) {
+			if (c.is<StringView::Compose<StringView::CharGroup<CharGroupId::Alphanumeric>,
+							chars::UniChar>>()) {
 				StringView h(r);
 
 				if (!h.empty()) {
@@ -94,7 +97,7 @@ bool UrlView::validateHost(StringView &r) {
 					while (!h.empty()) {
 						domain = h.readUntil<StringView::Chars<'.'>>();
 						if (h.is('.')) {
-							++ h;
+							++h;
 						}
 
 						if (domain.empty()) {
@@ -141,7 +144,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 		cb(StringView(s, 6), UrlView::UrlToken::Scheme);
 		s += 6;
 		cb(StringView(s, 1), UrlView::UrlToken::Blank);
-		++ s;
+		++s;
 		state = UrlView::UrlToken::User;
 	} else {
 		tmp = s.readChars<UnreservedUni>();
@@ -171,7 +174,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 			} else {
 				// if it's port, next chars will be numbers only
 				auto tmpS = s;
-				tmpS ++;
+				tmpS++;
 				auto port = tmpS.readChars<StringView::CharGroup<CharGroupId::Numbers>>();
 				if (!port.empty() && !tmpS.is<UnreservedUni>() && !tmpS.is('@')) {
 					// host + port
@@ -195,7 +198,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 					}
 				} else {
 					tmpS = s;
-					++ tmpS;
+					++tmpS;
 					auto arg = tmpS.readChars<UnreservedUni, SubDelim>();
 					if (tmpS.is('@')) {
 						// username + password
@@ -208,7 +211,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 						cb(arg, UrlView::UrlToken::Password);
 						cb(StringView(tmpS, 1), UrlView::UrlToken::Blank);
 						state = UrlView::UrlToken::Host;
-						++ tmpS;
+						++tmpS;
 						s = tmpS;
 					} else {
 						// scheme without authority segment
@@ -218,7 +221,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 						cb(tmp, UrlView::UrlToken::Scheme);
 						state = UrlView::UrlToken::Path;
 						cb(s.sub(0, 1), UrlView::UrlToken::Blank);
-						++ s;
+						++s;
 					}
 				}
 			}
@@ -229,7 +232,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 			cb(tmp, UrlView::UrlToken::User);
 			state = UrlView::UrlToken::Host;
 			cb(StringView(s, 1), UrlView::UrlToken::Blank);
-			++ s;
+			++s;
 		} else if (s.is('/')) {
 			// host + path
 			if (!tmp.empty()) {
@@ -284,11 +287,11 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 			cb(tmp, UrlView::UrlToken::User);
 			state = UrlView::UrlToken::Host;
 			cb(StringView(tmp_s, 1), UrlView::UrlToken::Blank);
-			++ tmp_s;
+			++tmp_s;
 			s = tmp_s;
 		} else if (tmp_s.is(':')) {
 			// user + password or host + port
-			tmp_s ++;
+			tmp_s++;
 			auto tmpS = tmp_s;
 
 			// if it's port, next chars will be numbers only
@@ -323,7 +326,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 				if (tmpS.is('@')) {
 					cb(StringView(port.data() - 1, 1), UrlView::UrlToken::Blank);
 					cb(port, UrlView::UrlToken::Password);
-					++ tmpS;
+					++tmpS;
 					state = UrlView::UrlToken::Host;
 					s = tmpS;
 				} else {
@@ -331,7 +334,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 					if (!tmp_s.is('@')) {
 						return false;
 					}
-					++ tmp_s;
+					++tmp_s;
 					if (!validateUserOrPassword(tmp)) {
 						return false;
 					}
@@ -367,10 +370,10 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 		bool stop = false;
 		if (s.is('[')) {
 			auto t = s;
-			++ t;
+			++t;
 			tmp = t.readChars<UnreservedUni, SubDelim, StringView::Chars<':'>>();
 			if (t.is(']')) {
-				++ t;
+				++t;
 				tmp = StringView(s.data(), t.data() - s.data());
 				s = t;
 			} else {
@@ -385,7 +388,7 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 		cb(tmp, UrlView::UrlToken::Host);
 		if (s.is(':')) {
 			auto tmp2 = s;
-			++ tmp2;
+			++tmp2;
 			auto port = tmp2.readChars<StringView::CharGroup<CharGroupId::Numbers>>();
 			if (port.empty() || s.is<UnreservedUni>()) {
 				state = UrlView::UrlToken::Path;
@@ -425,11 +428,12 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 	}
 
 	if (state == UrlView::UrlToken::Query) {
-		tmp = s.readChars<UnreservedUni, SubDelim, StringView::Chars<'/', ':', '@', '?', '[', ']'>>();
+		tmp = s.readChars<UnreservedUni, SubDelim,
+				StringView::Chars<'/', ':', '@', '?', '[', ']'>>();
 		if (!tmp.empty()) {
 			if (tmp.is('?')) {
 				cb(StringView(tmp, 1), UrlView::UrlToken::Blank);
-				++ tmp;
+				++tmp;
 			}
 			if (!tmp.empty()) {
 				cb(tmp, UrlView::UrlToken::Query);
@@ -444,11 +448,12 @@ bool UrlView::parseUrl(StringView &s, const Callback<void(StringViewUtf8, UrlVie
 	}
 
 	if (state == UrlView::UrlToken::Fragment) {
-		tmp = s.readChars<UnreservedUni, SubDelim, StringView::Chars<'/', ':', '@', '?', '#', '[', ']'>>();
+		tmp = s.readChars<UnreservedUni, SubDelim,
+				StringView::Chars<'/', ':', '@', '?', '#', '[', ']'>>();
 		if (!tmp.empty()) {
 			if (tmp.is('#')) {
 				cb(StringView(tmp, 1), UrlView::UrlToken::Blank);
-				++ tmp;
+				++tmp;
 			}
 			if (!tmp.empty()) {
 				cb(tmp, UrlView::UrlToken::Fragment);
@@ -464,7 +469,7 @@ auto _parsePath(StringView str, Vector &ret) {
 	StringView s(str);
 	do {
 		if (s.is('/')) {
-			s ++;
+			s++;
 		}
 		auto path = s.readUntil<StringView::Chars<'/', '?', ';', '&', '#'>>();
 		if (path == "..") {
@@ -482,14 +487,16 @@ auto _parsePath(StringView str, Vector &ret) {
 }
 
 template <>
-auto UrlView::parsePath<memory::StandartInterface>(StringView str) -> memory::StandartInterface::VectorType<StringView> {
+auto UrlView::parsePath<memory::StandartInterface>(StringView str)
+		-> memory::StandartInterface::VectorType<StringView> {
 	memory::StandartInterface::VectorType<StringView> ret;
 	_parsePath(str, ret);
 	return ret;
 }
 
 template <>
-auto UrlView::parsePath<memory::PoolInterface>(StringView str) -> memory::PoolInterface::VectorType<StringView> {
+auto UrlView::parsePath<memory::PoolInterface>(StringView str)
+		-> memory::PoolInterface::VectorType<StringView> {
 	memory::PoolInterface::VectorType<StringView> ret;
 	_parsePath(str, ret);
 	return ret;
@@ -497,9 +504,7 @@ auto UrlView::parsePath<memory::PoolInterface>(StringView str) -> memory::PoolIn
 
 UrlView::UrlView() { }
 
-UrlView::UrlView(StringView str) {
-	parse(str);
-}
+UrlView::UrlView(StringView str) { parse(str); }
 
 void UrlView::clear() {
 	scheme.clear();
@@ -520,7 +525,7 @@ bool UrlView::parse(const StringView &str) {
 
 bool UrlView::parse(StringView &str) {
 	auto tmp = str;
-	if (parseUrl(str, [this] (StringView str, UrlToken tok) {
+	if (parseUrl(str, [this](StringView str, UrlToken tok) {
 		switch (tok) {
 		case UrlToken::Scheme: scheme = str; break;
 		case UrlToken::User: user = str; break;
@@ -587,60 +592,61 @@ auto UrlView::get<memory::StandartInterface>() const -> memory::StandartInterfac
 }
 
 bool UrlView::isEmail() const {
-	return (!user.empty() && !host.empty()) && (scheme.empty() && password.empty() && port.empty() && path.empty() && query.empty() && fragment.empty());
+	return (!user.empty() && !host.empty())
+			&& (scheme.empty() && password.empty() && port.empty() && path.empty() && query.empty()
+					&& fragment.empty());
 }
 
 bool UrlView::isPath() const {
-	return !path.empty() && (scheme.empty() && user.empty() && password.empty() && host.empty() && port.empty() && query.empty() && fragment.empty());
+	return !path.empty()
+			&& (scheme.empty() && user.empty() && password.empty() && host.empty() && port.empty()
+					&& query.empty() && fragment.empty());
 }
 
 
 #if MODULE_STAPPLER_DATA
 
 template <>
-auto UrlView::parseArgs<memory::PoolInterface>(StringView str, size_t maxVarSize) -> data::ValueTemplate<memory::PoolInterface> {
+auto UrlView::parseArgs<memory::PoolInterface>(StringView str, size_t maxVarSize)
+		-> data::ValueTemplate<memory::PoolInterface> {
 	if (str.empty()) {
 		data::ValueTemplate<memory::PoolInterface>();
 	}
 	StringView r(str);
 	if (r.front() == '?' || r.front() == '&' || r.front() == ';') {
-		++ r;
+		++r;
 	}
 
-#if STAPPLER_SHARED
-	auto fn = (decltype(&data::readUrlencoded<memory::PoolInterface>))
-			SharedModule::acquireSymbol("data", "readUrlencoded<PoolInterface>(StringView,size_t)");
+	auto fn = SharedModule::acquireTypedSymbol<
+			decltype(&data::readUrlencoded<memory::PoolInterface>)>(
+			buildconfig::MODULE_STAPPLER_DATA_NAME, "readUrlencoded");
 	if (!fn) {
 		log::error("UrlView", "Module MODULE_STAPPLER_DATA declared, but not available in runtime");
 	}
 	return fn(str, maxVarSize);
-#else
-	return data::readUrlencoded<memory::PoolInterface>(str, maxVarSize);
-#endif
 }
 
 template <>
-auto UrlView::parseArgs<memory::StandartInterface>(StringView str, size_t maxVarSize) -> data::ValueTemplate<memory::StandartInterface> {
+auto UrlView::parseArgs<memory::StandartInterface>(StringView str, size_t maxVarSize)
+		-> data::ValueTemplate<memory::StandartInterface> {
 	if (str.empty()) {
 		data::ValueTemplate<memory::StandartInterface>();
 	}
 	StringView r(str);
 	if (r.front() == '?' || r.front() == '&' || r.front() == ';') {
-		++ r;
+		++r;
 	}
-#if STAPPLER_SHARED
-	auto fn = (decltype(&data::readUrlencoded<memory::StandartInterface>))
-			SharedModule::acquireSymbol("data", "readUrlencoded<StandartInterface>(StringView,size_t)");
+
+	auto fn = SharedModule::acquireTypedSymbol<
+			decltype(&data::readUrlencoded<memory::StandartInterface>)>(
+			buildconfig::MODULE_STAPPLER_DATA_NAME, "readUrlencoded");
 	if (!fn) {
 		log::error("UrlView", "Module MODULE_STAPPLER_DATA declared, but not available in runtime");
 	}
 	return fn(str, maxVarSize);
-#else
-	return data::readUrlencoded<memory::StandartInterface>(str);
-#endif
 }
 
 #endif
 
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler

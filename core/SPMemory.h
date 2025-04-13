@@ -166,6 +166,7 @@ using stappler::makeSpanView;
 using memory::pool::perform;
 using memory::pool::perform_clear;
 using memory::pool::perform_temporary;
+using memory::pool::perform_main;
 
 template <typename Container, typename T>
 bool emplace_ordered(Container &vec, T val);
@@ -231,6 +232,7 @@ using stappler::makeSpanView;
 using memory::pool::perform;
 using memory::pool::perform_clear;
 using memory::pool::perform_temporary;
+using memory::pool::perform_main;
 
 template <typename Container, typename T>
 bool emplace_ordered(Container &vec, T val);

@@ -24,6 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_SPMEMPOOLAPI_H_
 #define STAPPLER_CORE_MEMORY_SPMEMPOOLAPI_H_
 
+#include "SPCore.h"
 #include "SPMemPoolInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
@@ -46,7 +47,8 @@ public:
 		discard, // do nothing
 		conditional, // do not push pool if current context pool is the same
 		clear, // clear pool after pop
-		destroy // destroy pool after pop
+		destroy, // destroy pool after pop
+		main, // call sp::initialize/sp::terminate (for `perform_main` only)
 	};
 
 	explicit context(const pool_type &__m, finalize_flag = discard);
@@ -102,6 +104,9 @@ inline auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr);
 
 template <typename Callback>
 inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t tag, void *userdata = nullptr);
+
+template <typename Callback>
+inline auto perform_main(const Callback &cb);
 
 }
 
@@ -168,6 +173,9 @@ void context<_Pool>::push() noexcept {
 			pool::push(_pool);
 			_owns = true;
 		}
+		if (_flag == main) {
+			sp::initialize();
+		}
 	}
 }
 
@@ -199,6 +207,11 @@ void context<_Pool>::pop() noexcept {
 	case destroy:
 		pool::destroy(_pool);
 		_pool = nullptr;
+		break;
+	case main:
+		pool::destroy(_pool);
+		_pool = nullptr;
+		sp::terminate();
 		break;
 	}
 
@@ -259,6 +272,13 @@ template <typename Callback>
 inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr) {
 	auto pool = memory::pool::create(p ? p : memory::pool::acquire());
 	context<decltype(p)> holder(pool, tag, ptr, context<decltype(p)>::destroy);
+	return cb();
+}
+
+template <typename Callback>
+inline auto perform_main(const Callback &cb) {
+	auto pool = memory::pool::create(app_root_pool);
+	context<decltype(pool)> holder(pool, context<decltype(pool)>::main);
 	return cb();
 }
 

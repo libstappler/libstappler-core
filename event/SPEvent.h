@@ -44,7 +44,6 @@ class ThreadHandle;
 
 struct BufferChain;
 
-using FileType = filesystem::FileType;
 using OpenFlags = filesystem::OpenFlags;
 using ProtFlags = filesystem::ProtFlags;
 using Stat = filesystem::Stat;
