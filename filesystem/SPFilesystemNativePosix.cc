@@ -54,8 +54,8 @@ memory::StandartInterface::StringType posixToNative<memory::StandartInterface>(S
 
 template <>
 memory::PoolInterface::StringType getcwd_fn<memory::PoolInterface>() {
-	char cwd[1024] = { 0 };
-	if (getcwd(cwd, 1024 - 1) != NULL) {
+	char cwd[1'024] = {0};
+	if (getcwd(cwd, 1'024 - 1) != NULL) {
 		return memory::PoolInterface::StringType((const char *)cwd);
 	}
 	return memory::PoolInterface::StringType();
@@ -63,8 +63,8 @@ memory::PoolInterface::StringType getcwd_fn<memory::PoolInterface>() {
 
 template <>
 memory::StandartInterface::StringType getcwd_fn<memory::StandartInterface>() {
-	char cwd[1024] = { 0 };
-	if (getcwd(cwd, 1024 - 1) != NULL) {
+	char cwd[1'024] = {0};
+	if (getcwd(cwd, 1'024 - 1) != NULL) {
 		return memory::StandartInterface::StringType((const char *)cwd);
 	}
 	return memory::StandartInterface::StringType();
@@ -72,41 +72,86 @@ memory::StandartInterface::StringType getcwd_fn<memory::StandartInterface>() {
 
 #define SP_TERMINATED_DATA(view) (view.terminated()?view.data():view.str<memory::StandartInterface>().data())
 
-static ProtFlags getProtFlagsFromMode (mode_t m) {
+static ProtFlags getProtFlagsFromMode(mode_t m) {
 	ProtFlags flags = ProtFlags::None;
-	if (m & S_IRUSR) { flags |= ProtFlags::UserRead; }
-	if (m & S_IWUSR) { flags |= ProtFlags::UserWrite; }
-	if (m & S_IXUSR) { flags |= ProtFlags::UserExecute; }
-	if (m & S_ISUID) { flags |= ProtFlags::UserSetId; }
-	if (m & S_IRGRP) { flags |= ProtFlags::GroupRead; }
-	if (m & S_IWGRP) { flags |= ProtFlags::GroupWrite; }
-	if (m & S_IXGRP) { flags |= ProtFlags::GroupExecute; }
-	if (m & S_ISGID) { flags |= ProtFlags::GroupSetId; }
-	if (m & S_IROTH) { flags |= ProtFlags::AllRead; }
-	if (m & S_IWOTH) { flags |= ProtFlags::AllWrite; }
-	if (m & S_IXOTH) { flags |= ProtFlags::AllExecute; }
+	if (m & S_IRUSR) {
+		flags |= ProtFlags::UserRead;
+	}
+	if (m & S_IWUSR) {
+		flags |= ProtFlags::UserWrite;
+	}
+	if (m & S_IXUSR) {
+		flags |= ProtFlags::UserExecute;
+	}
+	if (m & S_ISUID) {
+		flags |= ProtFlags::UserSetId;
+	}
+	if (m & S_IRGRP) {
+		flags |= ProtFlags::GroupRead;
+	}
+	if (m & S_IWGRP) {
+		flags |= ProtFlags::GroupWrite;
+	}
+	if (m & S_IXGRP) {
+		flags |= ProtFlags::GroupExecute;
+	}
+	if (m & S_ISGID) {
+		flags |= ProtFlags::GroupSetId;
+	}
+	if (m & S_IROTH) {
+		flags |= ProtFlags::AllRead;
+	}
+	if (m & S_IWOTH) {
+		flags |= ProtFlags::AllWrite;
+	}
+	if (m & S_IXOTH) {
+		flags |= ProtFlags::AllExecute;
+	}
 	return flags;
 }
 
 static mode_t getModeFormProtFlags(ProtFlags flags) {
 	mode_t ret = 0;
-	if (hasFlag(flags, ProtFlags::UserRead)) { ret |= S_IRUSR; }
-	if (hasFlag(flags, ProtFlags::UserWrite)) { ret |= S_IWUSR; }
-	if (hasFlag(flags, ProtFlags::UserExecute)) { ret |= S_IXUSR; }
-	if (hasFlag(flags, ProtFlags::UserSetId)) { ret |= S_ISUID; }
-	if (hasFlag(flags, ProtFlags::GroupRead)) { ret |= S_IRGRP; }
-	if (hasFlag(flags, ProtFlags::GroupWrite)) { ret |= S_IWGRP; }
-	if (hasFlag(flags, ProtFlags::GroupExecute)) { ret |= S_IXGRP; }
-	if (hasFlag(flags, ProtFlags::GroupSetId)) { ret |= S_ISGID; }
-	if (hasFlag(flags, ProtFlags::AllRead)) { ret |= S_IROTH; }
-	if (hasFlag(flags, ProtFlags::AllWrite)) { ret |= S_IWOTH; }
-	if (hasFlag(flags, ProtFlags::AllExecute)) { ret |= S_IXOTH; }
+	if (hasFlag(flags, ProtFlags::UserRead)) {
+		ret |= S_IRUSR;
+	}
+	if (hasFlag(flags, ProtFlags::UserWrite)) {
+		ret |= S_IWUSR;
+	}
+	if (hasFlag(flags, ProtFlags::UserExecute)) {
+		ret |= S_IXUSR;
+	}
+	if (hasFlag(flags, ProtFlags::UserSetId)) {
+		ret |= S_ISUID;
+	}
+	if (hasFlag(flags, ProtFlags::GroupRead)) {
+		ret |= S_IRGRP;
+	}
+	if (hasFlag(flags, ProtFlags::GroupWrite)) {
+		ret |= S_IWGRP;
+	}
+	if (hasFlag(flags, ProtFlags::GroupExecute)) {
+		ret |= S_IXGRP;
+	}
+	if (hasFlag(flags, ProtFlags::GroupSetId)) {
+		ret |= S_ISGID;
+	}
+	if (hasFlag(flags, ProtFlags::AllRead)) {
+		ret |= S_IROTH;
+	}
+	if (hasFlag(flags, ProtFlags::AllWrite)) {
+		ret |= S_IWOTH;
+	}
+	if (hasFlag(flags, ProtFlags::AllExecute)) {
+		ret |= S_IXOTH;
+	}
 	return ret;
 }
 
 Status remove_fn(StringView path) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem", "filesystem::native::remove_fn should be used with absolute paths");
+		log::error("filesystem",
+				"filesystem::native::remove_fn should be used with absolute paths");
 		return Status::Declined;
 	}
 
@@ -118,7 +163,8 @@ Status remove_fn(StringView path) {
 
 Status unlink_fn(StringView path) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem", "filesystem::native::unlink_fn should be used with absolute paths");
+		log::error("filesystem",
+				"filesystem::native::unlink_fn should be used with absolute paths");
 		return Status::Declined;
 	}
 
@@ -140,30 +186,44 @@ Status mkdir_fn(StringView path, ProtFlags flags) {
 	} else {
 		ret = status::errnoToStatus(errno);
 	}
-    return ret;
+	return ret;
 }
 
 Status access_fn(StringView path, Access mode) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem", "filesystem::native::access_fn should be used with absolute paths");
+		log::error("filesystem",
+				"filesystem::native::access_fn should be used with absolute paths");
 		return Status::Declined;
 	}
 
 	int m = 0;
-	if (hasFlag(mode, Access::Execute)) { m |= X_OK; }
-	if (hasFlag(mode, Access::Exists)) { m |= F_OK; }
-	if (hasFlag(mode, Access::Read)) { m |= R_OK; }
-	if (hasFlag(mode, Access::Write)) { m |= W_OK; }
+	if (hasFlag(mode, Access::Execute)) {
+		m |= X_OK;
+	}
+	if (hasFlag(mode, Access::Exists)) {
+		m |= F_OK;
+	}
+	if (hasFlag(mode, Access::Read)) {
+		m |= R_OK;
+	}
+	if (hasFlag(mode, Access::Write)) {
+		m |= W_OK;
+	}
 
 	if (hasFlag(mode, Access::Empty)) {
 		if (m != 0) {
 			return Status::ErrorInvalidArguemnt;
 		}
-		
+
 		m |= F_OK;
 	}
 
-	auto st = ::faccessat(-1, SP_TERMINATED_DATA(path), m, AT_EACCESS);
+	int flags = 0;
+	if (getuid() != geteuid()) {
+		flags = AT_EACCESS;
+	}
+
+	auto st = ::faccessat(-1, SP_TERMINATED_DATA(path), m, flags);
 	if (st == 0) {
 		if (hasFlag(mode, Access::Empty)) {
 			return Status::Declined; // file exists
@@ -185,17 +245,26 @@ Status stat_fn(StringView path, Stat &stat) {
 	}
 
 	struct stat s;
-	if(::stat(SP_TERMINATED_DATA(path), &s) == 0 ) {
+	if (::stat(SP_TERMINATED_DATA(path), &s) == 0) {
 		stat.size = size_t(s.st_size);
 
-		if (S_ISBLK(s.st_mode)) { stat.type = FileType::BlockDevice; }
-		else if (S_ISCHR(s.st_mode)) { stat.type = FileType::CharDevice; }
-		else if (S_ISDIR(s.st_mode)) { stat.type = FileType::Dir; }
-		else if (S_ISFIFO(s.st_mode)) { stat.type = FileType::Pipe; }
-		else if (S_ISREG(s.st_mode)) { stat.type = FileType::File; }
-		else if (S_ISLNK(s.st_mode)) { stat.type = FileType::Link; }
-		else if (S_ISSOCK(s.st_mode)) { stat.type = FileType::Socket; }
-		else { stat.type = FileType::Unknown; }
+		if (S_ISBLK(s.st_mode)) {
+			stat.type = FileType::BlockDevice;
+		} else if (S_ISCHR(s.st_mode)) {
+			stat.type = FileType::CharDevice;
+		} else if (S_ISDIR(s.st_mode)) {
+			stat.type = FileType::Dir;
+		} else if (S_ISFIFO(s.st_mode)) {
+			stat.type = FileType::Pipe;
+		} else if (S_ISREG(s.st_mode)) {
+			stat.type = FileType::File;
+		} else if (S_ISLNK(s.st_mode)) {
+			stat.type = FileType::Link;
+		} else if (S_ISSOCK(s.st_mode)) {
+			stat.type = FileType::Socket;
+		} else {
+			stat.type = FileType::Unknown;
+		}
 
 		stat.prot = getProtFlagsFromMode(s.st_mode);
 
@@ -203,9 +272,9 @@ Status stat_fn(StringView path, Stat &stat) {
 		stat.group = s.st_gid;
 
 #if LINUX || ANDROID
-		stat.atime = Time::microseconds(s.st_atime * 1000000 + s.st_atim.tv_nsec / 1000);
-		stat.ctime = Time::microseconds(s.st_ctime * 1000000 + s.st_ctim.tv_nsec / 1000);
-		stat.mtime = Time::microseconds(s.st_mtime * 1000000 + s.st_mtim.tv_nsec / 1000);
+		stat.atime = Time::microseconds(s.st_atime * 1'000'000 + s.st_atim.tv_nsec / 1'000);
+		stat.ctime = Time::microseconds(s.st_ctime * 1'000'000 + s.st_ctim.tv_nsec / 1'000);
+		stat.mtime = Time::microseconds(s.st_mtime * 1'000'000 + s.st_mtim.tv_nsec / 1'000);
 #else
 		// some fruit systems just made by assholes
 		stat.atime = Time::seconds(s.st_atime);
@@ -232,12 +301,17 @@ Status touch_fn(StringView path) {
 static constexpr int OpenDirFlags = O_DIRECTORY | O_RDONLY | O_NDELAY | O_LARGEFILE | O_CLOEXEC;
 
 
-static Status _ftw_fn(int dirfd, StringView path,  const Callback<bool(StringView, FileType)> &callback, int depth, bool dirFirst) {
+static Status _ftw_fn(int dirfd, StringView path,
+		const Callback<bool(StringView, FileType)> &callback, int depth, bool dirFirst) {
 	memory::StandartInterface::StringType newPath;
 
 	struct Dir {
 		Dir(int dirfd) : dp(::fdopendir(dirfd)) { }
-		~Dir() { if (dp) { ::closedir(dp); } }
+		~Dir() {
+			if (dp) {
+				::closedir(dp);
+			}
+		}
 
 		struct dirent *read() { return ::readdir(dp); }
 
@@ -298,7 +372,8 @@ static Status _ftw_fn(int dirfd, StringView path,  const Callback<bool(StringVie
 									return Status::Suspended;
 								}
 							} else {
-								auto status = _ftw_fn(newDirfd, newPath, callback, depth - 1, dirFirst);
+								auto status =
+										_ftw_fn(newDirfd, newPath, callback, depth - 1, dirFirst);
 								if (status != Status::Ok) {
 									return status;
 								}
@@ -321,7 +396,8 @@ static Status _ftw_fn(int dirfd, StringView path,  const Callback<bool(StringVie
 	return Status::Ok;
 }
 
-Status ftw_fn(StringView path, const Callback<bool(StringView, FileType)> &callback, int depth, bool dirFirst) {
+Status ftw_fn(StringView path, const Callback<bool(StringView, FileType)> &callback, int depth,
+		bool dirFirst) {
 	if (!path.starts_with("/")) {
 		log::error("filesystem", "filesystem::native::ftw_fn should be used with absolute paths");
 		return Status::Declined;
@@ -347,7 +423,8 @@ FILE *fopen_fn(StringView path, StringView mode) {
 }
 
 Status write_fn(StringView path, const unsigned char *data, size_t len, ProtFlags flags) {
-	auto fd = ::open(SP_TERMINATED_DATA(path), O_WRONLY | O_CREAT | O_TRUNC, getModeFormProtFlags(flags));
+	auto fd = ::open(SP_TERMINATED_DATA(path), O_WRONLY | O_CREAT | O_TRUNC,
+			getModeFormProtFlags(flags));
 	if (fd < 0) {
 		return status::errnoToStatus(errno);
 	}
@@ -365,6 +442,6 @@ Status write_fn(StringView path, const unsigned char *data, size_t len, ProtFlag
 
 #undef SP_TERMINATED_DATA
 
-}
- 
+} // namespace stappler::filesystem::native
+
 #endif

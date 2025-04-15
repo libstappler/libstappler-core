@@ -164,7 +164,7 @@ static StringView Handle_getMimeType(StringView name) {
 
 template <typename Interface>
 static void Handle_setSendFile(HandleData<Interface> &iface, const FileInfo &str, StringView type) {
-	filesystem::enumerateReadablePaths(str, filesystem::Access::Read, [&](StringView path) {
+	filesystem::enumeratePaths(str, filesystem::Access::Read, [&](StringView path, FileFlags) {
 		iface.send.data = path.str<Interface>();
 		iface.send.size = 0;
 		return false;
@@ -285,7 +285,7 @@ HANDLE_NAME_CONST(long, getResponseCode) { return process.responseCode; }
 HANDLE_NAME_CONST(long, getErrorCode) { return process.errorCode; }
 HANDLE_NAME_CONST(StringView, getError) { return process.error; }
 HANDLE_NAME(void, setCookieFile, const FileInfo &info) {
-	filesystem::enumerateWritablePaths(info, [&](StringView path) {
+	filesystem::enumerateWritablePaths(info, [&](StringView path, FileFlags) {
 		process.cookieFile = filesystem::native::posixToNative<HANDLE_INTERFACE>(path);
 		return false;
 	});
@@ -315,7 +315,7 @@ HANDLE_NAME(void, setProxy, StringView proxy, StringView authData) {
 	auth.proxyAuth = authData.str<HANDLE_INTERFACE>();
 }
 HANDLE_NAME(void, setReceiveFile, const FileInfo &info, bool resumeDownload) {
-	filesystem::enumerateWritablePaths(info, [&](StringView path) {
+	filesystem::enumerateWritablePaths(info, [&](StringView path, FileFlags) {
 		receive.data = path.str<HANDLE_INTERFACE>();
 		receive.resumeDownload = resumeDownload;
 		return false;
@@ -392,7 +392,7 @@ HANDLE_NAME_CONST(long, getResponseCode) { return process.responseCode; }
 HANDLE_NAME_CONST(long, getErrorCode) { return process.errorCode; }
 HANDLE_NAME_CONST(StringView, getError) { return process.error; }
 HANDLE_NAME(void, setCookieFile, const FileInfo &info) {
-	filesystem::enumerateWritablePaths(info, [&](StringView path) {
+	filesystem::enumerateWritablePaths(info, [&](StringView path, FileFlags) {
 		process.cookieFile = filesystem::native::posixToNative<HANDLE_INTERFACE>(path);
 		return false;
 	});
@@ -422,7 +422,7 @@ HANDLE_NAME(void, setProxy, StringView proxy, StringView authData) {
 	auth.proxyAuth = authData.str<HANDLE_INTERFACE>();
 }
 HANDLE_NAME(void, setReceiveFile, const FileInfo &info, bool resumeDownload) {
-	filesystem::enumerateWritablePaths(info, [&](StringView path) {
+	filesystem::enumerateWritablePaths(info, [&](StringView path, FileFlags) {
 		receive.data = path.str<HANDLE_INTERFACE>();
 		receive.resumeDownload = resumeDownload;
 		return false;

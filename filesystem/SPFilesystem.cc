@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPFilesystem.h"
+#include "SPCore.h"
 #include "SPFilepath.h"
 #include "SPMemInterface.h"
 #include "SPPlatformUnistd.h"
@@ -37,7 +38,7 @@ File File::open_tmp(StringView prefix, bool delOnClose) {
 #if WIN32
 	log::warn("filesystem", "File::open_tmp unavailable on win32");
 #else
-	char buf[256] = { 0 };
+	char buf[256] = {0};
 	const char *tmp = P_tmpdir;
 	size_t len = strlen(tmp);
 	strcpy(&buf[0], tmp);
@@ -66,7 +67,7 @@ File::File(FILE *f, Flags flags) : _isBundled(false), _flags(flags), _nativeFile
 		if (pos != maxOf<size_t>()) {
 			seek(pos, io::Seek::Set);
 		}
-		_size = (size != maxOf<size_t>())?size:0;
+		_size = (size != maxOf<size_t>()) ? size : 0;
 	}
 }
 File::File(void *f) : _isBundled(true), _platformFile(f) {
@@ -76,13 +77,13 @@ File::File(void *f) : _isBundled(true), _platformFile(f) {
 		if (pos != maxOf<size_t>()) {
 			seek(pos, io::Seek::Set);
 		}
-		_size = (size != maxOf<size_t>())?size:0;
+		_size = (size != maxOf<size_t>()) ? size : 0;
 	}
 }
 
 File::File(void *f, size_t s) : _isBundled(true), _size(s), _platformFile(f) { }
 
-File::File(File && f) : _isBundled(f._isBundled), _size(f._size) {
+File::File(File &&f) : _isBundled(f._isBundled), _size(f._size) {
 	if (_isBundled) {
 		_platformFile = f._platformFile;
 		f._platformFile = nullptr;
@@ -96,7 +97,7 @@ File::File(File && f) : _isBundled(f._isBundled), _size(f._size) {
 	}
 }
 
-File & File::operator=(File && f) {
+File &File::operator=(File &&f) {
 	_isBundled = f._isBundled;
 	_size = f._size;
 	if (_isBundled) {
@@ -113,9 +114,7 @@ File & File::operator=(File && f) {
 	return *this;
 }
 
-File::~File() {
-	close();
-}
+File::~File() { close(); }
 
 size_t File::read(uint8_t *buf, size_t nbytes) {
 	if (is_open()) {
@@ -175,9 +174,7 @@ size_t File::tell() const {
 	}
 }
 
-size_t File::size() const {
-	return _size;
-}
+size_t File::size() const { return _size; }
 
 typename File::int_type File::xsgetc() {
 	int_type ret = traits_type::eof();
@@ -199,11 +196,11 @@ typename File::int_type File::xsputc(int_type c) {
 	if (is_open() && !_isBundled) {
 		ret = fputc(c, _nativeFile);
 	}
-	++ _size;
+	++_size;
 	return ret;
 }
 
-typename File::streamsize File::xsputn(const char* s, streamsize n) {
+typename File::streamsize File::xsputn(const char *s, streamsize n) {
 	streamsize ret = -1;
 	if (is_open() && !_isBundled) {
 		if (fwrite(s, n, 1, _nativeFile) == 1) {
@@ -214,7 +211,7 @@ typename File::streamsize File::xsputn(const char* s, streamsize n) {
 	return ret;
 }
 
-typename File::streamsize File::xsgetn(char* s, streamsize n) {
+typename File::streamsize File::xsgetn(char *s, streamsize n) {
 	streamsize ret = -1;
 	if (is_open()) {
 		ret = read(reinterpret_cast<uint8_t *>(s), n);
@@ -281,9 +278,7 @@ bool File::close_rename(const FileInfo &info) {
 	return false;
 }
 
-bool File::is_open() const {
-	return _nativeFile != nullptr || _platformFile != nullptr;
-}
+bool File::is_open() const { return _nativeFile != nullptr || _platformFile != nullptr; }
 
 const char *File::path() const {
 	if (_buf[0] == 0) {
@@ -293,13 +288,14 @@ const char *File::path() const {
 	}
 }
 
-void File::set_tmp_path(const char *buf) {
-	memcpy(_buf, buf, 256);
-}
+void File::set_tmp_path(const char *buf) { memcpy(_buf, buf, 256); }
 
-MemoryMappedRegion MemoryMappedRegion::mapFile(StringView path, MappingType type, ProtFlags prot, size_t offset, size_t len) {
+MemoryMappedRegion MemoryMappedRegion::mapFile(StringView path, MappingType type, ProtFlags prot,
+		size_t offset, size_t len) {
 	if (math::align(offset, size_t(platform::_getMemoryPageSize())) != offset) {
-		log::error("filesystem", "offset for MemoryMappedRegion::mapFile should be aligned as platform::_getMemoryPageSize");
+		log::error("filesystem",
+				"offset for MemoryMappedRegion::mapFile should be aligned as "
+				"platform::_getMemoryPageSize");
 		return MemoryMappedRegion();
 	}
 
@@ -313,7 +309,8 @@ MemoryMappedRegion MemoryMappedRegion::mapFile(StringView path, MappingType type
 
 	if (offset > 0) {
 		if (offset > stat.size) {
-			log::error("filesystem", "Offset (", offset, ") for a file ", path, " is larger then file itself");
+			log::error("filesystem", "Offset (", offset, ") for a file ", path,
+					" is larger then file itself");
 			return MemoryMappedRegion();
 		} else {
 			auto remains = stat.size - offset;
@@ -347,7 +344,7 @@ MemoryMappedRegion::MemoryMappedRegion(MemoryMappedRegion &&other) {
 	memset(other._storage.data(), 0, other._storage.size());
 }
 
-MemoryMappedRegion & MemoryMappedRegion::operator=(MemoryMappedRegion &&other) {
+MemoryMappedRegion &MemoryMappedRegion::operator=(MemoryMappedRegion &&other) {
 	_region = other._region;
 	_storage = sp::move(other._storage);
 	_type = other._type;
@@ -358,13 +355,13 @@ MemoryMappedRegion & MemoryMappedRegion::operator=(MemoryMappedRegion &&other) {
 	return *this;
 }
 
-void MemoryMappedRegion::sync() {
-	platform::_syncMappedRegion(_region, _storage.data());
-}
+void MemoryMappedRegion::sync() { platform::_syncMappedRegion(_region, _storage.data()); }
 
-MemoryMappedRegion::MemoryMappedRegion() : _region(nullptr), _type(MappingType::Private), _prot(ProtFlags::None) { }
+MemoryMappedRegion::MemoryMappedRegion()
+: _region(nullptr), _type(MappingType::Private), _prot(ProtFlags::None) { }
 
-MemoryMappedRegion::MemoryMappedRegion(PlatformStorage &&storage, uint8_t *ptr, MappingType t, ProtFlags p)
+MemoryMappedRegion::MemoryMappedRegion(PlatformStorage &&storage, uint8_t *ptr, MappingType t,
+		ProtFlags p)
 : _storage(move(storage)), _region(ptr), _type(t), _prot(p) { }
 
 bool exists(const FileInfo &info) {
@@ -372,15 +369,15 @@ bool exists(const FileInfo &info) {
 		return false;
 	}
 
-	if (info.category == FileCategory::Bundled) {
-		if (!filepath::isAboveRoot(info.path) && filesystem::platform::_exists(info.path)) {
+	if (hasFlag(getCategoryFlags(info.category), CategoryFlags::PlatformSpecific)) {
+		if (filesystem::platform::_access(info.category, info.path, Access::Exists)) {
 			return true;
 		}
 		return false;
 	}
 
 	bool found = false;
-	enumerateReadablePaths(info, Access::Exists, [&] (StringView str) {
+	enumeratePaths(info, Access::Exists, [&](StringView str, FileFlags) {
 		found = true;
 		return false;
 	});
@@ -392,15 +389,15 @@ bool stat(const FileInfo &info, Stat &stat) {
 		return false;
 	}
 
-	if (info.category == FileCategory::Bundled) {
-		if (!filepath::isAboveRoot(info.path) && filesystem::platform::_stat(info.path, stat)) {
+	if (hasFlag(getCategoryFlags(info.category), CategoryFlags::PlatformSpecific)) {
+		if (filesystem::platform::_stat(info.category, info.path, stat)) {
 			return true;
 		}
 		return false;
 	}
 
 	bool found = false;
-	enumerateReadablePaths(info, Access::Exists, [&] (StringView str) {
+	enumeratePaths(info, Access::Exists, [&](StringView str, FileFlags) {
 		found = filesystem::native::stat_fn(str, stat) == Status::Ok;
 		return false;
 	});
@@ -418,14 +415,14 @@ bool remove(const FileInfo &info, bool recursive, bool withDirs) {
 
 	if (!recursive) {
 		bool found = false;
-		enumerateWritablePaths(info, Access::Exists, [&] (StringView str) {
+		enumerateWritablePaths(info, Access::Exists, [&](StringView str, FileFlags) {
 			found = filesystem::native::remove_fn(str) == Status::Ok;
 			return false;
 		});
 		return found;
 	} else {
 		bool success = true;
-		ftw(info, [&] (const FileInfo &path, FileType type) -> bool {
+		ftw(info, [&](const FileInfo &path, FileType type) -> bool {
 			if (type != FileType::Dir || withDirs) {
 				if (!remove(path)) {
 					success = false;
@@ -448,7 +445,7 @@ bool touch(const FileInfo &info) {
 	}
 
 	bool found = false;
-	enumerateWritablePaths(info, Access::None, [&] (StringView str) {
+	enumerateWritablePaths(info, Access::None, [&](StringView str, FileFlags) {
 		found = filesystem::native::touch_fn(str) == Status::Ok;
 		return false;
 	});
@@ -461,7 +458,7 @@ bool mkdir(const FileInfo &info) {
 	}
 
 	bool found = false;
-	enumerateWritablePaths(info, Access::None, [&] (StringView str) {
+	enumerateWritablePaths(info, Access::None, [&](StringView str, FileFlags) {
 		found = filesystem::native::mkdir_fn(str) == Status::Ok;
 		return false;
 	});
@@ -473,18 +470,19 @@ static bool _mkdir_recursive(StringView path, const FileInfo &info) {
 	if (info.path.empty()) {
 		return false;
 	}
-	
+
 	// check if root dir exists
 	auto root = filepath::root(path);
 	auto rootInfo = info;
 	rootInfo.path = filepath::root(info.path);
 
-	if (filesystem::native::access_fn(root, Access::Exists) != Status::Ok) {
-		if (!_mkdir_recursive(filepath::root(path), rootInfo)) {
+	auto err = filesystem::native::access_fn(root, Access::Exists);
+	if (err != Status::Ok) {
+		if (!_mkdir_recursive(root, rootInfo)) {
 			return false;
 		}
 	}
-	
+
 	return filesystem::native::mkdir_fn(path) == Status::Ok;
 }
 
@@ -494,31 +492,32 @@ bool mkdir_recursive(const FileInfo &info) {
 	}
 
 	bool found = false;
-	enumerateWritablePaths(info, Access::None, [&] (StringView str) {
-		found =  _mkdir_recursive(str, info);
+	enumerateWritablePaths(info, Access::None, [&](StringView str, FileFlags) {
+		found = _mkdir_recursive(str, info);
 		return false;
 	});
 	return found;
 }
 
-bool ftw(const FileInfo &info, const Callback<bool(const FileInfo &, FileType)> &cb,
-		int depth, bool dirFirst) {
+bool ftw(const FileInfo &info, const Callback<bool(const FileInfo &, FileType)> &cb, int depth,
+		bool dirFirst) {
 	if (filepath::isEmpty(info)) {
 		return false;
 	}
 
-	auto fn = [&] (StringView p, FileType t) {
+	auto fn = [&](StringView p, FileType t) {
 		auto tmpPath = filepath::merge<memory::StandartInterface>(info.path, p);
 		FileInfo newInfo = info;
 		newInfo.path = tmpPath;
 		return cb(newInfo, t);
 	};
 
-	if (info.category == FileCategory::Bundled) {
-		return filesystem::platform::_ftw(info.path, fn, depth, dirFirst) == Status::Ok;
+	if (hasFlag(getCategoryFlags(info.category), CategoryFlags::PlatformSpecific)) {
+		return filesystem::platform::_ftw(info.category, info.path, fn, depth, dirFirst)
+				== Status::Ok;
 	} else {
 		bool found = false;
-		enumerateReadablePaths(info, Access::None, [&] (StringView str) {
+		enumeratePaths(info, Access::None, [&](StringView str, FileFlags) {
 			found = filesystem::native::ftw_fn(str, fn, depth, dirFirst) == Status::Ok;
 			return false;
 		});
@@ -534,7 +533,7 @@ bool move(const FileInfo &isource, const FileInfo &idest) {
 	memory::StandartInterface::StringType source;
 	memory::StandartInterface::StringType dest;
 
-	enumerateWritablePaths(isource, Access::Exists, [&] (StringView str) {
+	enumerateWritablePaths(isource, Access::Exists, [&](StringView str, FileFlags) {
 		source = str.str<memory::StandartInterface>();
 		return false;
 	});
@@ -543,7 +542,7 @@ bool move(const FileInfo &isource, const FileInfo &idest) {
 		return false;
 	}
 
-	enumerateWritablePaths(idest, Access::None, [&] (StringView str) {
+	enumerateWritablePaths(idest, Access::None, [&](StringView str, FileFlags) {
 		dest = str.str<memory::StandartInterface>();
 		return false;
 	});
@@ -563,11 +562,11 @@ bool move(const FileInfo &isource, const FileInfo &idest) {
 
 // Copy single file
 static bool performCopy(const FileInfo &source, const FileInfo &dest) {
-	remove(dest); 
+	remove(dest);
 
 	memory::StandartInterface::StringType absdest;
 
-	enumerateWritablePaths(dest, Access::None, [&] (StringView str) {
+	enumerateWritablePaths(dest, Access::None, [&](StringView str, FileFlags) {
 		absdest = str.str<memory::StandartInterface>();
 		return false;
 	});
@@ -624,11 +623,10 @@ bool copy(const FileInfo &isource, const FileInfo &idest, bool stopOnError) {
 	if (!isdir(isource)) {
 		return performCopy(isource, FileInfo{dest, idest.category});
 	} else {
-		return ftw(isource, [&] (const FileInfo &source, FileType type) -> bool {
-			auto tmpPath = filepath::replace<memory::StandartInterface>(source.path, isource.path, dest);
-			auto targetInfo = FileInfo{
-					tmpPath,
-					idest.category};
+		return ftw(isource, [&](const FileInfo &source, FileType type) -> bool {
+			auto tmpPath =
+					filepath::replace<memory::StandartInterface>(source.path, isource.path, dest);
+			auto targetInfo = FileInfo{tmpPath, idest.category};
 			if (type == FileType::Dir) {
 				if (isource.path == source.path) {
 					// root dir
@@ -661,7 +659,8 @@ bool write(const FileInfo &ipath, const unsigned char *data, size_t len, bool _o
 	}
 
 	bool success = false;
-	enumerateWritablePaths(ipath, _override ? Access::None : Access::Empty, [&] (StringView str) {
+	enumerateWritablePaths(ipath, _override ? Access::None : Access::Empty,
+			[&](StringView str, FileFlags) {
 		success = filesystem::native::write_fn(str, data, len) == Status::Ok;
 		return false;
 	});
@@ -676,11 +675,11 @@ File openForReading(const FileInfo &ipath) {
 
 	File ret;
 
-	if (ipath.category == FileCategory::Bundled) {
-		return filesystem::platform::_openForReading(ipath.path);
+	if (hasFlag(getCategoryFlags(ipath.category), CategoryFlags::PlatformSpecific)) {
+		return filesystem::platform::_openForReading(ipath.category, ipath.path);
 	}
 
-	enumerateReadablePaths(ipath, Access::Read, [&] (StringView str) {
+	enumeratePaths(ipath, Access::Read, [&](StringView str, FileFlags) {
 		auto f = filesystem::native::fopen_fn(str, "rb");
 		if (f) {
 			ret = File(f);
@@ -713,7 +712,8 @@ bool readIntoBuffer(uint8_t *buf, const FileInfo &ipath, size_t off, size_t size
 	return false;
 }
 
-bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, const FileInfo &ipath, size_t off, size_t size) {
+bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, const FileInfo &ipath,
+		size_t off, size_t size) {
 	auto f = openForReading(ipath);
 	if (f) {
 		size_t fsize = f.size();
@@ -746,15 +746,33 @@ bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, co
 std::ostream &operator<<(std::ostream &stream, ProtFlags flags) {
 	char buf[11] = "----------";
 
-	if (hasFlag(flags, ProtFlags::AllExecute)) { buf[9] = 'x'; }
-	if (hasFlag(flags, ProtFlags::AllWrite)) { buf[8] = 'w'; }
-	if (hasFlag(flags, ProtFlags::AllRead)) { buf[7] = 'r'; }
-	if (hasFlag(flags, ProtFlags::GroupExecute)) { buf[6] = 'x'; }
-	if (hasFlag(flags, ProtFlags::GroupWrite)) { buf[5] = 'w'; }
-	if (hasFlag(flags, ProtFlags::GroupRead)) { buf[4] = 'r'; }
-	if (hasFlag(flags, ProtFlags::UserExecute)) { buf[3] = 'x'; }
-	if (hasFlag(flags, ProtFlags::UserWrite)) { buf[2] = 'w'; }
-	if (hasFlag(flags, ProtFlags::UserRead)) { buf[1] = 'r'; }
+	if (hasFlag(flags, ProtFlags::AllExecute)) {
+		buf[9] = 'x';
+	}
+	if (hasFlag(flags, ProtFlags::AllWrite)) {
+		buf[8] = 'w';
+	}
+	if (hasFlag(flags, ProtFlags::AllRead)) {
+		buf[7] = 'r';
+	}
+	if (hasFlag(flags, ProtFlags::GroupExecute)) {
+		buf[6] = 'x';
+	}
+	if (hasFlag(flags, ProtFlags::GroupWrite)) {
+		buf[5] = 'w';
+	}
+	if (hasFlag(flags, ProtFlags::GroupRead)) {
+		buf[4] = 'r';
+	}
+	if (hasFlag(flags, ProtFlags::UserExecute)) {
+		buf[3] = 'x';
+	}
+	if (hasFlag(flags, ProtFlags::UserWrite)) {
+		buf[2] = 'w';
+	}
+	if (hasFlag(flags, ProtFlags::UserRead)) {
+		buf[1] = 'r';
+	}
 
 	stream << buf;
 	return stream;
@@ -762,12 +780,11 @@ std::ostream &operator<<(std::ostream &stream, ProtFlags flags) {
 
 std::ostream &operator<<(std::ostream &stream, const Stat &stat) {
 	stream << "Stat { size: " << stat.size << "; u: " << stat.user << "; g: " << stat.group << "; "
-			<< stat.type << "; " << stat.prot
-			<< "; ctime: " << stat.ctime.toHttp<memory::StandartInterface>()
-			<< "; mtime: " << stat.mtime.toHttp<memory::StandartInterface>()
-			<< "; atime: " << stat.atime.toHttp<memory::StandartInterface>()
-			<< " };";
+		   << stat.type << "; " << stat.prot
+		   << "; ctime: " << stat.ctime.toHttp<memory::StandartInterface>()
+		   << "; mtime: " << stat.mtime.toHttp<memory::StandartInterface>()
+		   << "; atime: " << stat.atime.toHttp<memory::StandartInterface>() << " };";
 	return stream;
 }
 
-}
+} // namespace stappler::filesystem

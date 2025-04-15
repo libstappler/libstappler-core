@@ -178,7 +178,7 @@ Pair<FILE *, uint64_t> _openFile(const FileInfo &filename, bool readOnly, bool r
 			pos = stat.size;
 			if (!readOnly) {
 				filesystem::enumerateWritablePaths(filename, filesystem::Access::None,
-						[&](StringView path) {
+						[&](StringView path, FileFlags) {
 					if (!resume) {
 						filesystem::remove(filename);
 						file = filesystem::native::fopen_fn(path, "w+b");
@@ -188,8 +188,8 @@ Pair<FILE *, uint64_t> _openFile(const FileInfo &filename, bool readOnly, bool r
 					return false;
 				});
 			} else {
-				filesystem::enumerateReadablePaths(filename, filesystem::Access::None,
-						[&](StringView path) {
+				filesystem::enumeratePaths(filename, filesystem::Access::None,
+						[&](StringView path, FileFlags) {
 					file = filesystem::native::fopen_fn(path, "rb");
 					return false;
 				});
@@ -198,7 +198,7 @@ Pair<FILE *, uint64_t> _openFile(const FileInfo &filename, bool readOnly, bool r
 	} else {
 		if (!readOnly) {
 			filesystem::enumerateWritablePaths(filename, filesystem::Access::None,
-					[&](StringView path) {
+					[&](StringView path, FileFlags) {
 				file = filesystem::native::fopen_fn(path, "w+b");
 				return false;
 			});

@@ -81,7 +81,7 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 
 	mem_pool::perform([&, this] {
 		if (root.empty()) {
-			_data->documentRoot = filesystem::findBasePath<db::Interface>(FileCategory::AppData);
+			_data->documentRoot = filesystem::findPath<db::Interface>(FileCategory::AppData);
 		} else {
 			_data->documentRoot = root.str<Interface>();
 		}

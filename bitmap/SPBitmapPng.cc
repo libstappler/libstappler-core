@@ -34,16 +34,17 @@ struct ReadState {
 	size_t offset = 0;
 };
 
-static bool isPng(const uint8_t * data, size_t dataLen) {
-    if (dataLen <= 8) {
-        return false;
-    }
+static bool isPng(const uint8_t *data, size_t dataLen) {
+	if (dataLen <= 8) {
+		return false;
+	}
 
-    static const unsigned char PNG_SIGNATURE[] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
-    return memcmp(PNG_SIGNATURE, data, sizeof(PNG_SIGNATURE)) == 0;
+	static const unsigned char PNG_SIGNATURE[] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
+	return memcmp(PNG_SIGNATURE, data, sizeof(PNG_SIGNATURE)) == 0;
 }
 
-static bool getPngImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width, uint32_t &height) {
+static bool getPngImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width,
+		uint32_t &height) {
 	if (isPng(data.data(), data.size()) && data.size() >= 24) {
 		auto reader = BytesViewNetwork(data.data() + 16, 8);
 
@@ -64,7 +65,8 @@ static void readDynamicData(png_structp pngPtr, png_bytep data, png_size_t lengt
 struct PngReadStruct {
 	~PngReadStruct() {
 		if (png_ptr || info_ptr) {
-			png_destroy_read_struct(png_ptr ? &png_ptr : nullptr, info_ptr ? &info_ptr : nullptr, NULL);
+			png_destroy_read_struct(png_ptr ? &png_ptr : nullptr, info_ptr ? &info_ptr : nullptr,
+					NULL);
 			png_ptr = nullptr;
 			info_ptr = nullptr;
 		}
@@ -93,7 +95,7 @@ struct PngReadStruct {
 
 		state.data = inputData;
 		state.offset = 0;
-		png_set_read_fn(png_ptr,(png_voidp)&state, readDynamicData);
+		png_set_read_fn(png_ptr, (png_voidp)&state, readDynamicData);
 
 #ifdef PNG_ARM_NEON_API_SUPPORTED
 		png_set_option(png_ptr, PNG_ARM_NEON, PNG_OPTION_ON);
@@ -137,7 +139,7 @@ struct PngReadStruct {
 		auto rowbytes = png_get_rowbytes(png_ptr, info_ptr);
 
 		if (color_type == PNG_COLOR_TYPE_GRAY) {
-			info.color = (info.color == PixelFormat::A8?PixelFormat::A8:PixelFormat::I8);
+			info.color = (info.color == PixelFormat::A8 ? PixelFormat::A8 : PixelFormat::I8);
 		} else if (color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
 			info.color = PixelFormat::IA88;
 		} else if (color_type == PNG_COLOR_TYPE_RGB) {
@@ -148,7 +150,8 @@ struct PngReadStruct {
 			info.width = 0;
 			info.height = 0;
 			info.stride = 0;
-			log::format(log::Error, "libpng", "unsupported color type: %u", (unsigned int)color_type);
+			log::format(log::Error, "libpng", "unsupported color type: %u",
+					(unsigned int)color_type);
 			return false;
 		}
 
@@ -175,7 +178,9 @@ struct PngReadStruct {
 
 		if (outputData.getStride) {
 			auto rowbytes = png_get_rowbytes(png_ptr, info_ptr);
-			outputData.stride = max((uint32_t)outputData.getStride(outputData.target, outputData.color, outputData.width), (uint32_t)rowbytes);
+			outputData.stride = max((uint32_t)outputData.getStride(outputData.target,
+											outputData.color, outputData.width),
+					(uint32_t)rowbytes);
 		}
 
 		png_bytep row_pointers[outputData.height];
@@ -224,7 +229,7 @@ struct PngWriteStruct {
 			return;
 		}
 
-		info_ptr = png_create_info_struct (png_ptr);
+		info_ptr = png_create_info_struct(png_ptr);
 		if (info_ptr == nullptr) {
 			log::error("libpng", "fail to create info struct");
 			return;
@@ -237,7 +242,8 @@ struct PngWriteStruct {
 	}
 
 	PngWriteStruct(const FileInfo &filename) : PngWriteStruct() {
-		filesystem::enumerateWritablePaths(filename, filesystem::Access::None, [&] (StringView str) {
+		filesystem::enumerateWritablePaths(filename, filesystem::Access::None,
+				[&](StringView str, FileFlags) {
 			fp = filesystem::native::fopen_fn(str, "wb");
 			if (fp) {
 				return false;
@@ -268,7 +274,7 @@ struct PngWriteStruct {
 			return false;
 		}
 
-		if (setjmp (png_jmpbuf (png_ptr))) {
+		if (setjmp(png_jmpbuf(png_ptr))) {
 			log::error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
@@ -280,40 +286,32 @@ struct PngWriteStruct {
 		int color_type = 0;
 		switch (state.color) {
 		case PixelFormat::A8:
-		case PixelFormat::I8:
-			color_type = PNG_COLOR_TYPE_GRAY;
-			break;
-		case PixelFormat::IA88:
-			color_type = PNG_COLOR_TYPE_GRAY_ALPHA;
-			break;
-		case PixelFormat::RGB888:
-			color_type = PNG_COLOR_TYPE_RGB;
-			break;
-		case PixelFormat::RGBA8888:
-			color_type = PNG_COLOR_TYPE_RGBA;
-			break;
-		default:
-			return false;
+		case PixelFormat::I8: color_type = PNG_COLOR_TYPE_GRAY; break;
+		case PixelFormat::IA88: color_type = PNG_COLOR_TYPE_GRAY_ALPHA; break;
+		case PixelFormat::RGB888: color_type = PNG_COLOR_TYPE_RGB; break;
+		case PixelFormat::RGBA8888: color_type = PNG_COLOR_TYPE_RGBA; break;
+		default: return false;
 		}
 
 		/* Set image attributes. */
-		png_set_IHDR (png_ptr, info_ptr, state.width, state.height, bit_depth,
-				color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+		png_set_IHDR(png_ptr, info_ptr, state.width, state.height, bit_depth, color_type,
+				PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
 		/* Initialize rows of PNG. */
 		png_byte *row_pointers[state.height];
 		for (size_t i = 0; i < state.height; ++i) {
-			row_pointers[i] = (png_byte *)data + (invert ? state.stride * (state.height - i - 1) : state.stride * i);
+			row_pointers[i] = (png_byte *)data
+					+ (invert ? state.stride * (state.height - i - 1) : state.stride * i);
 		}
 
 		if (fp) {
-			png_init_io (png_ptr, fp);
+			png_init_io(png_ptr, fp);
 		} else {
 			png_set_write_fn(png_ptr, out, &writePngFn, nullptr);
 		}
 
-		png_set_rows (png_ptr, info_ptr, row_pointers);
-		png_write_png (png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+		png_set_rows(png_ptr, info_ptr, row_pointers);
+		png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
 		return true;
 	}
 };
@@ -328,7 +326,8 @@ static bool loadPng(const uint8_t *inputData, size_t size, BitmapWriter &outputD
 	return pngStruct.init(inputData, size) && pngStruct.load(outputData);
 }
 
-static bool savePng(const FileInfo &filename, const uint8_t *data, BitmapWriter &state, bool invert) {
+static bool savePng(const FileInfo &filename, const uint8_t *data, BitmapWriter &state,
+		bool invert) {
 	PngWriteStruct s(filename);
 	return s.write(data, state, invert);
 }
@@ -338,4 +337,4 @@ static bool writePng(const uint8_t *data, BitmapWriter &state, bool invert) {
 	return s.write(data, state, invert);
 }
 
-}
+} // namespace stappler::bitmap::png

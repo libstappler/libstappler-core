@@ -21,6 +21,7 @@
  **/
 
 #include "SPFilesystemResourceData.h"
+#include "SPCore.h"
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
 #include "SPMemInterface.h"
@@ -30,9 +31,8 @@ namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 void _initSystemPaths(FilesystemResourceData &data);
 
-void _enumerateObjects(const FilesystemResourceData &data, StringView path, Access,
-		const Callback<bool(StringView)> &);
-
+void _enumerateObjects(const FilesystemResourceData &data, FileCategory, StringView path, FileFlags,
+		Access, const Callback<bool(StringView, FileFlags)> &);
 
 } // namespace stappler::filesystem::platform
 
@@ -54,8 +54,6 @@ StringView FilesystemResourceData::getResourcePrefix(FileCategory cat) {
 	case FileCategory::UserHome: return StringView("%USER_HOME%:"); break;
 	case FileCategory::UserDesktop: return StringView("%USER_DESKTOP%:"); break;
 	case FileCategory::UserDownload: return StringView("%USER_DOWNLOAD%:"); break;
-	case FileCategory::UserTemplates: return StringView("%USER_TEMPLATES%:"); break;
-	case FileCategory::UserPublicshare: return StringView("%USER_PUBLICSHARE%:"); break;
 	case FileCategory::UserDocuments: return StringView("%USER_DOCUMENTS%:"); break;
 	case FileCategory::UserMusic: return StringView("%USER_MUSIC%:"); break;
 	case FileCategory::UserPictures: return StringView("%USER_PICTURES%:"); break;
@@ -82,104 +80,131 @@ StringView FilesystemResourceData::getResourcePrefix(FileCategory cat) {
 FilesystemResourceData::FilesystemResourceData() { addInitializer(this, &initialize, &terminate); }
 
 void FilesystemResourceData::initResource(ResourceLocation &res) {
-	if (res.path.empty()) {
+	if (res.paths.empty()) {
 		return;
 	}
 
-	auto root = filepath::root(res.path);
+	if (!hasFlag(res.flags, CategoryFlags::PlatformSpecific)) {
+		for (auto &it : res.paths) {
+			if (hasFlag(it.second, FileFlags::Writable)) {
+				filesystem::mkdir_recursive(FileInfo(it.first));
 
-	filesystem::native::mkdir_fn(root);
-	filesystem::native::mkdir_fn(res.path);
-
-	if (res.writable) {
-		// check if path is actually writable
-		if (filesystem::native::access_fn(res.path, Access::Write) != Status::Ok) {
-			res.writable = false;
+				if (filesystem::native::access_fn(it.first, Access::Write) != Status::Ok) {
+					it.second &= ~FileFlags::Writable;
+				}
+			}
 		}
 	}
 
 	res.init = true;
 }
 
-void FilesystemResourceData::findObject(StringView filename, const ResourceLocation &res, Access a,
-		const Callback<bool(StringView)> &cb) const {
-	String path;
+// recursive-logic trick - ordered enumeration without sorting
+template <typename FileCallback>
+static bool enumerateOrdered(FileFlags order, SpanView<Pair<StringView, FileFlags>> paths,
+		FileCallback &&cb) {
+	if (paths.empty()) {
+		return true;
+	}
 
-	if (!res.path.empty()) {
-		path = filepath::merge<Interface>(res.path, filename);
-		if (a == Access::None || filesystem::native::access_fn(path, a) == Status::Ok) {
-			if (!cb(path)) {
-				return;
-			}
+	bool performInFront = true;
+	auto &path = paths.front();
+	switch (order) {
+	case FileFlags::PrivateFirst:
+		if (hasFlag(path.second, FileFlags::Private)) {
+			performInFront = true;
+		} else {
+			performInFront = false;
 		}
-	}
-
-	for (auto &it : res.paths) {
-		path = filepath::merge<Interface>(it, filename);
-		if (a == Access::None || filesystem::native::access_fn(path, a) == Status::Ok) {
-			if (!cb(path)) {
-				return;
-			}
+		break;
+	case FileFlags::PublicFirst:
+		if (hasFlag(path.second, FileFlags::Public)) {
+			performInFront = true;
+		} else {
+			performInFront = false;
 		}
+		break;
+	case FileFlags::SharedFirst:
+		if (hasFlag(path.second, FileFlags::Shared)) {
+			performInFront = true;
+		} else {
+			performInFront = false;
+		}
+		break;
+	default: break;
 	}
-}
 
-void FilesystemResourceData::findObject(StringView filename, FileCategory type, Access a,
-		const Callback<bool(StringView)> &cb) const {
-	if (filepath::isAboveRoot(filename)) {
-		return;
-	}
-
-	if (type == FileCategory::Bundled) {
-		filesystem::platform::_enumerateObjects(*this, filename, a, cb);
+	if (performInFront) {
+		if (!cb(path.first, path.second)) {
+			return false;
+		}
+		if (paths.size() > 1) {
+			return enumerateOrdered(order, paths.sub(1), cb);
+		}
 	} else {
-		findObject(filename, _resourceLocations[toInt(type)], a, cb);
+		if (paths.size() > 1) {
+			if (!enumerateOrdered(order, paths.sub(1), cb)) {
+				return false;
+			}
+		}
+		if (!cb(path.first, path.second)) {
+			return false;
+		}
 	}
+	return true;
 }
 
-void FilesystemResourceData::enumerateReadablePaths(StringView path, FileCategory t, Access a,
-		const Callback<bool(StringView)> &cb) const {
-	findObject(path, t, a, cb);
-}
+void FilesystemResourceData::enumeratePaths(ResourceLocation &res, StringView filename,
+		FileFlags flags, Access a, const Callback<bool(StringView, FileFlags)> &cb) {
+	String path;
 
-void FilesystemResourceData::enumerateWritablePaths(StringView filename, FileCategory t, Access a,
-		const Callback<bool(StringView)> &cb) {
-	auto &res = _resourceLocations[toInt(t)];
-	if (!res.writable) {
-		return;
+	bool writable = hasFlag(flags, FileFlags::Writable);
+	auto pathFlags = flags & FileFlags::PathMask;
+	auto orderFlags = flags & FileFlags::OrderMask;
+
+	if (hasFlag(a, Access::Write)) {
+		pathFlags |= FileFlags::Writable;
 	}
 
+	if (writable) {
+		std::unique_lock lock(_initMutex);
+		if (!res.init) {
+			initResource(res);
+		}
+	}
+
+	enumerateOrdered(orderFlags, res.paths, [&](StringView locPath, FileFlags locFlags) {
+		if (writable && !hasFlag(locFlags, FileFlags::Writable)) {
+			return true;
+		}
+		if (pathFlags == FileFlags::None || (locFlags & pathFlags) != FileFlags::None) {
+			path = filepath::merge<Interface>(locPath, filename);
+			if (a == Access::None || filesystem::native::access_fn(path, a) == Status::Ok) {
+				if (!cb(path, locFlags)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	});
+}
+
+void FilesystemResourceData::enumeratePaths(FileCategory cat, StringView filename, FileFlags flags,
+		Access a, const Callback<bool(StringView, FileFlags)> &cb) {
 	if (filepath::isAboveRoot(filename)) {
 		return;
 	}
 
-	std::unique_lock lock(_initMutex);
-	if (!res.init) {
-		initResource(res);
+	auto &res = _resourceLocations[toInt(cat)];
 
-		// re-check writable, this assumption can fail on init
-		if (!res.writable) {
-			return;
-		}
+	if ((flags & FileFlags::PathMask) == FileFlags::None) {
+		flags |= res.defaultFileFlags;
 	}
 
-	String path;
-	if (!res.path.empty()) {
-		path = filepath::merge<Interface>(res.path, filename);
-		if (a == Access::None || filesystem::native::access_fn(path, a) == Status::Ok) {
-			if (!cb(path)) {
-				return;
-			}
-		}
-	}
-
-	for (auto &it : res.paths) {
-		path = filepath::merge<Interface>(it, filename);
-		if (a == Access::None || filesystem::native::access_fn(path, a) == Status::Ok) {
-			if (!cb(path)) {
-				return;
-			}
-		}
+	if (hasFlag(res.flags, CategoryFlags::PlatformSpecific)) {
+		filesystem::platform::_enumerateObjects(*this, cat, filename, flags, a, cb);
+	} else {
+		enumeratePaths(res, filename, flags, a, cb);
 	}
 }
 
@@ -197,64 +222,65 @@ void FilesystemResourceData::init() {
 	for (auto it : each<FileCategory>()) {
 		auto &loc = _resourceLocations[toInt(it)];
 
-		loc.path.backwardSkipChars<StringView::Chars<'/'>>();
-		for (auto &it : loc.paths) { it.backwardSkipChars<StringView::Chars<'/'>>(); }
+		for (auto &it : loc.paths) { it.first.backwardSkipChars<StringView::Chars<'/'>>(); }
 	}
 
 	_initialized = true;
 }
 
 void FilesystemResourceData::term() {
-	_home = StringView();
-
-	for (auto it : each<FileCategory>()) {
-		_resourceLocations[toInt(it)].path = StringView();
-		_resourceLocations[toInt(it)].paths.clear();
-	}
+	for (auto it : each<FileCategory>()) { _resourceLocations[toInt(it)].paths.clear(); }
 }
 
 FileCategory FilesystemResourceData::detectResourceCategory(StringView path,
-		const Callback<void(StringView)> &cb) const {
-	if (!path.is('/') && !_bundleIsTransparent) {
-		if (filesystem::platform::_exists(path)) {
-			return FileCategory::Bundled;
+		const Callback<void(StringView prefixedPath, StringView categoryPath)> &cb) const {
+	if (path.is('%')) {
+		auto cat = getResourceCategoryByPrefix(path);
+		if (cat != FileCategory::Custom) {
+			if (cb) {
+				auto prefix = _resourceLocations[toInt(cat)].prefix;
+				cb(path, path.sub(prefix.size()));
+			}
 		}
-		return FileCategory::Max;
+		return cat;
+	}
+
+	auto tmpPath = path;
+	tmpPath.skipChars<StringView::Chars<'/'>>();
+	for (auto &it : _resourceLocations) {
+		if (hasFlag(it.flags, CategoryFlags::PlatformSpecific)) {
+			if (filesystem::platform::_access(it.category, tmpPath, Access::Exists)) {
+				if (cb) {
+					cb(string::toString<Interface>(it.prefix, tmpPath), tmpPath);
+				}
+				return it.category;
+			}
+		}
 	}
 
 	// In reverse order - most concrete first
 	const ResourceLocation *targetLoc = nullptr;
 	uint32_t match = 0;
 
-	auto it = _resourceLocations.crbegin();
-	while (it != _resourceLocations.rend()) {
-		if (it->locatable) {
-			if (!it->path.empty()) {
-				if (path.starts_with(it->path) && path.at(it->path.size()) == '/') {
-					if (it->path.size() > match) {
-						targetLoc = &(*it);
-						match = it->path.size();
-					}
-				}
-			}
-			for (auto &resPath : it->paths) {
-				if (path.starts_with(resPath) && path.at(resPath.size()) == '/') {
-					if (resPath.size() > match) {
-						targetLoc = &(*it);
-						match = resPath.size();
+	for (auto &it : _resourceLocations) {
+		if (!hasFlag(it.flags, CategoryFlags::PlatformSpecific)
+				&& hasFlag(it.flags, CategoryFlags::Locateable)) {
+			for (auto &resPath : it.paths) {
+				if (path.starts_with(resPath.first) && path.at(resPath.first.size()) == '/') {
+					if (resPath.first.size() > match) {
+						targetLoc = &it;
+						match = resPath.first.size();
 					}
 				}
 			}
 		}
-
-		++it;
 	}
 
 	if (targetLoc) {
 		if (cb) {
 			path += match;
 			path.skipChars<StringView::Chars<'/'>>();
-			cb(string::toString<Interface>(targetLoc->prefix, path));
+			cb(string::toString<Interface>(targetLoc->prefix, path), path);
 		}
 		return targetLoc->category;
 	}
@@ -262,25 +288,24 @@ FileCategory FilesystemResourceData::detectResourceCategory(StringView path,
 }
 
 FileCategory FilesystemResourceData::detectResourceCategory(const FileInfo &info,
-		const Callback<void(StringView)> &cb) const {
+		const Callback<void(StringView prefixedPath, StringView categoryPath)> &cb) const {
 	if (info.category == FileCategory::Custom) {
-		return FileCategory::Max;
-	} else if (info.category == FileCategory::Bundled) {
-		if (filesystem::platform::_exists(info.path)) {
-			if (cb) {
-				auto path = info.path;
-				path.skipChars<StringView::Chars<'/'>>();
-				cb(string::toString<Interface>(
-						_resourceLocations[toInt(FileCategory::Bundled)].prefix, path));
-			}
-		}
 		return FileCategory::Max;
 	} else {
 		auto &res = _resourceLocations[toInt(info.category)];
-		if (cb) {
-			auto path = info.path;
-			path.skipChars<StringView::Chars<'/'>>();
-			cb(string::toString<Interface>(res.prefix, path));
+		if (hasFlag(res.flags, CategoryFlags::PlatformSpecific)) {
+			auto tmpPath = info.path;
+			if (filesystem::platform::_access(info.category, tmpPath, Access::Exists)) {
+				if (cb) {
+					cb(string::toString<Interface>(res.prefix, tmpPath), tmpPath);
+				}
+			}
+		} else {
+			if (cb) {
+				auto path = info.path;
+				path.skipChars<StringView::Chars<'/'>>();
+				cb(string::toString<Interface>(res.prefix, path), path);
+			}
 		}
 		return res.category;
 	}
@@ -296,8 +321,8 @@ FileCategory FilesystemResourceData::getResourceCategoryByPrefix(StringView pref
 	return FileCategory::Max;
 }
 
-bool FilesystemResourceData::enumeratePrefixedPath(StringView path, Access a,
-		const Callback<bool(StringView)> &cb) const {
+bool FilesystemResourceData::enumeratePrefixedPath(StringView path, FileFlags flags, Access a,
+		const Callback<bool(StringView, FileFlags)> &cb) const {
 	if (!path.starts_with("%")) {
 		return false;
 	}
@@ -312,7 +337,7 @@ bool FilesystemResourceData::enumeratePrefixedPath(StringView path, Access a,
 		// enumerate target dirs
 		if (path.empty()) {
 			if (a == Access::None) {
-				enumeratePaths(type, cb);
+				filesystem::enumeratePaths(type, flags, cb);
 			} else {
 				return false;
 			}
@@ -327,38 +352,40 @@ bool FilesystemResourceData::enumeratePrefixedPath(StringView path, Access a,
 			return false;
 		}
 
-		enumerateReadablePaths(reconstructed, type, a, cb);
+		filesystem::enumeratePaths(reconstructed, type, flags, a, cb);
 		return true;
 	}
 	return false;
 }
 
-static FilesystemResourceData s_filesystemPathData;
-
-bool isFileResourceCategoryWritable(FileCategory t) {
-	return s_filesystemPathData._resourceLocations[toInt(t)].writable;
+CategoryFlags FilesystemResourceData::getCategoryFlags(FileCategory cat) const {
+	return _resourceLocations[toInt(cat)].flags;
 }
 
+static FilesystemResourceData s_filesystemPathData;
+
 // enumerate all paths, that will be used to find a resource of specific types
-void enumeratePaths(FileCategory t, const Callback<bool(StringView)> &cb) {
+void enumeratePaths(FileCategory t, FileFlags flags,
+		const Callback<bool(StringView, FileFlags)> &cb) {
 	auto &res = s_filesystemPathData._resourceLocations[toInt(t)];
-	if (!res.path.empty()) {
-		if (!cb(res.path)) {
-			return;
-		}
+
+	if ((flags & FileFlags::PathMask) == FileFlags::None) {
+		flags |= res.defaultFileFlags;
 	}
 
 	for (auto &it : res.paths) {
-		if (!cb(it)) {
-			return;
+		if (flags == FileFlags::None || (it.second & flags) != FileFlags::None) {
+			if (!cb(it.first, it.second)) {
+				return;
+			}
 		}
 	}
 }
 
-void enumerateReadablePaths(StringView path, FileCategory t, Access a,
-		const Callback<bool(StringView)> &cb) {
+void enumeratePaths(StringView path, FileCategory t, FileFlags flags, Access a,
+		const Callback<bool(StringView, FileFlags)> &cb) {
 	if (t < FileCategory::Custom) {
-		s_filesystemPathData.enumerateReadablePaths(path, t, a, cb);
+		s_filesystemPathData.enumeratePaths(t, path, flags, a, cb);
 	} else {
 		memory::StandartInterface::StringType str;
 		if (!filepath::isAbsolute(path)) {
@@ -367,69 +394,23 @@ void enumerateReadablePaths(StringView path, FileCategory t, Access a,
 		}
 
 		if (a == Access::None || native::access_fn(path, a) == Status::Ok) {
-			cb(path);
+			cb(path, FileFlags::None);
 		}
 	}
 }
 
-void enumerateReadablePaths(StringView path, FileCategory category,
-		const Callback<bool(StringView)> &cb) {
-	enumerateReadablePaths(path, category, Access::None, cb);
-}
-
-void enumerateReadablePaths(const FileInfo &info, Access a, const Callback<bool(StringView)> &cb) {
-	enumerateReadablePaths(info.path, info.category, a, cb);
-}
-
-void enumerateReadablePaths(const FileInfo &info, const Callback<bool(StringView)> &cb) {
-	enumerateReadablePaths(info.path, info.category, Access::None, cb);
-}
-
-bool enumeratePrefixedPath(StringView path, Access a, const Callback<bool(StringView)> &cb) {
-	return s_filesystemPathData.enumeratePrefixedPath(path, a, cb);
-}
-
-bool enumeratePrefixedPath(StringView path, const Callback<bool(StringView)> &cb) {
-	return s_filesystemPathData.enumeratePrefixedPath(path, Access::None, cb);
-}
-
-void enumerateWritablePaths(StringView path, FileCategory t, Access a,
-		const Callback<bool(StringView)> &cb) {
-	if (t < FileCategory::Custom) {
-		s_filesystemPathData.enumerateWritablePaths(path, t, a, cb);
-	} else {
-		memory::StandartInterface::StringType str;
-		if (!filepath::isAbsolute(path)) {
-			str = currentDir<memory::StandartInterface>(path);
-			path = str;
-		}
-
-		if (a == Access::None || native::access_fn(path, a) == Status::Ok) {
-			cb(path);
-		}
-	}
-}
-
-void enumerateWritablePaths(StringView path, FileCategory category,
-		const Callback<bool(StringView)> &cb) {
-	enumerateWritablePaths(path, category, Access::None, cb);
-}
-
-void enumerateWritablePaths(const FileInfo &info, Access a, const Callback<bool(StringView)> &cb) {
-	enumerateWritablePaths(info.path, info.category, a, cb);
-}
-
-void enumerateWritablePaths(const FileInfo &info, const Callback<bool(StringView)> &cb) {
-	enumerateWritablePaths(info.path, info.category, Access::None, cb);
-}
-
-FileCategory detectResourceCategory(StringView path, const Callback<void(StringView)> &cb) {
+FileCategory detectResourceCategory(StringView path,
+		const Callback<void(StringView prefixedPath, StringView categoryPath)> &cb) {
 	return s_filesystemPathData.detectResourceCategory(path, cb);
 }
 
-FileCategory detectResourceCategory(const FileInfo &info, const Callback<void(StringView)> &cb) {
+FileCategory detectResourceCategory(const FileInfo &info,
+		const Callback<void(StringView prefixedPath, StringView categoryPath)> &cb) {
 	return s_filesystemPathData.detectResourceCategory(info, cb);
 }
 
+CategoryFlags getCategoryFlags(FileCategory cat) {
+	return s_filesystemPathData.getCategoryFlags(cat);
+}
 
 } // namespace stappler::filesystem

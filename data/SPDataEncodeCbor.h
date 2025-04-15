@@ -49,23 +49,20 @@ struct Encoder : public Interface::AllocBaseType {
 
 	static typename Interface::BytesType encode(const typename ValueType::ArrayType &arr) {
 		Encoder<Interface> enc(false);
-		for (auto &it : arr) {
-			it.encode(enc);
-		}
+		for (auto &it : arr) { it.encode(enc); }
 		return enc.data();
 	}
 
 	static typename Interface::BytesType encode(const typename ValueType::DictionaryType &arr) {
 		Encoder<Interface> enc(false);
-		for (auto &it : arr) {
-			it.encode(enc);
-		}
+		for (auto &it : arr) { it.encode(enc); }
 		return enc.data();
 	}
 
 #if MODULE_STAPPLER_FILESYSTEM
 	Encoder(const FileInfo &info) : type(File) {
-		filesystem::enumerateWritablePaths(info, filesystem::Access::None, [&] (StringView filename) {
+		filesystem::enumerateWritablePaths(info, filesystem::Access::None,
+				[&](StringView filename, FileFlags) {
 			auto path = filesystem::native::posixToNative<Interface>(filename);
 			file = new std::ofstream(path.data(), std::ios::binary);
 			if (isOpen()) {
@@ -83,7 +80,8 @@ struct Encoder : public Interface::AllocBaseType {
 		}
 	}
 
-	Encoder(bool prefix = false, size_t reserve = 1_KiB) : type(Interface::usesMemoryPool()?Vector:Buffered) {
+	Encoder(bool prefix = false, size_t reserve = 1_KiB)
+	: type(Interface::usesMemoryPool() ? Vector : Buffered) {
 		static thread_local typename ValueType::BytesType tl_buffer;
 		if constexpr (Interface::usesMemoryPool()) {
 			buffer = new typename ValueType::BytesType();
@@ -105,7 +103,11 @@ struct Encoder : public Interface::AllocBaseType {
 
 	~Encoder() {
 		switch (type) {
-		case File: file->flush(); file->close(); delete file; break;
+		case File:
+			file->flush();
+			file->close();
+			delete file;
+			break;
 		case Stream: break;
 		case Vector: delete buffer; break;
 		default: break;
@@ -117,9 +119,7 @@ struct Encoder : public Interface::AllocBaseType {
 		case File: file->put(c); break;
 		case Stream: (*stream) << c; break;
 		case Buffered:
-		case Vector:
-			buffer->emplace_back(c);
-			break;
+		case Vector: buffer->emplace_back(c); break;
 		default: break;
 		}
 	}
@@ -183,8 +183,12 @@ public: // CBOR format impl
 	inline void write(const typename ValueType::StringType &str) { _writeString(*this, str); }
 	inline void write(const StringView &str) { _writeString(*this, str); }
 	inline void write(const typename ValueType::BytesType &data) { _writeBytes(*this, data); }
-	inline void onBeginArray(const typename ValueType::ArrayType &arr) { _writeArrayStart(*this, arr.size()); }
-	inline void onBeginDict(const typename ValueType::DictionaryType &dict) { _writeMapStart(*this, dict.size()); }
+	inline void onBeginArray(const typename ValueType::ArrayType &arr) {
+		_writeArrayStart(*this, arr.size());
+	}
+	inline void onBeginDict(const typename ValueType::DictionaryType &dict) {
+		_writeMapStart(*this, dict.size());
+	}
 
 private:
 	union {
@@ -198,16 +202,19 @@ private:
 
 
 template <typename Interface>
-inline auto writeArray(const typename ValueTemplate<Interface>::ArrayType &arr) -> typename Interface::BytesType {
+inline auto writeArray(const typename ValueTemplate<Interface>::ArrayType &arr) ->
+		typename Interface::BytesType {
 	return Encoder<Interface>::encode(arr);
 }
 template <typename Interface>
-inline auto writeObject(const typename ValueTemplate<Interface>::DictionaryType &dict) -> typename Interface::BytesType {
+inline auto writeObject(const typename ValueTemplate<Interface>::DictionaryType &dict) ->
+		typename Interface::BytesType {
 	return Encoder<Interface>::encode(dict);
 }
 
 template <typename Interface>
-inline auto write(const ValueTemplate<Interface> &data, size_t reserve = 1_KiB) -> typename Interface::BytesType {
+inline auto write(const ValueTemplate<Interface> &data, size_t reserve = 1_KiB) ->
+		typename Interface::BytesType {
 	Encoder<Interface> enc(true, reserve);
 	if (enc.isOpen()) {
 		data.encode(enc);
@@ -238,6 +245,6 @@ inline bool save(const ValueTemplate<Interface> &data, const FileInfo &file) {
 }
 #endif
 
-}
+} // namespace stappler::data::cbor
 
 #endif /* STAPPLER_DATA_SPDATAENCODECBOR_H_ */

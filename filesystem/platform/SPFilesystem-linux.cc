@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "detail/SPFilesystemResourceData.h"
 #include "SPMemInterface.h"
 #include "SPSharedModule.h"
+#include <unistd.h>
 
 #if LINUX
 
@@ -36,12 +37,43 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 static char s_execPath[PATH_MAX] = {0};
+static char s_homePath[PATH_MAX] = {0};
 
 static memory::StandartInterface::StringType getEnvExt(StringView key) {
 	if (key == "EXEC_DIR") {
 		return filepath::root(StringView((char *)s_execPath)).str<memory::StandartInterface>();
 	} else if (key == "CWD") {
 		return currentDir<memory::StandartInterface>();
+	} else if (key == "XDG_DATA_HOME") {
+		auto var = ::getenv("XDG_DATA_HOME");
+		if (!var || var[0] == 0) {
+			return filepath::merge<memory::StandartInterface>(s_homePath, ".local/share");
+		}
+		return var;
+	} else if (key == "XDG_CONFIG_HOME") {
+		auto var = ::getenv("XDG_CONFIG_HOME");
+		if (!var || var[0] == 0) {
+			return filepath::merge<memory::StandartInterface>(s_homePath, ".config");
+		}
+		return var;
+	} else if (key == "XDG_STATE_HOME") {
+		auto var = ::getenv("XDG_STATE_HOME");
+		if (!var || var[0] == 0) {
+			return filepath::merge<memory::StandartInterface>(s_homePath, ".local/state");
+		}
+		return var;
+	} else if (key == "XDG_CACHE_HOME") {
+		auto var = ::getenv("XDG_CACHE_HOME");
+		if (!var || var[0] == 0) {
+			return filepath::merge<memory::StandartInterface>(s_homePath, ".cache");
+		}
+		return var;
+	} else if (key == "XDG_RUNTIME_DIR") {
+		auto var = ::getenv("XDG_RUNTIME_DIR");
+		if (!var || var[0] == 0) {
+			return string::toString<memory::StandartInterface>("/run/user/", geteuid());
+		}
+		return var;
 	} else {
 		auto e = ::getenv(key.str<memory::StandartInterface>().data());
 		if (e) {
@@ -138,8 +170,6 @@ static StringView readVariable(memory::pool_t *pool, StringView str) {
 }
 
 void _initSystemPaths(FilesystemResourceData &data) {
-	auto uid = ::geteuid();
-
 	auto home = ::getenv("HOME");
 	if (!home) {
 		log::error("filesystem", "HOME envvar is not defined");
@@ -158,124 +188,98 @@ void _initSystemPaths(FilesystemResourceData &data) {
 		data._appPathCommon = true;
 	}
 
-	data._home = StringView(home).pdup(data._pool);
-
-	ssize_t length = ::readlink("/proc/self/exe", s_execPath, sizeof(s_execPath) - 1);
+	(void)::readlink("/proc/self/exe", s_execPath, sizeof(s_execPath) - 1);
+	memcpy(s_homePath, home, strlen(home));
 
 	auto &bundledLoc = data._resourceLocations[toInt(FileCategory::Bundled)];
 
-	bundledLoc.path = StringView(s_execPath, length).pdup(data._pool);
 	bundledLoc.init = true;
-	bundledLoc.locatable = true;
+	bundledLoc.flags |= CategoryFlags::Locateable;
 
 	if (bundlePath) {
 		StringView(bundlePath).split<StringView::Chars<':'>>([&](StringView str) {
 			auto value = readVariable(data._pool, str);
 			if (!value.empty()) {
-				bundledLoc.paths.emplace_back(value);
+				bundledLoc.paths.emplace_back(value, FileFlags::Private);
 			}
 		});
 	}
 
 	auto pathEnv = ::getenv("PATH");
 	if (pathEnv) {
+		auto &res = data._resourceLocations[toInt(FileCategory::Exec)];
 		StringView(pathEnv).split<StringView::Chars<':'>>([&](StringView value) {
-			data._resourceLocations[toInt(FileCategory::Exec)].paths.emplace_back(
-					value.pdup(data._pool));
+			res.paths.emplace_back(value.pdup(data._pool), FileFlags::Shared);
 		});
-		data._resourceLocations[toInt(FileCategory::Exec)].locatable = true;
+		res.flags |= CategoryFlags::Locateable;
 	}
 
 	// search for XDG envvars
-	auto dataHome = ::getenv("XDG_DATA_HOME");
-	if (dataHome) {
-		data._resourceLocations[toInt(FileCategory::CommonData)].path =
-				StringView(dataHome).pdup(data._pool);
-	} else {
-		data._resourceLocations[toInt(FileCategory::CommonData)].path =
-				StringView(filepath::merge<memory::StandartInterface>(data._home, ".local/share"))
-						.pdup(data._pool);
+	auto dataHome = getEnvExt("XDG_DATA_HOME");
+	if (!dataHome.empty()) {
+		auto &res = data._resourceLocations[toInt(FileCategory::CommonData)];
+		res.paths.emplace_back(StringView(dataHome).pdup(data._pool), FileFlags::Shared);
+
+		auto dataDirs = ::getenv("XDG_DATA_DIRS");
+		if (dataDirs && dataDirs[0] == 0) {
+			StringView(dataDirs).split<StringView::Chars<':'>>([&](StringView value) {
+				res.paths.emplace_back(value.pdup(data._pool), FileFlags::Shared);
+			});
+		} else {
+			res.paths.emplace_back("/usr/local/share", FileFlags::Shared);
+			res.paths.emplace_back("/usr/share", FileFlags::Shared);
+		}
+
+		res.init = true;
+		res.flags |= CategoryFlags::Locateable;
 	}
 
-	auto dataDirs = ::getenv("XDG_DATA_DIRS");
-	if (dataDirs) {
-		StringView(dataDirs).split<StringView::Chars<':'>>([&](StringView value) {
-			data._resourceLocations[toInt(FileCategory::CommonData)].paths.emplace_back(
-					value.pdup(data._pool));
-		});
-	} else {
-		data._resourceLocations[toInt(FileCategory::CommonData)].paths.emplace_back(
-				"/usr/local/share");
-		data._resourceLocations[toInt(FileCategory::CommonData)].paths.emplace_back("/usr/share");
+	auto configHome = getEnvExt("XDG_CONFIG_HOME");
+	if (!configHome.empty()) {
+		auto &res = data._resourceLocations[toInt(FileCategory::CommonConfig)];
+		res.paths.emplace_back(StringView(configHome).pdup(data._pool), FileFlags::Shared);
+
+		auto configDirs = ::getenv("XDG_CONFIG_DIRS");
+		if (configDirs) {
+			StringView(configDirs).split<StringView::Chars<':'>>([&](StringView value) {
+				res.paths.emplace_back(value.pdup(data._pool), FileFlags::Shared);
+			});
+		} else {
+			res.paths.emplace_back("/etc/xdg", FileFlags::Shared);
+		}
+
+		res.init = true;
+		res.flags |= CategoryFlags::Locateable;
 	}
 
-	data._resourceLocations[toInt(FileCategory::CommonData)].init = true;
-	data._resourceLocations[toInt(FileCategory::CommonData)].locatable = true;
-
-	auto configHome = ::getenv("XDG_CONFIG_HOME");
-	if (configHome) {
-		data._resourceLocations[toInt(FileCategory::CommonConfig)].path =
-				StringView(configHome).pdup(data._pool);
-	} else {
-		data._resourceLocations[toInt(FileCategory::CommonConfig)].path =
-				StringView(filepath::merge<memory::StandartInterface>(data._home, ".config"))
-						.pdup(data._pool);
+	auto stateHome = getEnvExt("XDG_STATE_HOME");
+	if (!stateHome.empty()) {
+		auto &res = data._resourceLocations[toInt(FileCategory::CommonState)];
+		res.paths.emplace_back(StringView(stateHome).pdup(data._pool), FileFlags::Shared);
+		res.init = true;
+		res.flags |= CategoryFlags::Locateable;
 	}
 
-	auto configDirs = ::getenv("XDG_CONFIG_DIRS");
-	if (configDirs) {
-		StringView(configDirs).split<StringView::Chars<':'>>([&](StringView value) {
-			data._resourceLocations[toInt(FileCategory::CommonConfig)].paths.emplace_back(
-					value.pdup(data._pool));
-		});
-	} else {
-		data._resourceLocations[toInt(FileCategory::CommonConfig)].paths.emplace_back("/etc/xdg");
+	auto cacheHome = getEnvExt("XDG_CACHE_HOME");
+	if (!cacheHome.empty()) {
+		auto &res = data._resourceLocations[toInt(FileCategory::CommonCache)];
+		res.paths.emplace_back(StringView(cacheHome).pdup(data._pool), FileFlags::Shared);
+		res.init = true;
+		res.flags |= CategoryFlags::Locateable;
 	}
 
-	data._resourceLocations[toInt(FileCategory::CommonConfig)].init = true;
-	data._resourceLocations[toInt(FileCategory::CommonConfig)].locatable = true;
-
-	auto stateHome = ::getenv("XDG_STATE_HOME");
-	if (stateHome) {
-		data._resourceLocations[toInt(FileCategory::CommonState)].path =
-				StringView(stateHome).pdup(data._pool);
-	} else {
-		data._resourceLocations[toInt(FileCategory::CommonState)].path =
-				StringView(filepath::merge<memory::StandartInterface>(data._home, ".local/state"))
-						.pdup(data._pool);
+	auto runtimeDir = getEnvExt("XDG_RUNTIME_DIR");
+	if (!runtimeDir.empty()) {
+		auto &res = data._resourceLocations[toInt(FileCategory::CommonRuntime)];
+		res.paths.emplace_back(StringView(runtimeDir).pdup(data._pool), FileFlags::Shared);
+		res.init = true;
+		res.flags |= CategoryFlags::Locateable;
 	}
-	data._resourceLocations[toInt(FileCategory::CommonState)].init = true;
-	data._resourceLocations[toInt(FileCategory::CommonState)].locatable = true;
 
-	auto cacheHome = ::getenv("XDG_CACHE_HOME");
-	if (cacheHome) {
-		data._resourceLocations[toInt(FileCategory::CommonCache)].path =
-				StringView(cacheHome).pdup(data._pool);
-	} else {
-		data._resourceLocations[toInt(FileCategory::CommonCache)].path =
-				StringView(filepath::merge<memory::StandartInterface>(data._home, ".cache"))
-						.pdup(data._pool);
-	}
-	data._resourceLocations[toInt(FileCategory::CommonCache)].init = true;
-	data._resourceLocations[toInt(FileCategory::CommonCache)].locatable = true;
-
-	auto runtimeDir = ::getenv("XDG_RUNTIME_DIR");
-	if (runtimeDir) {
-		data._resourceLocations[toInt(FileCategory::CommonRuntime)].path =
-				StringView(runtimeDir).pdup(data._pool);
-	} else {
-		data._resourceLocations[toInt(FileCategory::CommonRuntime)].path =
-				StringView(string::toString<memory::StandartInterface>("/run/user/", uid))
-						.pdup(data._pool);
-	}
-	data._resourceLocations[toInt(FileCategory::CommonRuntime)].init = true;
-	data._resourceLocations[toInt(FileCategory::CommonRuntime)].locatable = true;
-
-	for (auto it : each<FileCategory, FileCategory::UserHome, FileCategory::UserVideos>()) {
-		data._resourceLocations[toInt(it)].path = data._home;
-		data._resourceLocations[toInt(it)].init = true;
-	}
-	data._resourceLocations[toInt(FileCategory::UserHome)].locatable = true;
+	data._resourceLocations[toInt(FileCategory::UserHome)].paths.emplace_back(
+			StringView(s_homePath), FileFlags::Shared);
+	data._resourceLocations[toInt(FileCategory::UserHome)].flags |= CategoryFlags::Locateable;
+	data._resourceLocations[toInt(FileCategory::UserHome)].init = true;
 
 	bool userConfigFound = false;
 	auto filedata = filesystem::readIntoMemory<memory::StandartInterface>(
@@ -284,10 +288,11 @@ void _initSystemPaths(FilesystemResourceData &data) {
 		StringView strData(BytesView(filedata).toStringView());
 
 		auto writeLocation = [&](FileCategory t, StringView var) {
+			auto &res = data._resourceLocations[toInt(t)];
 			if (!var.empty()) {
-				data._resourceLocations[toInt(t)].path = var;
-				if (var != data._home) {
-					data._resourceLocations[toInt(t)].locatable = true;
+				res.paths.emplace_back(var, FileFlags::Shared);
+				if (var != StringView(s_homePath)) {
+					res.flags |= CategoryFlags::Locateable;
 				}
 			}
 		};
@@ -302,10 +307,6 @@ void _initSystemPaths(FilesystemResourceData &data) {
 						writeLocation(FileCategory::UserDesktop, readVariable(data._pool, str));
 					} else if (var == "XDG_DOWNLOAD_DIR") {
 						writeLocation(FileCategory::UserDownload, readVariable(data._pool, str));
-					} else if (var == "XDG_TEMPLATES_DIR") {
-						writeLocation(FileCategory::UserTemplates, readVariable(data._pool, str));
-					} else if (var == "XDG_PUBLICSHARE_DIR") {
-						writeLocation(FileCategory::UserPublicshare, readVariable(data._pool, str));
 					} else if (var == "XDG_DOCUMENTS_DIR") {
 						writeLocation(FileCategory::UserDocuments, readVariable(data._pool, str));
 					} else if (var == "XDG_MUSIC_DIR") {
@@ -321,110 +322,76 @@ void _initSystemPaths(FilesystemResourceData &data) {
 		userConfigFound = true;
 	}
 
+	for (auto it : each<FileCategory, FileCategory::UserHome, FileCategory::UserVideos>()) {
+		auto &res = data._resourceLocations[toInt(it)];
+		if (res.paths.empty()) {
+			res.paths.emplace_back(StringView(s_homePath), FileFlags::Shared);
+			res.init = true;
+		}
+	}
+
 	if (!userConfigFound) {
-		log::error("filesystem", "XDG defaults (user-dirs.dirs) not found, fallback to home dir");
+		log::warn("filesystem", "XDG defaults (user-dirs.dirs) not found, fallback to home dir");
 	}
 
 	if (bundleName && data._appPathCommon) {
 		// create app dirs on XDG locations
 		auto off = toInt(FileCategory::AppData) - toInt(FileCategory::CommonData);
 		for (auto it : each<FileCategory, FileCategory::AppData, FileCategory::AppRuntime>()) {
-			data._resourceLocations[toInt(it)].path =
+			auto &res = data._resourceLocations[toInt(it)];
+			res.paths.emplace_back(
 					StringView(filepath::merge<memory::StandartInterface>(
-									   data._resourceLocations[toInt(it) - off].path, bundleName))
-							.pdup(data._pool);
-			data._resourceLocations[toInt(it)].writable = true;
+									   data._resourceLocations[toInt(it) - off].paths.front().first,
+									   bundleName))
+							.pdup(data._pool),
+					FileFlags::Private | FileFlags::Public);
+			res.flags |= CategoryFlags::Locateable;
 		}
 	} else {
-		auto bundlePath =
-				filepath::root(data._resourceLocations[toInt(FileCategory::Bundled)].path);
+		auto bundlePath = filepath::root(s_execPath);
 
-		data._resourceLocations[toInt(FileCategory::AppData)].path =
+		data._resourceLocations[toInt(FileCategory::AppData)].paths.emplace_back(
 				StringView(filepath::merge<memory::StandartInterface>(bundlePath, "AppData/data"))
-						.pdup(data._pool);
-		data._resourceLocations[toInt(FileCategory::AppData)].writable = true;
+						.pdup(data._pool),
+				FileFlags::Private | FileFlags::Public);
+		data._resourceLocations[toInt(FileCategory::AppData)].flags |= CategoryFlags::Locateable;
 
-		data._resourceLocations[toInt(FileCategory::AppConfig)].path =
+		data._resourceLocations[toInt(FileCategory::AppConfig)].paths.emplace_back(
 				StringView(filepath::merge<memory::StandartInterface>(bundlePath, "AppData/config"))
-						.pdup(data._pool);
-		data._resourceLocations[toInt(FileCategory::AppConfig)].writable = true;
+						.pdup(data._pool),
+				FileFlags::Private | FileFlags::Public);
+		data._resourceLocations[toInt(FileCategory::AppConfig)].flags |= CategoryFlags::Locateable;
 
-		data._resourceLocations[toInt(FileCategory::AppState)].path =
+		data._resourceLocations[toInt(FileCategory::AppState)].paths.emplace_back(
 				StringView(filepath::merge<memory::StandartInterface>(bundlePath, "AppData/state"))
-						.pdup(data._pool);
-		data._resourceLocations[toInt(FileCategory::AppState)].writable = true;
+						.pdup(data._pool),
+				FileFlags::Private | FileFlags::Public);
+		data._resourceLocations[toInt(FileCategory::AppState)].flags |= CategoryFlags::Locateable;
 
-		data._resourceLocations[toInt(FileCategory::AppCache)].path =
+		data._resourceLocations[toInt(FileCategory::AppCache)].paths.emplace_back(
 				StringView(filepath::merge<memory::StandartInterface>(bundlePath, "AppData/cache"))
-						.pdup(data._pool);
-		data._resourceLocations[toInt(FileCategory::AppCache)].writable = true;
+						.pdup(data._pool),
+				FileFlags::Private | FileFlags::Public);
+		data._resourceLocations[toInt(FileCategory::AppCache)].flags |= CategoryFlags::Locateable;
 
-		data._resourceLocations[toInt(FileCategory::AppRuntime)].path = StringView(
-				filepath::merge<memory::StandartInterface>(bundlePath, "AppData/runtime"))
-																				.pdup(data._pool);
-		data._resourceLocations[toInt(FileCategory::AppRuntime)].writable = true;
+		data._resourceLocations[toInt(FileCategory::AppRuntime)].paths.emplace_back(
+				StringView(
+						filepath::merge<memory::StandartInterface>(bundlePath, "AppData/runtime"))
+						.pdup(data._pool),
+				FileFlags::Private | FileFlags::Public);
+		data._resourceLocations[toInt(FileCategory::AppRuntime)].flags |= CategoryFlags::Locateable;
 	}
 }
 
-void _enumerateObjects(const FilesystemResourceData &data, StringView filename, Access a,
-		const Callback<bool(StringView)> &cb) {
+// No PlatformSpecific categories defined for now
+void _enumerateObjects(const FilesystemResourceData &data, FileCategory, StringView path, FileFlags,
+		Access, const Callback<bool(StringView, FileFlags)> &) { }
 
-	switch (a) {
-	case Access::Execute:
-	case Access::Write: return; break;
-	default: break;
-	}
+bool _access(FileCategory cat, StringView path, Access) { return false; }
 
-	auto res = data._resourceLocations[toInt(FileCategory::Bundled)];
+bool _stat(FileCategory cat, StringView path, Stat &stat) { return false; }
 
-	memory::StandartInterface::StringType path;
-
-	for (auto &it : res.paths) {
-		path = filepath::merge<memory::StandartInterface>(it, filename);
-		if (a == Access::None || filesystem::native::access_fn(path, a) == Status::Ok) {
-			if (!cb(path)) {
-				return;
-			}
-		}
-	}
-}
-
-bool _exists(StringView path) {
-	bool found = false;
-	filesystem::enumerateReadablePaths(FileInfo{path, FileCategory::Bundled}, Access::Exists,
-			[&](StringView str) {
-		found = true;
-		return false;
-	});
-
-	return found;
-}
-
-bool _stat(StringView path, Stat &stat) {
-	bool found = false;
-	filesystem::enumerateReadablePaths(FileInfo{path, FileCategory::Bundled}, Access::Exists,
-			[&](StringView str) {
-		found = filesystem::native::stat_fn(str, stat) == Status::Ok;
-		return false;
-	});
-
-	return found;
-}
-
-File _openForReading(StringView path) {
-	FILE *f = nullptr;
-	filesystem::enumerateReadablePaths(FileInfo{path, FileCategory::Bundled}, Access::Read,
-			[&](StringView str) {
-		f = native::fopen_fn(str, "r");
-		return false;
-	});
-
-	if (f) {
-		return File(f);
-	}
-
-	return File();
-}
+File _openForReading(FileCategory cat, StringView path) { return File(); }
 
 size_t _read(void *, uint8_t *buf, size_t nbytes) { return 0; }
 size_t _seek(void *, int64_t offset, io::Seek s) { return maxOf<size_t>(); }
@@ -432,16 +399,9 @@ size_t _tell(void *) { return 0; }
 bool _eof(void *) { return true; }
 void _close(void *) { }
 
-Status _ftw(StringView path, const Callback<bool(StringView path, FileType t)> &cb, int depth,
-		bool dirFirst) {
-	Status status = Status::Declined;
-	filesystem::enumerateReadablePaths(FileInfo{path, FileCategory::Bundled}, Access::Exists,
-			[&](StringView str) {
-		filesystem::native::ftw_fn(str, cb, depth, dirFirst);
-		return false;
-	});
-
-	return status;
+Status _ftw(FileCategory cat, StringView path,
+		const Callback<bool(StringView path, FileType t)> &cb, int depth, bool dirFirst) {
+	return Status::Declined;
 }
 
 } // namespace stappler::filesystem::platform

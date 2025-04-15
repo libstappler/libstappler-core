@@ -314,6 +314,7 @@ SP_PUBLIC inline auto Forward(jint value) { return value; }
 SP_PUBLIC inline auto Forward(jlong value) { return value; }
 SP_PUBLIC inline auto Forward(jfloat value) { return value; }
 SP_PUBLIC inline auto Forward(jdouble value) { return value; }
+SP_PUBLIC inline auto Forward(std::nullptr_t value) { return value; }
 
 class SP_PUBLIC Env {
 public:

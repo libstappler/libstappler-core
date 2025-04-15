@@ -59,13 +59,11 @@ struct RawEncoder : public Interface::AllocBaseType {
 	inline RawEncoder(const Callback<void(StringView)> *s) : stream(s) { }
 
 	inline void write(nullptr_t) { (*stream) << "null"; }
-	inline void write(bool value) { (*stream) << ((value)?"true":"false"); }
+	inline void write(bool value) { (*stream) << ((value) ? "true" : "false"); }
 	inline void write(int64_t value) { (*stream) << value; }
 	inline void write(double value) { (*stream) << value; }
 
-	inline void write(const typename ValueType::StringType &str) {
-		encodeString(*stream, str);
-	}
+	inline void write(const typename ValueType::StringType &str) { encodeString(*stream, str); }
 
 	inline void write(const typename ValueType::BytesType &data) {
 		(*stream) << '~';
@@ -103,7 +101,7 @@ struct RawEncoder : public Interface::AllocBaseType {
 	inline void onKey(const typename ValueType::StringType &str) { write(str); }
 	inline void onNextValue() {
 		if (!preventKey) {
-			(*stream) << ((type == Type::Dict)?';':',');
+			(*stream) << ((type == Type::Dict) ? ';' : ',');
 		} else {
 			preventKey = false;
 		}
@@ -150,10 +148,22 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 
 	PrettyEncoder(const Callback<void(StringView)> *stream) : stream(stream) { }
 
-	void write(nullptr_t) { (*stream) << "null"; offsetted = false; }
-	void write(bool value) { (*stream) << ((value)?"true":"false"); offsetted = false; }
-	void write(int64_t value) { (*stream) << value; offsetted = false; }
-	void write(double value) { (*stream) << value; offsetted = false; }
+	void write(nullptr_t) {
+		(*stream) << "null";
+		offsetted = false;
+	}
+	void write(bool value) {
+		(*stream) << ((value) ? "true" : "false");
+		offsetted = false;
+	}
+	void write(int64_t value) {
+		(*stream) << value;
+		offsetted = false;
+	}
+	void write(double value) {
+		(*stream) << value;
+		offsetted = false;
+	}
 
 	void write(const typename ValueType::StringType &str) {
 		encodeString(*stream, str);
@@ -183,7 +193,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 		}
 
 		if (!isObjectArray(arr)) {
-			++ depth;
+			++depth;
 			bstack.push_back(false);
 			offsetted = false;
 		} else {
@@ -194,19 +204,15 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	void onEndArray(const typename ValueType::ArrayType &arr) {
 		if (!bstack.empty()) {
 			if (!bstack.back()) {
-				-- depth;
+				--depth;
 				(*stream) << '\n';
-				for (size_t i = 0; i < depth; i++) {
-					(*stream) << '\t';
-				}
+				for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 			}
 			bstack.pop_back();
 		} else {
-			-- depth;
+			--depth;
 			(*stream) << '\n';
-			for (size_t i = 0; i < depth; i++) {
-				(*stream) << '\t';
-			}
+			for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 		}
 		if (type != Type::Plain) {
 			(*stream) << ')';
@@ -217,31 +223,25 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	void onBeginDict(const typename ValueType::DictionaryType &dict) {
 		(*stream) << '(';
 		type = Type::Dict;
-		++ depth;
+		++depth;
 	}
 
 	void onEndDict(const typename ValueType::DictionaryType &dict) {
-		-- depth;
+		--depth;
 		(*stream) << '\n';
-		for (size_t i = 0; i < depth; i++) {
-			(*stream) << '\t';
-		}
+		for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 		(*stream) << ')';
 		popComplex = true;
 	}
 
 	void onKey(const typename ValueType::StringType &str) {
 		(*stream) << '\n';
-		for (size_t i = 0; i < depth; i++) {
-			(*stream) << '\t';
-		}
+		for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 		write(str);
 		offsetted = true;
 	}
 
-	void onNextValue() {
-		(*stream) << ((type == Type::Dict)?';':',');
-	}
+	void onNextValue() { (*stream) << ((type == Type::Dict) ? ';' : ','); }
 
 	void onValue(const ValueType &val) {
 		if (depth > 0) {
@@ -250,9 +250,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 			} else {
 				if (!offsetted) {
 					(*stream) << '\n';
-					for (size_t i = 0; i < depth; i++) {
-						(*stream) << '\t';
-					}
+					for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 					offsetted = true;
 				}
 			}
@@ -293,7 +291,8 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 };
 
 template <typename Interface>
-inline void write(const Callback<void(StringView)> &stream, const ValueTemplate<Interface> &val, bool pretty) {
+inline void write(const Callback<void(StringView)> &stream, const ValueTemplate<Interface> &val,
+		bool pretty) {
 	if (pretty) {
 		PrettyEncoder<Interface> encoder(&stream);
 		val.encode(encoder);
@@ -304,11 +303,10 @@ inline void write(const Callback<void(StringView)> &stream, const ValueTemplate<
 }
 
 template <typename Interface>
-inline auto write(const ValueTemplate<Interface> &val, bool pretty = false) -> typename Interface::StringType {
+inline auto write(const ValueTemplate<Interface> &val, bool pretty = false) ->
+		typename Interface::StringType {
 	typename Interface::StringType stream;
-	write<Interface>([&] (StringView str) {
-		stream.append(str.data(), str.size());
-	}, val, pretty);
+	write<Interface>([&](StringView str) { stream.append(str.data(), str.size()); }, val, pretty);
 	return stream;
 }
 
@@ -316,13 +314,12 @@ inline auto write(const ValueTemplate<Interface> &val, bool pretty = false) -> t
 template <typename Interface>
 bool save(const ValueTemplate<Interface> &val, const FileInfo &info, bool pretty) {
 	bool success = false;
-	filesystem::enumerateWritablePaths(info, filesystem::Access::None, [&] (StringView ipath) {
+	filesystem::enumerateWritablePaths(info, filesystem::Access::None,
+			[&](StringView ipath, FileFlags) {
 		auto path = filesystem::native::posixToNative<Interface>(ipath);
 		std::ofstream stream(path.data());
 		if (stream.is_open()) {
-			write([&] (StringView str) {
-				stream.write(str.data(), str.size());
-			}, val, pretty);
+			write([&](StringView str) { stream.write(str.data(), str.size()); }, val, pretty);
 			stream.flush();
 			stream.close();
 			success = true;
@@ -338,6 +335,6 @@ auto toString(const ValueTemplate<Interface> &data, bool pretty) -> typename Int
 	return write(data, pretty);
 }
 
-}
+} // namespace stappler::data::serenity
 
 #endif /* STAPPLER_DATA_SPDATAENCODESERENITY_H_ */

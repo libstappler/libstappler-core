@@ -33,59 +33,51 @@ void ApplicationInterface::defineUserScheme(Scheme &scheme) {
 	scheme.define({
 		db::Field::Text("name", db::Transform::Alias, db::Flags::Required),
 		db::Field::Bytes("pubkey", db::Transform::PublicKey, db::Flags::Indexed),
-		db::Field::Password("password", db::PasswordSalt(config::DEFAULT_PASSWORD_SALT), db::Flags::Required | db::Flags::Protected),
+		db::Field::Password("password", db::PasswordSalt(config::DEFAULT_PASSWORD_SALT),
+				db::Flags::Required | db::Flags::Protected),
 		db::Field::Boolean("isAdmin", Value(false)),
-		db::Field::Extra("data", Vector<db::Field>({
-			db::Field::Text("email", db::Transform::Email),
-			db::Field::Text("public"),
-			db::Field::Text("desc"),
-		})),
+		db::Field::Extra("data",
+				Vector<db::Field>({
+					db::Field::Text("email", db::Transform::Email),
+					db::Field::Text("public"),
+					db::Field::Text("desc"),
+				})),
 		db::Field::Text("email", db::Transform::Email, db::Flags::Unique),
 	});
 }
 
 void ApplicationInterface::defineFileScheme(Scheme &scheme) {
-	scheme.define({
-		db::Field::Text("location", db::Transform::Url),
+	scheme.define({db::Field::Text("location", db::Transform::Url),
 		db::Field::Text("type", db::Flags::ReadOnly),
 		db::Field::Integer("size", db::Flags::ReadOnly),
 		db::Field::Integer("mtime", db::Flags::AutoMTime | db::Flags::ReadOnly),
-		db::Field::Extra("image", Vector<db::Field>{
-			db::Field::Integer("width"),
-			db::Field::Integer("height"),
-		})
-	});
+		db::Field::Extra("image",
+				Vector<db::Field>{
+					db::Field::Integer("width"),
+					db::Field::Integer("height"),
+				})});
 }
 
 void ApplicationInterface::defineErrorScheme(Scheme &scheme) {
-	scheme.define({
-		db::Field::Boolean("hidden", Value(false)),
-		db::Field::Boolean("delivered", Value(false)),
-		db::Field::Text("name"),
-		db::Field::Text("documentRoot"),
-		db::Field::Text("url"),
-		db::Field::Text("request"),
-		db::Field::Text("ip"),
-		db::Field::Data("headers"),
-		db::Field::Data("data"),
+	scheme.define({db::Field::Boolean("hidden", Value(false)),
+		db::Field::Boolean("delivered", Value(false)), db::Field::Text("name"),
+		db::Field::Text("documentRoot"), db::Field::Text("url"), db::Field::Text("request"),
+		db::Field::Text("ip"), db::Field::Data("headers"), db::Field::Data("data"),
 		db::Field::Integer("time"),
 		db::Field::Custom(new db::FieldTextArray("tags", db::Flags::Indexed,
-				db::DefaultFn([&] (const Value &data) -> Value {
-			Vector<String> tags;
-			for (auto &it : data.getArray("data")) {
-				auto text = it.getString("source");
-				if (!text.empty()) {
-					emplace_ordered(tags, text);
-				}
+				db::DefaultFn([&](const Value &data) -> Value {
+		Vector<String> tags;
+		for (auto &it : data.getArray("data")) {
+			auto text = it.getString("source");
+			if (!text.empty()) {
+				emplace_ordered(tags, text);
 			}
+		}
 
-			Value ret;
-			for (auto &it : tags) {
-				ret.addString(it);
-			}
-			return ret;
-		})))
-	});
+		Value ret;
+		for (auto &it : tags) { ret.addString(it); }
+		return ret;
+	})))});
 }
 
 ApplicationInterface::~ApplicationInterface() { }
@@ -101,14 +93,15 @@ db::Adapter ApplicationInterface::getAdapterFromContext() const {
 	return db::Adapter(nullptr, nullptr);
 }
 
-void ApplicationInterface::scheduleAyncDbTask(const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const {
+void ApplicationInterface::scheduleAyncDbTask(
+		const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const {
 	log::error("ApplicationInterface", "scheduleAyncDbTask is not define");
 	::abort();
 }
 
 StringView ApplicationInterface::getDocumentRoot() const {
 	StringView ret;
-	filesystem::enumeratePaths(FileCategory::AppData, [&] (StringView path) {
+	filesystem::enumeratePaths(FileCategory::AppData, [&](StringView path, FileFlags) {
 		ret = path;
 		return false;
 	});
@@ -142,7 +135,7 @@ Adapter::Adapter(const Adapter &other) {
 	_interface = other._interface;
 }
 
-Adapter& Adapter::operator=(const Adapter &other) {
+Adapter &Adapter::operator=(const Adapter &other) {
 	_application = other._application;
 	_interface = other._interface;
 	return *this;
@@ -158,7 +151,7 @@ String Adapter::getTransactionKey() const {
 		return ret;
 	}
 
-	char buf[32] = { 0 };
+	char buf[32] = {0};
 	auto prefix = StringView(config::STORAGE_TRANSACTION_PREFIX);
 	memcpy(buf, prefix.data(), prefix.size());
 	stappler::base16::encode(buf + prefix.size(), 32 - prefix.size(),
@@ -166,17 +159,14 @@ String Adapter::getTransactionKey() const {
 	return String(buf, prefix.size() + sizeof(void *) * 2);
 }
 
-bool Adapter::set(const stappler::CoderSource &key, const Value &val, stappler::TimeInterval maxAge) const {
+bool Adapter::set(const stappler::CoderSource &key, const Value &val,
+		stappler::TimeInterval maxAge) const {
 	return _interface->set(key, val, maxAge);
 }
 
-Value Adapter::get(const stappler::CoderSource &key) const {
-	return _interface->get(key);
-}
+Value Adapter::get(const stappler::CoderSource &key) const { return _interface->get(key); }
 
-bool Adapter::clear(const stappler::CoderSource &key) const {
-	return _interface->clear(key);
-}
+bool Adapter::clear(const stappler::CoderSource &key) const { return _interface->clear(key); }
 
 Vector<int64_t> Adapter::performQueryListForIds(const QueryList &ql, size_t count) const {
 	return _interface->performQueryListForIds(ql, count);
@@ -190,25 +180,23 @@ Value Adapter::performQueryList(const QueryList &ql, size_t count, bool forUpdat
 	return Value();
 }
 
-bool Adapter::init(const BackendInterface::Config &cfg, const Map<StringView, const Scheme *> &schemes) const {
+bool Adapter::init(const BackendInterface::Config &cfg,
+		const Map<StringView, const Scheme *> &schemes) const {
 	Scheme::initSchemes(schemes);
 	return _interface->init(cfg, schemes);
 }
 
-void Adapter::makeSessionsCleanup() const {
-	_interface->makeSessionsCleanup();
-}
+void Adapter::makeSessionsCleanup() const { _interface->makeSessionsCleanup(); }
 
-User * Adapter::authorizeUser(const Auth &auth, const StringView &name, const StringView &password) const {
+User *Adapter::authorizeUser(const Auth &auth, const StringView &name,
+		const StringView &password) const {
 	if (_interface) {
 		return _interface->authorizeUser(auth, name, password);
 	}
 	return nullptr;
 }
 
-void Adapter::broadcast(const Bytes &data) const {
-	_interface->broadcast(data);
-}
+void Adapter::broadcast(const Bytes &data) const { _interface->broadcast(data); }
 
 void Adapter::broadcast(const Value &val) const {
 	broadcast(data::write<Interface>(val, EncodeFormat::Cbor));
@@ -249,16 +237,14 @@ bool Adapter::performWithTransaction(const Callback<bool(const db::Transaction &
 	return false;
 }
 
-int64_t Adapter::getDeltaValue(const Scheme &s) {
-	return _interface->getDeltaValue(s);
-}
+int64_t Adapter::getDeltaValue(const Scheme &s) { return _interface->getDeltaValue(s); }
 
 int64_t Adapter::getDeltaValue(const Scheme &s, const FieldView &v, uint64_t id) {
 	return _interface->getDeltaValue(s, v, id);
 }
 
-bool Adapter::foreach(Worker &w, const Query &q, const Callback<bool(Value &)> &cb) const {
-	return _interface->foreach(w, q, cb);
+bool Adapter::foreach (Worker &w, const Query &q, const Callback<bool(Value &)> &cb) const {
+	return _interface->foreach (w, q, cb);
 }
 
 Value Adapter::select(Worker &w, const Query &q) const {
@@ -298,7 +284,7 @@ Value Adapter::create(Worker &w, Value &changeSet) const {
 			} else {
 				if (it.second.hasFlag(Flags::Required)) {
 					w.getApplicationInterface()->error("Storage", "No value for required field",
-							Value({ std::make_pair("field", Value(it.first)) }));
+							Value({std::make_pair("field", Value(it.first))}));
 					stop = true;
 				}
 			}
@@ -312,7 +298,7 @@ Value Adapter::create(Worker &w, Value &changeSet) const {
 				} else {
 					if (it.second.hasFlag(Flags::Required)) {
 						w.getApplicationInterface()->error("Storage", "No value for required field",
-								Value({ std::make_pair("field", Value(it.first)) }));
+								Value({std::make_pair("field", Value(it.first))}));
 						stop = true;
 					}
 				}
@@ -347,7 +333,7 @@ Value Adapter::create(Worker &w, Value &changeSet) const {
 	processFullTextFields(scheme, changeSet, inputFields, inputRows);
 
 	auto ret = _interface->create(w, inputFields, inputRows, changeSet.isArray());
-	auto updateData = [&] (Value &value) -> bool {
+	auto updateData = [&](Value &value) -> bool {
 		for (auto &it : value.asDict()) {
 			auto f = w.scheme().getField(it.first);
 			if (f && f->getType() == Type::Virtual) {
@@ -380,7 +366,8 @@ Value Adapter::create(Worker &w, Value &changeSet) const {
 	return ret;
 }
 
-static void Adapter_mergeValues(const Scheme &scheme, const Field &f, const Value &obj, Value &original, Value &newVal) {
+static void Adapter_mergeValues(const Scheme &scheme, const Field &f, const Value &obj,
+		Value &original, Value &newVal) {
 	if (f.getType() == Type::Extra) {
 		if (newVal.isDictionary()) {
 			auto &extraFields = static_cast<const FieldExtra *>(f.getSlot())->fields;
@@ -389,7 +376,8 @@ static void Adapter_mergeValues(const Scheme &scheme, const Field &f, const Valu
 				if (f_it != extraFields.end()) {
 					auto slot = f_it->second.getSlot();
 					auto &val = original.getValue(it.first);
-					if (!slot->replaceFilterFn || slot->replaceFilterFn(scheme, obj, val, it.second)) {
+					if (!slot->replaceFilterFn
+							|| slot->replaceFilterFn(scheme, obj, val, it.second)) {
 						if (!it.second.isNull()) {
 							if (val) {
 								Adapter_mergeValues(scheme, f_it->second, obj, val, it.second);
@@ -410,7 +398,8 @@ static void Adapter_mergeValues(const Scheme &scheme, const Field &f, const Valu
 	}
 }
 
-Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch, const Set<const Field *> &fields) const {
+Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch,
+		const Set<const Field *> &fields) const {
 	bool hasNonVirtualUpdates = false;
 	Map<const FieldVirtual *, Value> virtualWrites;
 
@@ -425,7 +414,8 @@ Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch, const Set
 			if (!patchValue.isNull()) {
 				if (val) {
 					inputRow.values.emplace_back(Value(val));
-					Adapter_mergeValues(w.scheme(), *it, obj, inputRow.values.back().value, patchValue);
+					Adapter_mergeValues(w.scheme(), *it, obj, inputRow.values.back().value,
+							patchValue);
 				} else {
 					inputRow.values.emplace_back(Value(sp::move(patchValue)));
 				}
@@ -457,10 +447,11 @@ Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch, const Set
 			hasNonVirtualUpdates = true;
 		} else {
 			if (inputRow.values[i].hasValue()) {
-				virtualWrites.emplace(it.field->getSlot<FieldVirtual>(), move(inputRow.values[i].value));
+				virtualWrites.emplace(it.field->getSlot<FieldVirtual>(),
+						move(inputRow.values[i].value));
 			}
 		}
-		++ i;
+		++i;
 	}
 
 	Value ret;
@@ -487,13 +478,9 @@ Value Adapter::save(Worker &w, uint64_t oid, Value &obj, Value &patch, const Set
 	return ret;
 }
 
-bool Adapter::remove(Worker &w, uint64_t oid) const {
-	return _interface->remove(w, oid);
-}
+bool Adapter::remove(Worker &w, uint64_t oid) const { return _interface->remove(w, oid); }
 
-size_t Adapter::count(Worker &w, const Query &q) const {
-	return _interface->count(w, q);
-}
+size_t Adapter::count(Worker &w, const Query &q) const { return _interface->count(w, q); }
 
 Value Adapter::field(Action a, Worker &w, uint64_t oid, const Field &f, Value &&data) const {
 	return _interface->field(a, w, oid, f, sp::move(data));
@@ -503,47 +490,40 @@ Value Adapter::field(Action a, Worker &w, const Value &obj, const Field &f, Valu
 	return _interface->field(a, w, obj, f, sp::move(data));
 }
 
-bool Adapter::addToView(const FieldView &v, const Scheme *s, uint64_t oid, const Value &data) const {
+bool Adapter::addToView(const FieldView &v, const Scheme *s, uint64_t oid,
+		const Value &data) const {
 	return _interface->addToView(v, s, oid, data);
 }
 bool Adapter::removeFromView(const FieldView &v, const Scheme *s, uint64_t oid) const {
 	return _interface->removeFromView(v, s, oid);
 }
 
-Vector<int64_t> Adapter::getReferenceParents(const Scheme &s, uint64_t oid, const Scheme *fs, const Field *f) const {
+Vector<int64_t> Adapter::getReferenceParents(const Scheme &s, uint64_t oid, const Scheme *fs,
+		const Field *f) const {
 	return _interface->getReferenceParents(s, oid, fs, f);
 }
 
-bool Adapter::beginTransaction() const {
-	return _interface->beginTransaction();
-}
+bool Adapter::beginTransaction() const { return _interface->beginTransaction(); }
 
-bool Adapter::endTransaction() const {
-	return _interface->endTransaction();
-}
+bool Adapter::endTransaction() const { return _interface->endTransaction(); }
 
-void Adapter::cancelTransaction() const {
-	_interface->cancelTransaction();
-}
+void Adapter::cancelTransaction() const { _interface->cancelTransaction(); }
 
-bool Adapter::isInTransaction() const {
-	return _interface->isInTransaction();
-}
+bool Adapter::isInTransaction() const { return _interface->isInTransaction(); }
 
 TransactionStatus Adapter::getTransactionStatus() const {
 	return _interface->getTransactionStatus();
 }
 
-void Adapter::processFullTextFields(const Scheme &scheme, Value &patch, Vector<InputField> &ifields, Vector<InputRow> &ivalues) const {
-	auto addFullTextView = [&] (const Field *f, const FieldFullTextView *slot) {
+void Adapter::processFullTextFields(const Scheme &scheme, Value &patch, Vector<InputField> &ifields,
+		Vector<InputRow> &ivalues) const {
+	auto addFullTextView = [&](const Field *f, const FieldFullTextView *slot) {
 		if (slot->viewFn) {
 			size_t target = 0;
 			auto iit = std::find(ifields.begin(), ifields.end(), InputField{f});
 			if (iit == ifields.end()) {
 				ifields.emplace_back(InputField{f});
-				for (auto &row : ivalues) {
-					row.values.emplace_back(Value());
-				}
+				for (auto &row : ivalues) { row.values.emplace_back(Value()); }
 				target = ifields.size() - 1;
 			} else {
 				target = iit - ifields.begin();
@@ -551,11 +531,11 @@ void Adapter::processFullTextFields(const Scheme &scheme, Value &patch, Vector<I
 
 			size_t i = 0;
 			for (auto &row : ivalues) {
-				auto result = slot->viewFn(scheme, patch.isArray()? patch.getValue(i):patch);
+				auto result = slot->viewFn(scheme, patch.isArray() ? patch.getValue(i) : patch);
 				if (!result.empty()) {
 					row.values[target] = InputValue(move(result));
 				}
-				++ i;
+				++i;
 			}
 		}
 	};
@@ -564,7 +544,9 @@ void Adapter::processFullTextFields(const Scheme &scheme, Value &patch, Vector<I
 		if (it.second.getType() == Type::FullTextView) {
 			auto slot = it.second.getSlot<FieldFullTextView>();
 			for (auto &p_it : ifields) {
-				if (std::find(slot->requireFields.begin(), slot->requireFields.end(), p_it.field->getName()) != slot->requireFields.end()) {
+				if (std::find(slot->requireFields.begin(), slot->requireFields.end(),
+							p_it.field->getName())
+						!= slot->requireFields.end()) {
 					addFullTextView(&it.second, slot);
 					break;
 				}
@@ -574,22 +556,12 @@ void Adapter::processFullTextFields(const Scheme &scheme, Value &patch, Vector<I
 }
 
 
-void Binder::setInterface(QueryInterface *iface) {
-	_iface = iface;
-}
-QueryInterface * Binder::getInterface() const {
-	return _iface;
-}
+void Binder::setInterface(QueryInterface *iface) { _iface = iface; }
+QueryInterface *Binder::getInterface() const { return _iface; }
 
-void Binder::writeBind(StringStream &query, int64_t val) {
-	_iface->bindInt(*this, query, val);
-}
-void Binder::writeBind(StringStream &query, uint64_t val) {
-	_iface->bindUInt(*this, query, val);
-}
-void Binder::writeBind(StringStream &query, double val) {
-	_iface->bindDouble(*this, query, val);
-}
+void Binder::writeBind(StringStream &query, int64_t val) { _iface->bindInt(*this, query, val); }
+void Binder::writeBind(StringStream &query, uint64_t val) { _iface->bindUInt(*this, query, val); }
+void Binder::writeBind(StringStream &query, double val) { _iface->bindDouble(*this, query, val); }
 void Binder::writeBind(StringStream &query, stappler::Time val) {
 	_iface->bindUInt(*this, query, val.toMicros());
 }
@@ -635,65 +607,70 @@ void Binder::writeBind(StringStream &query, const FullTextRank &rank) {
 void Binder::writeBind(StringStream &query, const FullTextQueryRef &data) {
 	_iface->bindFullTextQuery(*this, query, data);
 }
-void Binder::writeBind(StringStream &query, const stappler::sql::PatternComparator<const Value &> &cmp) {
+void Binder::writeBind(StringStream &query,
+		const stappler::sql::PatternComparator<const Value &> &cmp) {
 	if (cmp.value->isString()) {
 		switch (cmp.cmp) {
 		case Comparation::Prefix: {
-			String str; str.reserve(cmp.value->getString().size() + 1);
+			String str;
+			str.reserve(cmp.value->getString().size() + 1);
 			str.append(cmp.value->getString());
 			str.append("%");
 			_iface->bindMoveString(*this, query, sp::move(str));
 			break;
 		}
 		case Comparation::Suffix: {
-			String str; str.reserve(cmp.value->getString().size() + 1);
+			String str;
+			str.reserve(cmp.value->getString().size() + 1);
 			str.append("%");
 			str.append(cmp.value->getString());
 			_iface->bindMoveString(*this, query, sp::move(str));
 			break;
 		}
 		case Comparation::WordPart: {
-			String str; str.reserve(cmp.value->getString().size() + 2);
+			String str;
+			str.reserve(cmp.value->getString().size() + 2);
 			str.append("%");
 			str.append(cmp.value->getString());
 			str.append("%");
 			_iface->bindMoveString(*this, query, sp::move(str));
 			break;
 		}
-		default:
-			_iface->bindValue(*this, query, Value());
-			break;
+		default: _iface->bindValue(*this, query, Value()); break;
 		}
 	} else {
 		_iface->bindValue(*this, query, Value());
 	}
 }
-void Binder::writeBind(StringStream &query, const stappler::sql::PatternComparator<const StringView &> &cmp) {
+void Binder::writeBind(StringStream &query,
+		const stappler::sql::PatternComparator<const StringView &> &cmp) {
 	switch (cmp.cmp) {
 	case Comparation::Prefix: {
-		String str; str.reserve(cmp.value->size() + 1);
+		String str;
+		str.reserve(cmp.value->size() + 1);
 		str.append(cmp.value->data(), cmp.value->size());
 		str.append("%");
 		_iface->bindMoveString(*this, query, sp::move(str));
 		break;
 	}
 	case Comparation::Suffix: {
-		String str; str.reserve(cmp.value->size() + 1);
+		String str;
+		str.reserve(cmp.value->size() + 1);
 		str.append("%");
 		str.append(cmp.value->data(), cmp.value->size());
 		_iface->bindMoveString(*this, query, sp::move(str));
 		break;
 	}
 	case Comparation::WordPart: {
-		String str; str.reserve(cmp.value->size() + 2);
+		String str;
+		str.reserve(cmp.value->size() + 2);
 		str.append("%");
 		str.append(cmp.value->data(), cmp.value->size());
 		str.append("%");
 		_iface->bindMoveString(*this, query, sp::move(str));
 		break;
 	}
-	default:
-		break;
+	default: break;
 	}
 	_iface->bindMoveString(*this, query, "NULL");
 }
@@ -725,21 +702,15 @@ void Binder::writeBindArray(StringStream &query, const Value &val) {
 	if (val.isArray()) {
 		if (val.getValue(0).isInteger()) {
 			Vector<int64_t> vec;
-			for (auto &it : val.asArray()) {
-				vec.emplace_back(it.getInteger());
-			}
+			for (auto &it : val.asArray()) { vec.emplace_back(it.getInteger()); }
 			_iface->bindIntVector(*this, query, vec);
 		} else if (val.getValue(0).isDouble()) {
 			Vector<double> vec;
-			for (auto &it : val.asArray()) {
-				vec.emplace_back(it.getDouble());
-			}
+			for (auto &it : val.asArray()) { vec.emplace_back(it.getDouble()); }
 			_iface->bindDoubleVector(*this, query, vec);
 		} else if (val.getValue(0).isString()) {
 			Vector<StringView> vec;
-			for (auto &it : val.asArray()) {
-				vec.emplace_back(it.getString());
-			}
+			for (auto &it : val.asArray()) { vec.emplace_back(it.getString()); }
 			_iface->bindStringVector(*this, query, vec);
 		} else {
 			log::error("db::Binder", "Malformed Value for writeBindArray - not an array");
@@ -749,22 +720,18 @@ void Binder::writeBindArray(StringStream &query, const Value &val) {
 	}
 }
 
-void Binder::clear() {
-	_iface->clear();
-}
+void Binder::clear() { _iface->clear(); }
 
 ResultRow::ResultRow(const ResultCursor *res, size_t r) : result(res), row(r) { }
 
-ResultRow::ResultRow(const ResultRow & other) noexcept : result(other.result), row(other.row) { }
-ResultRow & ResultRow::operator=(const ResultRow &other) noexcept {
+ResultRow::ResultRow(const ResultRow &other) noexcept : result(other.result), row(other.row) { }
+ResultRow &ResultRow::operator=(const ResultRow &other) noexcept {
 	result = other.result;
 	row = other.row;
 	return *this;
 }
 
-size_t ResultRow::size() const {
-	return result->getFieldsCount();
-}
+size_t ResultRow::size() const { return result->getFieldsCount(); }
 Value ResultRow::toData(const db::Scheme &scheme, const Map<String, db::Field> &viewFields,
 		const Vector<const Field *> &virtuals) {
 	Value row(Value::Type::DICTIONARY);
@@ -777,7 +744,7 @@ Value ResultRow::toData(const db::Scheme &scheme, const Map<String, db::Field> &
 				row.setInteger(toInteger(i), n.str<Interface>());
 			}
 		} else if (n == "__vid") {
-			auto val = isNull(i)?int64_t(0):toInteger(i);
+			auto val = isNull(i) ? int64_t(0) : toInteger(i);
 			row.setInteger(val, n.str<Interface>());
 			if (deltaPtr && val == 0) {
 				deltaPtr->setString("delete", "action");
@@ -791,7 +758,7 @@ Value ResultRow::toData(const db::Scheme &scheme, const Map<String, db::Field> &
 			case DeltaAction::Update: deltaPtr->setString("update", "action"); break;
 			case DeltaAction::Delete: deltaPtr->setString("delete", "action"); break;
 			case DeltaAction::Append: deltaPtr->setString("append", "action"); break;
-			case DeltaAction::Erase: deltaPtr->setString("erase", "action");  break;
+			case DeltaAction::Erase: deltaPtr->setString("erase", "action"); break;
 			default: break;
 			}
 		} else if (n == "__d_object") {
@@ -844,75 +811,40 @@ Value ResultRow::encode() const {
 	return row;
 }
 
-StringView ResultRow::front() const {
-	return at(0);
-}
-StringView ResultRow::back() const {
-	return at(result->getFieldsCount() - 1);
-}
+StringView ResultRow::front() const { return at(0); }
+StringView ResultRow::back() const { return at(result->getFieldsCount() - 1); }
 
-bool ResultRow::isNull(size_t n) const {
-	return result->isNull(n);
-}
+bool ResultRow::isNull(size_t n) const { return result->isNull(n); }
 
-StringView ResultRow::at(size_t n) const {
-	return result->toString(n);
-}
+StringView ResultRow::at(size_t n) const { return result->toString(n); }
 
-StringView ResultRow::toString(size_t n) const {
-	return result->toString(n);
-}
-BytesView ResultRow::toBytes(size_t n) const {
-	return result->toBytes(n);
-}
+StringView ResultRow::toString(size_t n) const { return result->toString(n); }
+BytesView ResultRow::toBytes(size_t n) const { return result->toBytes(n); }
 
-int64_t ResultRow::toInteger(size_t n) const {
-	return result->toInteger(n);
-}
+int64_t ResultRow::toInteger(size_t n) const { return result->toInteger(n); }
 
-double ResultRow::toDouble(size_t n) const {
-	return result->toDouble(n);
-}
+double ResultRow::toDouble(size_t n) const { return result->toDouble(n); }
 
-bool ResultRow::toBool(size_t n) const {
-	return result->toBool(n);
-}
+bool ResultRow::toBool(size_t n) const { return result->toBool(n); }
 
-Value ResultRow::toTypedData(size_t n) const {
-	return result->toTypedData(n);
-}
+Value ResultRow::toTypedData(size_t n) const { return result->toTypedData(n); }
 
 Value ResultRow::toData(size_t n, const db::Field &f) {
-	switch(f.getType()) {
+	switch (f.getType()) {
 	case db::Type::Integer:
 	case db::Type::Object:
 	case db::Type::Set:
 	case db::Type::Array:
 	case db::Type::File:
-	case db::Type::Image:
-		return Value(toInteger(n));
-		break;
-	case db::Type::Float:
-		return Value(toDouble(n));
-		break;
-	case db::Type::Boolean:
-		return Value(toBool(n));
-		break;
-	case db::Type::Text:
-		return Value(toString(n));
-		break;
-	case db::Type::Bytes:
-		return Value(toBytes(n));
-		break;
+	case db::Type::Image: return Value(toInteger(n)); break;
+	case db::Type::Float: return Value(toDouble(n)); break;
+	case db::Type::Boolean: return Value(toBool(n)); break;
+	case db::Type::Text: return Value(toString(n)); break;
+	case db::Type::Bytes: return Value(toBytes(n)); break;
 	case db::Type::Data:
-	case db::Type::Extra:
-		return data::read<Interface, BytesView>(toBytes(n));
-		break;
-	case db::Type::Custom:
-		return result->toCustomData(n, f.getSlot<db::FieldCustom>());
-		break;
-	default:
-		break;
+	case db::Type::Extra: return data::read<Interface, BytesView>(toBytes(n)); break;
+	case db::Type::Custom: return result->toCustomData(n, f.getSlot<db::FieldCustom>()); break;
+	default: break;
 	}
 
 	return Value();
@@ -924,14 +856,13 @@ Result::Result(db::ResultCursor *iface) : _cursor(iface) {
 		_nfields = _cursor->getFieldsCount();
 	}
 }
-Result::~Result() {
-	clear();
-}
+Result::~Result() { clear(); }
 
-Result::Result(Result &&res) : _cursor(res._cursor), _success(res._success), _nfields(res._nfields) {
+Result::Result(Result &&res)
+: _cursor(res._cursor), _success(res._success), _nfields(res._nfields) {
 	res._cursor = nullptr;
 }
-Result & Result::operator=(Result &&res) {
+Result &Result::operator=(Result &&res) {
 	clear();
 	_cursor = res._cursor;
 	_success = res._success;
@@ -940,32 +871,18 @@ Result & Result::operator=(Result &&res) {
 	return *this;
 }
 
-Result::operator bool () const {
-	return _success;
-}
-bool Result::success() const {
-	return _success;
-}
+Result::operator bool() const { return _success; }
+bool Result::success() const { return _success; }
 
-Value Result::info() const {
-	return _cursor->getInfo();
-}
+Value Result::info() const { return _cursor->getInfo(); }
 
-bool Result::empty() const {
-	return _cursor->isEmpty();
-}
+bool Result::empty() const { return _cursor->isEmpty(); }
 
-int64_t Result::readId() {
-	return _cursor->toId();
-}
+int64_t Result::readId() { return _cursor->toId(); }
 
-size_t Result::getAffectedRows() const {
-	return _cursor->getAffectedRows();
-}
+size_t Result::getAffectedRows() const { return _cursor->getAffectedRows(); }
 
-size_t Result::getRowsHint() const {
-	return _cursor->getRowsHint();
-}
+size_t Result::getRowsHint() const { return _cursor->getRowsHint(); }
 
 void Result::clear() {
 	if (_cursor) {
@@ -985,33 +902,25 @@ Result::Iter Result::begin() {
 	}
 }
 
-Result::Iter Result::end() {
-	return Result::Iter(this, stappler::maxOf<size_t>());
-}
+Result::Iter Result::end() { return Result::Iter(this, stappler::maxOf<size_t>()); }
 
-ResultRow Result::current() const {
-	return ResultRow(_cursor, _row);
-}
+ResultRow Result::current() const { return ResultRow(_cursor, _row); }
 
 bool Result::next() {
 	if (_cursor->next()) {
-		++ _row;
+		++_row;
 		return true;
 	}
 	_row = stappler::maxOf<size_t>();
 	return false;
 }
 
-StringView Result::name(size_t n) const {
-	return _cursor->getFieldName(n);
-}
+StringView Result::name(size_t n) const { return _cursor->getFieldName(n); }
 
 Value Result::decode(const db::Scheme &scheme, const Vector<const Field *> &virtuals) {
 	Value ret(Value::Type::ARRAY);
 	ret.asArray().reserve(getRowsHint());
-	for (auto it : *this) {
-		ret.addValue(it.toData(scheme, Map<String, db::Field>(), virtuals));
-	}
+	for (auto it : *this) { ret.addValue(it.toData(scheme, Map<String, db::Field>(), virtuals)); }
 	return ret;
 }
 Value Result::decode(const db::Field &field, const Vector<const Field *> &virtuals) {
@@ -1019,18 +928,14 @@ Value Result::decode(const db::Field &field, const Vector<const Field *> &virtua
 	if (!empty()) {
 		if (field.getType() == db::Type::Array) {
 			auto &arrF = static_cast<const db::FieldArray *>(field.getSlot())->tfield;
-			for (auto it : *this) {
-				ret.addValue(it.toData(0, arrF));
-			}
+			for (auto it : *this) { ret.addValue(it.toData(0, arrF)); }
 		} else if (field.getType() == db::Type::View) {
 			auto v = static_cast<const db::FieldView *>(field.getSlot());
 			for (auto it : *this) {
 				ret.addValue(it.toData(*v->scheme, Map<String, db::Field>(), virtuals));
 			}
 		} else {
-			for (auto it : *this) {
-				ret.addValue(it.toData(0, field));
-			}
+			for (auto it : *this) { ret.addValue(it.toData(0, field)); }
 		}
 	}
 	return ret;
@@ -1038,10 +943,8 @@ Value Result::decode(const db::Field &field, const Vector<const Field *> &virtua
 
 Value Result::decode(const db::FieldView &field) {
 	Value ret;
-	for (auto it : *this) {
-		ret.addValue(it.toData(*field.scheme, Map<String, db::Field>()));
-	}
+	for (auto it : *this) { ret.addValue(it.toData(*field.scheme, Map<String, db::Field>())); }
 	return ret;
 }
 
-}
+} // namespace stappler::db

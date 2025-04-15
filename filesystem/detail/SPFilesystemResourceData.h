@@ -32,13 +32,10 @@ struct FilesystemResourceData : InterfaceObject<memory::StandartInterface> {
 	struct ResourceLocation {
 		FileCategory category;
 		StringView prefix;
-		StringView path;
-		Vector<StringView> paths;
+		Vector<Pair<StringView, FileFlags>> paths;
 		bool init = false;
-		bool writable = false;
-
-		// if true - can be located by detectResourceType
-		bool locatable = false;
+		CategoryFlags flags = CategoryFlags::None;
+		FileFlags defaultFileFlags = FileFlags::None;
 	};
 
 	static void initialize(void *ptr);
@@ -54,15 +51,10 @@ struct FilesystemResourceData : InterfaceObject<memory::StandartInterface> {
 
 	void initResource(ResourceLocation &);
 
-	void findObject(StringView filename, const ResourceLocation &res, Access a,
-			const Callback<bool(StringView)> &cb) const;
-	void findObject(StringView filename, FileCategory type, Access a,
-			const Callback<bool(StringView)> &cb) const;
-
-	void enumerateReadablePaths(StringView path, FileCategory t, Access a,
-			const Callback<bool(StringView)> &cb) const;
-	void enumerateWritablePaths(StringView path, FileCategory t, Access a,
-			const Callback<bool(StringView)> &cb);
+	void enumeratePaths(ResourceLocation &res, StringView filename, FileFlags flags, Access a,
+			const Callback<bool(StringView, FileFlags)> &cb);
+	void enumeratePaths(FileCategory type, StringView filename, FileFlags flags, Access a,
+			const Callback<bool(StringView, FileFlags)> &cb);
 
 	void init();
 	void term();
@@ -70,27 +62,28 @@ struct FilesystemResourceData : InterfaceObject<memory::StandartInterface> {
 	// Find resource type for a path
 	// return ResourceType::Max on failure
 	FileCategory detectResourceCategory(StringView,
-			const Callback<void(StringView)> &cb = nullptr) const;
+			const Callback<void(StringView prefixedPath, StringView categoryPath)> &cb =
+					nullptr) const;
 	FileCategory detectResourceCategory(const FileInfo &,
-			const Callback<void(StringView)> &cb = nullptr) const;
+			const Callback<void(StringView prefixedPath, StringView categoryPath)> &cb =
+					nullptr) const;
 
 	// return ResourceType::Max on failure
 	FileCategory getResourceCategoryByPrefix(StringView) const;
 
 	// follows ReadablePath rules
 	// returns false if lookup was not performed
-	bool enumeratePrefixedPath(StringView, Access a, const Callback<bool(StringView)> &cb) const;
+	bool enumeratePrefixedPath(StringView, FileFlags, Access a,
+			const Callback<bool(StringView, FileFlags)> &cb) const;
+
+	CategoryFlags getCategoryFlags(FileCategory) const;
 
 	bool _initialized = false;
 	bool _appPathCommon = false;
 
-	// Is bundle accessible with native filesystem functions
-	bool _bundleIsTransparent = true;
-
 	memory::pool_t *_pool = nullptr;
 
 	std::mutex _initMutex;
-	StringView _home;
 	std::array<ResourceLocation, toInt(FileCategory::Max)> _resourceLocations;
 };
 

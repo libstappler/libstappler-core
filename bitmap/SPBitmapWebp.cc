@@ -30,19 +30,20 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::bitmap::webp {
 
-static bool isWebpLossless(const uint8_t * data, size_t dataLen) {
+static bool isWebpLossless(const uint8_t *data, size_t dataLen) {
 	if (dataLen <= 12) {
 		return false;
 	}
 
-	static const char* WEBP_RIFF = "RIFF";
-	static const char* WEBP_WEBP = "WEBPVP8L";
+	static const char *WEBP_RIFF = "RIFF";
+	static const char *WEBP_WEBP = "WEBPVP8L";
 
 	return memcmp(data, WEBP_RIFF, 4) == 0
-			&& memcmp(static_cast<const unsigned char*>(data) + 8, WEBP_WEBP, 8) == 0;
+			&& memcmp(static_cast<const unsigned char *>(data) + 8, WEBP_WEBP, 8) == 0;
 }
 
-static bool getWebpLosslessImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width, uint32_t &height) {
+static bool getWebpLosslessImageSize(const io::Producer &file, StackBuffer<512> &data,
+		uint32_t &width, uint32_t &height) {
 	if (isWebpLossless(data.data(), data.size())) {
 		auto reader = BytesViewTemplate<Endian::Big>(data.data() + 21, 4);
 
@@ -61,19 +62,20 @@ static bool getWebpLosslessImageSize(const io::Producer &file, StackBuffer<512> 
 	return false;
 }
 
-static bool isWebp(const uint8_t * data, size_t dataLen) {
+static bool isWebp(const uint8_t *data, size_t dataLen) {
 	if (dataLen <= 12) {
 		return false;
 	}
 
-	static const char* WEBP_RIFF = "RIFF";
-	static const char* WEBP_WEBP = "WEBP";
+	static const char *WEBP_RIFF = "RIFF";
+	static const char *WEBP_WEBP = "WEBP";
 
 	return memcmp(data, WEBP_RIFF, 4) == 0
-		&& memcmp(static_cast<const unsigned char*>(data) + 8, WEBP_WEBP, 4) == 0;
+			&& memcmp(static_cast<const unsigned char *>(data) + 8, WEBP_WEBP, 4) == 0;
 }
 
-static bool getWebpImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width, uint32_t &height) {
+static bool getWebpImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width,
+		uint32_t &height) {
 	if (isWebp(data.data(), data.size())) {
 		auto reader = BytesViewTemplate<Endian::Little>(data.data() + 24, 6);
 
@@ -94,16 +96,24 @@ static bool getWebpImageSize(const io::Producer &file, StackBuffer<512> &data, u
 	return false;
 }
 
-static bool infoWebp(WebPDecoderConfig *config, const uint8_t *inputData, size_t size, ImageInfo &outputData) {
-	if (WebPInitDecoderConfig(config) == 0) return false;
-	if (WebPGetFeatures(inputData, size, &config->input) != VP8_STATUS_OK) return false;
-	if (config->input.width == 0 || config->input.height == 0) return false;
+static bool infoWebp(WebPDecoderConfig *config, const uint8_t *inputData, size_t size,
+		ImageInfo &outputData) {
+	if (WebPInitDecoderConfig(config) == 0) {
+		return false;
+	}
+	if (WebPGetFeatures(inputData, size, &config->input) != VP8_STATUS_OK) {
+		return false;
+	}
+	if (config->input.width == 0 || config->input.height == 0) {
+		return false;
+	}
 
 	outputData.color = config->input.has_alpha ? PixelFormat::RGBA8888 : PixelFormat::RGB888;
 	outputData.width = config->input.width;
 	outputData.height = config->input.height;
 
-	outputData.alpha = (config->input.has_alpha != 0) ? AlphaFormat::Unpremultiplied : AlphaFormat::Opaque;
+	outputData.alpha =
+			(config->input.has_alpha != 0) ? AlphaFormat::Unpremultiplied : AlphaFormat::Opaque;
 	outputData.stride = (uint32_t)outputData.width * getBytesPerPixel(outputData.color);
 	return true;
 }
@@ -120,7 +130,8 @@ static bool loadWebp(const uint8_t *inputData, size_t size, BitmapWriter &output
 	}
 
 	if (outputData.getStride) {
-		outputData.stride = max((uint32_t)outputData.getStride(outputData.target, outputData.color, outputData.width),
+		outputData.stride = max((uint32_t)outputData.getStride(outputData.target, outputData.color,
+										outputData.width),
 				(uint32_t)outputData.width * getBytesPerPixel(outputData.color));
 	}
 
@@ -149,14 +160,13 @@ struct WebpStruct {
 		case PixelFormat::Auto:
 			log::error("Bitmap", "Webp supports only RGB888 and RGBA8888");
 			return false;
-		default:
-			break;
+		default: break;
 		}
 		return true;
 	}
 
-	static int FileWriter(const uint8_t* data, size_t data_size, const WebPPicture* const pic) {
-		FILE* const out = (FILE *)pic->custom_ptr;
+	static int FileWriter(const uint8_t *data, size_t data_size, const WebPPicture *const pic) {
+		FILE *const out = (FILE *)pic->custom_ptr;
 		return data_size ? (fwrite(data, data_size, 1, out) == 1) : 1;
 	}
 
@@ -183,7 +193,7 @@ struct WebpStruct {
 		}
 
 		if (fp) {
-	        fclose(fp);
+			fclose(fp);
 		}
 	}
 
@@ -213,12 +223,11 @@ struct WebpStruct {
 		}
 	}
 
-	WebpStruct(BitmapWriter *v, bool lossless) : WebpStruct(lossless) {
-		out = v;
-	}
+	WebpStruct(BitmapWriter *v, bool lossless) : WebpStruct(lossless) { out = v; }
 
 	WebpStruct(const FileInfo &filename, bool lossless) : WebpStruct(lossless) {
-		filesystem::enumerateWritablePaths(filename, filesystem::Access::None, [&] (StringView str) {
+		filesystem::enumerateWritablePaths(filename, filesystem::Access::None,
+				[&](StringView str, FileFlags) {
 			fp = filesystem::native::fopen_fn(str, "wb");
 			if (fp) {
 				return false;
@@ -226,16 +235,14 @@ struct WebpStruct {
 			return true;
 		});
 
-	    if (!fp) {
+		if (!fp) {
 			log::error("Bitmap", "fail to open file ", filename, " to write webp data");
 			valid = false;
 			return;
-	    }
+		}
 	}
 
-	explicit operator bool () const {
-		return valid;
-	}
+	explicit operator bool() const { return valid; }
 
 	bool write(const uint8_t *data, BitmapWriter &state) {
 		if (!valid) {
@@ -261,15 +268,9 @@ struct WebpStruct {
 		case PixelFormat::A8:
 		case PixelFormat::I8:
 		case PixelFormat::IA88:
-		case PixelFormat::Auto:
-			return false;
-		case PixelFormat::RGB888:
-			WebPPictureImportRGB(&pic, data, state.stride);
-
-			break;
-		case PixelFormat::RGBA8888:
-			WebPPictureImportRGBA(&pic, data, state.stride);
-			break;
+		case PixelFormat::Auto: return false;
+		case PixelFormat::RGB888: WebPPictureImportRGB(&pic, data, state.stride); break;
+		case PixelFormat::RGBA8888: WebPPictureImportRGBA(&pic, data, state.stride); break;
 		}
 		pictureInit = true;
 
@@ -292,11 +293,12 @@ struct WebpStruct {
 			memcpy(out->getData(out->target, 0), writer.mem, writer.size);
 		}
 
-	    return true;
+		return true;
 	}
 };
 
-static bool saveWebpLossless(const FileInfo &filename, const uint8_t *data, BitmapWriter &state, bool invert) {
+static bool saveWebpLossless(const FileInfo &filename, const uint8_t *data, BitmapWriter &state,
+		bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color)) {
 		return false;
 	}
@@ -311,7 +313,9 @@ static bool saveWebpLossless(const FileInfo &filename, const uint8_t *data, Bitm
 
 static bool writeWebpLossless(const uint8_t *data, BitmapWriter &state, bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color) || invert) {
-		if (invert) { log::error("Bitmap", "Inverted output is not supported for webp"); }
+		if (invert) {
+			log::error("Bitmap", "Inverted output is not supported for webp");
+		}
 		return false;
 	}
 
@@ -319,9 +323,12 @@ static bool writeWebpLossless(const uint8_t *data, BitmapWriter &state, bool inv
 	return coder.write(data, state);
 }
 
-static bool saveWebpLossy(const FileInfo &filename, const uint8_t *data, BitmapWriter &state, bool invert) {
+static bool saveWebpLossy(const FileInfo &filename, const uint8_t *data, BitmapWriter &state,
+		bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color) || invert) {
-		if (invert) { log::error("Bitmap", "Inverted output is not supported for webp"); }
+		if (invert) {
+			log::error("Bitmap", "Inverted output is not supported for webp");
+		}
 		return false;
 	}
 
@@ -331,7 +338,9 @@ static bool saveWebpLossy(const FileInfo &filename, const uint8_t *data, BitmapW
 
 static bool writeWebpLossy(const uint8_t *data, BitmapWriter &state, bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color) || invert) {
-		if (invert) { log::error("Bitmap", "Inverted output is not supported for webp"); }
+		if (invert) {
+			log::error("Bitmap", "Inverted output is not supported for webp");
+		}
 		return false;
 	}
 
@@ -339,4 +348,4 @@ static bool writeWebpLossy(const uint8_t *data, BitmapWriter &state, bool invert
 	return coder.write(data, state);
 }
 
-}
+} // namespace stappler::bitmap::webp

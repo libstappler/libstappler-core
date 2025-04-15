@@ -37,14 +37,14 @@ inline void encodeString(const Callback<void(StringView)> &stream, const StringT
 	stream << '"';
 	for (auto &i : str) {
 		switch (i) {
-		case '\n' : stream << "\\n"; break;
-		case '\r' : stream << "\\r"; break;
-		case '\t' : stream << "\\t"; break;
-		case '\f' : stream << "\\f"; break;
-		case '\b' : stream << "\\b"; break;
-		case '\\' : stream << "\\\\"; break;
-		case '\"' : stream << "\\\""; break;
-		case ' ' : stream << ' '; break;
+		case '\n': stream << "\\n"; break;
+		case '\r': stream << "\\r"; break;
+		case '\t': stream << "\\t"; break;
+		case '\f': stream << "\\f"; break;
+		case '\b': stream << "\\b"; break;
+		case '\\': stream << "\\\\"; break;
+		case '\"': stream << "\\\""; break;
+		case ' ': stream << ' '; break;
 		default:
 			if (i >= 0 && i <= 0x20) {
 				stream << "\\u00" << base16::charToHex(i, true);
@@ -64,41 +64,32 @@ struct RawEncoder : public Interface::AllocBaseType {
 
 	inline RawEncoder(const Callback<void(StringView)> *s) : stream(s) { }
 
-	inline void writeData(const char *data, size_t size) {
-		(*stream) << StringView(data, size);
-	}
+	inline void writeData(const char *data, size_t size) { (*stream) << StringView(data, size); }
 
-	inline void writeData(const char *data) {
-		writeData(data, strlen(data));
-	}
+	inline void writeData(const char *data) { writeData(data, strlen(data)); }
 
-	inline void writeChar(char c) {
-		(*stream) << c;
-	}
+	inline void writeChar(char c) { (*stream) << c; }
 
 	inline void write(nullptr_t) { writeData("null", "null"_len); }
-	inline void write(bool value) { writeData((value)?"true":"false"); }
+	inline void write(bool value) { writeData((value) ? "true" : "false"); }
 	inline void write(int64_t value) { (*stream) << value; }
-	inline void write(double value) {
-		(*stream) << value;
-	}
+	inline void write(double value) { (*stream) << value; }
 
-	inline void write(const typename ValueType::StringType &str) {
-		encodeString(*stream, str);
-	}
+	inline void write(const typename ValueType::StringType &str) { encodeString(*stream, str); }
 
 	inline void write(const typename ValueType::BytesType &data) {
 		(*stream) << '"' << "BASE64:";
-		base64url::encode([&] (char c) {
-			*stream << c;
-		}, data);
+		base64url::encode([&](char c) { *stream << c; }, data);
 		(*stream) << '"';
 	}
 	inline void onBeginArray(const typename ValueType::ArrayType &arr) { (*stream) << '['; }
 	inline void onEndArray(const typename ValueType::ArrayType &arr) { (*stream) << ']'; }
 	inline void onBeginDict(const typename ValueType::DictionaryType &dict) { (*stream) << '{'; }
 	inline void onEndDict(const typename ValueType::DictionaryType &dict) { (*stream) << '}'; }
-	inline void onKey(const typename ValueType::StringType &str) { write(str); (*stream) << ':'; }
+	inline void onKey(const typename ValueType::StringType &str) {
+		write(str);
+		(*stream) << ':';
+	}
 	inline void onNextValue() { (*stream) << ','; }
 
 	const Callback<void(StringView)> *stream = nullptr;
@@ -109,19 +100,27 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	using InterfaceType = Interface;
 	using ValueType = ValueTemplate<Interface>;
 
-	PrettyEncoder(const Callback<void(StringView)> *s, bool tM = false) : timeMarkers(tM), stream(s) { }
+	PrettyEncoder(const Callback<void(StringView)> *s, bool tM = false)
+	: timeMarkers(tM), stream(s) { }
 
-	void write(nullptr_t) { (*stream) << "null"; offsetted = false; }
-	void write(bool value) { (*stream) << ((value)?"true":"false"); offsetted = false; }
+	void write(nullptr_t) {
+		(*stream) << "null";
+		offsetted = false;
+	}
+	void write(bool value) {
+		(*stream) << ((value) ? "true" : "false");
+		offsetted = false;
+	}
 	void write(int64_t value) {
-		(*stream) << value; offsetted = false;
+		(*stream) << value;
+		offsetted = false;
 		if (timeMarkers
-			&& (lastKey.find("time") != maxOf<size_t>()
-					|| lastKey.find("Time") != maxOf<size_t>()
-					|| lastKey.find("TIME") != maxOf<size_t>()
-					|| lastKey.find("date") != maxOf<size_t>()
-					|| lastKey.find("Date") != maxOf<size_t>())
-			&& (value > 1000000000000000 && value < 10000000000000000)) {
+				&& (lastKey.find("time") != maxOf<size_t>()
+						|| lastKey.find("Time") != maxOf<size_t>()
+						|| lastKey.find("TIME") != maxOf<size_t>()
+						|| lastKey.find("date") != maxOf<size_t>()
+						|| lastKey.find("Date") != maxOf<size_t>())
+				&& (value > 1'000'000'000'000'000 && value < 10'000'000'000'000'000)) {
 			(*stream) << " /* " << Time::microseconds(value).toHttp<Interface>() << " */";
 		}
 	}
@@ -136,10 +135,8 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	}
 
 	void write(const typename ValueType::BytesType &data) {
-		(*stream) << '"'  << "BASE64:";
-		base64url::encode([&] (char c) {
-			*stream << c;
-		}, data);
+		(*stream) << '"' << "BASE64:";
+		base64url::encode([&](char c) { *stream << c; }, data);
 		(*stream) << '"';
 		offsetted = false;
 	}
@@ -156,7 +153,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	void onBeginArray(const typename ValueType::ArrayType &arr) {
 		(*stream) << '[';
 		if (!isObjectArray(arr)) {
-			++ depth;
+			++depth;
 			bstack.push_back(false);
 			offsetted = false;
 		} else {
@@ -167,19 +164,15 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	void onEndArray(const typename ValueType::ArrayType &arr) {
 		if (!bstack.empty()) {
 			if (!bstack.back()) {
-				-- depth;
+				--depth;
 				(*stream) << '\n';
-				for (size_t i = 0; i < depth; i++) {
-					(*stream) << '\t';
-				}
+				for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 			}
 			bstack.pop_back();
 		} else {
-			-- depth;
+			--depth;
 			(*stream) << '\n';
-			for (size_t i = 0; i < depth; i++) {
-				(*stream) << '\t';
-			}
+			for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 		}
 		(*stream) << ']';
 		popComplex = true;
@@ -188,16 +181,14 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	void onBeginDict(const typename ValueType::DictionaryType &dict) {
 		lastKey = StringView();
 		(*stream) << '{';
-		++ depth;
+		++depth;
 	}
 
 	void onEndDict(const typename ValueType::DictionaryType &dict) {
 		lastKey = StringView();
-		-- depth;
+		--depth;
 		(*stream) << '\n';
-		for (size_t i = 0; i < depth; i++) {
-			(*stream) << '\t';
-		}
+		for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 		(*stream) << '}';
 		popComplex = true;
 	}
@@ -205,9 +196,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 	void onKey(const typename ValueType::StringType &str) {
 		lastKey = str;
 		(*stream) << '\n';
-		for (size_t i = 0; i < depth; i++) {
-			(*stream) << '\t';
-		}
+		for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 		write(str);
 		offsetted = true;
 		(*stream) << ':' << ' ';
@@ -225,9 +214,7 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 			} else {
 				if (!offsetted) {
 					(*stream) << '\n';
-					for (size_t i = 0; i < depth; i++) {
-						(*stream) << '\t';
-					}
+					for (size_t i = 0; i < depth; i++) { (*stream) << '\t'; }
 					offsetted = true;
 				}
 			}
@@ -245,7 +232,8 @@ struct PrettyEncoder : public Interface::AllocBaseType {
 };
 
 template <typename Interface>
-inline void write(const Callback<void(StringView)> &stream, const ValueTemplate<Interface> &val, bool pretty, bool timeMarkers = false) {
+inline void write(const Callback<void(StringView)> &stream, const ValueTemplate<Interface> &val,
+		bool pretty, bool timeMarkers = false) {
 	if (pretty) {
 		PrettyEncoder<Interface> encoder(&stream, timeMarkers);
 		val.encode(encoder);
@@ -256,25 +244,26 @@ inline void write(const Callback<void(StringView)> &stream, const ValueTemplate<
 }
 
 template <typename Interface>
-inline auto write(const ValueTemplate<Interface> &val, bool pretty = false, bool timeMarkers = false) -> typename Interface::StringType {
+inline auto write(const ValueTemplate<Interface> &val, bool pretty = false,
+		bool timeMarkers = false) -> typename Interface::StringType {
 	typename Interface::StringType stream;
-	write<Interface>([&] (StringView str) {
-		stream.append(str.data(), str.size());
-	}, val, pretty, timeMarkers);
+	write<Interface>([&](StringView str) { stream.append(str.data(), str.size()); }, val, pretty,
+			timeMarkers);
 	return stream;
 }
 
 #if MODULE_STAPPLER_FILESYSTEM
 template <typename Interface>
-bool save(const ValueTemplate<Interface> &val, const FileInfo &info, bool pretty, bool timeMarkers = false) {
+bool save(const ValueTemplate<Interface> &val, const FileInfo &info, bool pretty,
+		bool timeMarkers = false) {
 	bool success = false;
-	filesystem::enumerateWritablePaths(info, filesystem::Access::None, [&] (StringView ipath) {
+	filesystem::enumerateWritablePaths(info, filesystem::Access::None,
+			[&](StringView ipath, FileFlags) {
 		auto path = filesystem::native::posixToNative<Interface>(ipath);
 		std::ofstream stream(path.data());
 		if (stream.is_open()) {
-			write([&] (StringView str) {
-				stream.write(str.data(), str.size());
-			}, val, pretty, timeMarkers);
+			write([&](StringView str) { stream.write(str.data(), str.size()); }, val, pretty,
+					timeMarkers);
 			stream.flush();
 			stream.close();
 			success = true;
@@ -290,6 +279,6 @@ auto toString(const ValueTemplate<Interface> &data, bool pretty) -> typename Int
 	return write(data, pretty);
 }
 
-}
+} // namespace stappler::data::json
 
 #endif /* STAPPLER_DATA_SPDATAENCODEJSON_H_ */

@@ -24,12 +24,32 @@ THE SOFTWARE.
 #ifndef STAPPLER_FILESYSTEM_SPFILESYSTEM_H_
 #define STAPPLER_FILESYSTEM_SPFILESYSTEM_H_
 
+#include "SPEnum.h"
 #include "SPIO.h"
 #include "SPTime.h"
 #include "SPFilepath.h"
 #include "SPLog.h"
 
+#if ANDROID
+#include "SPJni.h"
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
+
+enum class CategoryFlags {
+	None = 0,
+
+	// File in this category can be reverse-located via `detectResourceCategory` and 'filepath::canonical'
+	Locateable = 1 << 0,
+
+	// Files in this category can be accessed only with platform-specific api (filesystem::platform)
+	PlatformSpecific = 1 << 1,
+
+	// Category's root directory can be removed/unmounted when app is still active
+	Removable = 1 << 2
+};
+
+SP_DEFINE_ENUM_AS_MASK(CategoryFlags)
 
 enum class MappingType {
 	Private,
@@ -229,67 +249,128 @@ SP_PUBLIC auto currentDir(StringView = StringView(), bool relative = false) ->
 // Resource paths API
 // use this to load/save application resources, instead of direct read/write with custom paths
 
+// Returns most prioritized path to search for a resources of specific types
+template <typename Interface>
+SP_PUBLIC auto findPath(FileCategory, FileFlags = FileFlags::None) ->
+		typename Interface::StringType;
+
 // returns path, from which loadable resource can be read (from application bundle or dedicated resource directory)
 template <typename Interface>
-SP_PUBLIC auto findReadablePath(StringView path, FileCategory = FileCategory::Custom,
-		Access = Access::None) -> typename Interface::StringType;
+SP_PUBLIC auto findPath(StringView path, FileCategory = FileCategory::Custom,
+		FileFlags = FileFlags::None, Access = Access::None) -> typename Interface::StringType;
 
 template <typename Interface>
-SP_PUBLIC auto findReadablePath(const FileInfo &, Access = Access::None) ->
-		typename Interface::StringType;
-
-// returns path, into which specific resource can be written (possibly creates some dirs for it)
-template <typename Interface>
-SP_PUBLIC auto findWritablePath(StringView path, FileCategory, Access = Access::None) ->
-		typename Interface::StringType;
+SP_PUBLIC auto findPath(StringView path, FileCategory cat, Access a) ->
+		typename Interface::StringType {
+	return findPath<Interface>(path, cat, FileFlags::None, a);
+}
 
 template <typename Interface>
-SP_PUBLIC auto findWritablePath(const FileInfo &, Access = Access::None) ->
-		typename Interface::StringType;
+SP_PUBLIC auto findPath(const FileInfo &info, Access a = Access::None) ->
+		typename Interface::StringType {
+	return findPath<Interface>(info.path, info.category, info.flags, a);
+}
 
-// Returns most prioritized path to search for a resources of specific types
-// For the Bundled type, returns path to the app bundle itself
 template <typename Interface>
-SP_PUBLIC auto findBasePath(FileCategory) -> typename Interface::StringType;
+SP_PUBLIC inline auto findWritablePath(FileCategory cat, FileFlags flags = FileFlags::None) ->
+		typename Interface::StringType {
+	return findPath<Interface>(cat, flags | FileFlags::Writable);
+}
 
-// Is it possible for the app to create/write a resource with specific type
-SP_PUBLIC bool isResourceTypeWritable(FileCategory);
+template <typename Interface>
+SP_PUBLIC inline auto findWritablePath(StringView path, FileCategory cat = FileCategory::Custom,
+		FileFlags flags = FileFlags::None, Access a = Access::None) ->
+		typename Interface::StringType {
+	return findPath<Interface>(path, cat, flags | FileFlags::Writable, a);
+}
+
+template <typename Interface>
+SP_PUBLIC inline auto findWritablePath(StringView path, FileCategory cat, Access a) ->
+		typename Interface::StringType {
+	return findPath<Interface>(path, cat, FileFlags::Writable, a);
+}
+
+template <typename Interface>
+SP_PUBLIC inline auto findWritablePath(const FileInfo &info, Access a = Access::None) ->
+		typename Interface::StringType {
+	return findPath<Interface>(info.path, info.category, info.flags | FileFlags::Writable, a);
+}
 
 // enumerate all paths, that will be used to find a resource of specific types
-SP_PUBLIC void enumeratePaths(FileCategory, const Callback<bool(StringView)> &);
+SP_PUBLIC void enumeratePaths(FileCategory, FileFlags,
+		const Callback<bool(StringView, FileFlags)> &);
 
-// Enumerate all candidate paths, on which specific resource can be found
-// File on candidate path should be accessable with Access mask
-// If Access::None specified, all potential locations (empty too) will be returned
-// Resource type location will not be initialized, if it was not initialized before
-SP_PUBLIC void enumerateReadablePaths(StringView path, FileCategory, Access,
-		const Callback<bool(StringView)> &);
-SP_PUBLIC void enumerateReadablePaths(StringView path, FileCategory,
-		const Callback<bool(StringView)> &);
+SP_PUBLIC void enumeratePaths(StringView path, FileCategory, FileFlags, Access,
+		const Callback<bool(StringView, FileFlags)> &);
 
-SP_PUBLIC void enumerateReadablePaths(const FileInfo &, Access, const Callback<bool(StringView)> &);
-SP_PUBLIC void enumerateReadablePaths(const FileInfo &, const Callback<bool(StringView)> &);
+SP_PUBLIC inline void enumeratePaths(FileCategory t,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(t, FileFlags::None, cb);
+}
 
-SP_PUBLIC bool enumeratePrefixedPath(StringView, Access a, const Callback<bool(StringView)> &cb);
-SP_PUBLIC bool enumeratePrefixedPath(StringView, const Callback<bool(StringView)> &cb);
+SP_PUBLIC inline void enumeratePaths(StringView path, FileCategory t, FileFlags flags,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(path, t, flags, Access::None, cb);
+}
 
-// Enumerate all candidate paths, on which specific resource can be written
-// File on candidate path should be accessable with Access mask or not existed
-// If Access::None specified, all potential locations (empty too) will be returned
-// Resource type location will be initialized (created) if it's required
-SP_PUBLIC void enumerateWritablePaths(StringView path, FileCategory, Access,
-		const Callback<bool(StringView)> &);
-SP_PUBLIC void enumerateWritablePaths(StringView path, FileCategory,
-		const Callback<bool(StringView)> &);
+SP_PUBLIC inline void enumeratePaths(StringView path, FileCategory t, Access a,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(path, t, FileFlags::None, a, cb);
+}
 
-SP_PUBLIC void enumerateWritablePaths(const FileInfo &, Access, const Callback<bool(StringView)> &);
-SP_PUBLIC void enumerateWritablePaths(const FileInfo &, const Callback<bool(StringView)> &);
+SP_PUBLIC inline void enumeratePaths(const FileInfo &info, Access a,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(info.path, info.category, info.flags, a, cb);
+}
 
-// Search for a ResourceType for absolute path
+SP_PUBLIC inline void enumeratePaths(const FileInfo &info,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(info.path, info.category, info.flags, Access::None, cb);
+}
+
+SP_PUBLIC inline void enumerateWritablePaths(FileCategory cat,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(cat, FileFlags::Writable, cb);
+}
+
+SP_PUBLIC inline void enumerateWritablePaths(FileCategory cat, FileFlags flags,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(cat, flags | FileFlags::Writable, cb);
+}
+
+SP_PUBLIC inline void enumerateWritablePaths(StringView path, FileCategory cat, Access a,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(path, cat, FileFlags::Writable, a, cb);
+}
+
+SP_PUBLIC inline void enumerateWritablePaths(StringView path, FileCategory cat, FileFlags flags,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(path, cat, flags | FileFlags::Writable, Access::None, cb);
+}
+
+SP_PUBLIC inline void enumerateWritablePaths(StringView path, FileCategory cat, FileFlags flags,
+		Access a, const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(path, cat, flags | FileFlags::Writable, a, cb);
+}
+
+SP_PUBLIC inline void enumerateWritablePaths(const FileInfo &info, Access a,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(info.path, info.category, info.flags | FileFlags::Writable, a, cb);
+}
+
+SP_PUBLIC inline void enumerateWritablePaths(const FileInfo &info,
+		const Callback<bool(StringView, FileFlags)> &cb) {
+	enumeratePaths(info.path, info.category, info.flags | FileFlags::Writable, Access::None, cb);
+}
+
+// Search for a FileCategory for absolute path
 // optionally - returns prefixed path for in in callback
-FileCategory detectResourceCategory(StringView, const Callback<void(StringView)> &cb = nullptr);
+FileCategory detectResourceCategory(StringView,
+		const Callback<void(StringView prefixedPath, StringView categoryPath)> &cb = nullptr);
 FileCategory detectResourceCategory(const FileInfo &,
-		const Callback<void(StringView)> &cb = nullptr);
+		const Callback<void(StringView prefixedPath, StringView categoryPath)> &cb = nullptr);
+
+CategoryFlags getCategoryFlags(FileCategory);
 
 // write data into file on path
 SP_PUBLIC bool write(const FileInfo &, const uint8_t *data, size_t len, bool _override = true);
@@ -353,8 +434,8 @@ SP_PUBLIC std::ostream &operator<<(std::ostream &, const Stat &);
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 #if ANDROID
-SP_PUBLIC void Android_initializeFilesystem(void *assetManager, StringView filesDir,
-		StringView cachesDir, StringView apkPath);
+SP_PUBLIC void Android_initializeFilesystem(void *assetManager, const jni::Ref &ctx,
+		StringView apkPath);
 SP_PUBLIC void Android_terminateFilesystem();
 SP_PUBLIC StringView Android_getApkPath();
 #endif
@@ -362,18 +443,18 @@ SP_PUBLIC StringView Android_getApkPath();
 template <typename Interface>
 SP_PUBLIC auto _getApplicationPath() -> typename Interface::StringType;
 
-SP_PUBLIC bool _exists(StringView path);
-SP_PUBLIC bool _stat(StringView path, Stat &);
+SP_PUBLIC bool _access(FileCategory, StringView path, Access);
+SP_PUBLIC bool _stat(FileCategory, StringView path, Stat &);
 
-SP_PUBLIC File _openForReading(StringView);
+SP_PUBLIC File _openForReading(FileCategory, StringView);
 SP_PUBLIC size_t _read(void *, uint8_t *buf, size_t nbytes);
 SP_PUBLIC size_t _seek(void *, int64_t offset, io::Seek s);
 SP_PUBLIC size_t _tell(void *);
 SP_PUBLIC bool _eof(void *);
 SP_PUBLIC void _close(void *);
 
-SP_PUBLIC Status _ftw(StringView path, const Callback<bool(StringView, FileType)> &, int depth,
-		bool dirFirst);
+SP_PUBLIC Status _ftw(FileCategory, StringView path, const Callback<bool(StringView, FileType)> &,
+		int depth, bool dirFirst);
 
 SP_PUBLIC uint32_t _getMemoryPageSize();
 SP_PUBLIC uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot,
@@ -448,10 +529,10 @@ SP_PUBLIC inline auto currentDir(StringView path, bool relative) -> typename Int
 }
 
 template <typename Interface>
-SP_PUBLIC inline auto findReadablePath(StringView path, FileCategory type, Access a) ->
+SP_PUBLIC inline auto findPath(StringView path, FileCategory type, FileFlags flags, Access a) ->
 		typename Interface::StringType {
 	typename Interface::StringType npath;
-	enumerateReadablePaths(path, type, a, [&](StringView p) {
+	enumeratePaths(path, type, flags, a, [&](StringView p, FileFlags) {
 		npath = p.str<Interface>();
 		return false;
 	});
@@ -459,30 +540,9 @@ SP_PUBLIC inline auto findReadablePath(StringView path, FileCategory type, Acces
 }
 
 template <typename Interface>
-SP_PUBLIC auto findReadablePath(const FileInfo &info, Access a) -> typename Interface::StringType {
-	return findReadablePath<Interface>(info.path, info.category, a);
-}
-
-template <typename Interface>
-SP_PUBLIC auto findWritablePath(StringView path, FileCategory type, Access a) ->
-		typename Interface::StringType {
+SP_PUBLIC auto findPath(FileCategory type, FileFlags flags) -> typename Interface::StringType {
 	typename Interface::StringType npath;
-	enumerateWritablePaths(path, type, a, [&](StringView p) {
-		npath = p.str<Interface>();
-		return false;
-	});
-	return npath;
-}
-
-template <typename Interface>
-SP_PUBLIC auto findWritablePath(const FileInfo &info, Access a) -> typename Interface::StringType {
-	return findWritablePath<Interface>(info.path, info.category, a);
-}
-
-template <typename Interface>
-SP_PUBLIC auto findBasePath(FileCategory type) -> typename Interface::StringType {
-	typename Interface::StringType npath;
-	enumeratePaths(type, [&](StringView p) {
+	enumeratePaths(type, flags, [&](StringView p, FileFlags) {
 		npath = p.str<Interface>();
 		return false;
 	});

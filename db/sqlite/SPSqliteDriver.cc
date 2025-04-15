@@ -199,7 +199,7 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 			dbname = StringView(filepath::merge<Interface>(app->getDocumentRoot(), dbname)).pdup();
 		} else {
 			filesystem::enumerateWritablePaths(FileInfo{dbname, stappler::FileCategory::AppData},
-					[&](StringView path) {
+					[&](StringView path, FileFlags) {
 				dbname = path.pdup();
 				return false;
 			});

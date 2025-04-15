@@ -27,6 +27,22 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
+FileInfo::FileInfo(StringView _path) {
+	if (_path.is('%')) {
+		category = filesystem::detectResourceCategory(_path,
+				[&](StringView prefixed, StringView p) { path = p; });
+		if (category == FileCategory::Custom) {
+			path = _path;
+		}
+	}
+	path = _path;
+}
+
+FileInfo::FileInfo(StringView _path, FileCategory cat) : path(_path), category(cat) { }
+
+FileInfo::FileInfo(StringView _path, FileCategory cat, FileFlags f)
+: path(_path), category(cat), flags(f) { }
+
 std::ostream &operator<<(std::ostream &stream, FileCategory cat) {
 	switch (cat) {
 	case FileCategory::Exec: stream << "FileCategory::Exec"; break;
@@ -34,8 +50,6 @@ std::ostream &operator<<(std::ostream &stream, FileCategory cat) {
 	case FileCategory::UserHome: stream << "FileCategory::UserHome"; break;
 	case FileCategory::UserDesktop: stream << "FileCategory::UserDesktop"; break;
 	case FileCategory::UserDownload: stream << "FileCategory::UserDownload"; break;
-	case FileCategory::UserTemplates: stream << "FileCategory::UserTemplates"; break;
-	case FileCategory::UserPublicshare: stream << "FileCategory::UserPublicshare"; break;
 	case FileCategory::UserDocuments: stream << "FileCategory::UserDocuments"; break;
 	case FileCategory::UserMusic: stream << "FileCategory::UserMusic"; break;
 	case FileCategory::UserPictures: stream << "FileCategory::UserPictures"; break;
@@ -75,21 +89,10 @@ std::ostream &operator<<(std::ostream &stream, const FileInfo &fileInfo) {
 	return stream;
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 
 namespace STAPPLER_VERSIONIZED stappler::filepath {
-
-SPUNUSED static bool inAppBundle(StringView path) {
-	if (filepath::isAbsolute(path)) {
-		return false;
-	}
-	if (filepath::isBundled(path) ||
-			(!filepath::isAboveRoot(path) && filesystem::platform::_exists(path))) {
-		return true;
-	}
-	return false;
-}
 
 // check if filepath is absolute
 bool isAbsolute(StringView path) {
@@ -124,13 +127,14 @@ bool isAboveRoot(StringView path) {
 			if (components == 0) {
 				return true;
 			}
-			-- components;
-		} else if ((str == "." && str.size() == 1) || str.size() == 0) {return false;
+			--components;
+		} else if ((str == "." && str.size() == 1) || str.size() == 0) {
+			return false;
 		} else {
-			++ components;
+			++components;
 		}
 		if (r.is('/')) {
-			++ r;
+			++r;
 		}
 	}
 	return false;
@@ -145,15 +149,16 @@ bool isEmpty(StringView path) {
 bool validatePath(StringView path) {
 	StringView r(path);
 	if (r.is('/')) {
-		++ r;
+		++r;
 	}
 	while (!r.empty()) {
 		auto str = r.readUntil<StringView::Chars<'/'>>();
-		if ((str == ".." && str.size() == 2) || (str == "." && str.size() == 1) || str.size() == 0) {
+		if ((str == ".." && str.size() == 2) || (str == "." && str.size() == 1)
+				|| str.size() == 0) {
 			return false;
 		}
 		if (r.is('/')) {
-			++ r;
+			++r;
 		}
 	}
 	return true;
@@ -176,9 +181,8 @@ auto canonical_fn(StringView path) -> typename Interface::StringType {
 	typename Interface::StringType reconstructed = reconstructPath<Interface>(path);
 	typename Interface::StringType result;
 
-	filesystem::detectResourceCategory(reconstructed, [&] (StringView ret) {
-		result = ret.str<Interface>();
-	});
+	filesystem::detectResourceCategory(reconstructed,
+			[&](StringView ret, StringView n) { result = ret.str<Interface>(); });
 
 	return result;
 }
@@ -207,30 +211,31 @@ auto canonical_fn(const FileInfo &info) -> typename Interface::StringType {
 			result = filesystem::currentDir<Interface>(info.path);
 		}
 	} else {
-		filesystem::detectResourceCategory(info, [&] (StringView ret) {
-			result = ret.str<Interface>();
-		});
+		filesystem::detectResourceCategory(info,
+				[&](StringView ret, StringView n) { result = ret.str<Interface>(); });
 	}
 
 	return result;
 }
 
-template<>
-auto canonical<memory::StandartInterface>(StringView path) -> memory::StandartInterface::StringType {
+template <>
+auto canonical<memory::StandartInterface>(StringView path)
+		-> memory::StandartInterface::StringType {
 	return canonical_fn<memory::StandartInterface>(path);
 }
 
-template<>
+template <>
 auto canonical<memory::PoolInterface>(StringView path) -> memory::PoolInterface::StringType {
 	return canonical_fn<memory::PoolInterface>(path);
 }
 
-template<>
-auto canonical<memory::StandartInterface>(const FileInfo &info) -> memory::StandartInterface::StringType {
+template <>
+auto canonical<memory::StandartInterface>(const FileInfo &info)
+		-> memory::StandartInterface::StringType {
 	return canonical_fn<memory::StandartInterface>(info);
 }
 
-template<>
+template <>
 auto canonical<memory::PoolInterface>(const FileInfo &info) -> memory::PoolInterface::StringType {
 	return canonical_fn<memory::PoolInterface>(info);
 }
@@ -260,7 +265,7 @@ StringView root(StringView path, uint32_t levels) {
 				path = path.sub(0, pos);
 			}
 		}
-		-- levels;
+		--levels;
 	}
 	return path;
 }
@@ -279,14 +284,14 @@ StringView lastComponent(StringView path, size_t allowedComponents) {
 		return "";
 	}
 	size_t pos = path.rfind('/');
-	allowedComponents --;
+	allowedComponents--;
 	if (pos == 0) {
 		pos = maxOf<size_t>();
 	}
 
 	while (pos != maxOf<size_t>() && allowedComponents > 0) {
 		pos = path.rfind('/', pos - 1);
-		allowedComponents --;
+		allowedComponents--;
 		if (pos == 0) {
 			pos = maxOf<size_t>();
 		}
@@ -344,15 +349,13 @@ auto do_merge(StringView root, StringView path) -> typename Interface::StringTyp
 template <typename SourceVector>
 static size_t getMergeSize(const SourceVector &vec) {
 	size_t ret = vec.size();
-	for (auto it = vec.begin(); it != vec.end(); it ++) {
-		ret += it->size();
-	}
+	for (auto it = vec.begin(); it != vec.end(); it++) { ret += it->size(); }
 	return ret;
 }
 
 template <typename SourceVector>
 static void doMerge(const Callback<void(StringView)> &cb, const SourceVector &vec) {
-	auto stripSeps = [] (auto str) {
+	auto stripSeps = [](auto str) {
 		StringView tmp(str);
 		tmp.trimChars<StringView::Chars<'/'>>();
 		return tmp;
@@ -360,7 +363,7 @@ static void doMerge(const Callback<void(StringView)> &cb, const SourceVector &ve
 
 	bool front = true;
 	auto it = vec.begin();
-	for (; it != vec.end(); it ++) {
+	for (; it != vec.end(); it++) {
 		if (*it == "/") {
 			front = false;
 		}
@@ -386,12 +389,14 @@ static void doMerge(const Callback<void(StringView)> &cb, const SourceVector &ve
 }
 
 template <>
-auto _merge<memory::StandartInterface>(StringView root, StringView path) -> memory::StandartInterface::StringType {
+auto _merge<memory::StandartInterface>(StringView root, StringView path)
+		-> memory::StandartInterface::StringType {
 	return do_merge<memory::StandartInterface>(root, path);
 }
 
 template <>
-auto _merge<memory::PoolInterface>(StringView root, StringView path) -> memory::PoolInterface::StringType {
+auto _merge<memory::PoolInterface>(StringView root, StringView path)
+		-> memory::PoolInterface::StringType {
 	return do_merge<memory::PoolInterface>(root, path);
 }
 
@@ -405,84 +410,90 @@ void _merge(const Callback<void(StringView)> &cb, bool init, StringView root) {
 	}
 }
 
-void _merge(const Callback<void(StringView)> &cb, StringView root) {
-	_merge(cb, false, root);
-}
+void _merge(const Callback<void(StringView)> &cb, StringView root) { _merge(cb, false, root); }
 
-void merge(const Callback<void(StringView)> &cb, SpanView<std::string> vec) {
-	doMerge(cb, vec);
-}
+void merge(const Callback<void(StringView)> &cb, SpanView<std::string> vec) { doMerge(cb, vec); }
 
-void merge(const Callback<void(StringView)> &cb, SpanView<memory::string> vec) {
-	doMerge(cb, vec);
-}
+void merge(const Callback<void(StringView)> &cb, SpanView<memory::string> vec) { doMerge(cb, vec); }
 
-void merge(const Callback<void(StringView)> &cb, SpanView<StringView> vec) {
-	doMerge(cb, vec);
-}
+void merge(const Callback<void(StringView)> &cb, SpanView<StringView> vec) { doMerge(cb, vec); }
 
 template <>
-auto merge<memory::StandartInterface>(SpanView<std::string> vec) -> memory::StandartInterface::StringType {
-	memory::StandartInterface::StringType ret; ret.reserve(getMergeSize(vec));
-	doMerge([&] (StringView str) { ret.append(str.data(), str.size()); }, vec);
+auto merge<memory::StandartInterface>(SpanView<std::string> vec)
+		-> memory::StandartInterface::StringType {
+	memory::StandartInterface::StringType ret;
+	ret.reserve(getMergeSize(vec));
+	doMerge([&](StringView str) { ret.append(str.data(), str.size()); }, vec);
 	return ret;
 }
 
 template <>
 auto merge<memory::PoolInterface>(SpanView<std::string> vec) -> memory::PoolInterface::StringType {
-	memory::PoolInterface::StringType ret; ret.reserve(getMergeSize(vec));
-	doMerge([&] (StringView str) { ret.append(str.data(), str.size()); }, vec);
+	memory::PoolInterface::StringType ret;
+	ret.reserve(getMergeSize(vec));
+	doMerge([&](StringView str) { ret.append(str.data(), str.size()); }, vec);
 	return ret;
 }
 
 
 template <>
-auto merge<memory::StandartInterface>(SpanView<memory::string> vec) -> memory::StandartInterface::StringType {
-	memory::StandartInterface::StringType ret; ret.reserve(getMergeSize(vec));
-	doMerge([&] (StringView str) { ret.append(str.data(), str.size()); }, vec);
+auto merge<memory::StandartInterface>(SpanView<memory::string> vec)
+		-> memory::StandartInterface::StringType {
+	memory::StandartInterface::StringType ret;
+	ret.reserve(getMergeSize(vec));
+	doMerge([&](StringView str) { ret.append(str.data(), str.size()); }, vec);
 	return ret;
 }
 
 template <>
-auto merge<memory::PoolInterface>(SpanView<memory::string> vec) -> memory::PoolInterface::StringType {
-	memory::PoolInterface::StringType ret; ret.reserve(getMergeSize(vec));
-	doMerge([&] (StringView str) { ret.append(str.data(), str.size()); }, vec);
+auto merge<memory::PoolInterface>(SpanView<memory::string> vec)
+		-> memory::PoolInterface::StringType {
+	memory::PoolInterface::StringType ret;
+	ret.reserve(getMergeSize(vec));
+	doMerge([&](StringView str) { ret.append(str.data(), str.size()); }, vec);
 	return ret;
 }
 
 
 template <>
-auto merge<memory::StandartInterface>(SpanView<StringView> vec) -> memory::StandartInterface::StringType {
-	memory::StandartInterface::StringType ret; ret.reserve(getMergeSize(vec));
-	doMerge([&] (StringView str) { ret.append(str.data(), str.size()); }, vec);
+auto merge<memory::StandartInterface>(SpanView<StringView> vec)
+		-> memory::StandartInterface::StringType {
+	memory::StandartInterface::StringType ret;
+	ret.reserve(getMergeSize(vec));
+	doMerge([&](StringView str) { ret.append(str.data(), str.size()); }, vec);
 	return ret;
 }
 
 template <>
 auto merge<memory::PoolInterface>(SpanView<StringView> vec) -> memory::PoolInterface::StringType {
-	memory::PoolInterface::StringType ret; ret.reserve(getMergeSize(vec));
-	doMerge([&] (StringView str) { ret.append(str.data(), str.size()); }, vec);
+	memory::PoolInterface::StringType ret;
+	ret.reserve(getMergeSize(vec));
+	doMerge([&](StringView str) { ret.append(str.data(), str.size()); }, vec);
 	return ret;
 }
 
 template <>
-auto merge<memory::StandartInterface>(stappler::memory::StandartInterface::StringType &&str) -> memory::StandartInterface::StringType {
+auto merge<memory::StandartInterface>(stappler::memory::StandartInterface::StringType &&str)
+		-> memory::StandartInterface::StringType {
 	return str;
 }
 
 template <>
-auto merge<memory::PoolInterface>(stappler::memory::StandartInterface::StringType &&str) -> memory::PoolInterface::StringType {
+auto merge<memory::PoolInterface>(stappler::memory::StandartInterface::StringType &&str)
+		-> memory::PoolInterface::StringType {
 	return StringView(str).str<memory::PoolInterface>();
 }
 
 
 template <>
-auto merge<memory::StandartInterface>(stappler::memory::PoolInterface::StringType &&str) -> memory::StandartInterface::StringType {
+auto merge<memory::StandartInterface>(stappler::memory::PoolInterface::StringType &&str)
+		-> memory::StandartInterface::StringType {
 	return StringView(str).str<memory::StandartInterface>();
 }
 
 template <>
-auto merge<memory::PoolInterface>(stappler::memory::PoolInterface::StringType &&str) -> memory::PoolInterface::StringType {
+auto merge<memory::PoolInterface>(stappler::memory::PoolInterface::StringType &&str)
+		-> memory::PoolInterface::StringType {
 	return str;
 }
 
@@ -490,7 +501,9 @@ size_t extensionCount(StringView path) {
 	size_t ret = 0;
 	auto cmp = lastComponent(path);
 	for (auto c : cmp) {
-		if (c == '.') { ret ++; }
+		if (c == '.') {
+			ret++;
+		}
 	}
 	return ret;
 }
@@ -515,4 +528,4 @@ StringView extensionForContentType(StringView ct) {
 	return StringView();
 }
 
-}
+} // namespace stappler::filepath
