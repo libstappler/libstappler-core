@@ -20,182 +20,268 @@
  THE SOFTWARE.
  **/
 
+#include "SPCore.h"
+#include "SPFilepath.h"
 #include "SPFilesystem.h"
+#include "SPLog.h"
+#include <winnt.h>
 
 #if WIN32
 
 #include "SPString.h"
 #include "SPPlatformUnistd.h"
+#include "SPMemInterface.h"
+#include "SPSharedModule.h"
+#include "detail/SPFilesystemResourceData.h"
+#include <shlwapi.h>
+#include <Shobjidl.h>
+#include <userenv.h>
+#include <Shlobj.h>
+#include <sddl.h>
+#include <wil/result_macros.h>
+#include <wil/stl.h>
+#include <wil/resource.h>
+#include <wil/com.h>
+#include <wil\token_helpers.h>
+
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "shlwapi.lib")
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
-template <>
-auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
-	using Interface = memory::StandartInterface;
+static mem_std::String s_containerPath;
+static mem_std::String s_appPath;
 
-	wchar_t fullpath[512] = {0};
-	int length = GetModuleFileNameW(NULL, fullpath, 512 - 1);
-	if (length != 0) {
-		WideStringView appPathW(reinterpret_cast<char16_t *>(fullpath), length);
-		auto appPath = stappler::filesystem::native::nativeToPosix<Interface>(string::toUtf8<Interface>(appPathW));
-		return appPath;
-	}
-
-	return Interface::StringType();
-}
-
-template <>
-auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::StringType {
-	using Interface = memory::PoolInterface;
-
-	wchar_t fullpath[512] = {0};
-	int length = GetModuleFileNameW(NULL, fullpath, 512 - 1);
-	if (length != 0) {
-		WideStringView appPathW(reinterpret_cast<char16_t *>(fullpath), length);
-		auto appPath = stappler::filesystem::native::nativeToPosix<Interface>(string::toUtf8<Interface>(appPathW));
-		return appPath;
-	}
-
-	return Interface::StringType();
-}
-
-struct PathSource {
-	memory::StandartInterface::StringType _appPath;
-	memory::StandartInterface::StringType _platformPath;
-	memory::StandartInterface::StringType _cachePath;
-	memory::StandartInterface::StringType _documentsPath;
-	memory::StandartInterface::StringType _writablePath;
-
-	bool _platformInit = false;
-	bool _cacheInit = false;
-	bool _documentsInit = false;
-	bool _writableInit = false;
-
-	static PathSource *getInstance() {
-		static PathSource *s_paths = nullptr;
-		if (!s_paths) {
-			s_paths = new PathSource;
-		}
-		return s_paths;
-	}
-
-	PathSource() {
-		_appPath = _getApplicationPath<memory::StandartInterface>();
-		if (!_appPath.empty()) {
-			_writablePath = _platformPath = _appPath.substr(0, _appPath.find_last_of("/")) + "/AppData";
-			_documentsPath = _platformPath + "/Documents";
-			_cachePath = _platformPath + "/Caches";
-		}
-
-		size_t envSize = 512;
-		wchar_t envPath[512] = {0};
-		if (_wdupenv_s((wchar_t **)&envPath, &envSize, L"SP_CWD_OVERRIDE") == 0) {
-			if (_waccess(envPath, Access::Exists)) {
-				_wchdir(envPath);
-			}
-		}
-	}
-
-	StringView getPlatformPath(bool readOnly) {
-		if (!readOnly) {
-			if (!_platformInit) {
-				filesystem::mkdir(_platformPath);
-				_platformInit = true;
-			}
-		}
-		return _platformPath;
-	}
-	StringView getDocumentsPath(bool readOnly) {
-		if (!readOnly) {
-			if (!_platformInit) {
-				filesystem::mkdir(_platformPath);
-				_platformInit = true;
-			}
-			if (!_documentsInit) {
-				filesystem::mkdir(_documentsPath);
-				_documentsInit = true;
-			}
-		}
-		return _documentsPath;
-	}
-	StringView getCachePath(bool readOnly) {
-		if (!readOnly) {
-			if (!_platformInit) {
-				filesystem::mkdir(_platformPath);
-				_platformInit = true;
-			}
-			if (!_cacheInit) {
-				filesystem::mkdir(_cachePath);
-				_cacheInit = true;
-			}
-		}
-		return _cachePath;
-	}
-	StringView getWritablePath(bool readOnly) {
-		if (!readOnly) {
-			if (!_writableInit) {
-				filesystem::mkdir(_writablePath);
-				_writableInit = true;
-			}
-		}
-		return _writablePath;
-	}
+struct KnownFolderInfo {
+	const KNOWNFOLDERID *folder;
+	FileCategory category;
+	FileFlags flags;
 };
 
-template <typename Interface>
-auto _getPlatformPath(StringView path, bool readOnly) -> typename Interface::StringType {
-	if (filepath::isBundled(path)) {
-		return filepath::merge<Interface>(PathSource::getInstance()->getPlatformPath(readOnly), path.sub("%PLATFORM%:"_len));
+static KnownFolderInfo s_defaultKnownFolders[] = {
+	KnownFolderInfo{&FOLDERID_AppDataDesktop, FileCategory::UserDesktop, FileFlags::Private},
+	KnownFolderInfo{&FOLDERID_Desktop, FileCategory::UserDesktop, FileFlags::Public},
+	KnownFolderInfo{&FOLDERID_PublicDesktop, FileCategory::UserDesktop, FileFlags::Shared},
+	KnownFolderInfo{&FOLDERID_Pictures, FileCategory::UserPictures, FileFlags::Public},
+	KnownFolderInfo{&FOLDERID_PublicPictures, FileCategory::UserPictures, FileFlags::Shared},
+	KnownFolderInfo{&FOLDERID_Videos, FileCategory::UserVideos, FileFlags::Public},
+	KnownFolderInfo{&FOLDERID_PublicVideos, FileCategory::UserVideos, FileFlags::Shared},
+	KnownFolderInfo{&FOLDERID_Music, FileCategory::UserMusic, FileFlags::Public},
+	KnownFolderInfo{&FOLDERID_PublicMusic, FileCategory::UserMusic, FileFlags::Shared},
+	KnownFolderInfo{&FOLDERID_Downloads, FileCategory::UserDownload, FileFlags::Public},
+	KnownFolderInfo{&FOLDERID_PublicDownloads, FileCategory::UserDownload, FileFlags::Shared},
+	KnownFolderInfo{&FOLDERID_Documents, FileCategory::UserDocuments, FileFlags::Public},
+	KnownFolderInfo{&FOLDERID_PublicDocuments, FileCategory::UserDocuments, FileFlags::Shared},
+	KnownFolderInfo{&FOLDERID_Profile, FileCategory::UserHome, FileFlags::Public},
+	KnownFolderInfo{&FOLDERID_Public, FileCategory::UserHome, FileFlags::Shared},
+	KnownFolderInfo{&FOLDERID_Fonts, FileCategory::Fonts, FileFlags::Shared},
+	KnownFolderInfo{&FOLDERID_InternetCache, FileCategory::CommonData, FileFlags::Private},
+	KnownFolderInfo{&FOLDERID_LocalAppData, FileCategory::CommonData, FileFlags::Private},
+	KnownFolderInfo{&FOLDERID_RoamingAppData, FileCategory::CommonData, FileFlags::Public},
+	KnownFolderInfo{&FOLDERID_ProgramData, FileCategory::CommonData, FileFlags::Shared},
+};
+
+static void processKnownDir(FilesystemResourceData &data, const KnownFolderInfo &info,
+		IKnownFolder *dir) {
+	KNOWNFOLDER_DEFINITION def;
+	dir->GetFolderDefinition(&def);
+
+	wchar_t *pathAppWide = nullptr;
+
+	auto dirFlagsAppWide = KF_FLAG_DONT_UNEXPAND | KF_FLAG_NO_ALIAS
+			| KF_FLAG_RETURN_FILTER_REDIRECTION_TARGET | KF_FLAG_CREATE;
+
+	dir->GetPath(dirFlagsAppWide, &pathAppWide);
+	std::cout << string::toUtf8<memory::StandartInterface>(
+			WideStringView((const char16_t *)def.pszName))
+			  << " ";
+
+	switch (def.category) {
+	case KF_CATEGORY_VIRTUAL: std::cout << "KF_CATEGORY_VIRTUAL"; break;
+	case KF_CATEGORY_FIXED: std::cout << "KF_CATEGORY_FIXED"; break;
+	case KF_CATEGORY_COMMON: std::cout << "KF_CATEGORY_COMMON"; break;
+	case KF_CATEGORY_PERUSER: std::cout << "KF_CATEGORY_PERUSER"; break;
 	}
-	return filepath::merge<Interface>(PathSource::getInstance()->getPlatformPath(readOnly), path);
-}
 
-template <>
-auto _getWritablePath<memory::StandartInterface>(bool readOnly) -> typename memory::StandartInterface::StringType {
-	return PathSource::getInstance()->getWritablePath(readOnly).str<memory::StandartInterface>();
-}
-
-template <>
-auto _getWritablePath<memory::PoolInterface>(bool readOnly) -> typename memory::PoolInterface::StringType {
-	return StringView(PathSource::getInstance()->getWritablePath(readOnly)).str<memory::PoolInterface>();
-}
-
-template <>
-auto _getDocumentsPath<memory::StandartInterface>(bool readOnly) -> typename memory::StandartInterface::StringType {
-	return PathSource::getInstance()->getDocumentsPath(readOnly).str<memory::StandartInterface>();
-}
-
-template <>
-auto _getDocumentsPath<memory::PoolInterface>(bool readOnly) -> typename memory::PoolInterface::StringType {
-	return StringView(PathSource::getInstance()->getDocumentsPath(readOnly)).str<memory::PoolInterface>();
-}
-
-template <>
-auto _getCachesPath<memory::StandartInterface>(bool readOnly) -> typename memory::StandartInterface::StringType {
-	return PathSource::getInstance()->getCachePath(readOnly).str<memory::StandartInterface>();
-}
-
-template <>
-auto _getCachesPath<memory::PoolInterface>(bool readOnly) -> typename memory::PoolInterface::StringType {
-	return StringView(PathSource::getInstance()->getCachePath(readOnly)).str<memory::PoolInterface>();
-}
-
-bool _exists(StringView path, bool) {
-	if (path.empty() || path.front() == '/' || path.starts_with("..", 2) || path.find("/..") != maxOf<size_t>()) {
-		return false;
+	if (def.kfdFlags & KFDF_LOCAL_REDIRECT_ONLY) {
+		std::cout << " KFDF_LOCAL_REDIRECT_ONLY";
+	}
+	if (def.kfdFlags & KFDF_ROAMABLE) {
+		std::cout << " KFDF_ROAMABLE";
+	}
+	if (def.kfdFlags & KFDF_PRECREATE) {
+		std::cout << " KFDF_PRECREATE";
+	}
+	if (def.kfdFlags & KFDF_STREAM) {
+		std::cout << " KFDF_STREAM";
+	}
+	if (def.kfdFlags & KFDF_PUBLISHEXPANDEDPATH) {
+		std::cout << " KFDF_PUBLISHEXPANDEDPATH";
+	}
+	if (def.kfdFlags & KFDF_NO_REDIRECT_UI) {
+		std::cout << " KFDF_NO_REDIRECT_UI";
 	}
 
-	return filesystem::native::access_fn(_getPlatformPath<memory::StandartInterface>(path, false), Access::Exists);
+	auto uPath = string::toUtf8<memory::StandartInterface>(
+			WideStringView((const char16_t *)pathAppWide));
+	auto posixPath = filesystem::native::nativeToPosix<memory::StandartInterface>(uPath);
+
+	std::cout << "\n";
+	if (pathAppWide) {
+		std::cout << "\tApp: " << posixPath << "\n";
+		CoTaskMemFree(pathAppWide);
+	}
+
+	auto &res = data._resourceLocations[toInt(info.category)];
+	res.paths.emplace_back(StringView(posixPath).pdup(data._pool), info.flags);
+	res.flags = CategoryFlags::Locateable;
+	res.init = true;
+
+	//wchar_t *pathSystemWide = nullptr;
+	//auto dirFlagsSystemWide = KF_FLAG_DONT_UNEXPAND | KF_FLAG_NO_ALIAS
+	//		| KF_FLAG_NO_PACKAGE_REDIRECTION | KF_FLAG_DEFAULT_PATH | KF_FLAG_NOT_PARENT_RELATIVE;
+	//dir->GetPath(dirFlagsSystemWide, &pathSystemWide);
+	//if (pathSystemWide) {
+	//	std::cout << "\tSystem: "
+	//			  << string::toUtf8<memory::StandartInterface>(
+	//						 WideStringView((const char16_t *)pathSystemWide))
+	//			  << "\n";
+	//	CoTaskMemFree(pathSystemWide);
+	//}
 }
 
-bool _stat(StringView ipath, Stat &stat, bool) {
-	auto path = _getPlatformPath<memory::StandartInterface>(ipath, false);
-	return filesystem::native::stat_fn(path, stat);
+static void defineAppPathFromCommon(FilesystemResourceData &data, StringView bundleName) {
+	// init with CommonData and CommonCache paths
+	auto makeLocation = [&](FileCategory cat, StringView root, StringView subname) {
+		auto &res = data._resourceLocations[toInt(cat)];
+		res.paths.emplace_back(StringView(filepath::merge<memory::StandartInterface>(root, subname))
+									   .pdup(data._pool),
+				FileFlags::Private | FileFlags::Writable);
+		res.flags |= CategoryFlags::Locateable;
+	};
+
+	auto commonData = findPath<memory::StandartInterface>(FileCategory::CommonData);
+	auto commonCache = findPath<memory::StandartInterface>(FileCategory::CommonCache);
+	if (commonCache.empty()) {
+		commonCache = commonData;
+	}
+
+	makeLocation(FileCategory::AppData, commonData,
+			filepath::merge<memory::StandartInterface>(bundleName, "Data"));
+	makeLocation(FileCategory::AppConfig, commonData,
+			filepath::merge<memory::StandartInterface>(bundleName, "Config"));
+	makeLocation(FileCategory::AppState, commonData,
+			filepath::merge<memory::StandartInterface>(bundleName, "State"));
+	makeLocation(FileCategory::AppCache, commonData,
+			filepath::merge<memory::StandartInterface>(bundleName, "Cache"));
+	makeLocation(FileCategory::AppRuntime, commonData,
+			filepath::merge<memory::StandartInterface>(bundleName, "Runtime"));
 }
 
-File _openForReading(StringView path) {
-	return filesystem::openForReading(_getPlatformPath<memory::StandartInterface>(path, false));
+static mem_std::String getAppContainerPath(PSID sid) {
+	mem_std::String ret;
+	PWSTR str = nullptr, path = nullptr;
+	::ConvertSidToStringSidW(sid, &str);
+
+	if (SUCCEEDED(::GetAppContainerFolderPath(str, &path))) {
+		ret = filesystem::native::nativeToPosix<memory::StandartInterface>(
+				string::toUtf8<memory::StandartInterface>(WideStringView((const char16_t *)path)));
+		::CoTaskMemFree(path);
+	}
+	::LocalFree(str);
+	return ret;
 }
+
+void _initSystemPaths(FilesystemResourceData &data) {
+	wchar_t fullpath[NTFS_MAX_PATH] = {0};
+	GetModuleFileNameW(NULL, fullpath, NTFS_MAX_PATH - 1);
+
+	s_appPath = filesystem::native::nativeToPosix<memory::StandartInterface>(
+			string::toUtf8<memory::StandartInterface>((const char16_t *)fullpath));
+
+	auto manager = wil::CoCreateInstance<KnownFolderManager, IKnownFolderManager>();
+	if (manager) {
+		HRESULT hr;
+		IKnownFolder *pKnownFolder = nullptr;
+		for (auto &it : s_defaultKnownFolders) {
+			hr = manager->GetFolder(*it.folder, &pKnownFolder);
+			if (SUCCEEDED(hr)) {
+				processKnownDir(data, it, pKnownFolder);
+				pKnownFolder->Release();
+			}
+		}
+	}
+
+	auto bundleName = getAppconfigBundleName();
+	auto bundleNameW = string::toUtf16<memory::StandartInterface>(bundleName);
+
+	int appPathCommon = 0;
+	if (auto v = SharedModule::acquireTypedSymbol<int *>(buildconfig::MODULE_APPCONFIG_NAME,
+				"APPCONFIG_APP_PATH_COMMON")) {
+		appPathCommon = *v;
+	}
+
+	if (appPathCommon == 0) {
+		auto rootPath = filepath::root(s_appPath);
+		data.initAppPaths(rootPath);
+	} else if (appPathCommon == 1) {
+		defineAppPathFromCommon(data, bundleName);
+	} else if (appPathCommon == 2) {
+		// first, determine app container path, then - set paths within it
+		PSID containerId = nullptr;
+
+		auto hr = ::DeriveAppContainerSidFromAppContainerName((const wchar_t *)bundleNameW.data(),
+				&containerId);
+		if (SUCCEEDED_LOG(hr)) {
+			s_containerPath = getAppContainerPath(containerId);
+		}
+
+		if (containerId) {
+			FreeSid(containerId);
+		}
+
+		if (!s_containerPath.empty()) {
+			data.initAppPaths(s_containerPath);
+		} else {
+			defineAppPathFromCommon(data, bundleName);
+		}
+	} else if (appPathCommon == 3) {
+		// CommonData and CommonCache already within container
+		DWORD returnLength = 0;
+		TOKEN_APPCONTAINER_INFORMATION info = {nullptr};
+		::GetTokenInformation(::GetCurrentThreadEffectiveToken(), TokenAppContainerSid, &info,
+				sizeof(TOKEN_APPCONTAINER_INFORMATION), &returnLength);
+		if (info.TokenAppContainer) {
+			s_containerPath = getAppContainerPath(info.TokenAppContainer);
+		} else {
+			PSID containerId = nullptr;
+			auto hr = ::DeriveAppContainerSidFromAppContainerName(
+					(const wchar_t *)bundleNameW.data(), &containerId);
+			if (SUCCEEDED_LOG(hr)) {
+				s_containerPath = getAppContainerPath(containerId);
+			}
+			if (containerId) {
+				FreeSid(containerId);
+			}
+		}
+
+		if (!s_containerPath.empty()) {
+			data.initAppPaths(s_containerPath);
+		} else {
+			defineAppPathFromCommon(data, bundleName);
+		}
+	}
+}
+
+// No PlatformSpecific categories defined for now
+void _enumerateObjects(const FilesystemResourceData &data, FileCategory, StringView path, FileFlags,
+		Access, const Callback<bool(StringView, FileFlags)> &) { }
+
+bool _access(FileCategory cat, StringView path, Access) { return false; }
+
+bool _stat(FileCategory cat, StringView path, Stat &stat) { return false; }
+
+File _openForReading(FileCategory cat, StringView path) { return File(); }
 
 size_t _read(void *, uint8_t *buf, size_t nbytes) { return 0; }
 size_t _seek(void *, int64_t offset, io::Seek s) { return maxOf<size_t>(); }
@@ -203,14 +289,22 @@ size_t _tell(void *) { return 0; }
 bool _eof(void *) { return true; }
 void _close(void *) { }
 
-void _ftw(StringView path, const Callback<void(StringView path, bool isFile)> &cb, int depth, bool dirFirst, bool assetsRoot) {
-	return filesystem::native::ftw_fn(path, cb, depth, dirFirst);
+Status _ftw(FileCategory cat, StringView path,
+		const Callback<bool(StringView path, FileType t)> &cb, int depth, bool dirFirst) {
+	return Status::Declined;
 }
 
-bool _ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &cb, int depth, bool dirFirst, bool assetsRoot) {
-	return filesystem::native::ftw_b_fn(path, cb, depth, dirFirst);
+template <>
+auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
+	return s_appPath;
 }
 
+template <>
+auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::StringType {
+	using Interface = memory::PoolInterface;
+	return StringView(s_appPath).str<Interface>();
 }
+
+} // namespace stappler::filesystem::platform
 
 #endif

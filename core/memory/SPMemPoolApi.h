@@ -38,7 +38,7 @@ namespace pool {
 using namespace mempool::base::pool;
 
 // RAII wrapper for pool push+pop
-template<typename _Pool = pool_t *>
+template <typename _Pool = pool_t *>
 class context {
 public:
 	using pool_type = _Pool;
@@ -48,7 +48,6 @@ public:
 		conditional, // do not push pool if current context pool is the same
 		clear, // clear pool after pop
 		destroy, // destroy pool after pop
-		main, // call sp::initialize/sp::terminate (for `perform_main` only)
 	};
 
 	explicit context(const pool_type &__m, finalize_flag = discard);
@@ -57,11 +56,11 @@ public:
 	~context();
 
 	context(const context &) = delete;
-	context& operator=(const context &) = delete;
+	context &operator=(const context &) = delete;
 
-	context(context && u) noexcept;
+	context(context &&u) noexcept;
 
-	context & operator=(context && u) noexcept;
+	context &operator=(context &&u) noexcept;
 
 	void push() noexcept;
 
@@ -91,27 +90,29 @@ template <typename Callback>
 inline auto perform_conditional(const Callback &cb, memory::pool_t *p);
 
 template <typename Callback>
-inline auto perform_conditional(const Callback &cb, memory::pool_t *p, uint32_t tag, void *userdata = nullptr);
+inline auto perform_conditional(const Callback &cb, memory::pool_t *p, uint32_t tag,
+		void *userdata = nullptr);
 
 template <typename Callback>
 inline auto perform_clear(const Callback &cb, memory::pool_t *p);
 
 template <typename Callback>
-inline auto perform_clear(const Callback &cb, memory::pool_t *p, uint32_t tag, void *userdata = nullptr);
+inline auto perform_clear(const Callback &cb, memory::pool_t *p, uint32_t tag,
+		void *userdata = nullptr);
 
 template <typename Callback>
 inline auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr);
 
 template <typename Callback>
-inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t tag, void *userdata = nullptr);
+inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t tag,
+		void *userdata = nullptr);
 
 template <typename Callback>
-inline auto perform_main(const Callback &cb);
+inline int perform_main(const Callback &cb);
 
-}
+} // namespace pool
 
-}
-
+} // namespace stappler::memory
 
 
 //
@@ -121,19 +122,19 @@ inline auto perform_main(const Callback &cb);
 namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
 
-template<typename _Pool>
+template <typename _Pool>
 context<_Pool>::context(const pool_type &__m, finalize_flag f)
 : _pool(__m), _owns(false), _flag(f) {
 	push();
 }
 
-template<typename _Pool>
+template <typename _Pool>
 context<_Pool>::context(const pool_type &__m, uint32_t tag, void *userdata, finalize_flag f)
 : _pool(__m), _owns(false), _flag(f) {
 	push(tag, userdata);
 }
 
-template<typename _Pool>
+template <typename _Pool>
 context<_Pool>::~context() {
 	if (!_owns) {
 		return;
@@ -142,15 +143,14 @@ context<_Pool>::~context() {
 	pop();
 }
 
-template<typename _Pool>
-context<_Pool>::context(context && u) noexcept
-: _pool(u._pool), _owns(u._owns), _flag(u._flag) {
+template <typename _Pool>
+context<_Pool>::context(context &&u) noexcept : _pool(u._pool), _owns(u._owns), _flag(u._flag) {
 	u._pool = 0;
 	u._owns = false;
 }
 
-template<typename _Pool>
-auto context<_Pool>::operator=(context && u) noexcept -> context & {
+template <typename _Pool>
+auto context<_Pool>::operator=(context &&u) noexcept -> context & {
 	if (this == &u) {
 		return *this;
 	}
@@ -166,20 +166,17 @@ auto context<_Pool>::operator=(context && u) noexcept -> context & {
 	return *this;
 }
 
-template<typename _Pool>
+template <typename _Pool>
 void context<_Pool>::push() noexcept {
 	if (_pool && !_owns) {
 		if (_flag != conditional || pool::acquire() != _pool) {
 			pool::push(_pool);
 			_owns = true;
 		}
-		if (_flag == main) {
-			sp::initialize();
-		}
 	}
 }
 
-template<typename _Pool>
+template <typename _Pool>
 void context<_Pool>::push(uint32_t tag, void *userdata) noexcept {
 	if (_pool && !_owns) {
 		if (_flag != conditional || pool::acquire() != _pool) {
@@ -189,7 +186,7 @@ void context<_Pool>::push(uint32_t tag, void *userdata) noexcept {
 	}
 }
 
-template<typename _Pool>
+template <typename _Pool>
 void context<_Pool>::pop() noexcept {
 	if (!_owns) {
 		return;
@@ -199,26 +196,18 @@ void context<_Pool>::pop() noexcept {
 
 	switch (_flag) {
 	case discard:
-	case conditional:
-		break;
-	case clear:
-		pool::clear(_pool);
-		break;
+	case conditional: break;
+	case clear: pool::clear(_pool); break;
 	case destroy:
 		pool::destroy(_pool);
 		_pool = nullptr;
-		break;
-	case main:
-		pool::destroy(_pool);
-		_pool = nullptr;
-		sp::terminate();
 		break;
 	}
 
 	_owns = false;
 }
 
-template<typename _Pool>
+template <typename _Pool>
 void context<_Pool>::swap(context &u) noexcept {
 	std::swap(_pool, u._pool);
 	std::swap(_owns, u._owns);
@@ -276,12 +265,18 @@ inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t ta
 }
 
 template <typename Callback>
-inline auto perform_main(const Callback &cb) {
-	auto pool = memory::pool::create(app_root_pool);
-	context<decltype(pool)> holder(pool, context<decltype(pool)>::main);
-	return cb();
+inline int perform_main(const Callback &cb) {
+	int resultCode = 0;
+	if (sp::initialize(resultCode)) {
+		auto ret = cb();
+
+		sp::terminate();
+		return ret;
+	} else {
+		return resultCode;
+	}
 }
 
-}
+} // namespace stappler::memory::pool
 
 #endif /* STAPPLER_CORE_MEMORY_SPMEMPOOLAPI_H_ */

@@ -25,6 +25,7 @@
 
 // Platform-dependent implementation for some unistd.h POSIX utils
 
+#include "stappler-buildconfig.h"
 #include "detail/SPPlatformInit.h"
 
 #if WIN32
@@ -48,21 +49,22 @@
 #warning Not MSC compiler
 #endif
 
+#include <direct.h>
+#include <errno.h>
 #include <intrin.h>
+#include <io.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utime.h>
-#include <io.h>
-#include <direct.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
 
-#include <strsafe.h>
 #include <esent.h>
+#include <strsafe.h>
 
 #include <windows.h>
 #include <windowsx.h>
+#include <winioctl.h>
 #include <wincrypt.h>
 
 // suppress common macro leak
@@ -80,14 +82,26 @@ using pid_t = DWORD;
 
 #define SP_POSIX_MAPPED_FILES 0
 
+#define R_OK 4 /* Test for read permission.  */
+#define W_OK 2 /* Test for write permission.  */
+#define F_OK 0 /* Test for existence.  */
+
+#ifndef NTFS_MAX_PATH
+#define NTFS_MAX_PATH 32'768
+#endif /* NTFS_MAX_PATH */
+
+#ifndef NAME_MAX
+#define NAME_MAX 260
+#endif /* NAME_MAX */
+
 #else
 
 #include <dirent.h>
-#include <utime.h>
 #include <fcntl.h>
-#include <sys/time.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
+#include <utime.h>
 
 #define SP_POSIX_MAPPED_FILES _POSIX_MAPPED_FILES
 

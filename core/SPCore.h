@@ -219,10 +219,15 @@ bool hasFlag(T mask, T flag) {
  * call `initialize` when main application thread is started
  * call `terminate`` when main thread is stopped
  *
+ * initialize returns false when application should not try to run,
+ * and set appropriate resultCode to return from application's main
+ *
+ * if initialize return true - app can be run as usual
+ *
  * or use perform_main from SPMemory.h when possible
 */
 
-SP_PUBLIC void initialize();
+SP_PUBLIC bool initialize(int &resultCode);
 SP_PUBLIC void terminate();
 
 // `init` will be called in FIFO order, `term` - in reverse (LIFO) order

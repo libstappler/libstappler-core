@@ -522,7 +522,8 @@ SP_PUBLIC inline auto currentDir(StringView path, bool relative) -> typename Int
 		if (path.empty()) {
 			return cwd;
 		} else {
-			return filepath::reconstructPath<Interface>(filepath::merge<Interface>(cwd, path));
+			auto subPath = filepath::merge<Interface>(cwd, path);
+			return filepath::reconstructPath<Interface>(subPath);
 		}
 	}
 	return typename Interface::StringType();

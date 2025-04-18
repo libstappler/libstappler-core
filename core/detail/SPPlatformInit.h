@@ -39,30 +39,30 @@
 
 // Visibility rules (assume -fvisibility=hidden -fvisibility-inlines-hidden)
 #if WIN32
-  #ifdef SP_BUILD_APPLICATION
-    #define SP_PUBLIC
-  #elif SP_BUILD_SHARED_LIBRARY
-    #ifdef __GNUC__
-      #define SP_PUBLIC __attribute__ ((dllexport))
-    #else
-      #define SP_PUBLIC __declspec(dllexport)
-    #endif
-  #else
-    #ifdef __GNUC__
-      #define SP_PUBLIC __attribute__ ((dllimport))
-    #else
-      #define SP_PUBLIC __declspec(dllimport)
-    #endif
-  #endif
-  #define SP_LOCAL
+#ifdef SP_BUILD_APPLICATION
+#define SP_PUBLIC
+#elif SP_BUILD_SHARED_LIBRARY
+#ifdef __GNUC__
+#define SP_PUBLIC __attribute__ ((dllexport))
 #else
-  #if __GNUC__ >= 4
-    #define SP_PUBLIC __attribute__ ((visibility ("default")))
-    #define SP_LOCAL  __attribute__ ((visibility ("hidden")))
-  #else
-    #define SP_PUBLIC
-    #define SP_LOCAL
-  #endif
+#define SP_PUBLIC __declspec(dllexport)
+#endif
+#else
+#ifdef __GNUC__
+#define SP_PUBLIC __attribute__ ((dllimport))
+#else
+#define SP_PUBLIC __declspec(dllimport)
+#endif
+#endif
+#define SP_LOCAL
+#else
+#if __GNUC__ >= 4
+#define SP_PUBLIC __attribute__ ((visibility ("default")))
+#define SP_LOCAL  __attribute__ ((visibility ("hidden")))
+#else
+#define SP_PUBLIC
+#define SP_LOCAL
+#endif
 #endif
 
 // Add debug flag if none is specified
@@ -92,7 +92,7 @@
 //
 // Note that, not like `__func__`, this returns name by constructing argument
 // in place of a call, instead of macro substitution in place of occurrence
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202'002L
 #define STAPPLER_LOCATION (std::source_location::current().function_name())
 #else
 #define STAPPLER_LOCATION ("")
@@ -143,37 +143,37 @@
 #define MODULE_XENOLITH_RENDERER_MATERIAL2D 1
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-   //define something for Windows (32-bit and 64-bit, this part is common)
-	#ifdef _WIN64
-		#define WINDOWS 1
-		#ifndef WIN32
-			#define WIN32 1
-		#endif
-	#else
-		#define WINDOWS 1
-		#ifndef WIN32
-			#define WIN32 1
-		#endif
-	#endif
+//define something for Windows (32-bit and 64-bit, this part is common)
+#ifdef _WIN64
+#define WINDOWS 1
+#ifndef WIN32
+#define WIN32 1
+#endif
+#else
+#define WINDOWS 1
+#ifndef WIN32
+#define WIN32 1
+#endif
+#endif
 #elif __APPLE__
 #include <TargetConditionals.h>
-	#if TARGET_IPHONE_SIMULATOR
-		#define IOS 1
-	#elif TARGET_OS_MACCATALYST
-		#define IOS 1
-    #elif TARGET_OS_IPHONE
-		#define IOS 1
-	#elif TARGET_OS_MAC
-		#define MACOS 1
-    #else
-    #   error "Unknown Apple platform"
-	#endif
-#elif __ANDROID__
-	#define ANDROID 1
-#elif __linux__
-	#define LINUX 1
+#if TARGET_IPHONE_SIMULATOR
+#define IOS 1
+#elif TARGET_OS_MACCATALYST
+#define IOS 1
+#elif TARGET_OS_IPHONE
+#define IOS 1
+#elif TARGET_OS_MAC
+#define MACOS 1
 #else
-#   error "Unknown compiler"
+#error "Unknown Apple platform"
+#endif
+#elif __ANDROID__
+#define ANDROID 1
+#elif __linux__
+#define LINUX 1
+#else
+#error "Unknown compiler"
 #endif
 
 #if WIN32
@@ -227,7 +227,7 @@ using iter_reference_t = typename T::reference;
 #ifdef __cplusplus
 #if __LCC__ && __LCC__ <= 127
 #define SP_HAVE_THREE_WAY_COMPARISON 0
-#elif __cpp_impl_three_way_comparison >= 201711
+#elif __cpp_impl_three_way_comparison >= 201'711
 #define SP_HAVE_THREE_WAY_COMPARISON 1
 #else
 #define SP_HAVE_THREE_WAY_COMPARISON 0

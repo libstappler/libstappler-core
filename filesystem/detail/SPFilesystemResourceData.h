@@ -78,6 +78,8 @@ struct FilesystemResourceData : InterfaceObject<memory::StandartInterface> {
 
 	CategoryFlags getCategoryFlags(FileCategory) const;
 
+	void initAppPaths(StringView root);
+
 	bool _initialized = false;
 	bool _appPathCommon = false;
 

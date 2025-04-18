@@ -47,6 +47,7 @@ std::ostream &operator<<(std::ostream &stream, FileCategory cat) {
 	switch (cat) {
 	case FileCategory::Exec: stream << "FileCategory::Exec"; break;
 	case FileCategory::Library: stream << "FileCategory::Library"; break;
+	case FileCategory::Fonts: stream << "FileCategory::Fonts"; break;
 	case FileCategory::UserHome: stream << "FileCategory::UserHome"; break;
 	case FileCategory::UserDesktop: stream << "FileCategory::UserDesktop"; break;
 	case FileCategory::UserDownload: stream << "FileCategory::UserDownload"; break;

@@ -109,7 +109,7 @@ static sqlite3_module s_UnwrapModule = {
 		if (pCur == 0) {
 			return SQLITE_NOMEM;
 		}
-		memset(pCur, 0, sizeof(*pCur));
+		memset((void *)pCur, 0, sizeof(*pCur));
 		*ppCursor = &pCur->base;
 		return SQLITE_OK;
 	},

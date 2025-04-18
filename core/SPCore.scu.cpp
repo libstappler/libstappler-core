@@ -67,6 +67,13 @@ THE SOFTWARE.
 
 #define STAPPLER_VERSION_VARIANT 0
 
+namespace STAPPLER_VERSIONIZED stappler::platform {
+
+bool initialize(int &resultCode);
+void terminate();
+
+} // namespace stappler::platform
+
 namespace STAPPLER_VERSIONIZED stappler {
 
 struct Initializer {
@@ -90,13 +97,24 @@ InitializerManager &InitializerManager::get() {
 	return im;
 }
 
-void initialize() {
+bool initialize(int &resultCode) {
+	memory::pool::initialize();
+
+	auto pool = memory::pool::create(memory::app_root_pool);
+
+	memory::pool::push(pool);
+
+	if (!platform::initialize(resultCode)) {
+		memory::pool::pop();
+		return false;
+	}
+
 	auto &m = InitializerManager::get();
 	std::unique_lock lock(m.mutex);
 	m.initialized = true;
-	memory::pool::initialize();
 
 	for (auto &it : m.list) { it.init(it.userdata); }
+	return true;
 }
 
 void terminate() {
@@ -106,8 +124,12 @@ void terminate() {
 	// terminate in reverse oder
 	for (auto it = m.list.rbegin(); it != m.list.rend(); ++it) { it->term(it->userdata); }
 
-	memory::pool::terminate();
 	m.list.clear();
+
+	platform::terminate();
+
+	memory::pool::pop();
+	memory::pool::terminate();
 }
 
 bool addInitializer(void *ptr, NotNull<void (*)(void *)> init, NotNull<void (*)(void *)> term) {

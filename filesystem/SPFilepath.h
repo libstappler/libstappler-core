@@ -82,6 +82,8 @@ struct FileInfo {
 		Exec, // user or system executable from PATH
 		Library, // user or system dynamic shared library
 
+		Fonts,
+
 		// Based on xdg-user-dirs
 		// https://www.freedesktop.org/wiki/Software/xdg-user-dirs/
 		UserHome,

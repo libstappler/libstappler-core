@@ -84,6 +84,7 @@ enum class Status : int32_t {
 	ErrorNotImplemented =		status::ERRNO_ERROR_NUMBER(38), // ENOSYS
 	ErrorTimerExpired =			status::ERRNO_ERROR_NUMBER(62), // ETIME; when it's not an error - return Suspended
 	ErrorNotSupported =			status::ERRNO_ERROR_NUMBER(95), // ENOTSUP, VK_ERROR_FORMAT_NOT_SUPPORTED
+	ErrorBufferOverflow =		status::ERRNO_ERROR_NUMBER(105), // ENOBUFS
 	ErrorAlreadyPerformed =		status::ERRNO_ERROR_NUMBER(114), // EALREADY
 	ErrorInProgress =			status::ERRNO_ERROR_NUMBER(115), // EINPROGRESS
 	ErrorCancelled =			status::ERRNO_ERROR_NUMBER(125), // ECANCELED, VK_ERROR_OUT_OF_DATE_KHR
@@ -137,7 +138,7 @@ struct Result {
 	T result;
 
 	static Result<T> error() { return Result(); }
-	static Result<T> error(Status st) { return Result {st}; }
+	static Result<T> error(Status st) { return Result{st}; }
 
 	Result(T &&t) noexcept : status(Status::Ok), result(move(t)) { }
 	Result(const T &t) noexcept : status(Status::Ok), result(t) { }

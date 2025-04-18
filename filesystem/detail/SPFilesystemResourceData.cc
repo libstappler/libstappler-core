@@ -50,6 +50,7 @@ StringView FilesystemResourceData::getResourcePrefix(FileCategory cat) {
 	switch (cat) {
 	case FileCategory::Exec: return StringView("%EXEC%:"); break;
 	case FileCategory::Library: return StringView("%LIBRARY%:"); break;
+	case FileCategory::Fonts: return StringView("%FONTS%:"); break;
 
 	case FileCategory::UserHome: return StringView("%USER_HOME%:"); break;
 	case FileCategory::UserDesktop: return StringView("%USER_DESKTOP%:"); break;
@@ -359,7 +360,28 @@ bool FilesystemResourceData::enumeratePrefixedPath(StringView path, FileFlags fl
 }
 
 CategoryFlags FilesystemResourceData::getCategoryFlags(FileCategory cat) const {
-	return _resourceLocations[toInt(cat)].flags;
+	auto s = toInt(cat);
+	if (s < _resourceLocations.size()) {
+		return _resourceLocations[s].flags;
+	}
+	return CategoryFlags::None;
+}
+
+void FilesystemResourceData::initAppPaths(StringView root) {
+	auto makeLocation = [&](FileCategory cat, StringView subname) {
+		auto &res = _resourceLocations[toInt(cat)];
+		res.paths.emplace_back(
+				StringView(filepath::merge<memory::StandartInterface>(root, "AppData", subname))
+						.pdup(_pool),
+				FileFlags::Private | FileFlags::Public | FileFlags::Writable);
+		res.flags |= CategoryFlags::Locateable;
+	};
+
+	makeLocation(FileCategory::AppData, "data");
+	makeLocation(FileCategory::AppConfig, "config");
+	makeLocation(FileCategory::AppState, "state");
+	makeLocation(FileCategory::AppCache, "cache");
+	makeLocation(FileCategory::AppRuntime, "runtime");
 }
 
 static FilesystemResourceData s_filesystemPathData;

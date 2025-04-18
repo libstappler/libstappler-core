@@ -38,6 +38,8 @@
  *
  */
 
+#include "stappler-buildconfig.h"
+
 #if WIN32
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wignored-attributes"

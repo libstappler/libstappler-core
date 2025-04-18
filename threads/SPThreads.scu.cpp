@@ -40,10 +40,8 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 static SharedSymbol s_threadSharedSymbols[] = {
-	SharedSymbol{"ThreadInfo::setThreadInfo",
-		(void *)static_cast<void (*)(StringView, uint32_t, bool)>(&ThreadInfo::setThreadInfo)},
-	SharedSymbol{"ThreadInfo::setThreadPool",
-		(void *)static_cast<bool (*)(memory::pool_t *)>(&ThreadInfo::setThreadPool)},
+	SharedSymbol{"ThreadInfo::setThreadInfo", &ThreadInfo::setThreadInfo},
+	SharedSymbol{"ThreadInfo::setThreadPool", &ThreadInfo::setThreadPool},
 };
 
 static SharedModule s_threadSharedModule(buildconfig::MODULE_STAPPLER_THREADS_NAME,

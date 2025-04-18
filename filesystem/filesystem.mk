@@ -34,5 +34,9 @@ ifdef MACOS
 MODULE_STAPPLER_FILESYSTEM_GENERAL_LDFLAGS += -framework UniformTypeIdentifiers
 endif
 
+ifdef WIN32
+MODULE_STAPPLER_FILESYSTEM_LIBS += -luserenv
+endif
+
 # module name resolution
 MODULE_stappler_filesystem := MODULE_STAPPLER_FILESYSTEM

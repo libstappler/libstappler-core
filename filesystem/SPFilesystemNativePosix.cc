@@ -25,8 +25,6 @@ THE SOFTWARE.
 #include "SPFilesystem.h"
 #include "SPPlatformUnistd.h"
 #include "SPStatus.h"
-#include <dirent.h>
-#include <fcntl.h>
 
 #ifndef WIN32
 
@@ -299,7 +297,6 @@ Status touch_fn(StringView path) {
 }
 
 static constexpr int OpenDirFlags = O_DIRECTORY | O_RDONLY | O_NDELAY | O_LARGEFILE | O_CLOEXEC;
-
 
 static Status _ftw_fn(int dirfd, StringView path,
 		const Callback<bool(StringView, FileType)> &callback, int depth, bool dirFirst) {

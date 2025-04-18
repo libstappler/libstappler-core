@@ -26,7 +26,7 @@ MODULE_STAPPLER_EVENT_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/event
 MODULE_STAPPLER_EVENT_DEPENDS_ON := stappler_filesystem stappler_threads
 
 ifdef WIN32
-MODULE_STAPPLER_EVENT_LIBS += -lntdll
+MODULE_STAPPLER_EVENT_LIBS += -lntdll -lUser32
 endif
 
 # module name resolution

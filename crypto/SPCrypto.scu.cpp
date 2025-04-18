@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPCrypto.h"
+#include "SPCore.h"
 #include "SPString.h"
 #include "SPValid.h"
 #include "SPMemory.h"
@@ -35,54 +36,89 @@ struct BackendCtx {
 	StringView title;
 	BackendFlags flags;
 
-	void (*initialize) (BackendCtx &) = nullptr;
-	void (*finalize) (BackendCtx &) = nullptr;
+	void (*initialize)(BackendCtx &) = nullptr;
+	void (*finalize)(BackendCtx &) = nullptr;
 
-	bool (*encryptBlock) (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) = nullptr;
-	bool (*decryptBlock) (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) = nullptr;
+	bool (*encryptBlock)(const BlockKey256 &key, BytesView d,
+			const Callback<void(BytesView)> &cb) = nullptr;
+	bool (*decryptBlock)(const BlockKey256 &key, BytesView d,
+			const Callback<void(BytesView)> &cb) = nullptr;
 
-	bool (*hash256) (Sha256::Buf &, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func);
-	bool (*hash512) (Sha512::Buf &, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func);
+	bool (*hash256)(Sha256::Buf &, const Callback<void(const HashCoderCallback &upd)> &cb,
+			HashFunction func);
+	bool (*hash512)(Sha512::Buf &, const Callback<void(const HashCoderCallback &upd)> &cb,
+			HashFunction func);
 
-	bool (*privInit) (KeyContext &ctx) = nullptr;
-	void (*privFree) (KeyContext &ctx) = nullptr;
+	bool (*privInit)(KeyContext &ctx) = nullptr;
+	void (*privFree)(KeyContext &ctx) = nullptr;
 
-	bool (*privGen) (KeyContext &ctx, KeyBits, KeyType) = nullptr;
-	bool (*privImport) (KeyContext &ctx, BytesView data, const CoderSource &passwd) = nullptr;
-	bool (*privExportPem) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) = nullptr;
-	bool (*privExportDer) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) = nullptr;
-	bool (*privExportPublic) (KeyContext &target, const KeyContext &privKey) = nullptr;
-	bool (*privSign) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data, SignAlgorithm algo) = nullptr;
-	bool (*privVerify) (const KeyContext &ctx, const CoderSource &data, BytesView signature, SignAlgorithm algo) = nullptr;
-	bool (*privEncrypt) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) = nullptr;
-	bool (*privDecrypt) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) = nullptr;
-	bool (*privFingerprint) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) = nullptr;
+	bool (*privGen)(KeyContext &ctx, KeyBits, KeyType) = nullptr;
+	bool (*privImport)(KeyContext &ctx, BytesView data, const CoderSource &passwd) = nullptr;
+	bool (*privExportPem)(const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt,
+			const CoderSource &passPhrase) = nullptr;
+	bool (*privExportDer)(const KeyContext &ctx, const Callback<void(BytesView)> &cb, KeyFormat fmt,
+			const CoderSource &passPhrase) = nullptr;
+	bool (*privExportPublic)(KeyContext &target, const KeyContext &privKey) = nullptr;
+	bool (*privSign)(const KeyContext &ctx, const Callback<void(BytesView)> &cb,
+			const CoderSource &data, SignAlgorithm algo) = nullptr;
+	bool (*privVerify)(const KeyContext &ctx, const CoderSource &data, BytesView signature,
+			SignAlgorithm algo) = nullptr;
+	bool (*privEncrypt)(const KeyContext &ctx, const Callback<void(BytesView)> &cb,
+			const CoderSource &data) = nullptr;
+	bool (*privDecrypt)(const KeyContext &ctx, const Callback<void(BytesView)> &cb,
+			const CoderSource &data) = nullptr;
+	bool (*privFingerprint)(const KeyContext &ctx, const Callback<void(BytesView)> &cb,
+			const CoderSource &data) = nullptr;
 
-	bool (*pubInit) (KeyContext &ctx) = nullptr;
-	void (*pubFree) (KeyContext &ctx) = nullptr;
+	bool (*pubInit)(KeyContext &ctx) = nullptr;
+	void (*pubFree)(KeyContext &ctx) = nullptr;
 
-	bool (*pubImport) (KeyContext &ctx, BytesView data) = nullptr;
-	bool (*pubImportOpenSSH) (KeyContext &ctx, StringView data) = nullptr;
-	bool (*pubExportPem) (const KeyContext &ctx, const Callback<void(BytesView)> &cb) = nullptr;
-	bool (*pubExportDer) (const KeyContext &ctx, const Callback<void(BytesView)> &cb) = nullptr;
-	bool (*pubVerify) (const KeyContext &ctx, const CoderSource &data, BytesView signature, SignAlgorithm algo) = nullptr;
-	bool (*pubEncrypt) (const KeyContext &ctx, const Callback<void(BytesView)> &cb, const CoderSource &data) = nullptr;
+	bool (*pubImport)(KeyContext &ctx, BytesView data) = nullptr;
+	bool (*pubImportOpenSSH)(KeyContext &ctx, StringView data) = nullptr;
+	bool (*pubExportPem)(const KeyContext &ctx, const Callback<void(BytesView)> &cb) = nullptr;
+	bool (*pubExportDer)(const KeyContext &ctx, const Callback<void(BytesView)> &cb) = nullptr;
+	bool (*pubVerify)(const KeyContext &ctx, const CoderSource &data, BytesView signature,
+			SignAlgorithm algo) = nullptr;
+	bool (*pubEncrypt)(const KeyContext &ctx, const Callback<void(BytesView)> &cb,
+			const CoderSource &data) = nullptr;
 };
 
 struct BackendCtxRef {
-	static mem_std::HashMap<Backend, BackendCtx *> s_backends;
-
 	BackendCtxRef(BackendCtx *);
 	~BackendCtxRef();
 
 	BackendCtx *backend;
 };
 
-mem_std::HashMap<Backend, BackendCtx *> BackendCtxRef::s_backends;
+struct BackendInterface {
+	static void initialize(void *ptr) { reinterpret_cast<BackendInterface *>(ptr)->init(); }
+	static void terminate(void *ptr) { reinterpret_cast<BackendInterface *>(ptr)->term(); }
+
+	BackendInterface() { addInitializer(this, initialize, terminate); }
+
+	void init() {
+		for (auto &it : backends) {
+			if (it.second->initialize) {
+				it.second->initialize(*it.second);
+			}
+		}
+	}
+	void term() {
+		for (auto &it : backends) {
+			if (it.second->finalize) {
+				it.second->finalize(*it.second);
+			}
+		}
+	}
+
+	mem_std::HashMap<Backend, BackendCtx *> backends;
+};
+
+static BackendInterface s_interface;
 
 BackendCtx *BackendCtx::get(Backend b) {
-	auto it = BackendCtxRef::s_backends.find(b);
-	if (it !=  BackendCtxRef::s_backends.end()) {
+	auto it = s_interface.backends.find(b);
+	if (it != s_interface.backends.end()) {
 		return it->second;
 	}
 
@@ -113,24 +149,14 @@ BackendCtx *BackendCtx::get(Backend b) {
 }
 
 BackendCtxRef::BackendCtxRef(BackendCtx *ctx) {
-	s_backends.emplace(ctx->name, ctx);
+	s_interface.backends.emplace(ctx->name, ctx);
 	backend = ctx;
-	if (backend->initialize) {
-		backend->initialize(*backend);
-	}
 }
 
-BackendCtxRef::~BackendCtxRef() {
-	s_backends.erase(backend->name);
-	if (backend->finalize) {
-		backend->finalize(*backend);
-	}
-}
+BackendCtxRef::~BackendCtxRef() { s_interface.backends.erase(backend->name); }
 
 void listBackends(const Callback<void(Backend, StringView, BackendFlags)> &cb) {
-	for (auto &it : BackendCtxRef::s_backends) {
-		cb(it.first, it.second->title, it.second->flags);
-	}
+	for (auto &it : s_interface.backends) { cb(it.first, it.second->title, it.second->flags); }
 }
 
 bool isPemKey(BytesView data) {
@@ -146,12 +172,14 @@ static bool isBackendValidForBlock(BackendCtx *b, BlockCipher c) {
 	switch (c) {
 	case BlockCipher::AES_CBC:
 	case BlockCipher::AES_CFB8:
-		if ((b->flags & BackendFlags::SupportsAes) != BackendFlags::None && b->encryptBlock && b->decryptBlock) {
+		if ((b->flags & BackendFlags::SupportsAes) != BackendFlags::None && b->encryptBlock
+				&& b->decryptBlock) {
 			return true;
 		}
 		break;
 	case BlockCipher::Gost3412_2015_CTR_ACPKM:
-		if ((b->flags & BackendFlags::SupportsGost3412_2015) != BackendFlags::None && b->encryptBlock && b->decryptBlock) {
+		if ((b->flags & BackendFlags::SupportsGost3412_2015) != BackendFlags::None
+				&& b->encryptBlock && b->decryptBlock) {
 			return true;
 		}
 		break;
@@ -162,8 +190,10 @@ static bool isBackendValidForBlock(BackendCtx *b, BlockCipher c) {
 static BackendCtx *findBackendForBlock(BlockCipher c) {
 	// check default
 
-	auto check = [&] (BackendCtx *b, bool secure) -> BackendCtx * {
-		if (b && (b->flags & BackendFlags::SecureLibrary) == (secure ? BackendFlags::SecureLibrary : BackendFlags::None)) {
+	auto check = [&](BackendCtx *b, bool secure) -> BackendCtx * {
+		if (b
+				&& (b->flags & BackendFlags::SecureLibrary)
+						== (secure ? BackendFlags::SecureLibrary : BackendFlags::None)) {
 			if (isBackendValidForBlock(b, c)) {
 				return b;
 			}
@@ -177,12 +207,16 @@ static BackendCtx *findBackendForBlock(BlockCipher c) {
 	}
 
 	// check secure libs first
-	for (auto &it : BackendCtxRef::s_backends) {
-		if (check(it.second, true)) { return it.second; }
+	for (auto &it : s_interface.backends) {
+		if (check(it.second, true)) {
+			return it.second;
+		}
 	}
 
-	for (auto &it : BackendCtxRef::s_backends) {
-		if (check(it.second, false)) { return it.second; }
+	for (auto &it : s_interface.backends) {
+		if (check(it.second, false)) {
+			return it.second;
+		}
 	}
 	return nullptr;
 }
@@ -201,14 +235,9 @@ static void fillCryptoBlockHeader(uint8_t *buf, const BlockKey256 &key, BytesVie
 
 static SignAlgorithm getSignForBlockCipher(const PrivateKey &key) {
 	switch (key.getType()) {
-	case KeyType::GOST3410_2012_256:
-		return SignAlgorithm::GOST_256;
-		break;
-	case KeyType::GOST3410_2012_512:
-		return SignAlgorithm::GOST_512;
-		break;
-	default:
-		break;
+	case KeyType::GOST3410_2012_256: return SignAlgorithm::GOST_256; break;
+	case KeyType::GOST3410_2012_512: return SignAlgorithm::GOST_512; break;
+	default: break;
 	}
 	return SignAlgorithm::RSA_SHA512;
 }
@@ -218,7 +247,8 @@ bool encryptBlock(const BlockKey256 &key, BytesView data, const Callback<void(By
 	return b->encryptBlock(key, data, cb);
 }
 
-bool encryptBlock(Backend b, const BlockKey256 &key, BytesView data, const Callback<void(BytesView)> &cb) {
+bool encryptBlock(Backend b, const BlockKey256 &key, BytesView data,
+		const Callback<void(BytesView)> &cb) {
 	auto backend = BackendCtx::get(b);
 	if (!backend || !backend->encryptBlock) {
 		return false;
@@ -231,7 +261,8 @@ bool decryptBlock(const BlockKey256 &key, BytesView data, const Callback<void(By
 	return b->decryptBlock(key, data, cb);
 }
 
-bool decryptBlock(Backend b, const BlockKey256 &key, BytesView data, const Callback<void(BytesView)> &cb) {
+bool decryptBlock(Backend b, const BlockKey256 &key, BytesView data,
+		const Callback<void(BytesView)> &cb) {
 	auto backend = BackendCtx::get(b);
 	if (!backend || !backend->decryptBlock) {
 		return false;
@@ -239,7 +270,8 @@ bool decryptBlock(Backend b, const BlockKey256 &key, BytesView data, const Callb
 	return backend->decryptBlock(key, data, cb);
 }
 
-BlockKey256 makeBlockKey(Backend b, BytesView pkey, BytesView hash, BlockCipher c, uint32_t version) {
+BlockKey256 makeBlockKey(Backend b, BytesView pkey, BytesView hash, BlockCipher c,
+		uint32_t version) {
 	crypto::PrivateKey pk(b, pkey);
 	if (pk && version > 0) {
 		auto ret = makeBlockKey(pk, hash, c, version);
@@ -249,7 +281,7 @@ BlockKey256 makeBlockKey(Backend b, BytesView pkey, BytesView hash, BlockCipher 
 		ret.cipher = c;
 		return ret;
 	} else {
-		return BlockKey256 { 0, c, string::Sha256().update(hash).update(pkey).final() };
+		return BlockKey256{0, c, string::Sha256().update(hash).update(pkey).final()};
 	}
 }
 
@@ -263,8 +295,7 @@ BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, uint32_t versio
 	case KeyType::GOST3410_2012_512:
 		return makeBlockKey(pkey, hash, BlockCipher::Gost3412_2015_CTR_ACPKM, version);
 		break;
-	default:
-		break;
+	default: break;
 	}
 	return makeBlockKey(pkey, hash, BlockCipher::AES_CBC, version);
 }
@@ -277,22 +308,23 @@ BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher b, 
 		switch (b) {
 		case BlockCipher::AES_CBC:
 		case BlockCipher::AES_CFB8:
-			pkey.sign([&] (BytesView data) {
+			pkey.sign([&](BytesView data) {
 				ret.version = version;
 				ret.data = hash256(pkey.getBackend(), CoderSource(data), HashFunction::SHA_2);
 			}, hash, getSignForBlockCipher(pkey));
 			break;
 		case BlockCipher::Gost3412_2015_CTR_ACPKM:
-			pkey.fingerprint([&] (BytesView data) {
+			pkey.fingerprint([&](BytesView data) {
 				ret.version = version;
 				ret.data = Gost3411_256::hmac(hash, data);
 			}, hash);
 			break;
 		}
 	} else if (version == 1) {
-		if (!pkey.sign([&] (BytesView data) {
+		if (!pkey.sign([&](BytesView data) {
 			auto s = std::min(data.size(), size_t(256));
-			ret.data = hash256(pkey.getBackend(), CoderSource(BytesView(data, s)), HashFunction::SHA_2);
+			ret.data = hash256(pkey.getBackend(), CoderSource(BytesView(data, s)),
+					HashFunction::SHA_2);
 			ret.version = version;
 		}, hash, getSignForBlockCipher(pkey))) {
 			ret.version = 0;
@@ -312,12 +344,13 @@ BlockInfo getBlockInfo(BytesView val) {
 	return ret;
 }
 
-Sha256::Buf hash256(Backend b, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func) {
+Sha256::Buf hash256(Backend b, const Callback<void(const HashCoderCallback &upd)> &cb,
+		HashFunction func) {
 	auto embedded = [&] {
 		switch (func) {
 		case HashFunction::SHA_2: {
 			Sha256 ctx;
-			cb([&] (const CoderSource &data) {
+			cb([&](const CoderSource &data) {
 				ctx.update(data);
 				return true;
 			});
@@ -326,7 +359,7 @@ Sha256::Buf hash256(Backend b, const Callback<void( const HashCoderCallback &upd
 		}
 		case HashFunction::GOST_3411:
 			Gost3411_256 ctx;
-			cb([&] (const CoderSource &data) {
+			cb([&](const CoderSource &data) {
 				ctx.update(data);
 				return true;
 			});
@@ -349,17 +382,19 @@ Sha256::Buf hash256(Backend b, const Callback<void( const HashCoderCallback &upd
 }
 
 Sha256::Buf hash256(Backend b, const CoderSource &data, HashFunction func) {
-	return hash256(b, Callback<void( const HashCoderCallback &upd )>([&] (const HashCoderCallback &upd) {
-		upd(data);
-	}), func);
+	return hash256(b,
+			Callback<void(const HashCoderCallback &upd)>(
+					[&](const HashCoderCallback &upd) { upd(data); }),
+			func);
 }
 
-Sha512::Buf hash512(Backend b, const Callback<void( const HashCoderCallback &upd )> &cb, HashFunction func) {
+Sha512::Buf hash512(Backend b, const Callback<void(const HashCoderCallback &upd)> &cb,
+		HashFunction func) {
 	auto embedded = [&] {
 		switch (func) {
 		case HashFunction::SHA_2: {
 			Sha512 ctx;
-			cb([&] (const CoderSource &data) {
+			cb([&](const CoderSource &data) {
 				ctx.update(data);
 				return true;
 			});
@@ -368,7 +403,7 @@ Sha512::Buf hash512(Backend b, const Callback<void( const HashCoderCallback &upd
 		}
 		case HashFunction::GOST_3411:
 			Gost3411_512 ctx;
-			cb([&] (const CoderSource &data) {
+			cb([&](const CoderSource &data) {
 				ctx.update(data);
 				return true;
 			});
@@ -391,19 +426,22 @@ Sha512::Buf hash512(Backend b, const Callback<void( const HashCoderCallback &upd
 }
 
 Sha512::Buf hash512(Backend b, const CoderSource &data, HashFunction func) {
-	return hash512(b, Callback<void( const HashCoderCallback &upd )>([&] (const HashCoderCallback &upd) {
-		upd(data);
-	}), func);
+	return hash512(b,
+			Callback<void(const HashCoderCallback &upd)>(
+					[&](const HashCoderCallback &upd) { upd(data); }),
+			func);
 }
 
-Sha256::Buf hash256(const Callback<void( const Callback<bool(const CoderSource &)> &upd )> &cb, HashFunction func) {
+Sha256::Buf hash256(const Callback<void(const Callback<bool(const CoderSource &)> &upd)> &cb,
+		HashFunction func) {
 	return hash256(Backend::Default, cb, func);
 }
 Sha256::Buf hash256(const CoderSource &data, HashFunction func) {
 	return hash256(Backend::Default, data, func);
 }
 
-Sha512::Buf hash512(const Callback<void( const Callback<bool(const CoderSource &)> &upd )> &cb, HashFunction func) {
+Sha512::Buf hash512(const Callback<void(const Callback<bool(const CoderSource &)> &upd)> &cb,
+		HashFunction func) {
 	return hash512(Backend::Default, cb, func);
 }
 Sha512::Buf hash512(const CoderSource &data, HashFunction func) {
@@ -454,7 +492,7 @@ PrivateKey::PrivateKey(PrivateKey &&other) {
 	other._key.backendCtx = nullptr;
 }
 
-PrivateKey& PrivateKey::operator=(PrivateKey &&other) {
+PrivateKey &PrivateKey::operator=(PrivateKey &&other) {
 	if (_valid) {
 		auto backend = static_cast<BackendCtx *>(_key.backendCtx);
 		if (backend && backend->privFree) {
@@ -475,9 +513,7 @@ PrivateKey& PrivateKey::operator=(PrivateKey &&other) {
 	return *this;
 }
 
-bool PrivateKey::generate(KeyType type) {
-	return generate(KeyBits::_4096, type);
-}
+bool PrivateKey::generate(KeyType type) { return generate(KeyBits::_4096, type); }
 
 bool PrivateKey::generate(KeyBits bits, KeyType type) {
 	if (!_valid) {
@@ -507,16 +543,15 @@ bool PrivateKey::import(BytesView data, const CoderSource &passwd) {
 	return false;
 }
 
-PublicKey PrivateKey::exportPublic() const {
-	return PublicKey(*this);
-}
+PublicKey PrivateKey::exportPublic() const { return PublicKey(*this); }
 
 Backend PrivateKey::getBackend() const {
 	auto backend = static_cast<BackendCtx *>(_key.backendCtx);
 	return backend->name;
 }
 
-bool PrivateKey::exportPem(const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) const {
+bool PrivateKey::exportPem(const Callback<void(BytesView)> &cb, KeyFormat fmt,
+		const CoderSource &passPhrase) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -534,11 +569,13 @@ bool PrivateKey::exportPem(const Callback<void(BytesView)> &cb, KeyFormat fmt, c
 	return false;
 }
 
-bool PrivateKey::exportPem(const Callback<void(BytesView)> &cb, const CoderSource &passPhrase) const {
+bool PrivateKey::exportPem(const Callback<void(BytesView)> &cb,
+		const CoderSource &passPhrase) const {
 	return exportPem(cb, KeyFormat::PKCS8, passPhrase);
 }
 
-bool PrivateKey::exportDer(const Callback<void(BytesView)> &cb, KeyFormat fmt, const CoderSource &passPhrase) const {
+bool PrivateKey::exportDer(const Callback<void(BytesView)> &cb, KeyFormat fmt,
+		const CoderSource &passPhrase) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -556,11 +593,13 @@ bool PrivateKey::exportDer(const Callback<void(BytesView)> &cb, KeyFormat fmt, c
 	return false;
 }
 
-bool PrivateKey::exportDer(const Callback<void(BytesView)> &cb, const CoderSource &passPhrase) const {
+bool PrivateKey::exportDer(const Callback<void(BytesView)> &cb,
+		const CoderSource &passPhrase) const {
 	return exportDer(cb, KeyFormat::PKCS8, passPhrase);
 }
 
-bool PrivateKey::sign(const Callback<void(BytesView)> &cb, const CoderSource &data, SignAlgorithm algo) const {
+bool PrivateKey::sign(const Callback<void(BytesView)> &cb, const CoderSource &data,
+		SignAlgorithm algo) const {
 	if (!_loaded || !_valid) {
 		return false;
 	}
@@ -613,9 +652,7 @@ bool PrivateKey::isGenerateSupported(KeyType type) const {
 	case KeyType::Unknown:
 	case KeyType::DSA:
 	case KeyType::ECDSA:
-	case KeyType::EDDSA_ED448:
-		return false;
-		break;
+	case KeyType::EDDSA_ED448: return false; break;
 	}
 	return false;
 }
@@ -623,8 +660,12 @@ bool PrivateKey::isGenerateSupported(KeyType type) const {
 bool PrivateKey::isSupported(KeyFormat fmt) const {
 	auto backend = static_cast<BackendCtx *>(_key.backendCtx);
 	switch (fmt) {
-	case KeyFormat::PKCS1: return (backend->flags & BackendFlags::SupportsPKCS1) != BackendFlags::None; break;
-	case KeyFormat::PKCS8: return (backend->flags & BackendFlags::SupportsPKCS8) != BackendFlags::None; break;
+	case KeyFormat::PKCS1:
+		return (backend->flags & BackendFlags::SupportsPKCS1) != BackendFlags::None;
+		break;
+	case KeyFormat::PKCS8:
+		return (backend->flags & BackendFlags::SupportsPKCS8) != BackendFlags::None;
+		break;
 	}
 	return false;
 }
@@ -715,7 +756,7 @@ PublicKey::PublicKey(PublicKey &&other) {
 	other._key.backendCtx = nullptr;
 }
 
-PublicKey& PublicKey::operator=(PublicKey &&other) {
+PublicKey &PublicKey::operator=(PublicKey &&other) {
 	if (_valid) {
 		auto backend = static_cast<BackendCtx *>(_key.backendCtx);
 		if (backend && backend->pubFree) {
@@ -821,11 +862,11 @@ bool PublicKey::encrypt(const Callback<void(BytesView)> &cb, const CoderSource &
 	return false;
 }
 
-static uint8_t * writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwork exp) {
+static uint8_t *writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwork exp) {
 	size_t modSize = 1;
 	size_t expSize = 1;
 
-	auto readSize = [&] (size_t s) {
+	auto readSize = [&](size_t s) {
 		if (s < 128) {
 			return 1;
 		} else if (s < 256) {
@@ -835,45 +876,56 @@ static uint8_t * writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwor
 		}
 	};
 
-	auto writeSize = [&] (size_t s) {
+	auto writeSize = [&](size_t s) {
 		if (s < 128) {
-			*buf = uint8_t(s); ++ buf;
+			*buf = uint8_t(s);
+			++buf;
 		} else if (s < 256) {
-			*buf = uint8_t(0x81); ++ buf;
-			*buf = uint8_t(s); ++ buf;
+			*buf = uint8_t(0x81);
+			++buf;
+			*buf = uint8_t(s);
+			++buf;
 		} else {
-			*buf = uint8_t(0x82); ++ buf;
-			*buf = uint8_t((s >> 8) & 0xFF); ++ buf;
-			*buf = uint8_t(s & 0xFF); ++ buf;
+			*buf = uint8_t(0x82);
+			++buf;
+			*buf = uint8_t((s >> 8) & 0xFF);
+			++buf;
+			*buf = uint8_t(s & 0xFF);
+			++buf;
 		}
 	};
 
 	modSize += readSize(mod.size()) + mod.size();
 	expSize += readSize(exp.size()) + exp.size();
 
-	*buf = uint8_t(0x30); ++ buf;
+	*buf = uint8_t(0x30);
+	++buf;
 	writeSize(modSize + expSize);
 
-	*buf = uint8_t(0x02); ++ buf;
+	*buf = uint8_t(0x02);
+	++buf;
 	writeSize(mod.size());
-	for (size_t i = 0; i < mod.size(); ++ i) {
-		*buf = mod.at(i); ++ buf;
+	for (size_t i = 0; i < mod.size(); ++i) {
+		*buf = mod.at(i);
+		++buf;
 	}
 
-	*buf = uint8_t(0x02); ++ buf;
+	*buf = uint8_t(0x02);
+	++buf;
 	writeSize(exp.size());
-	for (size_t i = 0; i < exp.size(); ++ i) {
-		*buf = exp.at(i); ++ buf;
+	for (size_t i = 0; i < exp.size(); ++i) {
+		*buf = exp.at(i);
+		++buf;
 	}
 
 	return buf;
 }
 
-}
+} // namespace stappler::crypto
 
 #ifdef __LCC__
-#pragma diag_suppress 2464
-#pragma diag_suppress 1444
+#pragma diag_suppress 2'464
+#pragma diag_suppress 1'444
 #endif
 
 #include "SPCrypto-gost.cc"
@@ -882,6 +934,6 @@ static uint8_t * writeRSAKey(uint8_t *buf, BytesViewNetwork mod, BytesViewNetwor
 #include "SPCrypto-gnutls.cc"
 
 #ifdef __LCC__
-#pragma diag_default 2464
-#pragma diag_default 1444
+#pragma diag_default 2'464
+#pragma diag_default 1'444
 #endif

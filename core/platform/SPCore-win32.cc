@@ -20,11 +20,15 @@
  THE SOFTWARE.
  **/
 
+#include "SPLog.h"
+#include "SPStatus.h"
+#include "SPString.h"
 #include "SPStringView.h"
 
 #if WIN32
 #include "SPMemory.h"
 #include "SPPlatformUnistd.h"
+#include "SPSharedModule.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -32,7 +36,40 @@
 #include <x86intrin.h>
 #endif
 
+#include <processenv.h>
+#include <securitybaseapi.h>
+#include <strsafe.h>
+#include <synchapi.h>
+#include <winnt.h>
+#include <objbase.h>
+#include <shlwapi.h>
+#include <Shobjidl.h>
+#include <userenv.h>
+#include <Shlobj.h>
+#include <sddl.h>
+#include <accctrl.h>
+#include <aclapi.h>
+#include <wil/result_macros.h>
+#include <wil/stl.h>
+#include <wil/resource.h>
+#include <wil/com.h>
+#include <wil\token_helpers.h>
+
 namespace STAPPLER_VERSIONIZED stappler::platform {
+
+static PSID s_containerId = nullptr;
+
+static DWORD s_defaultAppContainerCaps[] = {
+	SECURITY_CAPABILITY_INTERNET_CLIENT_SERVER,
+	SECURITY_CAPABILITY_PICTURES_LIBRARY,
+	SECURITY_CAPABILITY_VIDEOS_LIBRARY,
+	SECURITY_CAPABILITY_MUSIC_LIBRARY,
+	SECURITY_CAPABILITY_DOCUMENTS_LIBRARY,
+	SECURITY_CAPABILITY_SHARED_USER_CERTIFICATES,
+	SECURITY_CAPABILITY_REMOVABLE_STORAGE,
+};
+
+static const KNOWNFOLDERID *s_knownFoldersToAllow[] = {&FOLDERID_Profile, &FOLDERID_Public};
 
 class RandomSequence {
 public:
@@ -40,7 +77,9 @@ public:
 		if (FALSE == CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, 0)) {
 			// failed, should we try to create a default provider?
 			if (NTE_BAD_KEYSET == GetLastError()) {
-				if (FALSE == CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_NEWKEYSET)) {
+				if (FALSE
+						== CryptAcquireContextW(&hProvider, NULL, NULL, PROV_RSA_FULL,
+								CRYPT_NEWKEYSET)) {
 					// ensure the provider is NULL so we could use a backup plan
 					hProvider = NULL;
 				}
@@ -66,14 +105,14 @@ private:
 };
 
 static auto mapBuffer(WideStringView data, char16_t *buf, size_t count, int flags) {
-	return LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, flags, (wchar_t *)data.data(), data.size(), (wchar_t *)buf, int(count),
-				nullptr, nullptr, 0);
+	return LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, flags, (wchar_t *)data.data(), data.size(),
+			(wchar_t *)buf, int(count), nullptr, nullptr, 0);
 }
 
 template <typename Interface>
 auto mapString(WideStringView data, int flags) {
-	auto bufSize = LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, flags, (wchar_t *)data.data(), data.size(), (wchar_t *)nullptr, 0,
-		nullptr, nullptr, 0);
+	auto bufSize = LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, flags, (wchar_t *)data.data(),
+			data.size(), (wchar_t *)nullptr, 0, nullptr, nullptr, 0);
 
 	typename Interface::WideStringType ret;
 	ret.resize(bufSize);
@@ -160,7 +199,8 @@ auto tolower<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto tolower<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto tolower<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	return mapString<memory::StandartInterface>(data, LCMAP_LOWERCASE);
 }
 
@@ -170,7 +210,8 @@ auto toupper<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto toupper<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto toupper<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	return mapString<memory::StandartInterface>(data, LCMAP_UPPERCASE);
 }
 
@@ -180,26 +221,30 @@ auto totitle<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto totitle<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto totitle<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	return mapString<memory::StandartInterface>(data, LCMAP_TITLECASE);
 }
 
 int compare_u(StringView l, StringView r) {
-	return compare_u(string::toUtf16<memory::StandartInterface>(l), string::toUtf16<memory::StandartInterface>(r));
+	return compare_u(string::toUtf16<memory::StandartInterface>(l),
+			string::toUtf16<memory::StandartInterface>(r));
 }
 
 int compare_u(WideStringView l, WideStringView r) {
-	return CompareStringEx(LOCALE_NAME_SYSTEM_DEFAULT, NORM_LINGUISTIC_CASING,
-			(wchar_t *)l.data(), l.size(), (wchar_t *)r.data(), r.size(), NULL, NULL, 0);
+	return CompareStringEx(LOCALE_NAME_SYSTEM_DEFAULT, NORM_LINGUISTIC_CASING, (wchar_t *)l.data(),
+			l.size(), (wchar_t *)r.data(), r.size(), NULL, NULL, 0);
 }
 
 int caseCompare_u(StringView l, StringView r) {
-	return caseCompare_u(string::toUtf16<memory::StandartInterface>(l), string::toUtf16<memory::StandartInterface>(r));
+	return caseCompare_u(string::toUtf16<memory::StandartInterface>(l),
+			string::toUtf16<memory::StandartInterface>(r));
 }
 
 int caseCompare_u(WideStringView l, WideStringView r) {
-	return CompareStringEx(LOCALE_NAME_SYSTEM_DEFAULT, NORM_LINGUISTIC_CASING | NORM_IGNORECASE | LINGUISTIC_IGNORECASE,
-			(wchar_t *)l.data(), l.size(), (wchar_t *)r.data(), r.size(), NULL, NULL, 0);
+	return CompareStringEx(LOCALE_NAME_SYSTEM_DEFAULT,
+			NORM_LINGUISTIC_CASING | NORM_IGNORECASE | LINGUISTIC_IGNORECASE, (wchar_t *)l.data(),
+			l.size(), (wchar_t *)r.data(), r.size(), NULL, NULL, 0);
 }
 
 size_t makeRandomBytes(uint8_t *buf, size_t len) {
@@ -217,7 +262,7 @@ static LARGE_INTEGER getFILETIMEoffset() {
 	FILETIME f;
 	LARGE_INTEGER t;
 
-	s.wYear = 1970;
+	s.wYear = 1'970;
 	s.wMonth = 1;
 	s.wDay = 1;
 	s.wHour = 0;
@@ -248,7 +293,7 @@ uint64_t clock(ClockType type) {
 		usePerformanceCounter = QueryPerformanceFrequency(&performanceFrequency);
 		if (usePerformanceCounter) {
 			QueryPerformanceCounter(&offset);
-			frequencyToMicroseconds = performanceFrequency.QuadPart / 1000000;
+			frequencyToMicroseconds = performanceFrequency.QuadPart / 1'000'000;
 		} else {
 			offset = getFILETIMEoffset();
 			frequencyToMicroseconds = 10;
@@ -270,17 +315,206 @@ uint64_t clock(ClockType type) {
 }
 
 void sleep(uint64_t microseconds) {
-    HANDLE timer;
-    LARGE_INTEGER ft;
+	HANDLE timer;
+	LARGE_INTEGER ft;
 
-    ft.QuadPart = -(10*microseconds); // Convert to 100 nanosecond interval, negative value indicates relative time
+	ft.QuadPart = -(10
+			* microseconds); // Convert to 100 nanosecond interval, negative value indicates relative time
 
-    timer = CreateWaitableTimer(NULL, TRUE, NULL);
-    SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
-    WaitForSingleObject(timer, INFINITE);
-    CloseHandle(timer);
+	timer = CreateWaitableTimer(NULL, TRUE, NULL);
+	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+	WaitForSingleObject(timer, INFINITE);
+	CloseHandle(timer);
 }
 
+bool allowNamedObjectAccess(PSID appContainerSid, PWSTR name, SE_OBJECT_TYPE type,
+		ACCESS_MASK accessMask) {
+	PACL oldAcl, newAcl = nullptr;
+	DWORD status;
+	EXPLICIT_ACCESS access;
+	do {
+		access.grfAccessMode = GRANT_ACCESS;
+		access.grfAccessPermissions = accessMask;
+		access.grfInheritance = OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE;
+		access.Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+		access.Trustee.pMultipleTrustee = nullptr;
+		access.Trustee.ptstrName = (PWSTR)appContainerSid;
+		access.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+		access.Trustee.TrusteeType = TRUSTEE_IS_GROUP;
+
+		status = ::GetNamedSecurityInfoW(name, type, DACL_SECURITY_INFORMATION, nullptr, nullptr,
+				&oldAcl, nullptr, nullptr);
+		if (status != ERROR_SUCCESS) {
+			return false;
+		}
+
+		status = ::SetEntriesInAclW(1, &access, oldAcl, &newAcl);
+		if (status != ERROR_SUCCESS) {
+			return false;
+		}
+
+		status = ::SetNamedSecurityInfoW(name, type, DACL_SECURITY_INFORMATION, nullptr, nullptr,
+				newAcl, nullptr);
+		if (status != ERROR_SUCCESS) {
+			break;
+		}
+	} while (false);
+
+	if (newAcl) {
+		::LocalFree(newAcl);
+	}
+
+	return status == ERROR_SUCCESS;
 }
+
+bool initialize(int &resultCode) {
+	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
+	int appPathCommon = 0;
+	if (auto v = SharedModule::acquireTypedSymbol<int *>(buildconfig::MODULE_APPCONFIG_NAME,
+				"APPCONFIG_APP_PATH_COMMON")) {
+		appPathCommon = *v;
+	}
+
+	bool isAppContainer = false;
+	wil::get_token_is_app_container_nothrow(nullptr, isAppContainer);
+
+	if (isAppContainer || appPathCommon < 2) {
+		return true;
+	}
+
+	auto appConfigName = getAppconfigAppName();
+	auto appConfigBundleName = getAppconfigBundleName();
+	if (!isAppContainer && appConfigName && appConfigBundleName) {
+		char16_t profileName[64] = {0};
+		char16_t publicName[512] = {0};
+		const wchar_t *desc = L"Stappler Application";
+
+		unicode::toUtf16(profileName, 63, appConfigBundleName);
+		unicode::toUtf16(publicName, 511, appConfigName);
+
+		HRESULT hr;
+
+		//hr = ::DeleteAppContainerProfile((const wchar_t *)profileName);
+		//if (!SUCCEEDED(hr)) {
+		//	log::warn("core", "Fail to delete temporary profile");
+		//}
+
+		hr = ::CreateAppContainerProfile((const wchar_t *)profileName, (const wchar_t *)publicName,
+				desc, nullptr, 0, &s_containerId);
+		if (!SUCCEEDED(hr)) {
+			if (hr == E_ACCESSDENIED) {
+				log::warn("core", "Fail to create temporary profile: E_ACCESSDENIED");
+			} else if (hr == HRESULT_FROM_WIN32(ERROR_ALREADY_EXISTS)) {
+				hr = ::DeriveAppContainerSidFromAppContainerName((const wchar_t *)profileName,
+						&s_containerId);
+				if (!SUCCEEDED(hr)) {
+					log::warn("core", "Fail to create temporary profile: ERROR_ALREADY_EXISTS");
+				}
+			} else if (hr == E_INVALIDARG) {
+				log::warn("core", "Fail to create temporary profile: E_INVALIDARG");
+			}
+		} else {
+			wchar_t *commonDirPath = nullptr;
+			for (auto &it : s_knownFoldersToAllow) {
+				SHGetKnownFolderPath(*it, 0, nullptr, &commonDirPath);
+				if (commonDirPath) {
+					allowNamedObjectAccess(s_containerId, commonDirPath, SE_FILE_OBJECT,
+							FILE_GENERIC_READ);
+					CoTaskMemFree(commonDirPath);
+					commonDirPath = nullptr;
+				}
+			}
+		}
+	}
+
+	if (appPathCommon == 2) {
+		// only use container for paths
+		return true;
+	}
+
+	// run self in app container
+	auto capsCount = sizeof(s_defaultAppContainerCaps) / sizeof(DWORD);
+
+	SID_AND_ATTRIBUTES capsAttrs[capsCount];
+	SID_IDENTIFIER_AUTHORITY authority = SECURITY_APP_PACKAGE_AUTHORITY;
+
+	int i = 0;
+	for (auto &it : s_defaultAppContainerCaps) {
+		if (!AllocateAndInitializeSid(&authority, SECURITY_BUILTIN_CAPABILITY_RID_COUNT,
+					SECURITY_CAPABILITY_BASE_RID, it, 0, 0, 0, 0, 0, 0, &capsAttrs[i].Sid)) {
+			log::warn("core", "Fail to allocate capability SID");
+		}
+		capsAttrs[i].Attributes = SE_GROUP_ENABLED;
+		++i;
+	}
+
+	// Run self in container
+	SECURITY_CAPABILITIES sc;
+	sc.AppContainerSid = s_containerId;
+	sc.Capabilities = nullptr;
+	sc.CapabilityCount = 0;
+	sc.Reserved = 0;
+	sc.Capabilities = capsAttrs;
+	sc.CapabilityCount = capsCount;
+
+	STARTUPINFOEXW si;
+	memset(&si, 0, sizeof(STARTUPINFOEXW));
+	si.StartupInfo.cb = sizeof(STARTUPINFOEXW);
+
+	PROCESS_INFORMATION pi;
+	memset(&pi, 0, sizeof(PROCESS_INFORMATION));
+
+	SIZE_T AttributesSize;
+	InitializeProcThreadAttributeList(NULL, 1, NULL, &AttributesSize);
+	si.lpAttributeList = (LPPROC_THREAD_ATTRIBUTE_LIST)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,
+			AttributesSize);
+	InitializeProcThreadAttributeList(si.lpAttributeList, 1, NULL, &AttributesSize);
+
+	if (!::UpdateProcThreadAttribute(si.lpAttributeList, 0,
+				PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES, &sc, sizeof(SECURITY_CAPABILITIES),
+				nullptr, nullptr)) {
+		log::error("core", "Fail to update proc attributes for AppContainer: ",
+				status::lastErrorToStatus(GetLastError()));
+		return false;
+	}
+
+	wchar_t fullpath[NTFS_MAX_PATH] = {0};
+	GetModuleFileNameW(NULL, fullpath, NTFS_MAX_PATH - 1);
+
+	auto commandLine = GetCommandLineW();
+
+	BOOL created = ::CreateProcessW(fullpath, commandLine, nullptr, nullptr, TRUE,
+			EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr, (LPSTARTUPINFOW)&si, &pi);
+
+	if (created) {
+		WaitForSingleObject(pi.hProcess, INFINITE);
+
+		DWORD code = 0;
+		GetExitCodeProcess(pi.hProcess, &code);
+
+		resultCode = code;
+	} else {
+		auto lastError = GetLastError();
+		log::error("core",
+				"Fail to create AppContainer process: ", status::lastErrorToStatus(lastError));
+		resultCode = -1'024;
+	}
+
+	DeleteProcThreadAttributeList(si.lpAttributeList);
+	for (auto &it : capsAttrs) { FreeSid(it.Sid); }
+
+	return false;
+}
+
+void terminate() {
+	if (s_containerId) {
+		FreeSid(s_containerId);
+	}
+
+	CoUninitialize();
+}
+
+} // namespace stappler::platform
 
 #endif

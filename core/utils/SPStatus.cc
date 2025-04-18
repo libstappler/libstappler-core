@@ -60,6 +60,7 @@ StringView getStatusName(Status status) {
 	case Status::ErrorNotImplemented: return "Status::ErrorNotImplemented"; break;
 	case Status::ErrorTimerExpired: return "Status::ErrorTimerExpired"; break;
 	case Status::ErrorNotSupported: return "Status::ErrorNotSupported"; break;
+	case Status::ErrorBufferOverflow: return "Status::ErrorBufferOverflow"; break;
 	case Status::ErrorAlreadyPerformed: return "Status::ErrorAlreadyPerformed"; break;
 	case Status::ErrorInProgress: return "Status::ErrorInProgress"; break;
 	case Status::ErrorCancelled: return "Status::ErrorCancelled"; break;
@@ -103,28 +104,52 @@ static StringView getInternalDescription(Status st) {
 	case Status::ErrorInvalidArguemnt: return "Invalid arguments, fail to execute command"; break;
 	case Status::ErrorOutOfDeviceMemory: return "No space left on target device"; break;
 	case Status::ErrorNotSupported: return "Operation not supported for this arguments"; break;
-	case Status::ErrorCancelled: return "Operation cancelled (device is not compatible with it any more)"; break;
+	case Status::ErrorCancelled:
+		return "Operation cancelled (device is not compatible with it any more)";
+		break;
 	case Status::ErrorDeviceLost: return "Device is not accessible any more"; break;
+	case Status::ErrorBufferOverflow: return "No buffer space available"; break;
 
 	case Status::ErrorMemoryMapFailed: return "Fail to map memory for the object"; break;
 
 	// Graphic-API specific errors
-	case Status::ErrorLayerNotPresent: return "A requested layer is not present or could not be loaded"; break;
+	case Status::ErrorLayerNotPresent:
+		return "A requested layer is not present or could not be loaded";
+		break;
 	case Status::ErrorExtensionNotPresent: return "A requested extension is not supported"; break;
 	case Status::ErrorFeatureNotPresent: return "A requested feature is not supported"; break;
-	case Status::ErrorFragmentedPool: return "A pool allocation has failed due to fragmentation of the pool’s memory"; break;
+	case Status::ErrorFragmentedPool:
+		return "A pool allocation has failed due to fragmentation of the pool’s memory";
+		break;
 	case Status::ErrorOutOfPoolMemory: return "A pool memory allocation has failed"; break;
-	case Status::ErrorInvalidExternalHandle: return "An external handle is not a valid handle of the specified type"; break;
-	case Status::ErrorFragmentation: return "A descriptor pool creation has failed due to fragmentation"; break;
-	case Status::ErrorInvalidCaptureAddress: return "A buffer creation or memory allocation failed because the requested address is not available"; break;
+	case Status::ErrorInvalidExternalHandle:
+		return "An external handle is not a valid handle of the specified type";
+		break;
+	case Status::ErrorFragmentation:
+		return "A descriptor pool creation has failed due to fragmentation";
+		break;
+	case Status::ErrorInvalidCaptureAddress:
+		return "A buffer creation or memory allocation failed because the requested address is not "
+			   "available";
+		break;
 	case Status::ErrorPipelineCompileRequired: return "Status::ErrorPipelineCompileRequired"; break;
 	case Status::ErrorSurfaceLost: return "A surface is no longer available"; break;
-	case Status::ErrorNativeWindowInUse: return "The requested window is already in use in a manner which prevents it from being used again"; break;
-	case Status::ErrorIncompatibleDisplay: return "The display is incompatible in a way that prevents sharing an image"; break;
-	case Status::ErrorValidationFailed: return " A command failed because invalid usage was detected by the implementation or a validation-layer"; break;
+	case Status::ErrorNativeWindowInUse:
+		return "The requested window is already in use in a manner which prevents it from being "
+			   "used again";
+		break;
+	case Status::ErrorIncompatibleDisplay:
+		return "The display is incompatible in a way that prevents sharing an image";
+		break;
+	case Status::ErrorValidationFailed:
+		return " A command failed because invalid usage was detected by the implementation or a "
+			   "validation-layer";
+		break;
 	case Status::ErrorInvalidShader: return "One or more shaders failed to compile or link"; break;
 	case Status::ErrorInvalidDrmFormat: return "Status::ErrorInvalidDrmFormat"; break;
-	case Status::ErrorFullscreenLost: return "Swapchain did not have exclusive full-screen access any more"; break;
+	case Status::ErrorFullscreenLost:
+		return "Swapchain did not have exclusive full-screen access any more";
+		break;
 
 	default: break;
 	}
@@ -133,12 +158,12 @@ static StringView getInternalDescription(Status st) {
 }
 
 void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
-	char strerrBuffer[STATUS_DESC_BUFFER_SIZE] = { 0 };
+	char strerrBuffer[STATUS_DESC_BUFFER_SIZE] = {0};
 
 	char *strTarget = strerrBuffer;
 
 	// Use callback-stream output
-	auto fn = [&] (StringView out) {
+	auto fn = [&](StringView out) {
 		if (strTarget + out.size() < &strerrBuffer[STATUS_DESC_BUFFER_SIZE]) {
 			memcpy(strTarget, out.data(), out.size());
 			strTarget += out.size();
@@ -152,13 +177,17 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 	if (name.empty()) {
 		if (toInt(st) > 0) {
 			outCb << "Status::Application(" << toInt(st) << ")";
-		} else if (toInt(st) <= -status::STATUS_ERRNO_OFFSET && toInt(st) > -status::STATUS_GENERIC_OFFSET) {
+		} else if (toInt(st) <= -status::STATUS_ERRNO_OFFSET
+				&& toInt(st) > -status::STATUS_GENERIC_OFFSET) {
 			outCb << "Status::Errno(" << status::toErrno(st) << ")";
-		} else if (toInt(st) <= -status::STATUS_GENERIC_OFFSET && toInt(st) > -status::STATUS_GAPI_OFFSET) {
+		} else if (toInt(st) <= -status::STATUS_GENERIC_OFFSET
+				&& toInt(st) > -status::STATUS_GAPI_OFFSET) {
 			outCb << "Status::Generic(" << status::toGeneric(st) << ")";
-		} else if (toInt(st) <= -status::STATUS_GAPI_OFFSET && toInt(st) > -status::STATUS_WINAPI_OFFSET) {
+		} else if (toInt(st) <= -status::STATUS_GAPI_OFFSET
+				&& toInt(st) > -status::STATUS_WINAPI_OFFSET) {
 			outCb << "Status::GApi(" << status::toGApi(st) << ")";
-		} else if (toInt(st) <= -status::STATUS_WINAPI_OFFSET && toInt(st) > -status::STATUS_END_OFFSET) {
+		} else if (toInt(st) <= -status::STATUS_WINAPI_OFFSET
+				&& toInt(st) > -status::STATUS_END_OFFSET) {
 			outCb << "Status::WinAPI(" << status::toWinApi(st) << ")";
 		} else {
 			outCb << "Status::Unknown(" << -toInt(st) << ")";
@@ -195,9 +224,9 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 		auto len = strlen(strerrBuffer);
 		auto target = &strerrBuffer[len];
 
-		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			target, STATUS_DESC_BUFFER_SIZE - len - 1, NULL);
+		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+				errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), target,
+				STATUS_DESC_BUFFER_SIZE - len - 1, NULL);
 #endif
 	} else {
 		outCb << ": No description found";
@@ -207,10 +236,8 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 }
 
 std::ostream &operator<<(std::ostream &stream, Status st) {
-	getStatusDescription(st, [&] (StringView str) {
-		stream << str;
-	});
+	getStatusDescription(st, [&](StringView str) { stream << str; });
 	return stream;
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler

@@ -567,7 +567,7 @@ static bool performCopy(const FileInfo &source, const FileInfo &dest) {
 	memory::StandartInterface::StringType absdest;
 
 	enumerateWritablePaths(dest, Access::None, [&](StringView str, FileFlags) {
-		absdest = str.str<memory::StandartInterface>();
+		absdest = native::posixToNative<memory::StandartInterface>(str);
 		return false;
 	});
 
@@ -584,8 +584,6 @@ static bool performCopy(const FileInfo &source, const FileInfo &dest) {
 			return true;
 		}
 	}
-
-	destStream.close();
 	return false;
 }
 

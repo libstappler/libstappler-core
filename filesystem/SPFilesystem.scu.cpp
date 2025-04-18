@@ -26,10 +26,10 @@ THE SOFTWARE.
 #include "detail/SPFilesystemResourceData.cc"
 
 #include "SPFilepath.cc"
-#include "SPFilesystem.cc"
-#include "SPFilesystemMime.cc"
 #include "SPFilesystemNativePosix.cc"
 #include "SPFilesystemNativeWin32.cc"
+#include "SPFilesystem.cc"
+#include "SPFilesystemMime.cc"
 
 #include "platform/SPFilesystem-android.cc"
 #include "platform/SPFilesystem-linux.cc"

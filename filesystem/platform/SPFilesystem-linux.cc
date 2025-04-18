@@ -21,16 +21,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#include "SPCore.h"
 #include "SPFilepath.h"
-#include "SPFilesystem.h"
-#include "detail/SPFilesystemResourceData.h"
-#include "SPMemInterface.h"
-#include "SPSharedModule.h"
-#include <unistd.h>
 
 #if LINUX
 
+#include "SPFilesystem.h"
+#include "SPMemInterface.h"
+#include "SPSharedModule.h"
+#include "detail/SPFilesystemResourceData.h"
 #include <limits.h>
 #include <fcntl.h>
 
@@ -349,37 +347,7 @@ void _initSystemPaths(FilesystemResourceData &data) {
 		}
 	} else {
 		auto bundlePath = filepath::root(s_execPath);
-
-		data._resourceLocations[toInt(FileCategory::AppData)].paths.emplace_back(
-				StringView(filepath::merge<memory::StandartInterface>(bundlePath, "AppData/data"))
-						.pdup(data._pool),
-				FileFlags::Private | FileFlags::Public);
-		data._resourceLocations[toInt(FileCategory::AppData)].flags |= CategoryFlags::Locateable;
-
-		data._resourceLocations[toInt(FileCategory::AppConfig)].paths.emplace_back(
-				StringView(filepath::merge<memory::StandartInterface>(bundlePath, "AppData/config"))
-						.pdup(data._pool),
-				FileFlags::Private | FileFlags::Public);
-		data._resourceLocations[toInt(FileCategory::AppConfig)].flags |= CategoryFlags::Locateable;
-
-		data._resourceLocations[toInt(FileCategory::AppState)].paths.emplace_back(
-				StringView(filepath::merge<memory::StandartInterface>(bundlePath, "AppData/state"))
-						.pdup(data._pool),
-				FileFlags::Private | FileFlags::Public);
-		data._resourceLocations[toInt(FileCategory::AppState)].flags |= CategoryFlags::Locateable;
-
-		data._resourceLocations[toInt(FileCategory::AppCache)].paths.emplace_back(
-				StringView(filepath::merge<memory::StandartInterface>(bundlePath, "AppData/cache"))
-						.pdup(data._pool),
-				FileFlags::Private | FileFlags::Public);
-		data._resourceLocations[toInt(FileCategory::AppCache)].flags |= CategoryFlags::Locateable;
-
-		data._resourceLocations[toInt(FileCategory::AppRuntime)].paths.emplace_back(
-				StringView(
-						filepath::merge<memory::StandartInterface>(bundlePath, "AppData/runtime"))
-						.pdup(data._pool),
-				FileFlags::Private | FileFlags::Public);
-		data._resourceLocations[toInt(FileCategory::AppRuntime)].flags |= CategoryFlags::Locateable;
+		data.initAppPaths(bundlePath);
 	}
 }
 

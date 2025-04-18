@@ -24,6 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_THREADS_SPTHREAD_H_
 #define STAPPLER_THREADS_SPTHREAD_H_
 
+#include "SPNotNull.h"
 #include "SPRef.h"
 
 namespace STAPPLER_VERSIONIZED stappler::thread {
@@ -43,7 +44,7 @@ struct SP_PUBLIC ThreadInfo {
 	//
 	// Some thread-bound utils, like event::Looper, uses thread memory pool as a lifetime definition,
 	// and destroyed when thread's pool is destroyed
-	static bool setThreadPool(memory::pool_t *);
+	static bool setThreadPool(const NotNull<memory::pool_t *> &);
 
 	uint32_t workerId = 0;
 	StringView name;
