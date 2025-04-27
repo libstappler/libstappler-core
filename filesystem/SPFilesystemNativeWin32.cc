@@ -29,11 +29,11 @@ THE SOFTWARE.
 #include "SPStatus.h"
 #include "SPString.h"
 
+#ifdef WIN32
+
 #include "SPPlatformUnistd.h"
 #include <handleapi.h>
 #include <sys/stat.h>
-
-#ifdef WIN32
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem::native {
 
@@ -304,7 +304,8 @@ struct DirHandle {
 		auto nativePath = native::posixToNative<memory::StandartInterface>(path);
 		ftw = &h;
 		size_t len = 0;
-		unicode::toUtf16((char16_t *)&ftw->pathBuffer[0], FtwHandle::PathBufferSize, nativePath, &len);
+		unicode::toUtf16((char16_t *)&ftw->pathBuffer[0], FtwHandle::PathBufferSize, nativePath,
+				&len);
 		ftw->pathBuffer[len] = L'\\';
 		ftw->pathBuffer[len + 1] = L'*';
 		ftw->pathBuffer[len + 2] = 0;

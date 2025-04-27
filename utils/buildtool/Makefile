@@ -26,7 +26,12 @@ LOCAL_MODULES_PATHS = \
 	core/stappler-modules.mk
 
 LOCAL_MODULES := \
-	stappler_filesystem
+	stappler_filesystem \
+	stappler_data \
+	stappler_makefile
+
+LOCAL_SRCS_DIRS := src
+LOCAL_INCLUDES_DIRS := src
 
 LOCAL_MAIN := main.cpp
 

@@ -279,6 +279,19 @@ void _initSystemPaths(FilesystemResourceData &data) {
 	data._resourceLocations[toInt(FileCategory::UserHome)].flags |= CategoryFlags::Locateable;
 	data._resourceLocations[toInt(FileCategory::UserHome)].init = true;
 
+	do {
+		auto &dataRes = data._resourceLocations[toInt(FileCategory::CommonData)];
+		auto &res = data._resourceLocations[toInt(FileCategory::Fonts)];
+		for (auto &it : dataRes.paths) {
+			res.paths.emplace_back(
+					StringView(filepath::merge<memory::StandartInterface>(it.first, "fonts"))
+							.pdup(data._pool),
+					FileFlags::Shared);
+		}
+		res.flags |= CategoryFlags::Locateable;
+		res.init = true;
+	} while (0);
+
 	bool userConfigFound = false;
 	auto filedata = filesystem::readIntoMemory<memory::StandartInterface>(
 			FileInfo{"user-dirs.dirs", FileCategory::CommonConfig});
@@ -370,6 +383,17 @@ void _close(void *) { }
 Status _ftw(FileCategory cat, StringView path,
 		const Callback<bool(StringView path, FileType t)> &cb, int depth, bool dirFirst) {
 	return Status::Declined;
+}
+
+template <>
+auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
+	return s_execPath;
+}
+
+template <>
+auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::StringType {
+	using Interface = memory::PoolInterface;
+	return StringView(s_execPath).str<Interface>();
 }
 
 } // namespace stappler::filesystem::platform

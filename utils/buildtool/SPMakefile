@@ -1,0 +1,166 @@
+
+reverse = $(let first rest,$1,\
+	$(if $(rest),$(call reverse,$(rest)) )$(first))
+
+$(info $(call reverse,d c b a))
+
+$(info $(foreach tmp,d r b l k q w e a,test/$(tmp)))
+
+$(info $(sort data/x.c.c data/bar.c objs/obj.c))
+$(info $(sort d r b l k q w e a))
+$(info $(filter data/%,data/x.c.c data/bar.c objs/obj.c))
+$(info $(filter-out data/%,data/x.c.c data/bar.c objs/obj.c))
+
+
+$(info $(patsubst data/%,test/%,data/x.c.c data/bar.c objs/obj.c))
+
+define var1=
+var3 = test1\
+two
+
+three
+#test)
+endef
+
+$(info $(strip $(var1)))
+
+comma:= ,
+empty:=
+space:= $(empty) $(empty)
+foo:= a b c
+$(info  $(subst $(space),$(comma),$(foo)))
+
+$(info TEST1$(space)TEST2)
+
+TEST_FN = $(1) $(1)_$(2) $(4)
+
+$(info $(call TEST_FN,name1 ,name2,,name4))
+
+ifeq ($(STAPPLER_TARGET),android)
+ANDROID := 1
+STAPPLER_PLATFORM += ANDROID=1
+$(info $(ANDROID))
+else ifeq ($(STAPPLER_TARGET),xwin)
+XWIN := 1
+WIN32 := 1
+STAPPLER_PLATFORM += XWIN=1 WIN32=1
+else ifeq ($(UNAME),Darwin)
+MACOS := 1
+STAPPLER_ARCH ?= $(shell uname -m)
+STAPPLER_PLATFORM += MACOS=1 STAPPLER_ARCH=$(STAPPLER_ARCH)
+else ifeq ($(UNAME),Msys)
+MSYS := 1
+WIN32 := 1
+STAPPLER_PLATFORM += MSYS=1 WIN32=1
+else
+LINUX := 1
+STAPPLER_ARCH ?= $(shell uname -m)
+STAPPLER_PLATFORM += LINUX=1 STAPPLER_ARCH=$(STAPPLER_ARCH)
+$(info $(STAPPLER_PLATFORM))
+endif
+
+edit : main.o kbd.o command.o display.o \
+ insert.o search.o files.o utils.o
+	cc -o edit main.o kbd.o command.o display.o \
+	insert.o search.o files.o utils.o
+main.o : main.c defs.h
+	cc -c main.c
+kbd.o : kbd.c defs.h command.h
+	cc -c kbd.c
+command.o : command.c defs.h command.h
+	cc -c command.c
+display.o : display.c defs.h buffer.h
+	cc -c display.c
+insert.o : insert.c defs.h buffer.h
+	cc -c insert.c
+search.o : search.c defs.h buffer.h
+	cc -c search.c
+files.o : files.c defs.h buffer.h command.h
+	cc -c files.c
+utils.o : utils.c defs.h
+	cc -c utils.c
+clean :
+	rm edit main.o kbd.o command.o display.o \
+	insert.o search.o files.o utils.o
+
+define var1=
+
+var3 = $(lastword\
+two
+
+three
+#test)
+
+endef
+
+test = vartest
+
+undefine var1
+
+ifeq ($(var1),$(var1))
+$(info var1 equal 1)
+endif
+
+ifeq "$(var1)" "$(var1)"
+$(info var1 equal 2)
+endif
+
+ifeq '$(var1)' '$(var1)'
+$(info var1 equal 3)
+endif
+
+ifdef var1
+$(info var1 is defined)
+else ifdef var1
+$(info var1 is not defined)
+else ifndef var1
+$(info var1 is not defined 2)
+else ifndef var1
+$(info var1 is not defined 3)
+endif
+
+var2 := one$\
+	\ word
+
+var1 := one$ \
+	\
+	\
+word
+
+var3 := one\ word
+
+foo = $(bar)
+bar = $(ugh)
+ugh = $(foo)
+
+var5 ::= test$$var
+
+#$(info $(foo) $(var1) $(var2) $(var3) $(var5))
+
+LOCAL_ARCHIVE_FILES := \
+	build/ \
+	core/ \
+	extra/ \
+	xenolith/application/ \
+	xenolith/backend/ \
+	xenolith/core/ \
+	xenolith/font/ \
+	xenolith/platform/ \
+	xenolith/renderer/ \
+	xenolith/resources/ \
+	xenolith/scene/ \
+	xenolith/thirdparty/ \
+	xenolith/LICENSE \
+	xenolith/xenolith-modules.mk \
+	LICENSE \
+	Makefile \
+	README.md
+
+$(LOCAL_LIBRARY)-$(LOCAL_VERSION).tar: $(LOCAL_MAKEFILE)
+	tar --transform 's,^\.,$(LOCAL_LIBRARY)-$(LOCAL_VERSION),' -cf $(LOCAL_LIBRARY)-$(LOCAL_VERSION).tar $(LOCAL_ARCHIVE_FILES)
+
+tar: $(LOCAL_LIBRARY)-$(LOCAL_VERSION).tar
+
+.PHONY: tar
+
+include shared.mk

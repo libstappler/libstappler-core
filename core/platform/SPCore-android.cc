@@ -77,15 +77,20 @@ struct IcuJave {
 		toUpperChar = tmpClass.getStaticMethodID("toUpperCase", "(I)I");
 		toTitleChar = tmpClass.getStaticMethodID("toTitleCase", "(I)I");
 
-		toLowerString = tmpClass.getStaticMethodID("toLowerCase", "(Ljava/lang/String;)Ljava/lang/String;");
-		toUpperString = tmpClass.getStaticMethodID("toUpperCase", "(Ljava/lang/String;)Ljava/lang/String;");
-		toTitleString = tmpClass.getStaticMethodID("toTitleCase", "(Ljava/lang/String;Landroid/icu/text/BreakIterator;)Ljava/lang/String;");
+		toLowerString =
+				tmpClass.getStaticMethodID("toLowerCase", "(Ljava/lang/String;)Ljava/lang/String;");
+		toUpperString =
+				tmpClass.getStaticMethodID("toUpperCase", "(Ljava/lang/String;)Ljava/lang/String;");
+		toTitleString = tmpClass.getStaticMethodID("toTitleCase",
+				"(Ljava/lang/String;Landroid/icu/text/BreakIterator;)Ljava/lang/String;");
 
 		auto tmpCollatorClass = env.findClass("android/icu/text/Collator");
 		collatorClass = tmpCollatorClass;
-		getInstance = tmpCollatorClass.getStaticMethodID("getInstance", "()Landroid/icu/text/Collator;");
+		getInstance =
+				tmpCollatorClass.getStaticMethodID("getInstance", "()Landroid/icu/text/Collator;");
 		setStrength = tmpCollatorClass.getMethodID("setStrength", "(I)V");
-		_compare = tmpCollatorClass.getMethodID("compare", "(Ljava/lang/String;Ljava/lang/String;)I");
+		_compare =
+				tmpCollatorClass.getMethodID("compare", "(Ljava/lang/String;Ljava/lang/String;)I");
 
 		PRIMARY = tmpCollatorClass.getStaticField<jint>("PRIMARY");
 		SECONDARY = tmpCollatorClass.getStaticField<jint>("SECONDARY");
@@ -123,7 +128,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toLowerString, env.newString(data));
+		auto ret = jni::RefClass(charClass, env)
+						   .callStaticMethod<jstring>(toLowerString, env.newString(data));
 		return ret.getWideString().str<Interface>();
 	}
 
@@ -133,7 +139,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toLowerString, env.newString(data));
+		auto ret = jni::RefClass(charClass, env)
+						   .callStaticMethod<jstring>(toLowerString, env.newString(data));
 		return ret.getString().str<Interface>();
 	}
 
@@ -143,7 +150,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toUpperString, env.newString(data));
+		auto ret = jni::RefClass(charClass, env)
+						   .callStaticMethod<jstring>(toUpperString, env.newString(data));
 		return ret.getWideString().str<Interface>();
 	}
 
@@ -153,7 +161,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toUpperString, env.newString(data));
+		auto ret = jni::RefClass(charClass, env)
+						   .callStaticMethod<jstring>(toUpperString, env.newString(data));
 		return ret.getString().str<Interface>();
 	}
 
@@ -163,7 +172,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toTitleString, env.newString(data));
+		auto ret = jni::RefClass(charClass, env)
+						   .callStaticMethod<jstring>(toTitleString, env.newString(data));
 		return ret.getWideString().str<Interface>();
 	}
 
@@ -173,7 +183,8 @@ struct IcuJave {
 			return data.str<Interface>();
 		}
 
-		auto ret = jni::RefClass(charClass, env).callStaticMethod<jstring>(toTitleString, env.newString(data));
+		auto ret = jni::RefClass(charClass, env)
+						   .callStaticMethod<jstring>(toTitleString, env.newString(data));
 		return ret.getString().str<Interface>();
 	}
 
@@ -217,169 +228,163 @@ struct IcuJave {
 };
 
 namespace i18n {
-	using cmp_fn = int32_t (*) (const char16_t *s1, int32_t length1, const char16_t *s2, int32_t length2, int8_t codePointOrder);
-	using case_cmp_fn =  int32_t (*) ( const char16_t *s1, int32_t length1, const char16_t *s2, int32_t length2,
-			uint32_t options, int *pErrorCode);
+using cmp_fn = int32_t (*)(const char16_t *s1, int32_t length1, const char16_t *s2, int32_t length2,
+		int8_t codePointOrder);
+using case_cmp_fn = int32_t (*)(const char16_t *s1, int32_t length1, const char16_t *s2,
+		int32_t length2, uint32_t options, int *pErrorCode);
 
-	static thread_local IcuJave tl_interface;
-	static Dso s_icu;
+static thread_local IcuJave tl_interface;
+static Dso s_icu;
 
-	static int32_t (*tolower_fn) (int32_t) = nullptr;
-	static int32_t (*toupper_fn) (int32_t) = nullptr;
-	static int32_t (*totitle_fn) (int32_t) = nullptr;
+static int32_t (*tolower_fn)(int32_t) = nullptr;
+static int32_t (*toupper_fn)(int32_t) = nullptr;
+static int32_t (*totitle_fn)(int32_t) = nullptr;
 
-	static int32_t (*strToLower_fn)(char16_t *dest, int32_t destCapacity, const char16_t *src, int32_t srcLength,
-			const char *locale, int *pErrorCode) = nullptr;
+static int32_t (*strToLower_fn)(char16_t *dest, int32_t destCapacity, const char16_t *src,
+		int32_t srcLength, const char *locale, int *pErrorCode) = nullptr;
 
-	static int32_t (*strToUpper_fn)(char16_t *dest, int32_t destCapacity, const char16_t *src, int32_t srcLength,
-			const char *locale, int *pErrorCode) = nullptr;
+static int32_t (*strToUpper_fn)(char16_t *dest, int32_t destCapacity, const char16_t *src,
+		int32_t srcLength, const char *locale, int *pErrorCode) = nullptr;
 
-	static int32_t (*strToTitle_fn)(char16_t *dest, int32_t destCapacity, const char16_t *src, int32_t srcLength,
-			void *iter, const char *locale, int *pErrorCode) = nullptr;
+static int32_t (*strToTitle_fn)(char16_t *dest, int32_t destCapacity, const char16_t *src,
+		int32_t srcLength, void *iter, const char *locale, int *pErrorCode) = nullptr;
 
-	static cmp_fn u_strCompare = nullptr;
-	static case_cmp_fn u_strCaseCompare = nullptr;
+static cmp_fn u_strCompare = nullptr;
+static case_cmp_fn u_strCaseCompare = nullptr;
 
-	static IcuJave *getInerface() {
-		if (!tl_interface.env) {
-			tl_interface.init(jni::Env::getEnv());
-		}
-		return &tl_interface;
-	};
-
-	void load(JavaVM *vm, int32_t sdk) {
-		s_icu = Dso("libicu.so");
-		if (s_icu) {
-			tolower_fn = s_icu.sym<decltype(tolower_fn)>("u_tolower");
-			toupper_fn = s_icu.sym<decltype(toupper_fn)>("u_toupper");
-			totitle_fn = s_icu.sym<decltype(totitle_fn)>("u_totitle");
-			strToLower_fn = s_icu.sym<decltype(strToLower_fn)>("u_strToLower");
-			strToUpper_fn = s_icu.sym<decltype(strToUpper_fn)>("u_strToUpper");
-			strToTitle_fn = s_icu.sym<decltype(strToTitle_fn)>("u_strToTitle");
-
-			u_strCompare = s_icu.sym<decltype(u_strCompare)>("u_strCompare");
-			u_strCaseCompare = s_icu.sym<decltype(u_strCaseCompare)>("u_strCaseCompare");
-		}
+static IcuJave *getInerface() {
+	if (!tl_interface.env) {
+		tl_interface.init(jni::Env::getEnv());
 	}
+	return &tl_interface;
+};
 
-	void finalize() {
-		s_icu.close();
-	}
+void load(JavaVM *vm, int32_t sdk) {
+	s_icu = Dso("libicu.so");
+	if (s_icu) {
+		tolower_fn = s_icu.sym<decltype(tolower_fn)>("u_tolower");
+		toupper_fn = s_icu.sym<decltype(toupper_fn)>("u_toupper");
+		totitle_fn = s_icu.sym<decltype(totitle_fn)>("u_totitle");
+		strToLower_fn = s_icu.sym<decltype(strToLower_fn)>("u_strToLower");
+		strToUpper_fn = s_icu.sym<decltype(strToUpper_fn)>("u_strToUpper");
+		strToTitle_fn = s_icu.sym<decltype(strToTitle_fn)>("u_strToTitle");
 
-	static char32_t tolower(char32_t c) {
-		if (s_icu) {
-			return char32_t(tolower_fn(int32_t(c)));
-		}
-		return getInerface()->tolower(c);
-	}
-
-	static char32_t toupper(char32_t c) {
-		if (s_icu) {
-			return char32_t(toupper_fn(int32_t(c)));
-		}
-		return getInerface()->toupper(c);
-	}
-
-	static char32_t totitle(char32_t c) {
-		if (s_icu) {
-			return char32_t(totitle_fn(int32_t(c)));
-		}
-		return getInerface()->totitle(c);
-	}
-
-	template <typename Interface>
-	static auto tolower(WideStringView data) {
-		if (s_icu) {
-			typename Interface::WideStringType ret;
-			ret.resize(data.size());
-
-			int status = 0;
-			auto len = strToLower_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
-			if (len <= int32_t(ret.size())) {
-				ret.resize(len);
-			} else {
-				ret.resize(len);
-				strToLower_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
-			}
-			return ret;
-		}
-		return getInerface()->tolower<Interface>(data);
-	}
-
-	template <typename Interface>
-	static auto tolower(StringView data) {
-		if (s_icu) {
-			return string::toUtf8<Interface>(tolower<Interface>(string::toUtf16<Interface>(data)));
-		}
-		return getInerface()->tolower<Interface>(data);
-	}
-
-	template <typename Interface>
-	static auto toupper(WideStringView data) {
-		if (s_icu) {
-			typename Interface::WideStringType ret;
-			ret.resize(data.size());
-
-			int status = 0;
-			auto len = strToUpper_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
-			if (len <= int32_t(ret.size())) {
-				ret.resize(len);
-			} else {
-				ret.resize(len);
-				strToUpper_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
-			}
-			return ret;
-		}
-		return getInerface()->toupper<Interface>(data);
-	}
-
-	template <typename Interface>
-	static auto toupper(StringView data) {
-		if (s_icu) {
-			return string::toUtf8<Interface>(toupper<Interface>(string::toUtf16<Interface>(data)));
-		}
-		return getInerface()->toupper<Interface>(data);
-	}
-
-	template <typename Interface>
-	static auto totitle(WideStringView data) {
-		if (s_icu) {
-			typename Interface::WideStringType ret;
-			ret.resize(data.size());
-
-			int status = 0;
-			auto len = strToTitle_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, NULL, &status);
-			if (len <= int32_t(ret.size())) {
-				ret.resize(len);
-			} else {
-				ret.resize(len);
-				strToTitle_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, NULL, &status);
-			}
-			return ret;
-		}
-		return getInerface()->totitle<Interface>(data);
-	}
-
-	template <typename Interface>
-	static auto totitle(StringView data) {
-		if (s_icu) {
-			return string::toUtf8<Interface>(totitle<Interface>(string::toUtf16<Interface>(data)));
-		}
-		return getInerface()->totitle<Interface>(data);
+		u_strCompare = s_icu.sym<decltype(u_strCompare)>("u_strCompare");
+		u_strCaseCompare = s_icu.sym<decltype(u_strCaseCompare)>("u_strCaseCompare");
 	}
 }
 
-char32_t tolower(char32_t c) {
-	return i18n::tolower(c);
+void finalize() { s_icu.close(); }
+
+static char32_t tolower(char32_t c) {
+	if (s_icu) {
+		return char32_t(tolower_fn(int32_t(c)));
+	}
+	return getInerface()->tolower(c);
 }
 
-char32_t toupper(char32_t c) {
-	return i18n::toupper(c);
+static char32_t toupper(char32_t c) {
+	if (s_icu) {
+		return char32_t(toupper_fn(int32_t(c)));
+	}
+	return getInerface()->toupper(c);
 }
 
-char32_t totitle(char32_t c) {
-	return i18n::totitle(c);
+static char32_t totitle(char32_t c) {
+	if (s_icu) {
+		return char32_t(totitle_fn(int32_t(c)));
+	}
+	return getInerface()->totitle(c);
 }
+
+template <typename Interface>
+static auto tolower(WideStringView data) {
+	if (s_icu) {
+		typename Interface::WideStringType ret;
+		ret.resize(data.size());
+
+		int status = 0;
+		auto len = strToLower_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
+		if (len <= int32_t(ret.size())) {
+			ret.resize(len);
+		} else {
+			ret.resize(len);
+			strToLower_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
+		}
+		return ret;
+	}
+	return getInerface()->tolower<Interface>(data);
+}
+
+template <typename Interface>
+static auto tolower(StringView data) {
+	if (s_icu) {
+		return string::toUtf8<Interface>(tolower<Interface>(string::toUtf16<Interface>(data)));
+	}
+	return getInerface()->tolower<Interface>(data);
+}
+
+template <typename Interface>
+static auto toupper(WideStringView data) {
+	if (s_icu) {
+		typename Interface::WideStringType ret;
+		ret.resize(data.size());
+
+		int status = 0;
+		auto len = strToUpper_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
+		if (len <= int32_t(ret.size())) {
+			ret.resize(len);
+		} else {
+			ret.resize(len);
+			strToUpper_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
+		}
+		return ret;
+	}
+	return getInerface()->toupper<Interface>(data);
+}
+
+template <typename Interface>
+static auto toupper(StringView data) {
+	if (s_icu) {
+		return string::toUtf8<Interface>(toupper<Interface>(string::toUtf16<Interface>(data)));
+	}
+	return getInerface()->toupper<Interface>(data);
+}
+
+template <typename Interface>
+static auto totitle(WideStringView data) {
+	if (s_icu) {
+		typename Interface::WideStringType ret;
+		ret.resize(data.size());
+
+		int status = 0;
+		auto len = strToTitle_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, NULL,
+				&status);
+		if (len <= int32_t(ret.size())) {
+			ret.resize(len);
+		} else {
+			ret.resize(len);
+			strToTitle_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, NULL, &status);
+		}
+		return ret;
+	}
+	return getInerface()->totitle<Interface>(data);
+}
+
+template <typename Interface>
+static auto totitle(StringView data) {
+	if (s_icu) {
+		return string::toUtf8<Interface>(totitle<Interface>(string::toUtf16<Interface>(data)));
+	}
+	return getInerface()->totitle<Interface>(data);
+}
+} // namespace i18n
+
+char32_t tolower(char32_t c) { return i18n::tolower(c); }
+
+char32_t toupper(char32_t c) { return i18n::toupper(c); }
+
+char32_t totitle(char32_t c) { return i18n::totitle(c); }
 
 template <>
 auto tolower<memory::PoolInterface>(StringView data) -> memory::PoolInterface::StringType {
@@ -417,7 +422,8 @@ auto tolower<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto tolower<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto tolower<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	return i18n::tolower<memory::StandartInterface>(data);
 }
 
@@ -427,7 +433,8 @@ auto toupper<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto toupper<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto toupper<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	return i18n::toupper<memory::StandartInterface>(data);
 }
 
@@ -437,7 +444,8 @@ auto totitle<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto totitle<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto totitle<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	return i18n::totitle<memory::StandartInterface>(data);
 }
 
@@ -461,7 +469,8 @@ int caseCompare_u(StringView l, StringView r) {
 		int status = 0;
 		auto lStr = string::toUtf16<memory::StandartInterface>(l);
 		auto rStr = string::toUtf16<memory::StandartInterface>(r);
-		return i18n::u_strCaseCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(), U_COMPARE_CODE_POINT_ORDER, &status);
+		return i18n::u_strCaseCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(),
+				U_COMPARE_CODE_POINT_ORDER, &status);
 	}
 	return i18n::getInerface()->compare(l, r, true);
 }
@@ -469,16 +478,21 @@ int caseCompare_u(StringView l, StringView r) {
 int caseCompare_u(WideStringView l, WideStringView r) {
 	if (i18n::u_strCaseCompare) {
 		int status = 0;
-		return i18n::u_strCaseCompare(l.data(), l.size(), r.data(), r.size(), U_COMPARE_CODE_POINT_ORDER, &status);
+		return i18n::u_strCaseCompare(l.data(), l.size(), r.data(), r.size(),
+				U_COMPARE_CODE_POINT_ORDER, &status);
 	}
 	return i18n::getInerface()->compare(l, r, true);
 }
 
-size_t makeRandomBytes(uint8_t * buf, size_t count) {
+size_t makeRandomBytes(uint8_t *buf, size_t count) {
 	::arc4random_buf(buf, count);
 	return count;
 }
 
-}
+bool initialize(int &resultCode) { return true; }
+
+void terminate() { }
+
+} // namespace stappler::platform
 
 #endif

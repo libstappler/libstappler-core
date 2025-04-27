@@ -18,26 +18,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-MODULE_STAPPLER_EVENT_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
-MODULE_STAPPLER_EVENT_SRCS_DIRS := $(STAPPLER_MODULE_DIR)/event
-MODULE_STAPPLER_EVENT_SRCS_OBJS :=
-MODULE_STAPPLER_EVENT_INCLUDES_DIRS :=
-MODULE_STAPPLER_EVENT_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/event
-MODULE_STAPPLER_EVENT_DEPENDS_ON := stappler_filesystem stappler_threads
+MODULE_STAPPLER_MAKEFILE_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
+MODULE_STAPPLER_MAKEFILE_SRCS_DIRS := $(STAPPLER_MODULE_DIR)/makefile
+MODULE_STAPPLER_MAKEFILE_SRCS_OBJS :=
+MODULE_STAPPLER_MAKEFILE_INCLUDES_DIRS :=
+MODULE_STAPPLER_MAKEFILE_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/makefile
+MODULE_STAPPLER_MAKEFILE_DEPENDS_ON := stappler_filesystem
 
-ifdef WIN32
-MODULE_STAPPLER_EVENT_LIBS += -lntdll -lUser32
-endif
+MODULE_STAPPLER_MAKEFILE_SHARED_SPEC_SUMMARY := libstappler makefile information extractor
 
-MODULE_STAPPLER_EVENT_SHARED_SPEC_SUMMARY := libstappler event loop module
-
-define MODULE_STAPPLER_EVENT_SHARED_SPEC_DESCRIPTION
-Module libstappler-event is a cross-platform low-level event loop
-In general, it provides:
-- async timers
-- cross-thread function calls
-- way to associate fd/HANDLE events with callback
+define MODULE_STAPPLER_MAKEFILE_SHARED_SPEC_DESCRIPTION
+Module libstappler-makefile is a way to extract variables and other information
+from GNU Make (or other make) files
 endef
 
 # module name resolution
-MODULE_stappler_event := MODULE_STAPPLER_EVENT
+MODULE_stappler_makefile := MODULE_STAPPLER_MAKEFILE

@@ -37,7 +37,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
-static constexpr size_t SP_ALLOC_STACK_SIZE = 256;
+static constexpr size_t SP_ALLOC_STACK_SIZE = 4'097;
 
 static void set_pool_info(pool_t *p, uint32_t tag, const void *ptr);
 
@@ -59,7 +59,7 @@ public:
 	void push(pool_t *, uint32_t, const void *);
 	void pop();
 
-	void foreachInfo(void *, bool(*cb)(void *, pool_t *, uint32_t, const void *));
+	void foreachInfo(void *, bool (*cb)(void *, pool_t *, uint32_t, const void *));
 
 protected:
 	template <typename T>
@@ -71,14 +71,15 @@ protected:
 #if DEBUG
 		void push(const T &t) {
 			if (size < data.size()) {
-				data[size] = t; ++ size;
+				data[size] = t;
+				++size;
 			} else {
 				abort();
 			}
 		}
 		void pop() {
 			if (size > 0) {
-				-- size;
+				--size;
 			} else {
 				abort();
 			}
@@ -90,8 +91,8 @@ protected:
 			return data[size - 1];
 		}
 #else
-		void push(const T &t) { data[size ++] = t; }
-		void pop() { -- size; }
+		void push(const T &t) { data[size++] = t; }
+		void pop() { --size; }
 		const T &get() const { return data[size - 1]; }
 #endif
 	};
@@ -99,21 +100,15 @@ protected:
 	stack<Info> _stack;
 };
 
-AllocStack::AllocStack() {
-	_stack.push(Info{nullptr, 0, nullptr});
-}
+AllocStack::AllocStack() { _stack.push(Info{nullptr, 0, nullptr}); }
 
-pool_t *AllocStack::top() const {
-	return _stack.get().pool;
-}
+pool_t *AllocStack::top() const { return _stack.get().pool; }
 
 Pair<uint32_t, const void *> AllocStack::info() const {
 	return pair(_stack.get().tag, _stack.get().ptr);
 }
 
-const AllocStack::Info &AllocStack::back() const {
-	return _stack.get();
-}
+const AllocStack::Info &AllocStack::back() const { return _stack.get(); }
 
 void AllocStack::push(pool_t *p) {
 	if (p) {
@@ -130,12 +125,10 @@ void AllocStack::push(pool_t *p, uint32_t tag, const void *ptr) {
 	}
 }
 
-void AllocStack::pop() {
-	_stack.pop();
-}
+void AllocStack::pop() { _stack.pop(); }
 
-void AllocStack::foreachInfo(void *data, bool(*cb)(void *, pool_t *, uint32_t, const void *)) {
-	for (size_t i = 0; i < _stack.size; ++ i) {
+void AllocStack::foreachInfo(void *data, bool (*cb)(void *, pool_t *, uint32_t, const void *)) {
+	for (size_t i = 0; i < _stack.size; ++i) {
 		auto &it = _stack.data[_stack.size - 1 - i];
 		if (it.pool && !cb(data, it.pool, it.tag, it.ptr)) {
 			break;
@@ -148,26 +141,18 @@ static AllocStack &get_stack() {
 	return tl_stack;
 }
 
-pool_t *acquire() {
-	return get_stack().top();
-}
+pool_t *acquire() { return get_stack().top(); }
 
-Pair<uint32_t, const void *> info() {
-	return get_stack().info();
-}
+Pair<uint32_t, const void *> info() { return get_stack().info(); }
 
-void push(pool_t *p) {
-	return get_stack().push(p);
-}
+void push(pool_t *p) { return get_stack().push(p); }
 void push(pool_t *p, uint32_t tag, const void *ptr) {
 	set_pool_info(p, tag, ptr);
 	return get_stack().push(p, tag, ptr);
 }
-void pop() {
-	return get_stack().pop();
-}
+void pop() { return get_stack().pop(); }
 
-void foreach_info(void *data, bool(*cb)(void *, pool_t *, uint32_t, const void *)) {
+void foreach_info(void *data, bool (*cb)(void *, pool_t *, uint32_t, const void *)) {
 	get_stack().foreachInfo(data, cb);
 }
 
@@ -193,7 +178,7 @@ static inline bool isStappler(pool_t *p) {
 	return true;
 }
 
-}
+} // namespace stappler::mempool::base::pool
 
 
 typedef struct apr_allocator_t apr_allocator_t;
@@ -206,9 +191,9 @@ namespace STAPPLER_VERSIONIZED stappler::mempool::apr {
 using allocator_t = apr_allocator_t;
 using status_t = apr_status_t;
 using pool_t = apr_pool_t;
-using cleanup_fn = status_t(*)(void *);
+using cleanup_fn = status_t (*)(void *);
 
-}
+} // namespace stappler::mempool::apr
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::apr::allocator {
 
@@ -216,10 +201,10 @@ SPUNUSED static allocator_t *create();
 SPUNUSED static allocator_t *create(void *mutex);
 SPUNUSED static void destroy(allocator_t *alloc);
 SPUNUSED static void owner_set(allocator_t *alloc, pool_t *pool);
-SPUNUSED static pool_t * owner_get(allocator_t *alloc);
+SPUNUSED static pool_t *owner_get(allocator_t *alloc);
 SPUNUSED static void max_free_set(allocator_t *alloc, size_t size);
 
-}
+} // namespace stappler::mempool::apr::allocator
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::apr::pool {
 
@@ -236,11 +221,13 @@ SPUNUSED static void *alloc(pool_t *p, size_t &size);
 SPUNUSED static void free(pool_t *p, void *ptr, size_t size);
 SPUNUSED static void *palloc(pool_t *p, size_t size);
 SPUNUSED static void *calloc(pool_t *p, size_t count, size_t eltsize);
-SPUNUSED static void cleanup_kill(pool_t *p, void *ptr, status_t(*cb)(void *));
-SPUNUSED static void cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *));
-SPUNUSED static void pre_cleanup_register(pool_t *p, void *ptr, status_t(*cb)(void *));
-SPUNUSED static status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool);
-SPUNUSED static status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool);
+SPUNUSED static void cleanup_kill(pool_t *p, void *ptr, status_t (*cb)(void *));
+SPUNUSED static void cleanup_register(pool_t *p, void *ptr, status_t (*cb)(void *));
+SPUNUSED static void pre_cleanup_register(pool_t *p, void *ptr, status_t (*cb)(void *));
+SPUNUSED static status_t userdata_set(const void *data, const char *key, cleanup_fn cb,
+		pool_t *pool);
+SPUNUSED static status_t userdata_setn(const void *data, const char *key, cleanup_fn cb,
+		pool_t *pool);
 SPUNUSED static status_t userdata_get(void **data, const char *key, pool_t *pool);
 SPUNUSED static size_t get_allocated_bytes(pool_t *p);
 SPUNUSED static size_t get_return_bytes(pool_t *p);
@@ -250,14 +237,12 @@ SPUNUSED static char *pstrdup(pool_t *a, const char *s);
 SPUNUSED static void set_pool_info(pool_t *p, uint32_t tag, const void *ptr);
 SPUNUSED static const char *get_tag(pool_t *pool);
 
-}
+} // namespace stappler::mempool::apr::pool
 
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::allocator {
 
-allocator_t *create() {
-	return (allocator_t *) (new custom::Allocator());
-}
+allocator_t *create() { return (allocator_t *)(new custom::Allocator()); }
 
 #if MODULE_STAPPLER_APR
 allocator_t *create_apr(void *mutex) {
@@ -297,7 +282,7 @@ void owner_set(allocator_t *alloc, pool_t *pool) {
 	}
 }
 
-pool_t * owner_get(allocator_t *alloc) {
+pool_t *owner_get(allocator_t *alloc) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!pool::isStappler(alloc)) {
 			return (pool_t *)apr::allocator::owner_get((apr::allocator_t *)alloc);
@@ -318,7 +303,7 @@ void max_free_set(allocator_t *alloc, size_t size) {
 	}
 }
 
-}
+} // namespace stappler::mempool::base::allocator
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
@@ -345,7 +330,8 @@ static void debug_backtrace_error(void *data, const char *msg, int errnum) {
 	log::error("Backtrace", msg);
 }
 
-static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *filename, int lineno, const char *function) {
+static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *filename, int lineno,
+		const char *function) {
 	auto ptr = (debug_bt_info *)data;
 
 	std::ostringstream f;
@@ -358,9 +344,9 @@ static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *f
 	if (function) {
 		f << " - ";
 		int status = 0;
-		auto ptr = abi::__cxa_demangle (function, nullptr, nullptr, &status);
-    	if (ptr) {
-    		f << (const char *)ptr;
+		auto ptr = abi::__cxa_demangle(function, nullptr, nullptr, &status);
+		if (ptr) {
+			f << (const char *)ptr;
 			::free(ptr);
 		} else {
 			f << function;
@@ -369,8 +355,8 @@ static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *f
 
 	auto tmp = f.str();
 	*ptr->target = pstrdup(ptr->pool, tmp.data());
-	++ ptr->target;
-	++ ptr->index;
+	++ptr->target;
+	++ptr->index;
 
 	if (ptr->index > 20) {
 		return 1;
@@ -382,33 +368,34 @@ static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *f
 static const char **getPoolInfo(pool_t *pool) {
 	static constexpr size_t len = 20;
 	static constexpr size_t offset = 2;
-	const char **ret = (const char **)calloc(s_poolDebugTarget, len + offset + 2, sizeof(const char *));
+	const char **ret =
+			(const char **)calloc(s_poolDebugTarget, len + offset + 2, sizeof(const char *));
 	size_t retIt = 0;
 
 	do {
 		std::ostringstream f;
 		f << "Pool " << (void *)pool << " (" << s_activePools.load() << ")";
 		auto tmp = f.str();
-		ret[retIt] = pstrdup(s_poolDebugTarget, tmp.data()); ++ retIt;
-	} while(0);
+		ret[retIt] = pstrdup(s_poolDebugTarget, tmp.data());
+		++retIt;
+	} while (0);
 
 	debug_bt_info info;
 	info.pool = s_poolDebugTarget;
 	info.target = ret + 1;
 	info.index = 0;
 
-	backtrace_full(s_backtraceState, 2, debug_backtrace_full_callback, debug_backtrace_error, &info);
+	backtrace_full(s_backtraceState, 2, debug_backtrace_full_callback, debug_backtrace_error,
+			&info);
 	return ret;
 }
 #else
-static const char **getPoolInfo(pool_t *pool) {
-	return nullptr;
-}
+static const char **getPoolInfo(pool_t *pool) { return nullptr; }
 #endif
 
 static pool_t *pushPoolInfo(pool_t *pool) {
 	if (pool) {
-		++ s_activePools;
+		++s_activePools;
 		if (s_poolDebug.load()) {
 			if (auto ret = getPoolInfo(pool)) {
 				s_poolDebugMutex.lock();
@@ -444,23 +431,25 @@ SPUNUSED static void popPoolInfo(pool_t *pool) {
 			s_poolDebugMutex.unlock();
 		}
 #endif
-		-- s_activePools;
+		--s_activePools;
 	}
 }
 
 void initialize() {
-	if constexpr (apr::SP_APR_COMPATIBLE) { apr::pool::initialize(); }
+	if constexpr (apr::SP_APR_COMPATIBLE) {
+		apr::pool::initialize();
+	}
 	custom::initialize();
 }
 
 void terminate() {
-	if constexpr (apr::SP_APR_COMPATIBLE) { apr::pool::terminate(); }
+	if constexpr (apr::SP_APR_COMPATIBLE) {
+		apr::pool::terminate();
+	}
 	custom::terminate();
 }
 
-pool_t *create() {
-	return pushPoolInfo((pool_t *)custom::Pool::create(nullptr));
-}
+pool_t *create() { return pushPoolInfo((pool_t *)custom::Pool::create(nullptr)); }
 
 pool_t *create(allocator_t *alloc) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
@@ -523,9 +512,10 @@ void destroy(pool_t *p) {
 #if DEBUG
 	// Clearing or destruction of a pool, that currently on stack, is an error,
 	// That can not be tracked another way
-	foreach_info(p, [] (void *ptr, pool_t *p, uint32_t, const void *) {
+	foreach_info(p, [](void *ptr, pool_t *p, uint32_t, const void *) {
 		if (ptr == p) {
-			log::error("memory", "pool::destroy was called on pool, that currently on stack/in use");
+			log::error("memory",
+					"pool::destroy was called on pool, that currently on stack/in use");
 			abort();
 		}
 		return true;
@@ -548,7 +538,7 @@ void clear(pool_t *p) {
 #if DEBUG
 	// Clearing or destruction of a pool, that currently on stack, is an error,
 	// That can not be tracked another way
-	foreach_info(p, [] (void *ptr, pool_t *p, uint32_t, const void *) {
+	foreach_info(p, [](void *ptr, pool_t *p, uint32_t, const void *) {
 		if (ptr == p) {
 			log::error("memory", "pool::clear was called on pool, that currently on stack/in use");
 			abort();
@@ -773,9 +763,7 @@ void pre_cleanup_register(pool_t *p, memory::function<void()> &&cb) {
 	}, p);
 }
 
-size_t get_active_count() {
-	return s_activePools.load();
-}
+size_t get_active_count() { return s_activePools.load(); }
 
 bool debug_begin(pool_t *pool) {
 	if (!pool) {
@@ -808,14 +796,12 @@ std::map<pool_t *, const char **, std::less<void>> debug_end() {
 	return ret;
 }
 
-void debug_foreach(void *ptr, void(*cb)(void *, pool_t *)) {
+void debug_foreach(void *ptr, void (*cb)(void *, pool_t *)) {
 #if DEBUG_POOL_LIST
 	s_poolDebugMutex.lock();
-	for (auto &it : s_poolList) {
-		cb(ptr, it);
-	}
+	for (auto &it : s_poolList) { cb(ptr, it); }
 	s_poolDebugMutex.unlock();
 #endif
 }
 
-}
+} // namespace stappler::mempool::base::pool

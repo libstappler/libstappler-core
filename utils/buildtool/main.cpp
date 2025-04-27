@@ -20,22 +20,24 @@
  THE SOFTWARE.
  **/
 
-#include "SPBytesView.h"
 #include "SPCommon.h" // << Prefix header
+#include "SPBytesView.h"
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
+#include "SPMemInterface.h"
 #include "SPMemPoolInterface.h"
 #include "SPMemory.h"
-#include <cstdlib>
 
-namespace stappler::app {
+#include "SPMakefile.h"
+
+namespace stappler::buildtool {
 
 // Выбираем стандартную подсистему памяти для текущего пространства имён
 using namespace mem_std;
 
 // Строка при запросе помощи по команде
 static constexpr auto HELP_STRING =
-R"(stappler-build <action> - build assistant for the Stappler SDK
+		R"(stappler-build <action> - build assistant for the Stappler SDK
 Actions:
 	list - search for an available STAPPLER_BUILD_ROOT in the system and list them
 	make [--with make-bin-path] <args> - make current work dir (forward arguments to 'make' utility)
@@ -44,14 +46,13 @@ Actions:
 )";
 
 static constexpr StringView SYSTEM_WIDE_PROFILE_D_FILE = "/etc/profile.d/stappler-sdk.sh";
-static constexpr StringView SYSTEM_WIDE_ENVIRONMENT_D_FILE = "/etc/environment.d/50stappler-sdk.conf";
+static constexpr StringView SYSTEM_WIDE_ENVIRONMENT_D_FILE =
+		"/etc/environment.d/50stappler-sdk.conf";
 
 static constexpr StringView USER_ENVIRONMENT_D_FILE = ".config/environment.d/50stappler-sdk.conf";
 static constexpr StringView USER_PROFILE_D_FILE = ".config/profile.d/stappler-sdk.sh";
 
-static void printHelp() {
-	std::cout << HELP_STRING << "\n";
-}
+static void printHelp() { std::cout << HELP_STRING << "\n"; }
 
 static bool checkCandidateDir(StringView candidate) {
 	if (candidate.empty()) {
@@ -59,11 +60,11 @@ static bool checkCandidateDir(StringView candidate) {
 	}
 
 	filesystem::Stat stat;
-	if (filesystem::stat(candidate, stat)) {
-		if (stat.type == filesystem::FileType::Dir) {
+	if (filesystem::stat(FileInfo{candidate}, stat)) {
+		if (stat.type == FileType::Dir) {
 			auto uPath = filepath::merge<Interface>(candidate, "universal.mk");
-			if (filesystem::exists(uPath)) {
-				auto fileData = filesystem::readIntoMemory<Interface>(uPath, 0, 2_KiB);
+			if (filesystem::exists(FileInfo{uPath})) {
+				auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{uPath}, 0, 2_KiB);
 				auto strData = BytesView(fileData).readString();
 
 				if (strData.find("#@ STAPPLER_BUILD_ROOT") != maxOf<size_t>()) {
@@ -80,11 +81,11 @@ static String getCandidateFromShellScript(StringView data) {
 	data.skipUntilString("export STAPPLER_BUILD_ROOT=");
 	if (data.starts_with("export STAPPLER_BUILD_ROOT=")) {
 		if (data.is('"')) {
-			++ data;
+			++data;
 			tmp = data.readUntil<StringView::Chars<'"'>>();
 			return tmp.str<Interface>();
 		} else if (data.is('\'')) {
-			++ data;
+			++data;
 			tmp = data.readUntil<StringView::Chars<'\''>>();
 			return tmp.str<Interface>();
 		} else {
@@ -99,11 +100,11 @@ static String getCandidateFromEnvironmentConfig(StringView data) {
 	data.skipUntilString("STAPPLER_BUILD_ROOT=");
 	if (data.starts_with("STAPPLER_BUILD_ROOT=")) {
 		if (data.is('"')) {
-			++ data;
+			++data;
 			tmp = data.readUntil<StringView::Chars<'"'>>();
 			return tmp.str<Interface>();
 		} else if (data.is('\'')) {
-			++ data;
+			++data;
 			tmp = data.readUntil<StringView::Chars<'\''>>();
 			return tmp.str<Interface>();
 		} else {
@@ -115,7 +116,7 @@ static String getCandidateFromEnvironmentConfig(StringView data) {
 
 static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 	String candidate;
-	
+
 	auto buildRoot = StringView(::getenv("STAPPLER_BUILD_ROOT"));
 	if (checkCandidateDir(buildRoot)) {
 		if (!cb(candidate)) {
@@ -126,10 +127,10 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 	auto home = StringView(::getenv("HOME"));
 	if (!home.empty()) {
 		auto profilePath = filepath::merge<Interface>(home, USER_PROFILE_D_FILE);
-		if (filesystem::exists(profilePath)) {
-			auto fileData = filesystem::readIntoMemory<Interface>(profilePath);
+		if (filesystem::exists(FileInfo{profilePath})) {
+			auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{profilePath});
 			auto strData = BytesView(fileData).readString();
-		
+
 			candidate = getCandidateFromShellScript(strData);
 			if (checkCandidateDir(candidate)) {
 				if (!cb(candidate)) {
@@ -139,10 +140,10 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 		}
 
 		auto envPath = filepath::merge<Interface>(home, USER_ENVIRONMENT_D_FILE);
-		if (filesystem::exists(envPath)) {
-			auto fileData = filesystem::readIntoMemory<Interface>(envPath);
+		if (filesystem::exists(FileInfo{envPath})) {
+			auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{envPath});
 			auto strData = BytesView(fileData).readString();
-		
+
 			candidate = getCandidateFromEnvironmentConfig(strData);
 			if (checkCandidateDir(candidate)) {
 				if (!cb(candidate)) {
@@ -181,7 +182,7 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 	auto appPath = filesystem::platform::_getApplicationPath<Interface>();
 	auto pathComponents = filepath::split<Interface>(appPath);
 	std::reverse(pathComponents.begin(), pathComponents.end());
-	
+
 	auto it = std::find(pathComponents.begin(), pathComponents.end(), "libstappler-root");
 	if (it != pathComponents.end()) {
 		pathComponents.erase(pathComponents.begin(), it);
@@ -221,7 +222,7 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 
 static String getBuildRoot() {
 	String ret;
-	findStapplerBuildRoot([&] (StringView str) {
+	findStapplerBuildRoot([&](StringView str) {
 		ret = str.str<Interface>();
 		return false;
 	});
@@ -237,7 +238,7 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 
 	size_t nextArg = 1;
 
-	auto action = StringView(argv[nextArg ++]);
+	auto action = StringView(argv[nextArg++]);
 
 	// проверяем, запрошена ли помощь
 	if (action == "help") {
@@ -245,24 +246,22 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 		return 0;
 	}
 
-	return perform_temporary([&] () -> int {
+	return perform_main([&]() -> int {
 		if (action == "list") {
 			Vector<String> candidates;
-			findStapplerBuildRoot([&] (StringView str) {
+			findStapplerBuildRoot([&](StringView str) {
 				auto it = std::find(candidates.begin(), candidates.end(), str);
 				if (it == candidates.end()) {
 					candidates.emplace_back(str.str<Interface>());
 				}
 				return true;
 			});
-			
+
 			if (candidates.empty()) {
 				std::cerr << "No SDK candidates found\n";
 				return -2;
 			} else {
-				for (auto &it : candidates) {
-					std::cout << it << "\n";
-				}
+				for (auto &it : candidates) { std::cout << it << "\n"; }
 			}
 			return 0;
 		} else if (action == "get-root") {
@@ -289,25 +288,63 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 				if (extraArg.starts_with("--with=")) {
 					extraArg += "--with="_len;
 					makeTool = extraArg;
-					++ nextArg;
+					++nextArg;
 				} else if (extraArg == "--with" && size_t(argc) > nextArg + 1) {
 					makeTool = StringView(argv[nextArg + 1]);
 					nextArg += 2;
 				}
 			}
 
-			char **argumentList = (char **)memory::pool::palloc(memory::pool::acquire(), argc * sizeof(char *));
+			char **argumentList =
+					(char **)memory::pool::palloc(memory::pool::acquire(), argc * sizeof(char *));
 
 			memset(argumentList, 0, argc * sizeof(char *));
-			
-			argumentList[0] = (char *)makeTool.data();
+
+			auto path = filepath::isAbsolute(makeTool)
+					? makeTool.str<Interface>()
+					: filesystem::findPath<memory::StandartInterface>(
+							  FileInfo{makeTool, FileCategory::Exec});
+
+			argumentList[0] = path.data();
 
 			auto argPtr = &argumentList[1];
-			for (size_t i = nextArg; i < size_t(argc); ++ i) {
-				*argPtr++ = (char *)argv[i];
+			for (size_t i = nextArg; i < size_t(argc); ++i) { *argPtr++ = (char *)argv[i]; }
+
+			return execvp(path.data(), argumentList);
+		} else if (action == "extract") {
+			auto root = getBuildRoot();
+			if (root.empty()) {
+				std::cerr << "No SDK candidates found\n";
+				return -2;
 			}
 
-			return execvp("make", argumentList);
+			auto platformTestMake = Rc<makefile::MakefileRef>::create();
+
+			platformTestMake->assignSimpleVariable("STAPPLER_BUILD_ROOT",
+					makefile::Origin::CommandLine, root);
+
+			platformTestMake->include(FileInfo{"Makefile"});
+
+			String str;
+
+			platformTestMake->eval([&](StringView s) { str.append(s.data(), s.size()); }, "<eval>",
+					"$(print $(call sp_detect_platform,host))");
+
+
+			auto make = Rc<makefile::MakefileRef>::create();
+
+			StringView(str).split<StringView::WhiteSpace>([&](StringView val) {
+				auto name = val.readUntil<StringView::Chars<'='>>();
+				if (val.is('=')) {
+					++val;
+					make->assignSimpleVariable(name, makefile::Origin::CommandLine, val);
+				}
+			});
+
+			make->include(FileInfo{"Makefile"});
+
+
+			return 0;
 		} else {
 			std::cerr << "Unknown action: \"" << action << "\"\n";
 		}
@@ -316,4 +353,4 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 	});
 }
 
-}
+} // namespace stappler::buildtool

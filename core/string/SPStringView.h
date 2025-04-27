@@ -55,7 +55,7 @@ public:
 	using PoolString = typename memory::PoolInterface::template BasicStringType<CharType>;
 	using StdString = typename memory::StandartInterface::template BasicStringType<CharType>;
 
-	template <CharType ... Args>
+	template <CharType... Args>
 	using MatchChars = chars::Chars<CharType, Args...>;
 
 	template <char First, char Last>
@@ -74,11 +74,11 @@ public:
 	using Hexadecimial = MatchCharGroup<CharGroupId::Hexadecimial>;
 	using Base64 = MatchCharGroup<CharGroupId::Base64>;
 
-	template <typename Interface, typename ... Args>
-	static auto merge(Args && ... args) -> typename Interface::template BasicStringType<CharType>;
+	template <typename Interface, typename... Args>
+	static auto merge(Args &&...args) -> typename Interface::template BasicStringType<CharType>;
 
-	template <typename Interface, _CharType c, typename ... Args>
-	static auto merge(Args && ... args) -> typename Interface::template BasicStringType<CharType>;
+	template <typename Interface, _CharType c, typename... Args>
+	static auto merge(Args &&...args) -> typename Interface::template BasicStringType<CharType>;
 
 	constexpr StringViewBase() = default;
 	constexpr StringViewBase(const CharType *ptr, size_t len = maxOf<size_t>());
@@ -88,26 +88,35 @@ public:
 	StringViewBase(const PoolString &str);
 	StringViewBase(const StdString &str);
 
-	Self & operator =(const PoolString &str);
-	Self & operator =(const StdString &str);
-	Self & operator =(const Self &str) = default;
+	Self &operator=(const PoolString &str);
+	Self &operator=(const StdString &str);
+	Self &operator=(const Self &str) = default;
 
-	Self & set(const PoolString &str);
-	Self & set(const StdString &str);
-	Self & set(const Self &str);
+	Self &set(const PoolString &str);
+	Self &set(const StdString &str);
+	Self &set(const Self &str);
 
 	// unsafe set, without length-check
-	Self & set(const CharType *p, size_t l);
+	Self &set(const CharType *p, size_t l);
 
 	bool is(const CharType &c) const;
 	bool is(const CharType *c) const;
 	bool is(const Self &c) const;
 
-	template <_CharType C> bool is() const;
-	template <CharGroupId G> bool is() const;
-	template <typename M> bool is() const;
+	template <_CharType C>
+	bool is() const;
+	template <CharGroupId G>
+	bool is() const;
+	template <typename M>
+	bool is() const;
 
-	Self sub(size_t pos = 0, size_t len = maxOf<size_t>()) const { return StringViewBase(*this, pos, len); }
+	Self sub(size_t pos = 0, size_t len = maxOf<size_t>()) const {
+		if (pos > this->size()) {
+			return Self();
+		}
+
+		return StringViewBase(*this, pos, len);
+	}
 
 	Self pdup(memory::pool_t * = nullptr) const;
 
@@ -117,15 +126,15 @@ public:
 	template <typename Interface>
 	auto str() const -> typename Interface::template BasicStringType<CharType>;
 
-	Self & operator ++ ();
-	Self operator ++ (int);
-	Self & operator += (size_t l);
+	Self &operator++();
+	Self operator++(int);
+	Self &operator+=(size_t l);
 
 	Self begin() const;
 	Self end() const;
 
-	Self operator - (const Self &) const;
-	Self& operator -= (const Self &) const;
+	Self operator-(const Self &) const;
+	Self &operator-=(const Self &) const;
 
 	uint64_t hash() const {
 		return hash::hash64((const char *)this->data(), this->size() * sizeof(CharType));
@@ -141,39 +150,50 @@ public:
 	Result<int64_t> readInteger(int base = 0);
 
 public:
-	template<typename ... Args> void skipChars();
-	template<typename ... Args> void skipUntil();
+	template <typename... Args>
+	void skipChars();
+	template <typename... Args>
+	void skipUntil();
 
-	template<typename ... Args> void backwardSkipChars();
-	template<typename ... Args> void backwardSkipUntil();
+	template <typename... Args>
+	void backwardSkipChars();
+	template <typename... Args>
+	void backwardSkipUntil();
 
 	bool skipString(const Self &str);
 	bool skipUntilString(const Self &str, bool stopBeforeString = true);
 
-	template<typename ... Args> Self readChars();
-	template<typename ... Args> Self readUntil();
+	template <typename... Args>
+	Self readChars();
+	template <typename... Args>
+	Self readUntil();
 
-	template<typename ... Args> Self backwardReadChars();
-	template<typename ... Args> Self backwardReadUntil();
+	template <typename... Args>
+	Self backwardReadChars();
+	template <typename... Args>
+	Self backwardReadUntil();
 
 	Self readUntilString(const Self &str);
 
-	template<typename Separator, typename Callback> void split(const Callback &cb) const;
+	template <typename Separator, typename Callback>
+	void split(const Callback &cb) const;
 
-	template <typename ... Args> void trimChars();
-	template <typename ... Args> void trimUntil();
+	template <typename... Args>
+	void trimChars();
+	template <typename... Args>
+	void trimUntil();
 
 protected:
-    template <typename T>
-    static size_t __size(const T &);
+	template <typename T>
+	static size_t __size(const T &);
 
-    static size_t __size(const CharType *);
+	static size_t __size(const CharType *);
 
-	template <typename T, typename ... Args>
+	template <typename T, typename... Args>
 	static size_t _size(T &&);
 
-	template <typename T, typename ... Args>
-	static size_t _size(T &&, Args && ... args);
+	template <typename T, typename... Args>
+	static size_t _size(T &&, Args &&...args);
 
 	template <typename Buf, typename T>
 	static void __merge(Buf &, T &&t);
@@ -181,8 +201,8 @@ protected:
 	template <typename Buf>
 	static void __merge(Buf &, const CharType *);
 
-	template <typename Buf, typename T, typename ... Args>
-	static void _merge(Buf &, T &&, Args && ... args);
+	template <typename Buf, typename T, typename... Args>
+	static void _merge(Buf &, T &&, Args &&...args);
 
 	template <typename Buf, typename T>
 	static void _merge(Buf &, T &&);
@@ -190,13 +210,14 @@ protected:
 	template <typename Buf, _CharType C, bool Front, typename T>
 	static void __mergeWithSep(Buf &, T &&t);
 
-	template <typename Buf, _CharType C, bool Front, typename T, typename ... Args>
-	static void _mergeWithSep(Buf &, T &&, Args && ... args);
+	template <typename Buf, _CharType C, bool Front, typename T, typename... Args>
+	static void _mergeWithSep(Buf &, T &&, Args &&...args);
 
 	template <typename Buf, _CharType C, bool Front, typename T>
 	static void _mergeWithSep(Buf &, T &&);
 
-	template <typename ... Args> bool match (CharType c);
+	template <typename... Args>
+	bool match(CharType c);
 };
 
 class StringViewUtf8 : public BytesReader<char> {
@@ -210,7 +231,7 @@ public:
 	using PoolString = typename memory::PoolInterface::StringType;
 	using StdString = typename memory::StandartInterface::StringType;
 
-	template <MatchCharType ... Args>
+	template <MatchCharType... Args>
 	using MatchChars = chars::Chars<MatchCharType, Args...>;
 
 	template <char First, char Last>
@@ -219,10 +240,10 @@ public:
 	template <CharGroupId Group>
 	using MatchCharGroup = chars::CharGroup<MatchCharType, Group>;
 
-	template <typename ... Args>
-	using MatchCompose = chars::Compose<MatchCharType, Args ...>;
+	template <typename... Args>
+	using MatchCompose = chars::Compose<MatchCharType, Args...>;
 
-	template <MatchCharType ... Args>
+	template <MatchCharType... Args>
 	using Chars = chars::Chars<MatchCharType, Args...>;
 
 	template <char First, char Last>
@@ -231,8 +252,8 @@ public:
 	template <CharGroupId Group>
 	using CharGroup = chars::CharGroup<MatchCharType, Group>;
 
-	template <typename ... Args>
-	using Compose = chars::Compose<MatchCharType, Args ...>;
+	template <typename... Args>
+	using Compose = chars::Compose<MatchCharType, Args...>;
 
 	// CharGroup shortcuts
 	using Numbers = MatchCharGroup<CharGroupId::Numbers>;
@@ -253,14 +274,14 @@ public:
 	StringViewUtf8(const StdString &str);
 	StringViewUtf8(const StringViewBase<char> &str);
 
-	Self & operator =(const PoolString &str);
-	Self & operator =(const StdString &str);
-	Self & operator =(const Self &str);
+	Self &operator=(const PoolString &str);
+	Self &operator=(const StdString &str);
+	Self &operator=(const Self &str);
 
-	Self & set(const PoolString &str);
-	Self & set(const StdString &str);
-	Self & set(const Self &str);
-	Self & set(const char *p, size_t l);
+	Self &set(const PoolString &str);
+	Self &set(const StdString &str);
+	Self &set(const Self &str);
+	Self &set(const char *p, size_t l);
 
 	bool is(const char &c) const;
 	bool is(const char16_t &c) const;
@@ -268,11 +289,16 @@ public:
 	bool is(const char *c) const;
 	bool is(const Self &c) const;
 
-	template <char32_t C> bool is() const;
-	template <CharGroupId G> bool is() const;
-	template <typename M> bool is() const;
+	template <char32_t C>
+	bool is() const;
+	template <CharGroupId G>
+	bool is() const;
+	template <typename M>
+	bool is() const;
 
-	Self sub(size_t pos = 0, size_t len = maxOf<size_t>()) const { return StringViewUtf8(*this, pos, len); }
+	Self sub(size_t pos = 0, size_t len = maxOf<size_t>()) const {
+		return StringViewUtf8(*this, pos, len);
+	}
 
 	Self letter() const;
 
@@ -280,34 +306,30 @@ public:
 	auto str() const -> typename Interface::StringType;
 
 	void offset(size_t l);
-	Self & operator ++ ();
-	Self operator ++ (int);
-	Self & operator += (size_t l);
+	Self &operator++();
+	Self operator++(int);
+	Self &operator+=(size_t l);
 
 	bool isSpace() const;
 
 	Self begin() const;
 	Self end() const;
 
-	Self operator - (const Self &) const;
-	Self& operator -= (const Self &);
+	Self operator-(const Self &) const;
+	Self &operator-=(const Self &);
 
-	MatchCharType operator * () const;
+	MatchCharType operator*() const;
 
 	template <typename Callback>
-	void foreach(const Callback &cb) const;
+	void foreach (const Callback &cb) const;
 
 	size_t code_size() const;
 
-	operator StringViewBase<char> () const;
+	operator StringViewBase<char>() const;
 
-	uint64_t hash() const {
-		return hash::hash64(data(), size() * sizeof(CharType));
-	}
+	uint64_t hash() const { return hash::hash64(data(), size() * sizeof(CharType)); }
 
-	uint64_t hash32() const {
-		return hash::hash32(data(), uint32_t(size() * sizeof(CharType)));
-	}
+	uint64_t hash32() const { return hash::hash32(data(), uint32_t(size() * sizeof(CharType))); }
 
 public:
 	Result<float> readFloat();
@@ -315,30 +337,43 @@ public:
 	Result<int64_t> readInteger(int base = 0);
 
 public:
-	template<typename ... Args> void skipChars();
-	template<typename ... Args> void skipUntil();
+	template <typename... Args>
+	void skipChars();
+	template <typename... Args>
+	void skipUntil();
 
-	template<typename ... Args> void backwardSkipChars();
-	template<typename ... Args> void backwardSkipUntil();
+	template <typename... Args>
+	void backwardSkipChars();
+	template <typename... Args>
+	void backwardSkipUntil();
 
 	bool skipString(const Self &str);
 	bool skipUntilString(const Self &str, bool stopBeforeString = true);
 
-	template<typename ... Args> Self readChars();
-	template<typename ... Args> Self readUntil();
+	template <typename... Args>
+	Self readChars();
+	template <typename... Args>
+	Self readUntil();
 
-	template<typename ... Args> Self backwardReadChars();
-	template<typename ... Args> Self backwardReadUntil();
+	template <typename... Args>
+	Self backwardReadChars();
+	template <typename... Args>
+	Self backwardReadUntil();
 
 	Self readUntilString(const Self &str);
-	template<typename Separator, typename Callback> void split(const Callback &cb) const;
+	template <typename Separator, typename Callback>
+	void split(const Callback &cb) const;
 
-	template <typename ... Args> void trimChars();
-    template <typename ... Args> void trimUntil();
+	template <typename... Args>
+	void trimChars();
+	template <typename... Args>
+	void trimUntil();
 
 protected: // char-matching inline functions
-    template <typename ...Args> bool rv_match_utf8 (const CharType *ptr, size_t len, uint8_t &offset);
-	template <typename ...Args> bool match (MatchCharType c);
+	template <typename... Args>
+	bool rv_match_utf8(const CharType *ptr, size_t len, uint8_t &offset);
+	template <typename... Args>
+	bool match(MatchCharType c);
 };
 
 using StringView = StringViewBase<char>;
@@ -350,7 +385,7 @@ SP_PUBLIC StringView getStatusName(Status);
 // Callback will be called exactly one time, do not store StringView from it directly!
 SP_PUBLIC void getStatusDescription(Status, const Callback<void(StringView)> &cb);
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 //
 // Implementation
@@ -360,13 +395,13 @@ SP_PUBLIC void getStatusDescription(Status, const Callback<void(StringView)> &cb
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-template <typename C> inline std::basic_ostream<C> &
-operator << (std::basic_ostream<C> & os, const StringViewBase<C> & str) {
+template <typename C>
+inline std::basic_ostream<C> &operator<<(std::basic_ostream<C> &os, const StringViewBase<C> &str) {
 	return os.write(str.data(), str.size());
 }
 
-inline std::basic_ostream<char> &
-operator << (std::basic_ostream<char> & os, const StringViewUtf8 & str) {
+inline std::basic_ostream<char> &operator<<(std::basic_ostream<char> &os,
+		const StringViewUtf8 &str) {
 	return os.write(str.data(), str.size());
 }
 
@@ -402,53 +437,85 @@ SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, memory::StandartInterface::BasicSt
 SP_STRINGVIEW_COMPARE_OP_UTF8(memory::PoolInterface::BasicStringType<char>, StringViewUtf8)
 SP_STRINGVIEW_COMPARE_OP_UTF8(StringViewUtf8, memory::PoolInterface::BasicStringType<char>)
 
-template <typename C> inline std::weak_ordering
-operator<=>(const StringViewBase<C> &l, const StringViewBase<C> &r) {
+template <typename C>
+inline std::weak_ordering operator<=>(const StringViewBase<C> &l, const StringViewBase<C> &r) {
 	auto c = string::detail::compare_c(l, r);
-	if (c == 0) { return std::weak_ordering::equivalent; }
-	else if (c < 0) { return std::weak_ordering::less; }
-	else { return std::weak_ordering::greater; }
+	if (c == 0) {
+		return std::weak_ordering::equivalent;
+	} else if (c < 0) {
+		return std::weak_ordering::less;
+	} else {
+		return std::weak_ordering::greater;
+	}
 }
 
-template <typename C> inline std::weak_ordering
-operator<=>(const StringViewUtf8 &l, const StringViewUtf8 &r) {
+template <typename C>
+inline std::weak_ordering operator<=>(const StringViewUtf8 &l, const StringViewUtf8 &r) {
 	auto c = string::detail::compare_c(l, r);
-	if (c == 0) { return std::weak_ordering::equivalent; }
-	else if (c < 0) { return std::weak_ordering::less; }
-	else { return std::weak_ordering::greater; }
+	if (c == 0) {
+		return std::weak_ordering::equivalent;
+	} else if (c < 0) {
+		return std::weak_ordering::less;
+	} else {
+		return std::weak_ordering::greater;
+	}
 }
 
-template <typename C> inline bool operator == (const StringViewBase<C> &l, const C *r) { return string::detail::compare_c(l, StringViewBase<C>(r)) == 0; }
-template <typename C> inline bool operator != (const StringViewBase<C> &l, const C *r) { return string::detail::compare_c(l, StringViewBase<C>(r)) != 0; }
+template <typename C>
+inline bool operator==(const StringViewBase<C> &l, const C *r) {
+	return string::detail::compare_c(l, StringViewBase<C>(r)) == 0;
+}
+template <typename C>
+inline bool operator!=(const StringViewBase<C> &l, const C *r) {
+	return string::detail::compare_c(l, StringViewBase<C>(r)) != 0;
+}
 
-template <typename C> inline bool operator == (const C *l, const StringViewBase<C> &r) { return string::detail::compare_c(StringViewBase<C>(l), r) == 0; }
-template <typename C> inline bool operator != (const C *l, const StringViewBase<C> &r) { return string::detail::compare_c(StringViewBase<C>(l), r) != 0; }
+template <typename C>
+inline bool operator==(const C *l, const StringViewBase<C> &r) {
+	return string::detail::compare_c(StringViewBase<C>(l), r) == 0;
+}
+template <typename C>
+inline bool operator!=(const C *l, const StringViewBase<C> &r) {
+	return string::detail::compare_c(StringViewBase<C>(l), r) != 0;
+}
 
-inline bool operator == (const StringViewUtf8 &l, const char *r) { return string::detail::compare_c(l, StringViewUtf8(r)) == 0; }
-inline bool operator != (const StringViewUtf8 &l, const char *r) { return string::detail::compare_c(l, StringViewUtf8(r)) != 0; }
+inline bool operator==(const StringViewUtf8 &l, const char *r) {
+	return string::detail::compare_c(l, StringViewUtf8(r)) == 0;
+}
+inline bool operator!=(const StringViewUtf8 &l, const char *r) {
+	return string::detail::compare_c(l, StringViewUtf8(r)) != 0;
+}
 
-inline bool operator == (const char *l, const StringViewUtf8 &r) { return string::detail::compare_c(StringViewUtf8(l), r) == 0; }
-inline bool operator != (const char *l, const StringViewUtf8 &r) { return string::detail::compare_c(StringViewUtf8(l), r) != 0; }
+inline bool operator==(const char *l, const StringViewUtf8 &r) {
+	return string::detail::compare_c(StringViewUtf8(l), r) == 0;
+}
+inline bool operator!=(const char *l, const StringViewUtf8 &r) {
+	return string::detail::compare_c(StringViewUtf8(l), r) != 0;
+}
 
 #undef SP_STRINGVIEW_COMPARE_OP
 #undef SP_STRINGVIEW_COMPARE_OP_UTF8
 
 template <typename _CharType>
-template <typename Interface, typename ... Args>
-auto StringViewBase<_CharType>::merge(Args && ... args) -> typename Interface::template BasicStringType<CharType> {
+template <typename Interface, typename... Args>
+auto StringViewBase<_CharType>::merge(Args &&...args) ->
+		typename Interface::template BasicStringType<CharType> {
 	using StringType = typename Interface::template BasicStringType<CharType>;
 
-	StringType ret; ret.reserve(_size(forward<Args>(args)...));
+	StringType ret;
+	ret.reserve(_size(forward<Args>(args)...));
 	_merge(ret, forward<Args>(args)...);
 	return ret;
 }
 
 template <typename _CharType>
-template <typename Interface, _CharType C, typename ... Args>
-auto StringViewBase<_CharType>::merge(Args && ... args) -> typename Interface::template BasicStringType<CharType> {
+template <typename Interface, _CharType C, typename... Args>
+auto StringViewBase<_CharType>::merge(Args &&...args) ->
+		typename Interface::template BasicStringType<CharType> {
 	using StringType = typename Interface::template BasicStringType<CharType>;
 
-	StringType ret; ret.reserve(_size(forward<Args>(args)...) + sizeof...(Args));
+	StringType ret;
+	ret.reserve(_size(forward<Args>(args)...) + sizeof...(Args));
 	_mergeWithSep<StringType, C, true>(ret, forward<Args>(args)...);
 	return ret;
 }
@@ -466,14 +533,14 @@ inline size_t StringViewBase<_CharType>::__size(const CharType *c) {
 }
 
 template <typename _CharType>
-template <typename T, typename ... Args>
+template <typename T, typename... Args>
 inline size_t StringViewBase<_CharType>::_size(T &&t) {
 	return __size(t);
 }
 
 template <typename _CharType>
-template <typename T, typename ... Args>
-inline size_t StringViewBase<_CharType>::_size(T &&t, Args && ... args) {
+template <typename T, typename... Args>
+inline size_t StringViewBase<_CharType>::_size(T &&t, Args &&...args) {
 	return __size(t) + _size(forward<Args>(args)...);
 }
 
@@ -494,8 +561,8 @@ inline void StringViewBase<_CharType>::__merge(Buf &buf, const CharType *c) {
 }
 
 template <typename _CharType>
-template <typename Buf, typename T, typename ... Args>
-inline void StringViewBase<_CharType>::_merge(Buf &buf, T &&t, Args && ... args) {
+template <typename Buf, typename T, typename... Args>
+inline void StringViewBase<_CharType>::_merge(Buf &buf, T &&t, Args &&...args) {
 	__merge(buf, std::forward<T>(t));
 	_merge(buf, forward<Args>(args)...);
 }
@@ -531,8 +598,8 @@ inline void StringViewBase<_CharType>::__mergeWithSep(Buf &buf, T &&t) {
 }
 
 template <typename _CharType>
-template <typename Buf, _CharType C, bool Front, typename T, typename ... Args>
-inline void StringViewBase<_CharType>::_mergeWithSep(Buf &buf, T &&t, Args && ... args) {
+template <typename Buf, _CharType C, bool Front, typename T, typename... Args>
+inline void StringViewBase<_CharType>::_mergeWithSep(Buf &buf, T &&t, Args &&...args) {
 	__mergeWithSep<Buf, C, Front>(buf, std::forward<T>(t));
 	_mergeWithSep<Buf, C, false>(buf, std::forward<Args>(args)...);
 }
@@ -549,7 +616,8 @@ inline constexpr StringViewBase<_CharType>::StringViewBase(const CharType *ptr, 
 : BytesReader<_CharType>(ptr, string::detail::length(ptr, len)) { }
 
 template <typename _CharType>
-inline constexpr StringViewBase<_CharType>::StringViewBase(const CharType *ptr, size_t pos, size_t len)
+inline constexpr StringViewBase<_CharType>::StringViewBase(const CharType *ptr, size_t pos,
+		size_t len)
 : BytesReader<_CharType>(ptr + pos, string::detail::length(ptr + pos, len)) { }
 
 template <typename _CharType>
@@ -569,37 +637,37 @@ StringViewBase<_CharType>::StringViewBase(const StdString &str)
 : StringViewBase(str.data(), str.size()) { }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::operator =(const PoolString &str) -> Self & {
+auto StringViewBase<_CharType>::operator=(const PoolString &str) -> Self & {
 	this->set(str);
 	return *this;
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::operator =(const StdString &str)-> Self & {
+auto StringViewBase<_CharType>::operator=(const StdString &str) -> Self & {
 	this->set(str);
 	return *this;
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::set(const PoolString &str)-> Self & {
-	this->set(str.data(),str.size());
-	return *this;
-}
-
-template <typename _CharType>
-auto StringViewBase<_CharType>::set(const StdString &str)-> Self & {
+auto StringViewBase<_CharType>::set(const PoolString &str) -> Self & {
 	this->set(str.data(), str.size());
 	return *this;
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::set(const Self &str)-> Self & {
+auto StringViewBase<_CharType>::set(const StdString &str) -> Self & {
 	this->set(str.data(), str.size());
 	return *this;
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::set(const CharType *p, size_t l)-> Self & {
+auto StringViewBase<_CharType>::set(const Self &str) -> Self & {
+	this->set(str.data(), str.size());
+	return *this;
+}
+
+template <typename _CharType>
+auto StringViewBase<_CharType>::set(const CharType *p, size_t l) -> Self & {
 	this->ptr = p;
 	this->len = l;
 	return *this;
@@ -610,10 +678,13 @@ auto StringViewBase<_CharType>::pdup(memory::pool_t *p) const -> Self {
 	if (!p) {
 		p = memory::pool::acquire();
 	}
-	auto buf = (_CharType *)memory::pool::palloc(p, (this->size() + 1) * sizeof(_CharType));
-	memcpy(buf, this->data(), this->size() * sizeof(_CharType));
-	buf[this->size()] = 0;
-	return Self(buf, this->size());
+	if (this->size() > 0) {
+		auto buf = (_CharType *)memory::pool::palloc(p, (this->size() + 1) * sizeof(_CharType));
+		memcpy(buf, this->data(), this->size() * sizeof(_CharType));
+		buf[this->size()] = 0;
+		return Self(buf, this->size());
+	}
+	return StringView();
 }
 
 template <typename _CharType>
@@ -621,13 +692,14 @@ auto StringViewBase<_CharType>::ptolower_c(memory::pool_t *p) const -> Self {
 	if (!p) {
 		p = memory::pool::acquire();
 	}
-	auto buf = (_CharType *)memory::pool::palloc(p, (this->size() + 1) * sizeof(_CharType));
-	memcpy(buf, this->data(), this->size() * sizeof(_CharType));
-	for (size_t i = 0; i < this->size(); ++ i) {
-		buf[i] = std::tolower(buf[i], std::locale());
+	if (this->size() > 0) {
+		auto buf = (_CharType *)memory::pool::palloc(p, (this->size() + 1) * sizeof(_CharType));
+		memcpy(buf, this->data(), this->size() * sizeof(_CharType));
+		for (size_t i = 0; i < this->size(); ++i) { buf[i] = std::tolower(buf[i], std::locale()); }
+		buf[this->size()] = 0;
+		return Self(buf, this->size());
 	}
-	buf[this->size()] = 0;
-	return Self(buf, this->size());
+	return StringView();
 }
 
 template <typename _CharType>
@@ -635,18 +707,20 @@ auto StringViewBase<_CharType>::ptoupper_c(memory::pool_t *p) const -> Self {
 	if (!p) {
 		p = memory::pool::acquire();
 	}
-	auto buf = (_CharType *)memory::pool::palloc(p, (this->size() + 1) * sizeof(_CharType));
-	memcpy(buf, this->data(), this->size() * sizeof(_CharType));
-	for (size_t i = 0; i < this->size(); ++ i) {
-		buf[i] = std::toupper(buf[i], std::locale());
+	if (this->size() > 0) {
+		auto buf = (_CharType *)memory::pool::palloc(p, (this->size() + 1) * sizeof(_CharType));
+		memcpy(buf, this->data(), this->size() * sizeof(_CharType));
+		for (size_t i = 0; i < this->size(); ++i) { buf[i] = std::toupper(buf[i], std::locale()); }
+		buf[this->size()] = 0;
+		return Self(buf, this->size());
 	}
-	buf[this->size()] = 0;
-	return Self(buf, this->size());
+	return StringView();
 }
 
 template <typename _CharType>
 template <typename Interface>
-auto StringViewBase<_CharType>::str() const -> typename Interface::template BasicStringType<CharType> {
+auto StringViewBase<_CharType>::str() const ->
+		typename Interface::template BasicStringType<CharType> {
 	if (this->ptr && this->len > 0) {
 		return typename Interface::template BasicStringType<CharType>(this->ptr, this->len);
 	} else {
@@ -655,24 +729,26 @@ auto StringViewBase<_CharType>::str() const -> typename Interface::template Basi
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::operator ++ () -> Self & {
+auto StringViewBase<_CharType>::operator++() -> Self & {
 	if (!this->empty()) {
-		this->ptr ++; this->len --;
+		this->ptr++;
+		this->len--;
 	}
 	return *this;
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::operator ++ (int) -> Self {
+auto StringViewBase<_CharType>::operator++(int) -> Self {
 	auto tmp = *this;
 	if (!this->empty()) {
-		this->ptr ++; this->len --;
+		this->ptr++;
+		this->len--;
 	}
 	return tmp;
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::operator += (size_t l) -> Self & {
+auto StringViewBase<_CharType>::operator+=(size_t l) -> Self & {
 	this->offset(l);
 	return *this;
 }
@@ -695,7 +771,7 @@ auto StringViewBase<_CharType>::is(const Self &c) const -> bool {
 template <typename _CharType>
 template <_CharType C>
 auto StringViewBase<_CharType>::is() const -> bool {
-	return this->len > 0 && *this->ptr ==C;
+	return this->len > 0 && *this->ptr == C;
 }
 
 template <typename _CharType>
@@ -721,7 +797,7 @@ auto StringViewBase<_CharType>::end() const -> Self {
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::operator - (const Self &other) const -> Self {
+auto StringViewBase<_CharType>::operator-(const Self &other) const -> Self {
 	if (this->ptr > other.ptr && size_t(this->ptr - other.ptr) < this->len) {
 		return Self(this->ptr, this->ptr - other.ptr);
 	}
@@ -729,7 +805,7 @@ auto StringViewBase<_CharType>::operator - (const Self &other) const -> Self {
 }
 
 template <typename _CharType>
-auto StringViewBase<_CharType>::operator -= (const Self &other) const -> Self & {
+auto StringViewBase<_CharType>::operator-=(const Self &other) const -> Self & {
 	if (this->ptr > other.ptr && size_t(this->ptr - other.ptr) < this->len) {
 		this->len = this->ptr - other.ptr;
 		return *this;
@@ -743,7 +819,8 @@ auto StringViewBase<_CharType>::readFloat() -> Result<float> {
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
 	auto ret = string::detail::readNumber<float>(tmp.ptr, tmp.len, 0, offset);
-	this->ptr += offset; this->len -= offset;
+	this->ptr += offset;
+	this->len -= offset;
 	return ret;
 }
 
@@ -753,7 +830,8 @@ auto StringViewBase<_CharType>::readDouble() -> Result<double> {
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
 	auto ret = string::detail::readNumber<double>(tmp.ptr, tmp.len, 0, offset);
-	this->ptr += offset; this->len -= offset;
+	this->ptr += offset;
+	this->len -= offset;
 	return ret;
 }
 
@@ -763,48 +841,41 @@ auto StringViewBase<_CharType>::readInteger(int base) -> Result<int64_t> {
 	tmp.skipChars<typename Self::template CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
 	auto ret = string::detail::readNumber<int64_t>(tmp.ptr, tmp.len, 0, offset);
-	this->ptr += offset; this->len -= offset;
+	this->ptr += offset;
+	this->len -= offset;
 	return ret;
 }
 
 template <typename _CharType>
-template<typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::skipChars() -> void {
 	size_t offset = 0;
-	while (this->len > offset && match<Args...>(this->ptr[offset])) {
-		++offset;
-	}
+	while (this->len > offset && match<Args...>(this->ptr[offset])) { ++offset; }
 	auto off = std::min(offset, this->len);
 	this->len -= off;
 	this->ptr += off;
 }
 
 template <typename _CharType>
-template<typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::skipUntil() -> void {
 	size_t offset = 0;
-	while (this->len > offset && !match<Args...>(this->ptr[offset])) {
-		++offset;
-	}
+	while (this->len > offset && !match<Args...>(this->ptr[offset])) { ++offset; }
 	auto off = std::min(offset, this->len);
 	this->len -= off;
 	this->ptr += off;
 }
 
 template <typename _CharType>
-template<typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::backwardSkipChars() -> void {
-	while (this->len > 0 && match<Args...>(this->ptr[this->len - 1])) {
-		-- this->len;
-	}
+	while (this->len > 0 && match<Args...>(this->ptr[this->len - 1])) { --this->len; }
 }
 
 template <typename _CharType>
-template<typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::backwardSkipUntil() -> void {
-	while (this->len > 0 && !match<Args...>(this->ptr[this->len - 1])) {
-		-- this->len;
-	}
+	while (this->len > 0 && !match<Args...>(this->ptr[this->len - 1])) { --this->len; }
 }
 
 template <typename _CharType>
@@ -839,34 +910,34 @@ auto StringViewBase<_CharType>::skipUntilString(const Self &str, bool stopBefore
 }
 
 template <typename _CharType>
-template <typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::readChars() -> Self {
 	auto tmp = *this;
-	skipChars<Args ...>();
+	skipChars<Args...>();
 	return Self(tmp.data(), tmp.size() - this->size());
 }
 
 template <typename _CharType>
-template <typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::readUntil() -> Self {
 	auto tmp = *this;
-	skipUntil<Args ...>();
+	skipUntil<Args...>();
 	return Self(tmp.data(), tmp.size() - this->size());
 }
 
 template <typename _CharType>
-template<typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::backwardReadChars() -> Self {
 	auto tmp = *this;
-	backwardSkipChars<Args ...>();
+	backwardSkipChars<Args...>();
 	return Self(this->data() + this->size(), tmp.size() - this->size());
 }
 
 template <typename _CharType>
-template<typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::backwardReadUntil() -> Self {
 	auto tmp = *this;
-	backwardSkipUntil<Args ...>();
+	backwardSkipUntil<Args...>();
 	return Self(this->data() + this->size(), tmp.size() - this->size());
 }
 
@@ -878,7 +949,7 @@ auto StringViewBase<_CharType>::readUntilString(const Self &str) -> Self {
 }
 
 template <typename _CharType>
-template<typename Separator, typename Callback>
+template <typename Separator, typename Callback>
 auto StringViewBase<_CharType>::split(const Callback &cb) const -> void {
 	Self str(*this);
 	while (!str.empty()) {
@@ -891,7 +962,7 @@ auto StringViewBase<_CharType>::split(const Callback &cb) const -> void {
 }
 
 template <typename _CharType>
-template<typename ... Args>
+template <typename... Args>
 auto StringViewBase<_CharType>::trimChars() -> void {
 	this->skipChars<Args...>();
 	if (!this->empty()) {
@@ -909,8 +980,8 @@ auto StringViewBase<_CharType>::trimUntil() -> void {
 }
 
 template <typename _CharType>
-template <typename ...Args>
-auto StringViewBase<_CharType>::match (CharType c) -> bool {
+template <typename... Args>
+auto StringViewBase<_CharType>::match(CharType c) -> bool {
 	return chars::Compose<CharType, Args...>::match(c);
 }
 
@@ -938,15 +1009,15 @@ inline StringViewUtf8::StringViewUtf8(const StdString &str)
 inline StringViewUtf8::StringViewUtf8(const StringViewBase<char> &str)
 : StringViewUtf8(str.data(), str.size()) { }
 
-inline auto StringViewUtf8::operator =(const PoolString &str) -> Self & {
+inline auto StringViewUtf8::operator=(const PoolString &str) -> Self & {
 	this->set(str);
 	return *this;
 }
-inline auto StringViewUtf8::operator =(const StdString &str) -> Self & {
+inline auto StringViewUtf8::operator=(const StdString &str) -> Self & {
 	this->set(str);
 	return *this;
 }
-inline auto StringViewUtf8::operator =(const Self &str) -> Self & {
+inline auto StringViewUtf8::operator=(const Self &str) -> Self & {
 	this->set(str);
 	return *this;
 }
@@ -964,44 +1035,47 @@ inline auto StringViewUtf8::set(const Self &str) -> Self & {
 	return *this;
 }
 inline auto StringViewUtf8::set(const char *p, size_t l) -> Self & {
-	ptr = p; len = l;
+	ptr = p;
+	len = l;
 	return *this;
 }
 
-inline bool StringViewUtf8::is(const char &c) const {
-	return len > 0 && *ptr == c;
-}
+inline bool StringViewUtf8::is(const char &c) const { return len > 0 && *ptr == c; }
 inline bool StringViewUtf8::is(const char16_t &c) const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == c;
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
+			&& unicode::utf8Decode32(ptr) == c;
 }
 inline bool StringViewUtf8::is(const char32_t &c) const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == c;
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
+			&& unicode::utf8Decode32(ptr) == c;
 }
 inline bool StringViewUtf8::is(const char *c) const {
 	return prefix(c, std::char_traits<char>::length(c));
 }
-inline bool StringViewUtf8::is(const Self &c) const {
-	return prefix(c.data(), c.size());
-}
+inline bool StringViewUtf8::is(const Self &c) const { return prefix(c.data(), c.size()); }
 
 template <char32_t C>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && unicode::utf8Decode32(ptr) == C;
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
+			&& unicode::utf8Decode32(ptr) == C;
 }
 
 template <CharGroupId G>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && chars::CharGroup<MatchCharType, G>::match(unicode::utf8Decode32(ptr));
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
+			&& chars::CharGroup<MatchCharType, G>::match(unicode::utf8Decode32(ptr));
 }
 
 template <typename M>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)] && M::match(unicode::utf8Decode32(ptr));
+	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
+			&& M::match(unicode::utf8Decode32(ptr));
 }
 
 inline auto StringViewUtf8::letter() const -> Self {
 	if (this->len > 0) {
-		return Self(this->ptr, std::min(this->len, size_t( unicode::utf8_length_data[uint8_t(*ptr)] )));
+		return Self(this->ptr,
+				std::min(this->len, size_t(unicode::utf8_length_data[uint8_t(*ptr)])));
 	}
 	return Self();
 }
@@ -1016,22 +1090,24 @@ inline auto StringViewUtf8::str() const -> typename Interface::StringType {
 // extend offset functions with unicode support
 inline void StringViewUtf8::offset(size_t l) {
 	while (l > 0 && len > 0) {
-		++ (*this); -- l;
+		++(*this);
+		--l;
 	}
 }
-inline auto StringViewUtf8::operator ++ () -> Self & {
+inline auto StringViewUtf8::operator++() -> Self & {
 	if (len > 0) {
-		auto l = std::min(size_t( unicode::utf8_length_data[uint8_t(*ptr)] ), len);
-		ptr += l; len -= l;
+		auto l = std::min(size_t(unicode::utf8_length_data[uint8_t(*ptr)]), len);
+		ptr += l;
+		len -= l;
 	}
 	return *this;
 }
-inline auto StringViewUtf8::operator ++ (int) -> Self {
+inline auto StringViewUtf8::operator++(int) -> Self {
 	auto tmp = *this;
-	++ (*this);
+	++(*this);
 	return tmp;
 }
-inline auto StringViewUtf8::operator += (size_t l) -> Self & {
+inline auto StringViewUtf8::operator+=(size_t l) -> Self & {
 	offset(l);
 	return *this;
 }
@@ -1042,31 +1118,27 @@ inline bool StringViewUtf8::isSpace() const {
 	return tmp.empty();
 }
 
-inline auto StringViewUtf8::begin() const -> Self {
-	return Self(this->ptr, this->len);
-}
-inline auto StringViewUtf8::end() const -> Self {
-	return Self(this->ptr + this->len, 0);
-}
-inline auto StringViewUtf8::operator - (const Self &other) const -> Self {
+inline auto StringViewUtf8::begin() const -> Self { return Self(this->ptr, this->len); }
+inline auto StringViewUtf8::end() const -> Self { return Self(this->ptr + this->len, 0); }
+inline auto StringViewUtf8::operator-(const Self &other) const -> Self {
 	if (this->ptr > other.ptr && size_t(this->ptr - other.ptr) < this->len) {
 		return Self(this->ptr, this->ptr - other.ptr);
 	}
 	return Self();
 }
-inline auto StringViewUtf8::operator -= (const Self &other) -> Self & {
+inline auto StringViewUtf8::operator-=(const Self &other) -> Self & {
 	if (this->ptr > other.ptr && size_t(this->ptr - other.ptr) < this->len) {
 		this->len = this->ptr - other.ptr;
 		return *this;
 	}
 	return *this;
 }
-inline auto StringViewUtf8::operator * () const -> MatchCharType {
+inline auto StringViewUtf8::operator*() const -> MatchCharType {
 	return unicode::utf8Decode32(ptr);
 }
 
 template <typename Callback>
-inline void StringViewUtf8::foreach(const Callback &cb) const {
+inline void StringViewUtf8::foreach (const Callback &cb) const {
 	auto p = ptr;
 	const auto e = ptr + len;
 	while (p < e) {
@@ -1074,7 +1146,7 @@ inline void StringViewUtf8::foreach(const Callback &cb) const {
 		const uint8_t len = unicode::utf8_length_data[uint8_t(*p)];
 		uint32_t ret = *p++ & mask;
 		for (uint8_t c = 1; c < len; ++c) {
-			const auto ch =  *p++;
+			const auto ch = *p++;
 			if ((ch & 0xc0) != 0x80) {
 				ret = 0;
 				break;
@@ -1091,13 +1163,13 @@ inline size_t StringViewUtf8::code_size() const {
 	auto p = ptr;
 	const auto e = ptr + len;
 	while (p < e) {
-		++ ret;
+		++ret;
 		p += unicode::utf8_length_data[uint8_t(*p)];
 	}
 	return ret;
 }
 
-inline StringViewUtf8::operator StringViewBase<char> () const {
+inline StringViewUtf8::operator StringViewBase<char>() const {
 	return StringViewBase<char>(ptr, len);
 }
 
@@ -1106,7 +1178,8 @@ inline Result<float> StringViewUtf8::readFloat() {
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
 	auto ret = string::detail::readNumber<float>(tmp.ptr, tmp.len, 0, offset);
-	this->ptr += offset; this->len -= offset;
+	this->ptr += offset;
+	this->len -= offset;
 	return ret;
 }
 inline Result<double> StringViewUtf8::readDouble() {
@@ -1114,7 +1187,8 @@ inline Result<double> StringViewUtf8::readDouble() {
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
 	auto ret = string::detail::readNumber<double>(tmp.ptr, tmp.len, 0, offset);
-	this->ptr += offset; this->len -= offset;
+	this->ptr += offset;
+	this->len -= offset;
 	return ret;
 }
 inline Result<int64_t> StringViewUtf8::readInteger(int base) {
@@ -1122,11 +1196,12 @@ inline Result<int64_t> StringViewUtf8::readInteger(int base) {
 	tmp.skipChars<CharGroup<CharGroupId::WhiteSpace>>();
 	uint8_t offset = 0;
 	auto ret = string::detail::readNumber<int64_t>(tmp.ptr, tmp.len, 0, offset);
-	this->ptr += offset; this->len -= offset;
+	this->ptr += offset;
+	this->len -= offset;
 	return ret;
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline void StringViewUtf8::skipChars() {
 	uint8_t clen = 0;
 	size_t offset = 0;
@@ -1138,7 +1213,7 @@ inline void StringViewUtf8::skipChars() {
 	ptr += off;
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline void StringViewUtf8::skipUntil() {
 	uint8_t clen = 0;
 	size_t offset = 0;
@@ -1150,7 +1225,7 @@ inline void StringViewUtf8::skipUntil() {
 	ptr += off;
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline void StringViewUtf8::backwardSkipChars() {
 	uint8_t clen = 0;
 	while (this->len > 0 && rv_match_utf8<Args...>(this->ptr, this->len, clen)) {
@@ -1162,12 +1237,13 @@ inline void StringViewUtf8::backwardSkipChars() {
 	}
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline void StringViewUtf8::backwardSkipUntil() {
 	uint8_t clen = 0;
 	while (this->len > 0 && !rv_match_utf8<Args...>(this->ptr, this->len, clen)) {
 		if (clen > 0) {
-			this->len -= std::min(size_t(clen), this->len);;
+			this->len -= std::min(size_t(clen), this->len);
+			;
 		} else {
 			return;
 		}
@@ -1202,31 +1278,31 @@ inline bool StringViewUtf8::skipUntilString(const Self &str, bool stopBeforeStri
 	return this->len > 0 && *this->ptr != 0;
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline auto StringViewUtf8::readChars() -> Self {
 	auto tmp = *this;
-	skipChars<Args ...>();
+	skipChars<Args...>();
 	return Self(tmp.data(), tmp.size() - this->size());
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline auto StringViewUtf8::readUntil() -> Self {
 	auto tmp = *this;
-	skipUntil<Args ...>();
+	skipUntil<Args...>();
 	return Self(tmp.data(), tmp.size() - this->size());
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline auto StringViewUtf8::backwardReadChars() -> Self {
 	auto tmp = *this;
-	backwardSkipChars<Args ...>();
+	backwardSkipChars<Args...>();
 	return Self(this->data() + this->size(), tmp.size() - this->size());
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline auto StringViewUtf8::backwardReadUntil() -> Self {
 	auto tmp = *this;
-	backwardSkipUntil<Args ...>();
+	backwardSkipUntil<Args...>();
 	return Self(this->data() + this->size(), tmp.size() - this->size());
 }
 
@@ -1236,7 +1312,7 @@ inline auto StringViewUtf8::readUntilString(const Self &str) -> Self {
 	return Self(tmp.data(), tmp.size() - this->size());
 }
 
-template<typename Separator, typename Callback>
+template <typename Separator, typename Callback>
 inline void StringViewUtf8::split(const Callback &cb) const {
 	Self str(*this);
 	while (!str.empty()) {
@@ -1248,7 +1324,7 @@ inline void StringViewUtf8::split(const Callback &cb) const {
 	}
 }
 
-template<typename ... Args>
+template <typename... Args>
 inline void StringViewUtf8::trimChars() {
 	this->skipChars<Args...>();
 	if (!this->empty()) {
@@ -1264,25 +1340,25 @@ inline void StringViewUtf8::trimUntil() {
 	}
 }
 
-template  <typename ...Args>
-inline bool StringViewUtf8::rv_match_utf8 (const CharType *ptr, size_t len, uint8_t &offset) {
+template <typename... Args>
+inline bool StringViewUtf8::rv_match_utf8(const CharType *ptr, size_t len, uint8_t &offset) {
 	while (len > 0) {
 		if (!unicode::isUtf8Surrogate(ptr[len - 1])) {
 			return match<Args...>(unicode::utf8Decode32(ptr + len - 1, offset));
 		} else {
-			-- len;
+			--len;
 		}
 	}
 	offset = 0;
 	return false;
 }
 
-template <typename ...Args>
-inline bool StringViewUtf8::match (MatchCharType c) {
+template <typename... Args>
+inline bool StringViewUtf8::match(MatchCharType c) {
 	return chars::Compose<MatchCharType, Args...>::match(c);
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace std {
 
@@ -1290,7 +1366,7 @@ template <>
 struct hash<STAPPLER_VERSIONIZED_NAMESPACE::StringView> {
 	hash() { }
 
-	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::StringView &value) const noexcept {
+	size_t operator()(const STAPPLER_VERSIONIZED_NAMESPACE::StringView &value) const noexcept {
 		return hash<string_view>()(string_view(value.data(), value.size()));
 	}
 };
@@ -1299,7 +1375,7 @@ template <>
 struct hash<STAPPLER_VERSIONIZED_NAMESPACE::StringViewUtf8> {
 	hash() { }
 
-	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::StringViewUtf8 &value) const noexcept {
+	size_t operator()(const STAPPLER_VERSIONIZED_NAMESPACE::StringViewUtf8 &value) const noexcept {
 		return hash<string_view>()(string_view(value.data(), value.size()));
 	}
 };
@@ -1308,11 +1384,11 @@ template <>
 struct hash<STAPPLER_VERSIONIZED_NAMESPACE::WideStringView> {
 	hash() { }
 
-	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::WideStringView &value) const noexcept {
+	size_t operator()(const STAPPLER_VERSIONIZED_NAMESPACE::WideStringView &value) const noexcept {
 		return hash<u16string_view>()(u16string_view(value.data(), value.size()));
 	}
 };
 
-}
+} // namespace std
 
 #endif /* STAPPLER_CORE_STRING_SPSTRINGVIEW_H_ */

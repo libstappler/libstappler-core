@@ -24,7 +24,6 @@
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
 #include "SPLog.h"
-#include <winnt.h>
 
 #if WIN32
 
@@ -43,6 +42,7 @@
 #include <wil/resource.h>
 #include <wil/com.h>
 #include <wil\token_helpers.h>
+#include <winnt.h>
 
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
