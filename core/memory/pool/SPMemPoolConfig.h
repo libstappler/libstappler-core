@@ -32,7 +32,7 @@ static constexpr int SP_APR_COMPATIBLE = 1;
 #else
 static constexpr int SP_APR_COMPATIBLE = 0;
 #endif
-}
+} // namespace stappler::mempool::apr
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
@@ -44,33 +44,34 @@ class function;
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
-using Status = int;
 
 // minimal size of block, that can be reallocated
 static constexpr uint32_t BlockThreshold = 256;
 
+static constexpr uint32_t DefaultAlignment = 16;
+
 // Align on a power of 2 boundary
-static constexpr size_t SPALIGN(size_t size, uint32_t boundary) { return math::align<size_t>(size, boundary); }
+static constexpr size_t SPALIGN(size_t size, uint32_t boundary) {
+	return math::align<size_t>(size, boundary);
+}
 
 // Default alignment, 16-bytes is compatible with SSE or other 128-bit SIMD
-static constexpr size_t SPALIGN_DEFAULT(size_t size) { return SPALIGN(size, 16); }
+static constexpr size_t SPALIGN_DEFAULT(size_t size) { return SPALIGN(size, DefaultAlignment); }
 
-static constexpr uint32_t BOUNDARY_INDEX ( 12 );
-static constexpr uint32_t BOUNDARY_SIZE ( 1 << BOUNDARY_INDEX );
+static constexpr uint32_t BOUNDARY_INDEX(12);
+static constexpr uint32_t BOUNDARY_SIZE(1 << BOUNDARY_INDEX);
 
-static constexpr uint32_t MIN_ALLOC (2 * BOUNDARY_SIZE);
-static constexpr uint32_t MAX_INDEX ( 20 );
-static constexpr uint32_t ALLOCATOR_MAX_FREE_UNLIMITED ( 0 );
+static constexpr uint32_t MIN_ALLOC(2 * BOUNDARY_SIZE);
+static constexpr uint32_t MAX_INDEX(20);
+static constexpr uint32_t ALLOCATOR_MAX_FREE_UNLIMITED(0);
 
 // address space (not actual mem) reservation for mmap allocator
 // you can not allocate more then this with mmap
 static constexpr size_t ALLOCATOR_MMAP_RESERVED = size_t(64_GiB);
 
-static constexpr Status SUCCESS = 0;
-
 // Can be 64-bit or stripped to 32-bit
-static constexpr uint64_t POOL_MAGIC = 0xDEAD7fffDEAD7fff;
+static constexpr uint64_t POOL_MAGIC = 0xDEAD'7fff'DEAD'7fff;
 
-}
+} // namespace stappler::mempool::custom
 
 #endif /* STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLCONFIG_H_ */

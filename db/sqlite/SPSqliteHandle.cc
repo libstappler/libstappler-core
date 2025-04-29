@@ -31,19 +31,19 @@ class SqliteQuery : public db::sql::SqlQuery {
 public:
 	virtual ~SqliteQuery() = default;
 
-	SqliteQuery(db::QueryInterface *q, const sql::Driver *d)
-	: SqlQuery(q, d) { }
+	SqliteQuery(db::QueryInterface *q, const sql::Driver *d) : SqlQuery(q, d) { }
 
 	virtual void writeFullTextWhere(WhereContinue &whi, db::Operator op, const db::Scheme &scheme,
 			const db::Query::Select &sel, StringView ftsQuery) override {
-		auto functionCall = toString("sp_ts_query_valid(\"", scheme.getName(), "\".\"", sel.field, "\", '", ftsQuery, "')");
-		whi.where(op,
-				SqlQuery::Field(StringView(functionCall), SqlQuery::Field::PlainText),
+		auto functionCall = toString("sp_ts_query_valid(\"", scheme.getName(), "\".\"", sel.field,
+				"\", '", ftsQuery, "')");
+		whi.where(op, SqlQuery::Field(StringView(functionCall), SqlQuery::Field::PlainText),
 				Comparation::Equal, RawStringView{StringView("1")});
 	}
 };
 
-SqliteQueryInterface::SqliteQueryInterface(const sql::Driver *d, const sql::QueryStorageHandle *s, Driver::Handle h)
+SqliteQueryInterface::SqliteQueryInterface(const sql::Driver *d, const sql::QueryStorageHandle *s,
+		Driver::Handle h)
 : driver(d), storage(s), handle(h) { }
 
 size_t SqliteQueryInterface::push(String &&val) {
@@ -71,7 +71,8 @@ size_t SqliteQueryInterface::push(Bytes &&val) {
 	return it.idx;
 }
 
-size_t SqliteQueryInterface::push(StringStream &query, const Value &val, bool force, bool compress) {
+size_t SqliteQueryInterface::push(StringStream &query, const Value &val, bool force,
+		bool compress) {
 	if (!force || val.getType() == Value::Type::EMPTY) {
 		switch (val.getType()) {
 		case Value::Type::EMPTY: query << "NULL"; break;
@@ -85,32 +86,33 @@ size_t SqliteQueryInterface::push(StringStream &query, const Value &val, bool fo
 			} else if (-val.asDouble() == std::numeric_limits<double>::infinity()) {
 				query << "'Infinity'";
 			} else {
-				query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << val.asDouble();
+				query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1)
+					  << val.asDouble();
 			}
 			break;
-		case Value::Type::CHARSTRING:
-			query << "?" << push(val.getString());
-			break;
-		case Value::Type::BYTESTRING:
-			query << "?" << push(val.asBytes());
-			break;
+		case Value::Type::CHARSTRING: query << "?" << push(val.getString()); break;
+		case Value::Type::BYTESTRING: query << "?" << push(val.asBytes()); break;
 		case Value::Type::ARRAY:
 		case Value::Type::DICTIONARY:
-			query << "?" << push(data::write<Interface>(val, EncodeFormat(EncodeFormat::Cbor,
-					compress ? EncodeFormat::LZ4HCCompression : EncodeFormat::DefaultCompress)));
+			query << "?"
+				  << push(data::write<Interface>(val,
+							 EncodeFormat(EncodeFormat::Cbor,
+									 compress ? EncodeFormat::LZ4HCCompression
+											  : EncodeFormat::DefaultCompress)));
 			break;
 		default: break;
 		}
 	} else {
-		query << "?" << push(data::write<Interface>(val, EncodeFormat(EncodeFormat::Cbor,
-				compress ? EncodeFormat::LZ4HCCompression : EncodeFormat::DefaultCompress)));
+		query << "?"
+			  << push(data::write<Interface>(val,
+						 EncodeFormat(EncodeFormat::Cbor,
+								 compress ? EncodeFormat::LZ4HCCompression
+										  : EncodeFormat::DefaultCompress)));
 	}
 	return params.size();
 }
 
-void SqliteQueryInterface::bindInt(db::Binder &, StringStream &query, int64_t val) {
-	query << val;
-}
+void SqliteQueryInterface::bindInt(db::Binder &, StringStream &query, int64_t val) { query << val; }
 void SqliteQueryInterface::bindUInt(db::Binder &, StringStream &query, uint64_t val) {
 	query << val;
 }
@@ -127,7 +129,8 @@ void SqliteQueryInterface::bindMoveString(db::Binder &, StringStream &query, Str
 		query << "?" << num;
 	}
 }
-void SqliteQueryInterface::bindStringView(db::Binder &, StringStream &query, const StringView &val) {
+void SqliteQueryInterface::bindStringView(db::Binder &, StringStream &query,
+		const StringView &val) {
 	if (auto num = push(val)) {
 		query << "?" << num;
 	}
@@ -142,7 +145,8 @@ void SqliteQueryInterface::bindMoveBytes(db::Binder &, StringStream &query, Byte
 		query << "?" << num;
 	}
 }
-void SqliteQueryInterface::bindCoderSource(db::Binder &, StringStream &query, const stappler::CoderSource &val) {
+void SqliteQueryInterface::bindCoderSource(db::Binder &, StringStream &query,
+		const stappler::CoderSource &val) {
 	if (auto num = push(Bytes(val.data(), val.data() + val.size()))) {
 		query << "?" << num;
 	}
@@ -150,7 +154,8 @@ void SqliteQueryInterface::bindCoderSource(db::Binder &, StringStream &query, co
 void SqliteQueryInterface::bindValue(db::Binder &, StringStream &query, const Value &val) {
 	push(query, val, false);
 }
-void SqliteQueryInterface::bindDataField(db::Binder &, StringStream &query, const db::Binder::DataField &f) {
+void SqliteQueryInterface::bindDataField(db::Binder &, StringStream &query,
+		const db::Binder::DataField &f) {
 	if (f.field && f.field->getType() == db::Type::Custom) {
 		auto c = f.field->getSlot<db::FieldCustom>();
 		if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
@@ -164,13 +169,15 @@ void SqliteQueryInterface::bindDataField(db::Binder &, StringStream &query, cons
 		push(query, f.data, f.force, f.compress);
 	}
 }
-void SqliteQueryInterface::bindTypeString(db::Binder &, StringStream &query, const db::Binder::TypeString &type) {
+void SqliteQueryInterface::bindTypeString(db::Binder &, StringStream &query,
+		const db::Binder::TypeString &type) {
 	if (auto num = push(type.str)) {
 		query << "?" << num;
 	}
 }
 
-void SqliteQueryInterface::bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) {
+void SqliteQueryInterface::bindFullText(db::Binder &, StringStream &query,
+		const db::Binder::FullTextField &d) {
 	auto slot = d.field->getSlot<FieldFullTextView>();
 	auto result = slot->searchConfiguration->encodeSearchVectorData(d.data);
 	if (auto num = push(move(result))) {
@@ -180,7 +187,8 @@ void SqliteQueryInterface::bindFullText(db::Binder &, StringStream &query, const
 	storage->data->emplace(d.field->getName(), &d.data);
 }
 
-void SqliteQueryInterface::bindFullTextFrom(db::Binder &, StringStream &query, const db::Binder::FullTextFrom &d) {
+void SqliteQueryInterface::bindFullTextFrom(db::Binder &, StringStream &query,
+		const db::Binder::FullTextFrom &d) {
 	auto tableName = toString(d.scheme, "_f_", d.field->getName());
 	auto fieldId = toString(d.scheme, "_id");
 
@@ -189,25 +197,33 @@ void SqliteQueryInterface::bindFullTextFrom(db::Binder &, StringStream &query, c
 	auto it = storageData.find(d.query);
 	if (it != storageData.end()) {
 		auto q = (TextQueryData *)it->second;
-		query << " INNER JOIN (SELECT DISTINCT \"" << fieldId << "\" as id FROM \"" << tableName << "\" WHERE word IN (";
+		query << " INNER JOIN (SELECT DISTINCT \"" << fieldId << "\" as id FROM \"" << tableName
+			  << "\" WHERE word IN (";
 
 		bool first = true;
 		for (auto &w : q->pos) {
-			if (first) { first = false; } else { query << ","; }
+			if (first) {
+				first = false;
+			} else {
+				query << ",";
+			}
 			query << w;
 		}
 
-		query << ")) AS \"__" << d.scheme << "_" << d.field->getName() << "\""
-			" ON (\"" << d.scheme << "\".__oid=\"__" << d.scheme << "_" << d.field->getName() << "\".id)";
+		query << ")) AS \"__" << d.scheme << "_" << d.field->getName() << "\"" " ON (\"" << d.scheme
+			  << "\".__oid=\"__" << d.scheme << "_" << d.field->getName() << "\".id)";
 	}
 }
 
-void SqliteQueryInterface::bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) {
+void SqliteQueryInterface::bindFullTextRank(db::Binder &, StringStream &query,
+		const db::Binder::FullTextRank &d) {
 	auto slot = d.field->getSlot<FieldFullTextView>();
-	query << " sp_ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", '" << d.query << "', " << toInt(slot->normalization) << ")";
+	query << " sp_ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", '" << d.query
+		  << "', " << toInt(slot->normalization) << ")";
 }
 
-void SqliteQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query, const db::Binder::FullTextQueryRef &d) {
+void SqliteQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query,
+		const db::Binder::FullTextQueryRef &d) {
 	query << d.scheme << "." << d.field->getName();
 
 	auto it = storage->data->find(query.weak());
@@ -216,11 +232,11 @@ void SqliteQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query, 
 		it = storage->data->find(query.weak());
 	}
 
-	auto q = new TextQueryData;
+	auto q = new (std::nothrow) TextQueryData;
 	q->query = &d.query;
-	q->query->decompose([&, this] (StringView pos) {
+	q->query->decompose([&, this](StringView pos) {
 		emplace_ordered(q->pos, ((const Driver *)driver)->insertWord(handle, pos));
-	}, [&, this] (StringView neg) {
+	}, [&, this](StringView neg) {
 		emplace_ordered(q->neg, ((const Driver *)driver)->insertWord(handle, neg));
 	});
 
@@ -228,39 +244,52 @@ void SqliteQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query, 
 	storage->data->emplace(str.pdup(), q);
 }
 
-void SqliteQueryInterface::bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) {
+void SqliteQueryInterface::bindIntVector(Binder &, StringStream &query,
+		const Vector<int64_t> &vec) {
 	query << "(";
 	bool start = true;
 	for (auto &it : vec) {
-		if (start) { start = false; } else { query << ","; }
+		if (start) {
+			start = false;
+		} else {
+			query << ",";
+		}
 		query << it;
 	}
 	query << ")";
 }
 
-void SqliteQueryInterface::bindDoubleVector(Binder &b, StringStream &query, const Vector<double> &vec) {
+void SqliteQueryInterface::bindDoubleVector(Binder &b, StringStream &query,
+		const Vector<double> &vec) {
 	query << "(";
 	bool start = true;
 	for (auto &it : vec) {
-		if (start) { start = false; } else { query << ","; }
+		if (start) {
+			start = false;
+		} else {
+			query << ",";
+		}
 		bindDouble(b, query, it);
 	}
 	query << ")";
 }
 
-void SqliteQueryInterface::bindStringVector(Binder &b, StringStream &query, const Vector<StringView> &vec) {
+void SqliteQueryInterface::bindStringVector(Binder &b, StringStream &query,
+		const Vector<StringView> &vec) {
 	query << "(";
 	bool start = true;
 	for (auto &it : vec) {
-		if (start) { start = false; } else { query << ","; }
+		if (start) {
+			start = false;
+		} else {
+			query << ",";
+		}
 		bindStringView(b, query, it);
 	}
 	query << ")";
 }
 
-void SqliteQueryInterface::clear() {
-	params.clear();
-}
+void SqliteQueryInterface::clear() { params.clear(); }
 
 Handle::Handle(const Driver *d, Driver::Handle h) : SqlHandle(d), driver(d), handle(h) {
 	_profile = stappler::sql::Profile::Sqlite;
@@ -273,30 +302,24 @@ Handle::Handle(const Driver *d, Driver::Handle h) : SqlHandle(d), driver(d), han
 	}
 }
 
-Handle::operator bool() const {
-	return conn.get() != nullptr;
-}
+Handle::operator bool() const { return conn.get() != nullptr; }
 
-Driver::Handle Handle::getHandle() const {
-	return handle;
-}
+Driver::Handle Handle::getHandle() const { return handle; }
 
-Driver::Connection Handle::getConnection() const {
-	return conn;
-}
+Driver::Connection Handle::getConnection() const { return conn; }
 
-void Handle::close() {
-	conn = Driver::Connection(nullptr);
-}
+void Handle::close() { conn = Driver::Connection(nullptr); }
 
-void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb, const sql::QueryStorageHandle *storage) {
+void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb,
+		const sql::QueryStorageHandle *storage) {
 	SqliteQueryInterface interface(_driver, storage, handle);
 	SqliteQuery query(&interface, _driver);
 	query.setProfile(_profile);
 	cb(query);
 }
 
-bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bool(sql::Result &)> &cb,
+bool Handle::selectQuery(const sql::SqlQuery &query,
+		const stappler::Callback<bool(sql::Result &)> &cb,
 		const Callback<void(const Value &)> &errCb) {
 	if (!conn.get() || getTransactionStatus() == db::TransactionStatus::Rollback) {
 		return false;
@@ -307,7 +330,8 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	auto queryString = query.getQuery().weak();
 
 	sqlite3_stmt *stmt = nullptr;
-	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), queryString.data(), int(queryString.size()), 0, &stmt, nullptr);
+	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), queryString.data(),
+			int(queryString.size()), 0, &stmt, nullptr);
 	if (err != SQLITE_OK) {
 		auto info = driver->getInfo(conn, err);
 		info.setString(query.getQuery().str(), "query");
@@ -317,7 +341,8 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query",
+				sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction();
 		return false;
@@ -327,13 +352,14 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	for (auto &it : queryInterface->params) {
 		switch (it.type) {
 		case Type::Text:
-			driver->getHandle()->_bind_text(stmt, it.idx, (const char *)it.data.data(), int(it.data.size() - 1), SQLITE_STATIC);
+			driver->getHandle()->_bind_text(stmt, it.idx, (const char *)it.data.data(),
+					int(it.data.size() - 1), SQLITE_STATIC);
 			break;
 		case Type::Bytes:
-			driver->getHandle()->_bind_blob(stmt, it.idx, it.data.data(), int(it.data.size()), SQLITE_STATIC);
+			driver->getHandle()->_bind_blob(stmt, it.idx, it.data.data(), int(it.data.size()),
+					SQLITE_STATIC);
 			break;
-		default:
-			break;
+		default: break;
 		}
 	}
 
@@ -347,7 +373,8 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query",
+				sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		driver->getHandle()->finalize(stmt);
 		cancelTransaction();
@@ -360,7 +387,8 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	return true;
 }
 
-bool Handle::performSimpleQuery(const StringView &query, const Callback<void(const Value &)> &errCb) {
+bool Handle::performSimpleQuery(const StringView &query,
+		const Callback<void(const Value &)> &errCb) {
 	if (getTransactionStatus() == db::TransactionStatus::Rollback) {
 		return false;
 	}
@@ -378,7 +406,8 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 		}
 
 		sqlite3_stmt *stmt = nullptr;
-		auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), nextQuery.data(), int(nextQuery.size()), 0, &stmt, &outPtr);
+		auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), nextQuery.data(),
+				int(nextQuery.size()), 0, &stmt, &outPtr);
 		if (err != SQLITE_OK) {
 			auto len = outPtr - nextQuery.data();
 			StringView performedQuery(nextQuery.data(), len);
@@ -390,7 +419,8 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 			if (errCb) {
 				errCb(info);
 			}
-			driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
+			driver->getApplicationInterface()->debug("Database", "Fail to perform query",
+					sp::move(info));
 			driver->getApplicationInterface()->error("Database", "Fail to perform query");
 			cancelTransaction();
 			return false;
@@ -407,7 +437,8 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 			if (errCb) {
 				errCb(info);
 			}
-			driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
+			driver->getApplicationInterface()->debug("Database", "Fail to perform query",
+					sp::move(info));
 			driver->getApplicationInterface()->error("Database", "Fail to perform query");
 			driver->getHandle()->finalize(stmt);
 			cancelTransaction();
@@ -420,14 +451,16 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 	return success;
 }
 
-bool Handle::performSimpleSelect(const StringView &query, const stappler::Callback<void(sql::Result &)> &cb,
+bool Handle::performSimpleSelect(const StringView &query,
+		const stappler::Callback<void(sql::Result &)> &cb,
 		const Callback<void(const Value &)> &errCb) {
 	if (getTransactionStatus() == db::TransactionStatus::Rollback) {
 		return false;
 	}
 
 	sqlite3_stmt *stmt = nullptr;
-	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), query.data(), int(query.size()), 0, &stmt, nullptr);
+	auto err = driver->getHandle()->prepare((sqlite3 *)conn.get(), query.data(), int(query.size()),
+			0, &stmt, nullptr);
 	if (err != SQLITE_OK) {
 		auto info = driver->getInfo(conn, err);
 		info.setString(query, "query");
@@ -437,7 +470,8 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query",
+				sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction();
 		return false;
@@ -451,9 +485,7 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 	return true;
 }
 
-bool Handle::isSuccess() const {
-	return ResultCursor::statusIsSuccess(lastError);
-}
+bool Handle::isSuccess() const { return ResultCursor::statusIsSuccess(lastError); }
 
 bool Handle::beginTransaction() {
 	if (transactionStatus != db::TransactionStatus::None) {
@@ -486,8 +518,7 @@ bool Handle::beginTransaction() {
 			return true;
 		}
 		break;
-	default:
-		break;
+	default: break;
 	}
 	return false;
 }
@@ -508,10 +539,9 @@ bool Handle::endTransaction() {
 			return false;
 		}
 		break;
-	default:
-		break;
+	default: break;
 	}
 	return false;
 }
 
-}
+} // namespace stappler::db::sqlite

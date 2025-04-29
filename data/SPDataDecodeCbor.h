@@ -38,9 +38,7 @@ struct Decoder : public Interface::AllocBaseType {
 	using ArrayType = typename ValueType::ArrayType;
 	using DictionaryType = typename ValueType::DictionaryType;
 
-	Decoder(BytesViewTemplate<Endian::Network> &r) : r(r), back(nullptr) {
-		stack.reserve(10);
-	}
+	Decoder(BytesViewTemplate<Endian::Network> &r) : r(r), back(nullptr) { stack.reserve(10); }
 
 	void decodePositiveInt(uint8_t type, ValueType &v) {
 		auto value = _readIntValue(r, type);
@@ -80,7 +78,9 @@ void Decoder<Interface>::decodeUndefinedLength(Container &buf, MajorTypeEncoded 
 		auto majorType = (MajorTypeEncoded)(type & toInt(Flags::MajorTypeMaskEncoded));
 		type = type & toInt(Flags::AdditionalInfoMask);
 
-		if (majorType != rootType && (majorType != MajorTypeEncoded::Simple || type != toInt(Flags::UndefinedLength))) {
+		if (majorType != rootType
+				&& (majorType != MajorTypeEncoded::Simple
+						|| type != toInt(Flags::UndefinedLength))) {
 			//logTag("CBOR Coder", "malformed CBOR block: invalid ByteString sequence with MajorType: %d and Info: %d", toInt(majorType), type);
 			return;
 		}
@@ -100,14 +100,14 @@ void Decoder<Interface>::decodeByteString(uint8_t type, ValueType &v) {
 		auto size = size_t(_readIntValue(r, type));
 		size = min(r.size(), (size_t)size);
 		v._type = ValueType::Type::BYTESTRING;
-		v.bytesVal = new BytesType(r.data(), r.data() + size);
+		v.bytesVal = new (std::nothrow) BytesType(r.data(), r.data() + size);
 		r.offset(size);
 	} else {
 		// variable-length string
 		BytesType ret;
 		decodeUndefinedLength(ret, MajorTypeEncoded::ByteString);
 		v._type = ValueType::Type::BYTESTRING;
-		v.bytesVal = new BytesType(sp::move(ret));
+		v.bytesVal = new (std::nothrow) BytesType(sp::move(ret));
 	}
 }
 
@@ -117,7 +117,7 @@ void Decoder<Interface>::decodeCharString(uint8_t type, ValueType &v) {
 		auto size = size_t(_readIntValue(r, type));
 		size = min(r.size(), (size_t)size);
 		v._type = ValueType::Type::CHARSTRING;
-		v.strVal = new StringType((char *)r.data(), size);
+		v.strVal = new (std::nothrow) StringType((char *)r.data(), size);
 		r.offset(size);
 	} else {
 		// variable-length string
@@ -125,7 +125,7 @@ void Decoder<Interface>::decodeCharString(uint8_t type, ValueType &v) {
 		decodeUndefinedLength(ret, MajorTypeEncoded::CharString);
 		ret[ret.length()] = 0;
 		v._type = ValueType::Type::CHARSTRING;
-		v.strVal = new StringType(sp::move(ret));
+		v.strVal = new (std::nothrow) StringType(sp::move(ret));
 	}
 }
 
@@ -149,23 +149,22 @@ void Decoder<Interface>::decodeArray(uint8_t type, ValueType &ret) {
 	}
 
 	ret._type = ValueType::Type::ARRAY;
-	ret.arrayVal = new ArrayType();
+	ret.arrayVal = new (std::nothrow) ArrayType();
 	if (size != maxOf<size_t>()) {
 		ret.arrayVal->reserve(size);
 	}
 
-	while (
-			(!r.empty() || (
-					(majorType == MajorTypeEncoded::Unsigned || majorType == MajorTypeEncoded::Negative || majorType == MajorTypeEncoded::Simple)
-					&& type < toInt(Flags::MaxAdditionalNumber)
-				)
-			)
+	while ((!r.empty()
+				   || ((majorType == MajorTypeEncoded::Unsigned
+							   || majorType == MajorTypeEncoded::Negative
+							   || majorType == MajorTypeEncoded::Simple)
+						   && type < toInt(Flags::MaxAdditionalNumber)))
 			&& size > 0
 			&& !(majorType == MajorTypeEncoded::Simple && type == toInt(Flags::UndefinedLength))) {
 		ret.arrayVal->emplace_back(ValueType::Type::EMPTY);
 		decode(majorType, type, ret.arrayVal->back());
 
-		size --;
+		size--;
 
 		if (size > 0) {
 			type = r.readUnsigned();
@@ -198,7 +197,7 @@ void Decoder<Interface>::decodeMap(uint8_t type, ValueType &ret) {
 	}
 
 	ret._type = ValueType::Type::DICTIONARY;
-	ret.dictVal = new DictionaryType();
+	ret.dictVal = new (std::nothrow) DictionaryType();
 
 	if constexpr (Interface::usesMemoryPool()) {
 		if (size != maxOf<size_t>()) {
@@ -206,12 +205,13 @@ void Decoder<Interface>::decodeMap(uint8_t type, ValueType &ret) {
 		}
 	}
 
-	while (!r.empty() && size > 0 && !(majorType == MajorTypeEncoded::Simple && type == toInt(Flags::UndefinedLength))) {
+	while (!r.empty() && size > 0
+			&& !(majorType == MajorTypeEncoded::Simple && type == toInt(Flags::UndefinedLength))) {
 		bool skip = false;
 		StringType parsedKey;
 		StringView key;
 
-		switch(majorType) {
+		switch (majorType) {
 		case MajorTypeEncoded::Unsigned:
 			parsedKey = string::toString<Interface>(_readIntValue(r, type));
 			key = StringView(parsedKey);
@@ -243,9 +243,7 @@ void Decoder<Interface>::decodeMap(uint8_t type, ValueType &ret) {
 		case MajorTypeEncoded::Array:
 		case MajorTypeEncoded::Map:
 		case MajorTypeEncoded::Tag:
-		case MajorTypeEncoded::Simple:
-			decode(majorType, type, ret);
-			break;
+		case MajorTypeEncoded::Simple: decode(majorType, type, ret); break;
 		}
 
 
@@ -264,13 +262,15 @@ void Decoder<Interface>::decodeMap(uint8_t type, ValueType &ret) {
 			}
 
 			if (!skip) {
-				decode(majorType, type, ret.dictVal->emplace(key.str<Interface>(), ValueType::Type::EMPTY).first->second);
+				decode(majorType, type,
+						ret.dictVal->emplace(key.str<Interface>(), ValueType::Type::EMPTY)
+								.first->second);
 			} else {
 				ValueType val;
 				decode(majorType, type, val);
 			}
 
-			size --;
+			size--;
 
 			if (size > 0) {
 				type = r.readUnsigned();
@@ -320,31 +320,15 @@ void Decoder<Interface>::decodeSimpleValue(uint8_t type, ValueType &ret) {
 
 template <typename Interface>
 void Decoder<Interface>::decode(MajorTypeEncoded majorType, uint8_t type, ValueType &ret) {
-	switch(majorType) {
-	case MajorTypeEncoded::Unsigned:
-		decodePositiveInt(type, ret);
-		break;
-	case MajorTypeEncoded::Negative:
-		decodeNegativeInt(type, ret);
-		break;
-	case MajorTypeEncoded::ByteString:
-		decodeByteString(type, ret);
-		break;
-	case MajorTypeEncoded::CharString:
-		decodeCharString(type, ret);
-		break;
-	case MajorTypeEncoded::Array:
-		decodeArray(type, ret);
-		break;
-	case MajorTypeEncoded::Map:
-		decodeMap(type, ret);
-		break;
-	case MajorTypeEncoded::Tag:
-		decodeTaggedValue(type, ret);
-		break;
-	case MajorTypeEncoded::Simple:
-		decodeSimpleValue(type, ret);
-		break;
+	switch (majorType) {
+	case MajorTypeEncoded::Unsigned: decodePositiveInt(type, ret); break;
+	case MajorTypeEncoded::Negative: decodeNegativeInt(type, ret); break;
+	case MajorTypeEncoded::ByteString: decodeByteString(type, ret); break;
+	case MajorTypeEncoded::CharString: decodeCharString(type, ret); break;
+	case MajorTypeEncoded::Array: decodeArray(type, ret); break;
+	case MajorTypeEncoded::Map: decodeMap(type, ret); break;
+	case MajorTypeEncoded::Tag: decodeTaggedValue(type, ret); break;
+	case MajorTypeEncoded::Simple: decodeSimpleValue(type, ret); break;
 	}
 }
 
@@ -397,10 +381,10 @@ auto read(BytesViewTemplate<Endian::Little> &data) -> ValueTemplate<Interface> {
 
 template <typename Interface, typename Container>
 auto read(const Container &data) -> ValueTemplate<Interface> {
-	BytesViewTemplate<Endian::Network> reader((const uint8_t*)data.data(), data.size());
+	BytesViewTemplate<Endian::Network> reader((const uint8_t *)data.data(), data.size());
 	return read<Interface>(reader);
 }
 
-}
+} // namespace stappler::data::cbor
 
 #endif /* STAPPLER_DATA_SPDATADECODECBOR_H_ */

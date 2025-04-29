@@ -21,9 +21,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
+#include "SPCrypto.h"
+#include "SPMemPoolConfig.h"
 #include "SPMemPoolInterface.h"
 #include "SPMemPoolStruct.h"
 #include "SPMemPoolApi.h"
+#include "SPLog.h"
+
+namespace STAPPLER_VERSIONIZED stappler::mempool::base {
+
+pool_t *get_zero_pool() {
+	struct ZeroPoolStruct {
+		custom::Allocator _alloc;
+		custom::Pool *_pool = nullptr;
+
+		ZeroPoolStruct() { _pool = custom::Pool::create(&_alloc); }
+		~ZeroPoolStruct() {
+			custom::Pool::destroy(_pool);
+			_pool = nullptr;
+		}
+	};
+
+	static ZeroPoolStruct s_struct;
+	return (pool_t *)s_struct._pool;
+}
+
+} // namespace stappler::mempool::base
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 
@@ -40,46 +63,56 @@ SPUNUSED static std::atomic<int> s_global_init = 0;
 static std::atomic<size_t> s_nPools = 0;
 
 static void Pool_performCleanup(Pool *pool) {
-	memory::pool::perform_conditional([&] {
-		Cleanup::run(&pool->pre_cleanups);
-	}, (stappler::memory::pool_t *)pool);
+	memory::pool::perform_conditional([&] { Cleanup::run(&pool->pre_cleanups); },
+			(stappler::memory::pool_t *)pool);
 
 	pool->pre_cleanups = nullptr;
 
 	// DO NOT push current pool when childs is destroyed
-	while (pool->child) {
-		pool->child->~Pool();
-	}
+	while (pool->child) { pool->child->~Pool(); }
 
 	/* Run cleanups */
-	memory::pool::perform_conditional([&] {
-		Cleanup::run(&pool->cleanups);
-	}, (stappler::memory::pool_t *)pool);
+	memory::pool::perform_conditional([&] { Cleanup::run(&pool->cleanups); },
+			(stappler::memory::pool_t *)pool);
 
 	pool->cleanups = nullptr;
 	pool->free_cleanups = nullptr;
 	pool->user_data = nullptr;
 }
 
-void *Pool::alloc(size_t &sizeInBytes) {
+void *Pool::alloc(size_t &sizeInBytes, uint32_t alignment) {
 	if (sizeInBytes >= BlockThreshold) {
-		return allocmngr.alloc(sizeInBytes, [] (void *p, size_t s) { return((Pool *)p)->palloc(s); });
+		return allocmngr.alloc(sizeInBytes, alignment,
+				[](void *p, size_t s, uint32_t a) { return ((Pool *)p)->palloc(s, a); });
 	}
 
 	allocmngr.increment_alloc(sizeInBytes);
-	return palloc(sizeInBytes);
+	return palloc(sizeInBytes, alignment);
 }
 
 void Pool::free(void *ptr, size_t sizeInBytes) {
 	if (sizeInBytes >= BlockThreshold) {
-		allocmngr.free(ptr, sizeInBytes, [] (void *p, size_t s) { return((Pool *)p)->palloc_self(s); });
+		allocmngr.free(ptr, sizeInBytes, [](void *p, size_t s, uint32_t a) {
+			if (a == DefaultAlignment) {
+				return ((Pool *)p)->palloc_self(s);
+			} else {
+				return ((Pool *)p)->palloc(s, a);
+			}
+		});
 	}
 }
 
-void *Pool::palloc(size_t in_size) {
-	MemNode *active, *node;
+void *Pool::palloc(size_t in_size, uint32_t alignment) {
+	MemNode *active;
 	void *mem;
 	size_t size, free_index;
+
+	alignment = std::max(alignment, DefaultAlignment);
+
+	if (alignment > 1'024) {
+		log::error("memory", STAPPLER_LOCATION, ": alignment value too large: ", alignment);
+		return nullptr;
+	}
 
 	size = SPALIGN_DEFAULT(in_size);
 	if (size < in_size) {
@@ -90,11 +123,21 @@ void *Pool::palloc(size_t in_size) {
 	/* If the active node has enough bytes left, use it. */
 	if (size <= active->free_space()) {
 		mem = active->first_avail;
-		active->first_avail += size;
-		return mem;
+
+		if (alignment > DefaultAlignment) {
+			size_t space = active->endp - active->first_avail;
+			mem = std::align(alignment, in_size, mem, space);
+			if (mem) {
+				active->first_avail += size + ((active->endp - active->first_avail) - space);
+				return mem;
+			}
+		} else {
+			active->first_avail += size;
+			return mem;
+		}
 	}
 
-	node = active->next;
+	auto node = active->next;
 	if (size <= node->free_space()) {
 		node->remove();
 	} else {
@@ -106,13 +149,27 @@ void *Pool::palloc(size_t in_size) {
 	node->free_index = 0;
 
 	mem = node->first_avail;
-	node->first_avail += size;
+
+	if (alignment > DefaultAlignment) {
+		size_t space = node->endp - node->first_avail;
+		mem = std::align(alignment, in_size, mem, space);
+		if (mem) {
+			node->first_avail += size + ((node->endp - node->first_avail) - space);
+		} else {
+			log::error("memory", STAPPLER_LOCATION,
+					": fail to allocate aligned memory: ", alignment);
+			return nullptr;
+		}
+	} else {
+		node->first_avail += size;
+	}
 
 	node->insert(active);
 
 	this->active = node;
 
-	free_index = (SPALIGN(active->endp - active->first_avail + 1, BOUNDARY_SIZE) - BOUNDARY_SIZE) >> BOUNDARY_INDEX;
+	free_index = (SPALIGN(active->endp - active->first_avail + 1, BOUNDARY_SIZE) - BOUNDARY_SIZE)
+			>> BOUNDARY_INDEX;
 
 	active->free_index = (uint32_t)free_index;
 	node = active->next;
@@ -120,9 +177,7 @@ void *Pool::palloc(size_t in_size) {
 		return mem;
 	}
 
-	do {
-		node = node->next;
-	} while (free_index < node->free_index);
+	do { node = node->next; } while (free_index < node->free_index);
 
 	active->remove();
 	active->insert(node);
@@ -220,15 +275,13 @@ void Pool::destroy(Pool *pool) {
 	pool->~Pool();
 }
 
-size_t Pool::getPoolsCount() {
-	return s_nPools.load();
-}
+size_t Pool::getPoolsCount() { return s_nPools.load(); }
 
-Pool::Pool() : allocmngr{this} { ++ s_nPools; }
+Pool::Pool() : allocmngr{this} { ++s_nPools; }
 
 Pool::Pool(Allocator *alloc, MemNode *node)
 : allocator(alloc), active(node), self(node), allocmngr{this} {
-	++ s_nPools;
+	++s_nPools;
 }
 
 Pool::Pool(Pool *p, Allocator *alloc, MemNode *node)
@@ -243,7 +296,7 @@ Pool::Pool(Pool *p, Allocator *alloc, MemNode *node)
 		parent->child = this;
 		ref = &parent->child;
 	}
-	++ s_nPools;
+	++s_nPools;
 }
 
 Pool::~Pool() {
@@ -270,13 +323,11 @@ Pool::~Pool() {
 		delete allocator;
 	}
 
-	-- s_nPools;
+	--s_nPools;
 }
 
 
-Pool *Pool::make_child() {
-	return make_child(allocator);
-}
+Pool *Pool::make_child() { return make_child(allocator); }
 
 Pool *Pool::make_child(Allocator *allocator) {
 	Pool *parent = this;
@@ -375,17 +426,17 @@ Status Pool::userdata_set(const void *data, const char *key, Cleanup::Callback c
 		user_data = HashTable::make(this);
 	}
 
-    if (user_data->get(key, -1) == NULL) {
-        char *new_key = pstrdup(key);
-        user_data->set(new_key, -1, data);
-    } else {
-        user_data->set(key, -1, data);
-    }
+	if (user_data->get(key, -1) == NULL) {
+		char *new_key = pstrdup(key);
+		user_data->set(new_key, -1, data);
+	} else {
+		user_data->set(key, -1, data);
+	}
 
-    if (cleanup) {
-        cleanup_register(data, cleanup);
-    }
-    return SUCCESS;
+	if (cleanup) {
+		cleanup_register(data, cleanup);
+	}
+	return Status::Ok;
 }
 
 Status Pool::userdata_setn(const void *data, const char *key, Cleanup::Callback cleanup) {
@@ -395,28 +446,28 @@ Status Pool::userdata_setn(const void *data, const char *key, Cleanup::Callback 
 
 	user_data->set(key, -1, data);
 
-    if (cleanup) {
-        cleanup_register(data, cleanup);
-    }
-    return SUCCESS;
+	if (cleanup) {
+		cleanup_register(data, cleanup);
+	}
+	return Status::Ok;
 }
 
 Status Pool::userdata_get(void **data, const char *key) {
-    if (user_data == nullptr) {
-        *data = nullptr;
-    } else {
-        *data = user_data->get(key, -1);
-    }
-    return SUCCESS;
+	if (user_data == nullptr) {
+		*data = nullptr;
+	} else {
+		*data = user_data->get(key, -1);
+	}
+	return Status::Ok;
 }
 
 Status Pool::userdata_get(void **data, const char *key, size_t klen) {
-    if (user_data == nullptr) {
-        *data = nullptr;
-    } else {
-        *data = user_data->get(key, klen);
-    }
-    return SUCCESS;
+	if (user_data == nullptr) {
+		*data = nullptr;
+	} else {
+		*data = user_data->get(key, klen);
+	}
+	return Status::Ok;
 }
 
 void initialize() {
@@ -448,8 +499,6 @@ Pool *create(Pool *p) {
 	}
 }
 
-void destroy(Pool *p) {
-	Pool::destroy(p);
-}
+void destroy(Pool *p) { Pool::destroy(p); }
 
-}
+} // namespace stappler::mempool::custom

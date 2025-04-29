@@ -117,7 +117,7 @@ Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path) {
 
 	if (l) {
 		if (l->_initialize() == SQLITE_OK) {
-			return new Driver(pool, app, path, l);
+			return new (std::nothrow) Driver(pool, app, path, l);
 		} else {
 			log::error("sqlite::Driver", "sqlite3_initialize failed");
 			DriverLibStorage::getInstance()->closeLib(l);

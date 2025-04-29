@@ -77,12 +77,10 @@ struct Looper::Data : public memory::AllocPool {
 			auto tmp = q->getRef();
 			q = nullptr;
 
-			tmp->foreachBacktrace([] (uint64_t id, Time time, const std::vector<std::string> &vec) {
+			tmp->foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
 				mem_std::StringStream stream;
 				stream << "[" << id << ":" << time.toHttp<memory::StandartInterface>() << "]:\n";
-				for (auto &it : vec) {
-					stream << "\t" << it << "\n";
-				}
+				for (auto &it : vec) { stream << "\t" << it << "\n"; }
 				log::debug("event::Queue", stream.str());
 			});
 		}
@@ -92,11 +90,12 @@ struct Looper::Data : public memory::AllocPool {
 };
 
 Looper *Looper::acquire(LooperInfo &&info) {
-	return acquire(move(info), QueueInfo{
-		.flags = QueueFlags::SubmitImmediate | QueueFlags::ThreadNative,
-		.engineMask = info.engineMask,
-		.osIdleInterval = TimeInterval::milliseconds(100),
-	});
+	return acquire(move(info),
+			QueueInfo{
+				.flags = QueueFlags::SubmitImmediate | QueueFlags::ThreadNative,
+				.engineMask = info.engineMask,
+				.osIdleInterval = TimeInterval::milliseconds(100),
+			});
 }
 
 Looper *Looper::acquire(LooperInfo &&info, QueueInfo &&qinfo) {
@@ -119,9 +118,7 @@ Looper *Looper::acquire(LooperInfo &&info, QueueInfo &&qinfo) {
 	return tl_looper;
 }
 
-Looper *Looper::getIfExists() {
-	return tl_looper;
-}
+Looper *Looper::getIfExists() { return tl_looper; }
 
 Looper::~Looper() {
 	if (_data) {
@@ -134,7 +131,8 @@ Rc<TimerHandle> Looper::scheduleTimer(TimerInfo &&info, Ref *ref) {
 	return _data->queue->scheduleTimer(move(info), ref);
 }
 
-Rc<Handle> Looper::schedule(TimeInterval timeout, mem_std::Function<void(Handle *, bool success)> &&fn, Ref *ref) {
+Rc<Handle> Looper::schedule(TimeInterval timeout,
+		mem_std::Function<void(Handle *, bool success)> &&fn, Ref *ref) {
 	return _data->queue->schedule(timeout, sp::move(fn), ref);
 }
 
@@ -151,7 +149,8 @@ Status Looper::performOnThread(Rc<thread::Task> &&task, bool immediate) {
 	}
 }
 
-Status Looper::performOnThread(mem_std::Function<void()> &&func, Ref *target, bool immediate, StringView tag) {
+Status Looper::performOnThread(mem_std::Function<void()> &&func, Ref *target, bool immediate,
+		StringView tag) {
 	bool isOnThread = isOnThisThread();
 	if (immediate && isOnThread) {
 		func();
@@ -168,21 +167,16 @@ Status Looper::performAsync(Rc<thread::Task> &&task, bool first) {
 	return _data->getThreadPool()->perform(move(task), first);
 }
 
-Status Looper::performAsync(mem_std::Function<void()> &&func, Ref *target, bool first, StringView tag) {
+Status Looper::performAsync(mem_std::Function<void()> &&func, Ref *target, bool first,
+		StringView tag) {
 	return _data->getThreadPool()->perform(sp::move(func), target, first, tag);
 }
 
-Status Looper::performHandle(Handle *h) {
-	return _data->queue->runHandle(h);
-}
+Status Looper::performHandle(Handle *h) { return _data->queue->runHandle(h); }
 
-uint32_t Looper::poll() {
-	return _data->queue->poll();
-}
+uint32_t Looper::poll() { return _data->queue->poll(); }
 
-uint32_t Looper::wait(TimeInterval ival) {
-	return _data->queue->wait(ival);
-}
+uint32_t Looper::wait(TimeInterval ival) { return _data->queue->wait(ival); }
 
 Status Looper::run(TimeInterval ival, QueueWakeupInfo &&info) {
 	_data->threadHandle->wakeup();
@@ -206,25 +200,15 @@ Status Looper::wakeup(QueueWakeupInfo &&info) {
 	return _data->queue->wakeup(move(info));
 }
 
-uint16_t Looper::getWorkersCount() const {
-	return _data->threadPool->getInfo().threadCount;
-}
+uint16_t Looper::getWorkersCount() const { return _data->threadPool->getInfo().threadCount; }
 
-memory::pool_t *Looper::getThreadMemPool() const {
-	return _data->threadMemPool;
-}
+memory::pool_t *Looper::getThreadMemPool() const { return _data->threadMemPool; }
 
-const event::Queue *Looper::getQueue() const {
-	return _data->queue;
-}
+const event::Queue *Looper::getQueue() const { return _data->queue; }
 
-thread::ThreadPool *Looper::getThreadPool() const {
-	return _data->threadPool;
-}
+thread::ThreadPool *Looper::getThreadPool() const { return _data->threadPool; }
 
-bool Looper::isOnThisThread() const {
-	return _data->thisThreadId == std::this_thread::get_id();
-}
+bool Looper::isOnThisThread() const { return _data->thisThreadId == std::this_thread::get_id(); }
 
 Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 	auto pool = q->getPool();
@@ -232,13 +216,11 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 		_data = new (pool) Data;
 		_data->queue = move(q);
 		_data->threadHandle = _data->queue->addThreadHandle();
-		_data->threadPoolInfo = thread::ThreadPoolInfo{
-			.flags = info.workersFlags,
+		_data->threadPoolInfo = thread::ThreadPoolInfo{.flags = info.workersFlags,
 			.name = info.name,
 			.threadCount = info.workersCount,
 			.complete = _data->threadHandle.get(),
-			.ref = _data->threadHandle
-		};
+			.ref = _data->threadHandle};
 
 		_data->threadPoolInfo.name = StringView(mem_pool::toString(info.name, ":Worker")).pdup();
 
@@ -249,12 +231,12 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 			_data->threadMemPool = pool;
 		} else {
 			_data->threadMemPool = _data->threadInfo->threadPool;
-			memory::pool::cleanup_register(_data->threadMemPool, this, [] (void *d) -> memory::status_t {
+			memory::pool::cleanup_register(_data->threadMemPool, this, [](void *d) -> Status {
 				auto l = (Looper *)d;
 				l->_data->cleanup();
 				l->_data = nullptr;
 				tl_looper = nullptr;
-				return 0;
+				return Status::Ok;
 			});
 		}
 
@@ -262,4 +244,4 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 	}, pool);
 }
 
-}
+} // namespace stappler::event

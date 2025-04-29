@@ -290,14 +290,16 @@ const char *File::path() const {
 
 void File::set_tmp_path(const char *buf) { memcpy(_buf, buf, 256); }
 
-MemoryMappedRegion MemoryMappedRegion::mapFile(StringView path, MappingType type, ProtFlags prot,
-		size_t offset, size_t len) {
+MemoryMappedRegion MemoryMappedRegion::mapFile(const FileInfo &info, MappingType type,
+		ProtFlags prot, size_t offset, size_t len) {
 	if (math::align(offset, size_t(platform::_getMemoryPageSize())) != offset) {
 		log::error("filesystem",
 				"offset for MemoryMappedRegion::mapFile should be aligned as "
 				"platform::_getMemoryPageSize");
 		return MemoryMappedRegion();
 	}
+
+	auto path = findPath<memory::StandartInterface>(info, getAccessProtFlags(prot));
 
 	Stat stat;
 	if (native::stat_fn(path, stat) != Status::Ok) {
@@ -739,6 +741,39 @@ bool readWithConsumer(const io::Consumer &stream, uint8_t *buf, size_t bsize, co
 		return ret;
 	}
 	return false;
+}
+
+Access getAccessProtFlags(ProtFlags flags) {
+	Access ret = Access::None;
+
+	if (hasFlag(flags, ProtFlags::UserRead)) {
+		ret |= Access::Read;
+	}
+	if (hasFlag(flags, ProtFlags::UserWrite)) {
+		ret |= Access::Write;
+	}
+	if (hasFlag(flags, ProtFlags::UserExecute)) {
+		ret |= Access::Execute;
+	}
+	if (hasFlag(flags, ProtFlags::GroupRead)) {
+		ret |= Access::Read;
+	}
+	if (hasFlag(flags, ProtFlags::GroupWrite)) {
+		ret |= Access::Write;
+	}
+	if (hasFlag(flags, ProtFlags::GroupExecute)) {
+		ret |= Access::Execute;
+	}
+	if (hasFlag(flags, ProtFlags::AllRead)) {
+		ret |= Access::Read;
+	}
+	if (hasFlag(flags, ProtFlags::AllWrite)) {
+		ret |= Access::Write;
+	}
+	if (hasFlag(flags, ProtFlags::AllExecute)) {
+		ret |= Access::Execute;
+	}
+	return ret;
 }
 
 std::ostream &operator<<(std::ostream &stream, ProtFlags flags) {

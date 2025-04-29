@@ -31,7 +31,12 @@ THE SOFTWARE.
 
 #include "SPString.h"
 #include "SPStatus.h"
+#include "SPStringDetail.h"
 #include "SPUnicode.h"
+
+#if LINUX || ANDROID || MACOS
+#include <cxxabi.h>
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::unicode {
 
@@ -912,6 +917,74 @@ size_t dtoa(double number, char16_t *buffer, size_t bufSize) {
 	}
 
 	return dtoa_impl::dtoa_milo(number, buffer);
+}
+
+template <typename Stream>
+static void printDemangled(const Stream &stream, const std::type_info &t) {
+#if LINUX || ANDROID || MACOS
+	int status = 0;
+	auto name = abi::__cxa_demangle(t.name(), nullptr, nullptr, &status);
+	if (status == 0) {
+		streamWrite(stream, name);
+		::free(name);
+	} else {
+		streamWrite(stream, t.name());
+	}
+#else
+	streamWrite(stream, t.name());
+#endif
+}
+
+void streamWrite(const Callback<void(WideStringView)> &stream, const StringView &c) {
+	auto len = string::getUtf16Length(c);
+	char16_t buf[len + 1];
+	unicode::toUtf16(buf, len, c);
+
+	streamWrite(stream, buf);
+}
+
+void streamWrite(const std::function<void(WideStringView)> &stream, const StringView &c) {
+	auto len = string::getUtf16Length(c);
+	char16_t buf[len + 1];
+	unicode::toUtf16(buf, len, c);
+
+	streamWrite(stream, buf);
+}
+
+void streamWrite(const memory::function<void(WideStringView)> &stream, const StringView &c) {
+	auto len = string::getUtf16Length(c);
+	char16_t buf[len + 1];
+	unicode::toUtf16(buf, len, c);
+
+	streamWrite(stream, buf);
+}
+
+void streamWrite(const Callback<void(StringView)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
+}
+void streamWrite(const Callback<void(WideStringView)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
+}
+void streamWrite(const Callback<void(StringViewUtf8)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
+}
+void streamWrite(const std::function<void(StringView)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
+}
+void streamWrite(const std::function<void(WideStringView)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
+}
+void streamWrite(const std::function<void(StringViewUtf8)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
+}
+void streamWrite(const memory::function<void(StringView)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
+}
+void streamWrite(const memory::function<void(WideStringView)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
+}
+void streamWrite(const memory::function<void(StringViewUtf8)> &stream, const std::type_info &c) {
+	printDemangled(stream, c);
 }
 
 } // namespace stappler::string::detail

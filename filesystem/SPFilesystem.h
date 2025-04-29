@@ -175,7 +175,7 @@ class MemoryMappedRegion final {
 public:
 	using PlatformStorage = std::array<uint8_t, 16>;
 
-	static MemoryMappedRegion mapFile(StringView, MappingType, ProtFlags, size_t offset = 0,
+	static MemoryMappedRegion mapFile(const FileInfo &, MappingType, ProtFlags, size_t offset = 0,
 			size_t len = maxOf<size_t>());
 
 	~MemoryMappedRegion();
@@ -421,6 +421,8 @@ auto readIntoMemory(const FileInfo &info, size_t off = 0, size_t size = maxOf<si
 	}
 	return typename Interface::BytesType();
 }
+
+SP_PUBLIC Access getAccessProtFlags(ProtFlags);
 
 SP_PUBLIC StringView detectMimeType(StringView path);
 

@@ -47,14 +47,19 @@ namespace STAPPLER_VERSIONIZED stappler {
 //
 // Reference object can be allocated from memory pool, in this case memory will be freed only when memory pool is destroyed
 
-class SP_PUBLIC RefAlloc :  public memory::StandartInterface::AllocBaseType {
+class SP_PUBLIC RefAlloc : public memory::StandartInterface::AllocBaseType {
 public:
 	static constexpr uint32_t PoolAllocBit = 0x8000'0000;
 
-	static void * operator new (size_t size, const std::nothrow_t& tag) noexcept { return ::operator new(size, tag); }
-	static void * operator new (size_t size, std::align_val_t al, const std::nothrow_t& tag) noexcept { return ::operator new(size, al, tag); }
-	static void * operator new (size_t size, void* ptr) noexcept { return ::operator new(size, ptr); }
-	static void * operator new (size_t size, memory::pool_t* ptr) noexcept;
+	static void *operator new(size_t size, const std::nothrow_t &tag) noexcept {
+		return ::operator new(size, tag);
+	}
+	static void *operator new(size_t size, std::align_val_t al,
+			const std::nothrow_t &tag) noexcept {
+		return ::operator new(size, al, tag);
+	}
+	static void *operator new(size_t size, void *ptr) noexcept { return ::operator new(size, ptr); }
+	static void *operator new(size_t size, memory::pool_t *ptr) noexcept;
 
 	static void operator delete(void *ptr) noexcept;
 	static void operator delete(void *ptr, std::align_val_t al) noexcept;
@@ -95,19 +100,26 @@ public:
 	virtual uint64_t retain(uint64_t value = maxOf<uint64_t>());
 	virtual void release(uint64_t id);
 
-	void foreachBacktrace(const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &) const;
+	void foreachBacktrace(
+			const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &) const;
 #else
-	uint64_t retain(uint64_t value = maxOf<uint64_t>()) { (void)value; incrementReferenceCount(); return 0; }
-	void release(uint64_t id) { if (decrementReferenceCount()) { delete this; } }
+	uint64_t retain(uint64_t value = maxOf<uint64_t>()) {
+		(void)value;
+		incrementReferenceCount();
+		return 0;
+	}
+	void release(uint64_t id) {
+		if (decrementReferenceCount()) {
+			delete this;
+		}
+	}
 #endif
 
 protected:
 	Ref() noexcept : RefAlloc() { }
 
 #if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const {
-		return false;
-	}
+	virtual bool isRetainTrackerEnabled() const { return false; }
 #endif
 };
 
@@ -128,16 +140,16 @@ enum class SharedRefMode {
 template <typename T>
 class SP_PUBLIC SharedRef : public Ref {
 public:
-	template <typename ...Args>
-	static SharedRef *create(Args && ...);
+	template <typename... Args>
+	static SharedRef *create(Args &&...);
 
-	template <typename ...Args>
-	static SharedRef *create(memory::pool_t *, Args && ...);
+	template <typename... Args>
+	static SharedRef *create(memory::pool_t *, Args &&...);
 
-	template <typename ...Args>
-	static SharedRef *create(SharedRefMode, Args && ...);
+	template <typename... Args>
+	static SharedRef *create(SharedRefMode, Args &&...);
 
-	static int invaldate(void *);
+	static Status invaldate(void *);
 
 	virtual ~SharedRef();
 
@@ -146,19 +158,17 @@ public:
 
 	inline T *get() const noexcept { return _shared; }
 
-	inline operator T * () const noexcept { return get(); }
-	inline T * operator->() const noexcept { return get(); }
+	inline operator T *() const noexcept { return get(); }
+	inline T *operator->() const noexcept { return get(); }
 
-	inline explicit operator bool () const noexcept { return _shared != nullptr; }
+	inline explicit operator bool() const noexcept { return _shared != nullptr; }
 
 	memory::pool_t *getPool() const { return _pool; }
 	memory::allocator_t *getAllocator() const { return _allocator; }
 
 protected:
 #if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const {
-		return true;
-	}
+	virtual bool isRetainTrackerEnabled() const { return true; }
 #endif
 
 	SharedRef(SharedRefMode m, memory::allocator_t *, memory::pool_t *) noexcept;
@@ -183,46 +193,46 @@ public:
 	RcBase(const RcBase<Base, Pointer> &v) noexcept;
 	RcBase(RcBase<Base, Pointer> &&v) noexcept;
 
-	RcBase & operator = (const nullptr_t &) noexcept;
+	RcBase &operator=(const nullptr_t &) noexcept;
 
-	RcBase & operator = (const Pointer &value) noexcept;
-	RcBase & operator = (const RcBase<Base, Pointer> &v) noexcept;
-	RcBase & operator = (RcBase<Base, Pointer> &&v) noexcept;
+	RcBase &operator=(const Pointer &value) noexcept;
+	RcBase &operator=(const RcBase<Base, Pointer> &v) noexcept;
+	RcBase &operator=(RcBase<Base, Pointer> &&v) noexcept;
 
 	~RcBase();
 
 	void set(const Pointer &value);
-	void swap(RcBase<Base, Pointer> & v);
+	void swap(RcBase<Base, Pointer> &v);
 
-	bool operator == (const RcBase<Base, Pointer> & other) const;
-	bool operator == (const Base * & other) const;
-	bool operator == (typename std::remove_const<Base>::type * other) const;
-	bool operator == (const std::nullptr_t other) const;
+	bool operator==(const RcBase<Base, Pointer> &other) const;
+	bool operator==(const Base *&other) const;
+	bool operator==(typename std::remove_const<Base>::type *other) const;
+	bool operator==(const std::nullptr_t other) const;
 
-	bool operator != (const RcBase<Base, Pointer> & other) const;
-	bool operator != (const Base * & other) const;
-	bool operator != (typename std::remove_const<Base>::type * other) const;
-	bool operator != (const std::nullptr_t other) const;
+	bool operator!=(const RcBase<Base, Pointer> &other) const;
+	bool operator!=(const Base *&other) const;
+	bool operator!=(typename std::remove_const<Base>::type *other) const;
+	bool operator!=(const std::nullptr_t other) const;
 
-	bool operator > (const RcBase<Base, Pointer> & other) const;
-	bool operator > (const Base * other) const;
-	bool operator > (typename std::remove_const<Base>::type * other) const;
-	bool operator > (const std::nullptr_t other) const;
+	bool operator>(const RcBase<Base, Pointer> &other) const;
+	bool operator>(const Base *other) const;
+	bool operator>(typename std::remove_const<Base>::type *other) const;
+	bool operator>(const std::nullptr_t other) const;
 
-	bool operator < (const RcBase<Base, Pointer> & other) const;
-	bool operator < (const Base * other) const;
-	bool operator < (typename std::remove_const<Base>::type * other) const;
-	bool operator < (const std::nullptr_t other) const;
+	bool operator<(const RcBase<Base, Pointer> &other) const;
+	bool operator<(const Base *other) const;
+	bool operator<(typename std::remove_const<Base>::type *other) const;
+	bool operator<(const std::nullptr_t other) const;
 
-	bool operator >= (const RcBase<Base, Pointer> & other) const;
-	bool operator >= (const Base * other) const;
-	bool operator >= (typename std::remove_const<Base>::type * other) const;
-	bool operator >= (const std::nullptr_t other) const;
+	bool operator>=(const RcBase<Base, Pointer> &other) const;
+	bool operator>=(const Base *other) const;
+	bool operator>=(typename std::remove_const<Base>::type *other) const;
+	bool operator>=(const std::nullptr_t other) const;
 
-	bool operator <= (const RcBase<Base, Pointer> & other) const;
-	bool operator <= (const Base * other) const;
-	bool operator <= (typename std::remove_const<Base>::type * other) const;
-	bool operator <= (const std::nullptr_t other) const;
+	bool operator<=(const RcBase<Base, Pointer> &other) const;
+	bool operator<=(const Base *other) const;
+	bool operator<=(typename std::remove_const<Base>::type *other) const;
+	bool operator<=(const std::nullptr_t other) const;
 
 #if SP_REF_DEBUG
 	uint64_t getId() const { return _id; }
@@ -253,42 +263,46 @@ public:
 	static auto doReferenceCast(Rc<Type> &&source) -> Rc<Target>;
 
 	template <class... Args>
-	static inline Self create(Args && ... args);
+	static inline Self create(Args &&...args);
 
 	static inline Self alloc();
 
 	template <class... Args>
-	static inline Self alloc(Args && ... args);
+	static inline Self alloc(Args &&...args);
 
 	using Parent::Parent;
-	using Parent::operator =;
+	using Parent::operator=;
 
-	template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type* = nullptr>
-	inline Rc & operator = (const Rc<B> &value) noexcept;
+	template <typename B,
+			typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type * = nullptr>
+	inline Rc &operator=(const Rc<B> &value) noexcept;
 
-	template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type* = nullptr>
-	inline Rc & operator = (Rc<B> &&value) noexcept;
+	template <typename B,
+			typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type * = nullptr>
+	inline Rc &operator=(Rc<B> &&value) noexcept;
 
 	// upcast
-	template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type* = nullptr>
+	template <typename B,
+			typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type * = nullptr>
 	B *get_cast() const noexcept;
 
 	// Direct call of `get` should not be on empty storage
 	_Base *get() const noexcept;
 
-	operator _Base * () const noexcept;
+	operator _Base *() const noexcept;
 
-	_Base * operator->() const noexcept;
+	_Base *operator->() const noexcept;
 
-	explicit operator bool () const noexcept;
+	explicit operator bool() const noexcept;
 
-	template <typename B, typename std::enable_if<std::is_convertible<_Base *, B*>{}>::type* = nullptr>
-	operator Rc<B> () noexcept;
+	template <typename B,
+			typename std::enable_if<std::is_convertible<_Base *, B *>{}>::type * = nullptr>
+	operator Rc<B>() noexcept;
 
 	template <typename Target>
 	Rc<Target> cast() const;
 
-	template<typename T>
+	template <typename T>
 	friend class Rc;
 };
 
@@ -300,27 +314,27 @@ public:
 	using Type = SharedRef<_Base>;
 
 	template <class... Args>
-	static Self create(Args && ... args);
+	static Self create(Args &&...args);
 
 	template <class... Args>
-	static Self create(memory::pool_t *pool, Args && ... args);
+	static Self create(memory::pool_t *pool, Args &&...args);
 
 	template <class... Args>
-	static Self create(SharedRefMode mode, Args && ... args);
+	static Self create(SharedRefMode mode, Args &&...args);
 
 	static Self alloc();
 
 	template <class... Args>
-	static Self alloc(Args && ... args);
+	static Self alloc(Args &&...args);
 
 	template <class... Args>
-	static Self alloc(memory::pool_t *pool, Args && ... args);
+	static Self alloc(memory::pool_t *pool, Args &&...args);
 
 	template <class... Args>
-	static Self alloc(SharedRefMode mode, Args && ... args);
+	static Self alloc(SharedRefMode mode, Args &&...args);
 
 	using Parent::Parent;
-	using Parent::operator =;
+	using Parent::operator=;
 
 	// Direct call of `get` should not be on empty storage
 	_Base *get() const noexcept {
@@ -330,11 +344,13 @@ public:
 		return this->_ptr->get();
 	}
 
-	inline operator _Base * () const noexcept { return get(); }
+	inline operator _Base *() const noexcept { return get(); }
 
-	inline _Base * operator->() const noexcept { return this->_ptr->get(); }
+	inline _Base *operator->() const noexcept { return this->_ptr->get(); }
 
-	inline explicit operator bool () const noexcept { return this->_ptr != nullptr && this->_ptr->get() != nullptr; }
+	inline explicit operator bool() const noexcept {
+		return this->_ptr != nullptr && this->_ptr->get() != nullptr;
+	}
 };
 
 template <typename T>
@@ -343,15 +359,15 @@ using SharedRc = Rc<SharedRef<T>>;
 // Cast between reference types, possibly, without retain/release cycle
 // Can be performed for upcast/downcast
 template <typename Target, typename Source,
-	typename std::enable_if<std::is_convertible_v<Target*, Source*>
-						|| std::is_convertible_v<Source*, Target*>>::type* = nullptr>
+		typename std::enable_if<std::is_convertible_v<Target *, Source *>
+				|| std::is_convertible_v<Source *, Target *>>::type * = nullptr>
 auto ref_cast(Rc<Source> &&source) -> Rc<Target> {
 	return Rc<Source>::template doReferenceCast<Target>(move(source));
 }
 
 template <typename Target, typename Source,
-	typename std::enable_if<std::is_convertible_v<Target*, Source*>
-						|| std::is_convertible_v<Source*, Target*>>::type* = nullptr>
+		typename std::enable_if<std::is_convertible_v<Target *, Source *>
+				|| std::is_convertible_v<Source *, Target *>>::type * = nullptr>
 auto ref_cast(const Rc<Source> &source) -> Rc<Target> {
 	return Rc<Source>::template doReferenceCast<Target>(source.get());
 }
@@ -365,7 +381,7 @@ SP_PUBLIC void releaseBacktrace(const Ref *, uint64_t);
 SP_PUBLIC void foreachBacktrace(const Ref *,
 		const Callback<void(uint64_t, Time, const std::vector<std::string> &)> &);
 
-}
+} // namespace memleak
 
 
 //
@@ -381,9 +397,7 @@ inline bool RefAlloc::isPoolAllocated() const noexcept {
 }
 
 // DO NOT USE THIS DIRECTLY, use Ref::retain
-inline void RefAlloc::incrementReferenceCount() {
-	++ _referenceCount;
-}
+inline void RefAlloc::incrementReferenceCount() { ++_referenceCount; }
 
 // DO NOT USE THIS DIRECTLY, use Ref::release
 inline bool RefAlloc::decrementReferenceCount() {
@@ -394,8 +408,8 @@ inline bool RefAlloc::decrementReferenceCount() {
 }
 
 template <typename T>
-template <typename ...Args>
-auto SharedRef<T>::create(Args && ... args) -> SharedRef * {
+template <typename... Args>
+auto SharedRef<T>::create(Args &&...args) -> SharedRef * {
 	auto pool = memory::pool::create((memory::pool_t *)nullptr);
 
 	SharedRef *shared = nullptr;
@@ -409,8 +423,8 @@ auto SharedRef<T>::create(Args && ... args) -> SharedRef * {
 }
 
 template <typename T>
-template <typename ...Args>
-auto SharedRef<T>::create(memory::pool_t *p, Args && ... args) -> SharedRef * {
+template <typename... Args>
+auto SharedRef<T>::create(memory::pool_t *p, Args &&...args) -> SharedRef * {
 	auto pool = memory::pool::create(p);
 
 	SharedRef *shared = nullptr;
@@ -428,15 +442,13 @@ auto SharedRef<T>::create(memory::pool_t *p, Args && ... args) -> SharedRef * {
 }
 
 template <typename T>
-template <typename ...Args>
-auto SharedRef<T>::create(SharedRefMode mode, Args && ... args) -> SharedRef * {
+template <typename... Args>
+auto SharedRef<T>::create(SharedRefMode mode, Args &&...args) -> SharedRef * {
 	memory::allocator_t *alloc = nullptr;
 	memory::pool_t *pool = nullptr;
 
 	switch (mode) {
-	case SharedRefMode::Pool:
-		pool = memory::pool::create((memory::pool_t *)nullptr);
-		break;
+	case SharedRefMode::Pool: pool = memory::pool::create((memory::pool_t *)nullptr); break;
 	case SharedRefMode::Allocator:
 		alloc = memory::allocator::create();
 		pool = memory::pool::create(alloc);
@@ -454,22 +466,20 @@ auto SharedRef<T>::create(SharedRefMode mode, Args && ... args) -> SharedRef * {
 }
 
 template <typename T>
-memory::status_t SharedRef<T>::invaldate(void *ptr) {
+Status SharedRef<T>::invaldate(void *ptr) {
 	auto shared = (SharedRef *)ptr;
 
 	shared->_shared = nullptr;
 	shared->_pool = nullptr;
 	shared->_parent = nullptr;
 
-	return 0;
+	return Status::Ok;
 }
 
 template <typename T>
 SharedRef<T>::~SharedRef() {
 	if (_shared) {
-		memory::pool::perform([&, this] {
-			delete _shared;
-		}, _pool);
+		memory::pool::perform([&, this] { delete _shared; }, _pool);
 		_shared = nullptr;
 	}
 
@@ -497,9 +507,7 @@ SharedRef<T>::~SharedRef() {
 template <typename T>
 template <typename Callback>
 void SharedRef<T>::perform(Callback &&cb) {
-	memory::pool::perform([&, this] {
-		cb(_shared);
-	}, _pool);
+	memory::pool::perform([&, this] { cb(_shared); }, _pool);
 }
 
 template <typename T>
@@ -508,34 +516,34 @@ SharedRef<T>::SharedRef(SharedRefMode m, memory::allocator_t *alloc, memory::poo
 
 
 template <typename _Base, typename _Pointer>
-inline RcBase<_Base, _Pointer>::RcBase() noexcept
-: _ptr(nullptr) { }
+inline RcBase<_Base, _Pointer>::RcBase() noexcept : _ptr(nullptr) { }
 
 template <typename _Base, typename _Pointer>
-inline RcBase<_Base, _Pointer>::RcBase(const nullptr_t &) noexcept
-: _ptr(nullptr) { }
+inline RcBase<_Base, _Pointer>::RcBase(const nullptr_t &) noexcept : _ptr(nullptr) { }
 
 template <typename _Base, typename _Pointer>
-inline RcBase<_Base, _Pointer>::RcBase(const Pointer &value) noexcept
-: _ptr(value) {
+inline RcBase<_Base, _Pointer>::RcBase(const Pointer &value) noexcept : _ptr(value) {
 	doRetain();
 }
 
 template <typename _Base, typename _Pointer>
 inline RcBase<_Base, _Pointer>::RcBase(const RcBase<Base, Pointer> &v) noexcept {
-	_ptr = v._ptr; doRetain();
+	_ptr = v._ptr;
+	doRetain();
 }
 
 template <typename _Base, typename _Pointer>
 inline RcBase<_Base, _Pointer>::RcBase(RcBase<Base, Pointer> &&v) noexcept {
-	_ptr = v._ptr; v._ptr = nullptr;
+	_ptr = v._ptr;
+	v._ptr = nullptr;
 #if SP_REF_DEBUG
-	_id = v._id; v._id = 0;
+	_id = v._id;
+	v._id = 0;
 #endif
 }
 
 template <typename _Base, typename _Pointer>
-inline auto RcBase<_Base, _Pointer>::operator = (const nullptr_t &) noexcept -> RcBase & {
+inline auto RcBase<_Base, _Pointer>::operator=(const nullptr_t &) noexcept -> RcBase & {
 	doRelease();
 	_ptr = nullptr;
 #if SP_REF_DEBUG
@@ -545,13 +553,14 @@ inline auto RcBase<_Base, _Pointer>::operator = (const nullptr_t &) noexcept -> 
 }
 
 template <typename _Base, typename _Pointer>
-inline auto RcBase<_Base, _Pointer>::operator = (const Pointer &value) noexcept -> RcBase & {
+inline auto RcBase<_Base, _Pointer>::operator=(const Pointer &value) noexcept -> RcBase & {
 	set(value);
 	return *this;
 }
 
 template <typename _Base, typename _Pointer>
-inline auto RcBase<_Base, _Pointer>::operator = (const RcBase<Base, Pointer> &v) noexcept -> RcBase & {
+inline auto RcBase<_Base, _Pointer>::operator=(const RcBase<Base, Pointer> &v) noexcept
+		-> RcBase & {
 	if (this == &v) {
 		return *this;
 	}
@@ -560,15 +569,17 @@ inline auto RcBase<_Base, _Pointer>::operator = (const RcBase<Base, Pointer> &v)
 }
 
 template <typename _Base, typename _Pointer>
-inline auto RcBase<_Base, _Pointer>::operator = (RcBase<Base, Pointer> &&v) noexcept -> RcBase & {
+inline auto RcBase<_Base, _Pointer>::operator=(RcBase<Base, Pointer> &&v) noexcept -> RcBase & {
 	if (this == &v) {
 		return *this;
 	}
 
 	doRelease();
-	_ptr = v._ptr; v._ptr = nullptr;
+	_ptr = v._ptr;
+	v._ptr = nullptr;
 #if SP_REF_DEBUG
-	_id = v._id; v._id = 0;
+	_id = v._id;
+	v._id = 0;
 #endif
 	return *this;
 }
@@ -585,7 +596,7 @@ inline void RcBase<_Base, _Pointer>::set(const Pointer &value) {
 }
 
 template <typename _Base, typename _Pointer>
-inline void RcBase<_Base, _Pointer>::swap(RcBase<Base, Pointer> & v) {
+inline void RcBase<_Base, _Pointer>::swap(RcBase<Base, Pointer> &v) {
 	std::swap(_ptr, v._ptr);
 #if SP_REF_DEBUG
 	std::swap(_id, v._id);
@@ -593,76 +604,130 @@ inline void RcBase<_Base, _Pointer>::swap(RcBase<Base, Pointer> & v) {
 }
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator == (const RcBase<Base, Pointer> & other) const { return _ptr == other._ptr; }
+inline bool RcBase<_Base, _Pointer>::operator==(const RcBase<Base, Pointer> &other) const {
+	return _ptr == other._ptr;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator == (const Base * & other) const { return _ptr == other; }
+inline bool RcBase<_Base, _Pointer>::operator==(const Base *&other) const {
+	return _ptr == other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator == (typename std::remove_const<Base>::type * other) const { return _ptr == other; }
+inline bool RcBase<_Base, _Pointer>::operator==(
+		typename std::remove_const<Base>::type *other) const {
+	return _ptr == other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator == (const std::nullptr_t other) const { return _ptr == other; }
+inline bool RcBase<_Base, _Pointer>::operator==(const std::nullptr_t other) const {
+	return _ptr == other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator != (const RcBase<Base, Pointer> & other) const { return _ptr != other._ptr; }
+inline bool RcBase<_Base, _Pointer>::operator!=(const RcBase<Base, Pointer> &other) const {
+	return _ptr != other._ptr;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator != (const Base * & other) const { return _ptr != other; }
+inline bool RcBase<_Base, _Pointer>::operator!=(const Base *&other) const {
+	return _ptr != other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator != (typename std::remove_const<Base>::type * other) const { return _ptr != other; }
+inline bool RcBase<_Base, _Pointer>::operator!=(
+		typename std::remove_const<Base>::type *other) const {
+	return _ptr != other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator != (const std::nullptr_t other) const { return _ptr != other; }
+inline bool RcBase<_Base, _Pointer>::operator!=(const std::nullptr_t other) const {
+	return _ptr != other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator > (const RcBase<Base, Pointer> & other) const { return _ptr > other._ptr; }
+inline bool RcBase<_Base, _Pointer>::operator>(const RcBase<Base, Pointer> &other) const {
+	return _ptr > other._ptr;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator > (const Base * other) const { return _ptr > other; }
+inline bool RcBase<_Base, _Pointer>::operator>(const Base *other) const {
+	return _ptr > other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator > (typename std::remove_const<Base>::type * other) const { return _ptr > other; }
+inline bool RcBase<_Base, _Pointer>::operator>(
+		typename std::remove_const<Base>::type *other) const {
+	return _ptr > other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator > (const std::nullptr_t other) const { return _ptr > other; }
+inline bool RcBase<_Base, _Pointer>::operator>(const std::nullptr_t other) const {
+	return _ptr > other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator < (const RcBase<Base, Pointer> & other) const { return _ptr < other._ptr; }
+inline bool RcBase<_Base, _Pointer>::operator<(const RcBase<Base, Pointer> &other) const {
+	return _ptr < other._ptr;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator < (const Base * other) const { return _ptr < other; }
+inline bool RcBase<_Base, _Pointer>::operator<(const Base *other) const {
+	return _ptr < other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator < (typename std::remove_const<Base>::type * other) const { return _ptr < other; }
+inline bool RcBase<_Base, _Pointer>::operator<(
+		typename std::remove_const<Base>::type *other) const {
+	return _ptr < other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator < (const std::nullptr_t other) const { return _ptr < other; }
+inline bool RcBase<_Base, _Pointer>::operator<(const std::nullptr_t other) const {
+	return _ptr < other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator >= (const RcBase<Base, Pointer> & other) const { return _ptr >= other._ptr; }
+inline bool RcBase<_Base, _Pointer>::operator>=(const RcBase<Base, Pointer> &other) const {
+	return _ptr >= other._ptr;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator >= (const Base * other) const { return _ptr >= other; }
+inline bool RcBase<_Base, _Pointer>::operator>=(const Base *other) const {
+	return _ptr >= other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator >= (typename std::remove_const<Base>::type * other) const { return _ptr >= other; }
+inline bool RcBase<_Base, _Pointer>::operator>=(
+		typename std::remove_const<Base>::type *other) const {
+	return _ptr >= other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator >= (const std::nullptr_t other) const { return _ptr >= other; }
+inline bool RcBase<_Base, _Pointer>::operator>=(const std::nullptr_t other) const {
+	return _ptr >= other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator <= (const RcBase<Base, Pointer> & other) const { return _ptr <= other._ptr; }
+inline bool RcBase<_Base, _Pointer>::operator<=(const RcBase<Base, Pointer> &other) const {
+	return _ptr <= other._ptr;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator <= (const Base * other) const { return _ptr <= other; }
+inline bool RcBase<_Base, _Pointer>::operator<=(const Base *other) const {
+	return _ptr <= other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator <= (typename std::remove_const<Base>::type * other) const { return _ptr <= other; }
+inline bool RcBase<_Base, _Pointer>::operator<=(
+		typename std::remove_const<Base>::type *other) const {
+	return _ptr <= other;
+}
 
 template <typename _Base, typename _Pointer>
-inline bool RcBase<_Base, _Pointer>::operator <= (const std::nullptr_t other) const { return _ptr <= other; }
+inline bool RcBase<_Base, _Pointer>::operator<=(const std::nullptr_t other) const {
+	return _ptr <= other;
+}
 
 template <typename _Base, typename _Pointer>
 inline void RcBase<_Base, _Pointer>::doRetain() {
@@ -673,9 +738,13 @@ inline void RcBase<_Base, _Pointer>::doRetain() {
 #endif
 
 #if SP_REF_DEBUG
-	if (ptr) { _id = ptr->retain(); }
+	if (ptr) {
+		_id = ptr->retain();
+	}
 #else
-	if (ptr) { ptr->retain(); }
+	if (ptr) {
+		ptr->retain();
+	}
 #endif
 }
 
@@ -688,9 +757,13 @@ inline void RcBase<_Base, _Pointer>::doRelease() {
 #endif
 
 #if SP_REF_DEBUG
-	if (ptr) { ptr->release(_id); }
+	if (ptr) {
+		ptr->release(_id);
+	}
 #else
-	if (ptr) { ptr->release(0); }
+	if (ptr) {
+		ptr->release(0);
+	}
 #endif
 }
 
@@ -706,20 +779,27 @@ inline auto RcBase<_Base, _Pointer>::doSwap(Pointer _value) -> Pointer {
 
 #if SP_REF_DEBUG
 	uint64_t id = 0;
-	if (value) { id = value->retain(); }
-	if (ptr) { ptr->release(_id); }
+	if (value) {
+		id = value->retain();
+	}
+	if (ptr) {
+		ptr->release(_id);
+	}
 	_id = id;
 	return value;
 #else
-	if (value) { value->retain(); }
-	if (ptr) { ptr->release(0); }
+	if (value) {
+		value->retain();
+	}
+	if (ptr) {
+		ptr->release(0);
+	}
 	return (Pointer)value;
 #endif
 }
 
 template <typename _Base, typename _Pointer>
-inline RcBase<_Base, _Pointer>::RcBase(Pointer value, bool v) noexcept
-: _ptr(value) { }
+inline RcBase<_Base, _Pointer>::RcBase(Pointer value, bool v) noexcept : _ptr(value) { }
 
 
 template <typename _Base>
@@ -737,11 +817,11 @@ inline auto Rc<_Base>::doReferenceCast(Rc<Type> &&source) -> Rc<Target> {
 
 template <typename _Base>
 template <class... Args>
-inline auto Rc<_Base>::create(Args && ... args) -> Self {
+inline auto Rc<_Base>::create(Args &&...args) -> Self {
 	static_assert(std::is_base_of<Ref, _Base>::value, "Rc base class should be derived from Ref");
 	auto pRet = new (std::nothrow) Type();
-    if (pRet->init(std::forward<Args>(args)...)) {
-    	return Self(pRet, true); // unsafe assignment
+	if (pRet->init(std::forward<Args>(args)...)) {
+		return Self(pRet, true); // unsafe assignment
 	} else {
 		delete pRet;
 		return Self(nullptr);
@@ -756,21 +836,21 @@ inline auto Rc<_Base>::alloc() -> Self {
 
 template <typename _Base>
 template <class... Args>
-inline auto Rc<_Base>::alloc(Args && ... args) -> Self{
+inline auto Rc<_Base>::alloc(Args &&...args) -> Self {
 	static_assert(std::is_base_of<Ref, _Base>::value, "Rc base class should be derived from Ref");
 	return Self(new (std::nothrow) Type(std::forward<Args>(args)...), true);
 }
 
 template <typename _Base>
-template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type *>
-inline auto Rc<_Base>::operator = (const Rc<B> &value) noexcept -> Rc & {
+template <typename B, typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type *>
+inline auto Rc<_Base>::operator=(const Rc<B> &value) noexcept -> Rc & {
 	this->set(value);
 	return *this;
 }
 
 template <typename _Base>
-template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type *>
-inline auto Rc<_Base>::operator = (Rc<B> &&value) noexcept -> Rc & {
+template <typename B, typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type *>
+inline auto Rc<_Base>::operator=(Rc<B> &&value) noexcept -> Rc & {
 	this->_ptr = static_cast<Type *>(value._ptr);
 	value._ptr = nullptr;
 #if SP_REF_DEBUG
@@ -782,7 +862,7 @@ inline auto Rc<_Base>::operator = (Rc<B> &&value) noexcept -> Rc & {
 
 // upcast
 template <typename _Base>
-template <typename B, typename std::enable_if<std::is_convertible<B*, _Base *>{}>::type*>
+template <typename B, typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type *>
 inline auto Rc<_Base>::get_cast() const noexcept -> B * {
 	return static_cast<B *>(this->_ptr);
 }
@@ -796,7 +876,7 @@ inline auto Rc<_Base>::get() const noexcept -> _Base * {
 }
 
 template <typename _Base>
-inline Rc<_Base>::operator _Base * () const noexcept {
+inline Rc<_Base>::operator _Base *() const noexcept {
 	return *this ? get() : nullptr;
 }
 
@@ -806,19 +886,19 @@ inline auto Rc<_Base>::operator->() const noexcept -> _Base * {
 }
 
 template <typename _Base>
-inline Rc<_Base>::operator bool () const noexcept {
+inline Rc<_Base>::operator bool() const noexcept {
 	return this->_ptr != nullptr;
 }
 
 template <typename _Base>
-template <typename B, typename std::enable_if<std::is_convertible<_Base *, B*>{}>::type *>
-inline Rc<_Base>::operator Rc<B> () noexcept {
+template <typename B, typename std::enable_if<std::is_convertible<_Base *, B *>{}>::type *>
+inline Rc<_Base>::operator Rc<B>() noexcept {
 	return Rc<B>(static_cast<B *>(get()));
 }
 
 template <typename _Base>
 template <typename Target>
-inline Rc<Target>  Rc<_Base>::cast() const {
+inline Rc<Target> Rc<_Base>::cast() const {
 	if (auto v = dynamic_cast<Target *>(this->_ptr)) {
 		return Rc<Target>(v);
 	}
@@ -827,10 +907,10 @@ inline Rc<Target>  Rc<_Base>::cast() const {
 
 template <typename _Base>
 template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(Args && ... args) {
+inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(Args &&...args) {
 	auto pRet = Type::create();
 	Self ret(nullptr);
-	pRet->perform([&] (_Base *base) {
+	pRet->perform([&](_Base *base) {
 		if (base->init(std::forward<Args>(args)...)) {
 			ret = Self(pRet, true); // unsafe assignment
 		}
@@ -843,10 +923,11 @@ inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(Args && 
 
 template <typename _Base>
 template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(memory::pool_t *pool, Args && ... args) {
+inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(memory::pool_t *pool,
+		Args &&...args) {
 	auto pRet = Type::create(pool);
 	Self ret(nullptr);
-	pRet->perform([&] (_Base *base) {
+	pRet->perform([&](_Base *base) {
 		if (base->init(std::forward<Args>(args)...)) {
 			ret = Self(pRet, true); // unsafe assignment
 		}
@@ -859,10 +940,11 @@ inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(memory::
 
 template <typename _Base>
 template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(SharedRefMode mode, Args && ... args) {
+inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::create(SharedRefMode mode,
+		Args &&...args) {
 	auto pRet = Type::create(mode);
 	Self ret(nullptr);
-	pRet->perform([&] (_Base *base) {
+	pRet->perform([&](_Base *base) {
 		if (base->init(std::forward<Args>(args)...)) {
 			ret = Self(pRet, true); // unsafe assignment
 		}
@@ -880,22 +962,24 @@ inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc() {
 
 template <typename _Base>
 template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(Args && ... args) {
+inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(Args &&...args) {
 	return Self(Type::create(std::forward<Args>(args)...), true);
 }
 
 template <typename _Base>
 template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(memory::pool_t *pool, Args && ... args) {
+inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(memory::pool_t *pool,
+		Args &&...args) {
 	return Self(Type::create(pool, std::forward<Args>(args)...), true);
 }
 
 template <typename _Base>
 template <class... Args>
-inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(SharedRefMode mode, Args && ... args) {
+inline typename Rc<SharedRef<_Base>>::Self Rc<SharedRef<_Base>>::alloc(SharedRefMode mode,
+		Args &&...args) {
 	return Self(Type::create(mode, std::forward<Args>(args)...), true);
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* STAPPLER_CORE_UTILS_REF_SPREF_H_ */

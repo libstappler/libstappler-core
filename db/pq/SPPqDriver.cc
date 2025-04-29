@@ -59,46 +59,48 @@ enum PGTransactionStatusType {
 };
 
 struct pgNotify {
-	char	   *relname;		/* notification condition name */
-	int			be_pid;			/* process ID of notifying server process */
-	char	   *extra;			/* notification parameter */
+	char *relname; /* notification condition name */
+	int be_pid; /* process ID of notifying server process */
+	char *extra; /* notification parameter */
 	/* Fields below here are private to libpq; apps should not use 'em */
-	pgNotify *next;		/* list link */
+	pgNotify *next; /* list link */
 };
 
 struct DriverSym : AllocBase {
-	using PQnoticeProcessor = void (*) (void *arg, const char *message);
-	using PQresultStatusType = ExecStatusType (*) (const void *res);
-	using PQconnectdbParamsType = void * (*) (const char * const *keywords, const char * const *values, int expand_dbname);
-	using PQfinishType = void (*) (void *conn);
-	using PQfformatType = int (*) (const void *res, int field_num);
-	using PQgetisnullType = int	(*) (const void *res, int tup_num, int field_num);
-	using PQgetvalueType = char *(*) (const void *res, int tup_num, int field_num);
-	using PQgetlengthType = int	(*) (const void *res, int tup_num, int field_num);
-	using PQfnameType = char *(*) (const void *res, int field_num);
-	using PQftypeType = unsigned int (*) (const void *res, int field_num);
-	using PQntuplesType = int (*) (const void *res);
-	using PQnfieldsType = int (*) (const void *res);
-	using PQcmdTuplesType = char *(*) (void *res);
-	using PQresStatusType = char *(*) (ExecStatusType status);
-	using PQresultErrorMessageType = char *(*) (const void *res);
-	using PQclearType = void (*) (void *res);
-	using PQexecType = void *(*) (void *conn, const char *query);
-	using PQexecParamsType = void *(*) (void *conn, const char *command, int nParams, const void *paramTypes,
-			const char *const *paramValues, const int *paramLengths, const int *paramFormats, int resultFormat);
-	using PQsendQueryType = int (*) (void *conn, const char *query);
-	using PQstatusType = ConnStatusType (*) (void *conn);
-	using PQerrorMessageType = char * (*) (const void *conn);
-	using PQresetType = void (*) (void *conn);
-	using PQtransactionStatusType = PGTransactionStatusType (*) (void *conn);
-	using PQsetnonblockingType = int (*) (void *conn, int arg);
-	using PQsocketType = int (*) (const void *conn);
-	using PQconsumeInputType = int (*) (void *conn);
-	using PQnotifiesType = pgNotify *(*) (void *conn);
-	using PQfreememType = void (*) (void *ptr);
-	using PQisBusyType = int (*) (void *conn);
-	using PQgetResultType = void *(*) (void *conn);
-	using PQsetNoticeProcessorType = void (*) (void *conn, PQnoticeProcessor, void *);
+	using PQnoticeProcessor = void (*)(void *arg, const char *message);
+	using PQresultStatusType = ExecStatusType (*)(const void *res);
+	using PQconnectdbParamsType = void *(*)(const char *const *keywords, const char *const *values,
+			int expand_dbname);
+	using PQfinishType = void (*)(void *conn);
+	using PQfformatType = int (*)(const void *res, int field_num);
+	using PQgetisnullType = int (*)(const void *res, int tup_num, int field_num);
+	using PQgetvalueType = char *(*)(const void *res, int tup_num, int field_num);
+	using PQgetlengthType = int (*)(const void *res, int tup_num, int field_num);
+	using PQfnameType = char *(*)(const void *res, int field_num);
+	using PQftypeType = unsigned int (*)(const void *res, int field_num);
+	using PQntuplesType = int (*)(const void *res);
+	using PQnfieldsType = int (*)(const void *res);
+	using PQcmdTuplesType = char *(*)(void *res);
+	using PQresStatusType = char *(*)(ExecStatusType status);
+	using PQresultErrorMessageType = char *(*)(const void *res);
+	using PQclearType = void (*)(void *res);
+	using PQexecType = void *(*)(void *conn, const char *query);
+	using PQexecParamsType = void *(*)(void *conn, const char *command, int nParams,
+			const void *paramTypes, const char *const *paramValues, const int *paramLengths,
+			const int *paramFormats, int resultFormat);
+	using PQsendQueryType = int (*)(void *conn, const char *query);
+	using PQstatusType = ConnStatusType (*)(void *conn);
+	using PQerrorMessageType = char *(*)(const void *conn);
+	using PQresetType = void (*)(void *conn);
+	using PQtransactionStatusType = PGTransactionStatusType (*)(void *conn);
+	using PQsetnonblockingType = int (*)(void *conn, int arg);
+	using PQsocketType = int (*)(const void *conn);
+	using PQconsumeInputType = int (*)(void *conn);
+	using PQnotifiesType = pgNotify *(*)(void *conn);
+	using PQfreememType = void (*)(void *ptr);
+	using PQisBusyType = int (*)(void *conn);
+	using PQgetResultType = void *(*)(void *conn);
+	using PQsetNoticeProcessorType = void (*)(void *conn, PQnoticeProcessor, void *);
 
 	DriverSym(StringView n, Dso &&d) : name(n), ptr(move(d)) {
 		this->PQresultStatus = ptr.sym<DriverSym::PQresultStatusType>("PQresultStatus");
@@ -114,7 +116,8 @@ struct DriverSym : AllocBase {
 		this->PQnfields = ptr.sym<DriverSym::PQnfieldsType>("PQnfields");
 		this->PQcmdTuples = ptr.sym<DriverSym::PQcmdTuplesType>("PQcmdTuples");
 		this->PQresStatus = ptr.sym<DriverSym::PQresStatusType>("PQresStatus");
-		this->PQresultErrorMessage = ptr.sym<DriverSym::PQresultErrorMessageType>("PQresultErrorMessage");
+		this->PQresultErrorMessage =
+				ptr.sym<DriverSym::PQresultErrorMessageType>("PQresultErrorMessage");
 		this->PQclear = ptr.sym<DriverSym::PQclearType>("PQclear");
 		this->PQexec = ptr.sym<DriverSym::PQexecType>("PQexec");
 		this->PQexecParams = ptr.sym<DriverSym::PQexecParamsType>("PQexecParams");
@@ -122,7 +125,8 @@ struct DriverSym : AllocBase {
 		this->PQstatus = ptr.sym<DriverSym::PQstatusType>("PQstatus");
 		this->PQerrorMessage = ptr.sym<DriverSym::PQerrorMessageType>("PQerrorMessage");
 		this->PQreset = ptr.sym<DriverSym::PQresetType>("PQreset");
-		this->PQtransactionStatus = ptr.sym<DriverSym::PQtransactionStatusType>("PQtransactionStatus");
+		this->PQtransactionStatus =
+				ptr.sym<DriverSym::PQtransactionStatusType>("PQtransactionStatus");
 		this->PQsetnonblocking = ptr.sym<DriverSym::PQsetnonblockingType>("PQsetnonblocking");
 		this->PQsocket = ptr.sym<DriverSym::PQsocketType>("PQsocket");
 		this->PQconsumeInput = ptr.sym<DriverSym::PQconsumeInputType>("PQconsumeInput");
@@ -130,19 +134,20 @@ struct DriverSym : AllocBase {
 		this->PQfreemem = ptr.sym<DriverSym::PQfreememType>("PQfreemem");
 		this->PQisBusy = ptr.sym<DriverSym::PQisBusyType>("PQisBusy");
 		this->PQgetResult = ptr.sym<DriverSym::PQgetResultType>("PQgetResult");
-		this->PQsetNoticeProcessor = ptr.sym<DriverSym::PQsetNoticeProcessorType>("PQsetNoticeProcessor");
+		this->PQsetNoticeProcessor =
+				ptr.sym<DriverSym::PQsetNoticeProcessorType>("PQsetNoticeProcessor");
 	}
 
 	~DriverSym() { }
 
-	explicit operator bool () const {
+	explicit operator bool() const {
 		void **begin = (void **)&this->PQconnectdbParams;
 		void **end = (void **)&this->PQsetNoticeProcessor + 1;
 		while (begin != end) {
 			if (*begin == nullptr) {
 				return false;
 			}
-			++ begin;
+			++begin;
 		}
 		return true;
 	}
@@ -204,7 +209,7 @@ struct DriverLibStorage {
 		auto target = lib.str<stappler::memory::StandartInterface>();
 		auto it = s_driverLibs.find(target);
 		if (it != s_driverLibs.end()) {
-			++ it->second.refCount;
+			++it->second.refCount;
 			return &it->second;
 		}
 
@@ -225,7 +230,7 @@ struct DriverLibStorage {
 		if (sym->refCount == 1) {
 			s_driverLibs.erase(sym->name.str<stappler::memory::StandartInterface>());
 		} else {
-			-- sym->refCount;
+			--sym->refCount;
 		}
 	}
 };
@@ -245,17 +250,19 @@ void Driver_noticeMessage(void *arg, const char *message) {
 	// Silence libpq notices
 }
 
-static void Driver_insert_sorted(Vector<Pair<uint32_t, BackendInterface::StorageType>> & vec, uint32_t oid, BackendInterface::StorageType type) {
-	auto it = std::upper_bound(vec.begin(), vec.end(), oid, [] (uint32_t l, const Pair<uint32_t, BackendInterface::StorageType> &r) -> bool {
+static void Driver_insert_sorted(Vector<Pair<uint32_t, BackendInterface::StorageType>> &vec,
+		uint32_t oid, BackendInterface::StorageType type) {
+	auto it = std::upper_bound(vec.begin(), vec.end(), oid,
+			[](uint32_t l, const Pair<uint32_t, BackendInterface::StorageType> &r) -> bool {
 		return l < r.first;
 	});
 	vec.emplace(it, oid, type);
 }
 
-static void Driver_insert_sorted(Vector<Pair<uint32_t, String>> & vec, uint32_t oid, StringView type) {
-	auto it = std::upper_bound(vec.begin(), vec.end(), oid, [] (uint32_t l, const Pair<uint32_t, String> &r) -> bool {
-		return l < r.first;
-	});
+static void Driver_insert_sorted(Vector<Pair<uint32_t, String>> &vec, uint32_t oid,
+		StringView type) {
+	auto it = std::upper_bound(vec.begin(), vec.end(), oid,
+			[](uint32_t l, const Pair<uint32_t, String> &r) -> bool { return l < r.first; });
 	vec.emplace(it, oid, type.str<Interface>());
 }
 
@@ -269,7 +276,7 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 	if (!dbs.empty()) {
 		auto res = exec(conn, "SELECT datname FROM pg_database;");
 
-		for (size_t i = 0; i < getNTuples(res); ++ i) {
+		for (size_t i = 0; i < getNTuples(res); ++i) {
 			auto name = StringView(getValue(res, i, 0), getLength(res, i, 0));
 			auto it = std::find(toCreate.begin(), toCreate.end(), name);
 			if (it != toCreate.end()) {
@@ -294,7 +301,8 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 
 	db::sql::Result res(&result);
 
-	memory::pool::context<memory::pool_t *> ctx(_storageTypes.get_allocator(), memory::pool::context<memory::pool_t *>::conditional);
+	memory::pool::context<memory::pool_t *> ctx(_storageTypes.get_allocator(),
+			memory::pool::context<memory::pool_t *>::conditional);
 
 	for (auto it : res) {
 		auto tid = it.toInteger(0);
@@ -302,7 +310,8 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 		if (tname == "bool") {
 			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Bool);
 		} else if (tname == "bytea") {
-			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Bytes);
+			Driver_insert_sorted(_storageTypes, uint32_t(tid),
+					BackendInterface::StorageType::Bytes);
 		} else if (tname == "char") {
 			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Char);
 		} else if (tname == "int8") {
@@ -312,19 +321,24 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 		} else if (tname == "int2") {
 			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Int2);
 		} else if (tname == "float4") {
-			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Float4);
+			Driver_insert_sorted(_storageTypes, uint32_t(tid),
+					BackendInterface::StorageType::Float4);
 		} else if (tname == "float8") {
-			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Float8);
+			Driver_insert_sorted(_storageTypes, uint32_t(tid),
+					BackendInterface::StorageType::Float8);
 		} else if (tname == "varchar") {
-			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::VarChar);
+			Driver_insert_sorted(_storageTypes, uint32_t(tid),
+					BackendInterface::StorageType::VarChar);
 		} else if (tname == "text") {
 			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Text);
 		} else if (tname == "name") {
 			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Text);
 		} else if (tname == "numeric") {
-			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::Numeric);
+			Driver_insert_sorted(_storageTypes, uint32_t(tid),
+					BackendInterface::StorageType::Numeric);
 		} else if (tname == "tsvector") {
-			Driver_insert_sorted(_storageTypes, uint32_t(tid), BackendInterface::StorageType::TsVector);
+			Driver_insert_sorted(_storageTypes, uint32_t(tid),
+					BackendInterface::StorageType::TsVector);
 		} else {
 			Driver_insert_sorted(_customTypes, uint32_t(tid), tname);
 		}
@@ -334,7 +348,8 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 	return true;
 }
 
-void Driver::performWithStorage(Handle handle, const Callback<void(const db::Adapter &)> &cb) const {
+void Driver::performWithStorage(Handle handle,
+		const Callback<void(const db::Adapter &)> &cb) const {
 	auto targetPool = pool::acquire();
 
 	db::pq::Handle h(this, handle);
@@ -343,7 +358,8 @@ void Driver::performWithStorage(Handle handle, const Callback<void(const db::Ada
 
 	cb(storage);
 
-	auto stack = stappler::memory::pool::get<db::Transaction::Stack>(targetPool, config::STORAGE_TRANSACTION_STACK_KEY);
+	auto stack = stappler::memory::pool::get<db::Transaction::Stack>(targetPool,
+			config::STORAGE_TRANSACTION_STACK_KEY);
 	if (stack) {
 		for (auto &it : stack->stack) {
 			if (it->adapter == storage) {
@@ -358,9 +374,7 @@ void Driver::performWithStorage(Handle handle, const Callback<void(const db::Ada
 
 BackendInterface *Driver::acquireInterface(Handle handle, pool_t *pool) const {
 	BackendInterface *ret = nullptr;
-	memory::pool::perform_conditional([&] {
-		ret = new (pool) db::pq::Handle(this, handle);
-	}, pool);
+	memory::pool::perform_conditional([&] { ret = new (pool) db::pq::Handle(this, handle); }, pool);
 	return ret;
 }
 
@@ -368,50 +382,35 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 	auto p = pool::create(pool::acquire());
 	Driver::Handle rec;
 	memory::pool::perform_conditional([&] {
-		Vector<const char *> keywords; keywords.reserve(params.size());
-		Vector<const char *> values; values.reserve(params.size());
+		Vector<const char *> keywords;
+		keywords.reserve(params.size());
+		Vector<const char *> values;
+		values.reserve(params.size());
 
 		for (auto &it : params) {
-			if (it.first == "host"
-					|| it.first == "hostaddr"
-					|| it.first == "port"
-					|| it.first == "dbname"
-					|| it.first == "user"
-					|| it.first == "password"
-					|| it.first == "passfile"
-					|| it.first == "channel_binding"
-					|| it.first == "connect_timeout"
-					|| it.first == "client_encoding"
-					|| it.first == "options"
-					|| it.first == "application_name"
-					|| it.first == "fallback_application_name"
-					|| it.first == "keepalives"
-					|| it.first == "keepalives_idle"
-					|| it.first == "keepalives_interval"
-					|| it.first == "keepalives_count"
-					|| it.first == "tcp_user_timeout"
-					|| it.first == "replication"
-					|| it.first == "gssencmode"
-					|| it.first == "sslmode"
-					|| it.first == "requiressl"
-					|| it.first == "sslcompression"
-					|| it.first == "sslcert"
-					|| it.first == "sslkey"
-					|| it.first == "sslpassword"
-					|| it.first == "sslrootcert"
-					|| it.first == "sslcrl"
-					|| it.first == "requirepeer"
+			if (it.first == "host" || it.first == "hostaddr" || it.first == "port"
+					|| it.first == "dbname" || it.first == "user" || it.first == "password"
+					|| it.first == "passfile" || it.first == "channel_binding"
+					|| it.first == "connect_timeout" || it.first == "client_encoding"
+					|| it.first == "options" || it.first == "application_name"
+					|| it.first == "fallback_application_name" || it.first == "keepalives"
+					|| it.first == "keepalives_idle" || it.first == "keepalives_interval"
+					|| it.first == "keepalives_count" || it.first == "tcp_user_timeout"
+					|| it.first == "replication" || it.first == "gssencmode"
+					|| it.first == "sslmode" || it.first == "requiressl"
+					|| it.first == "sslcompression" || it.first == "sslcert" || it.first == "sslkey"
+					|| it.first == "sslpassword" || it.first == "sslrootcert"
+					|| it.first == "sslcrl" || it.first == "requirepeer"
 					|| it.first == "ssl_min_protocol_version"
-					|| it.first == "ssl_max_protocol_version"
-					|| it.first == "krbsrvname"
-					|| it.first == "gsslib"
-					|| it.first == "service"
+					|| it.first == "ssl_max_protocol_version" || it.first == "krbsrvname"
+					|| it.first == "gsslib" || it.first == "service"
 					|| it.first == "target_session_attrs") {
 				keywords.emplace_back(it.first.data());
 				values.emplace_back(it.second.data());
 			} else if (it.first != "driver" && it.first == "nmin" && it.first == "nkeep"
 					&& it.first == "nmax" && it.first == "exptime" && it.first == "persistent") {
-				log::error("pq::Driver", "unknown connection parameter: ", it.first, "=", it.second);
+				log::error("pq::Driver", "unknown connection parameter: ", it.first, "=",
+						it.second);
 			}
 		}
 
@@ -503,9 +502,7 @@ bool Driver::consumeNotifications(Handle handle, const Callback<void(StringView)
 	}
 	if (_handle->PQisBusy(conn) == 0) {
 		void *result;
-		while ((result = _handle->PQgetResult(conn)) != NULL) {
-			_handle->PQclear(result);
-		}
+		while ((result = _handle->PQgetResult(conn)) != NULL) { _handle->PQclear(result); }
 	}
 	return true;
 }
@@ -564,13 +561,9 @@ unsigned int Driver::getType(Result res, size_t field) const {
 	return _handle->PQftype(res.get(), int(field));
 }
 
-size_t Driver::getNTuples(Result res) const {
-	return size_t(_handle->PQntuples(res.get()));
-}
+size_t Driver::getNTuples(Result res) const { return size_t(_handle->PQntuples(res.get())); }
 
-size_t Driver::getNFields(Result res) const {
-	return size_t(_handle->PQnfields(res.get()));
-}
+size_t Driver::getNFields(Result res) const { return size_t(_handle->PQnfields(res.get())); }
 
 size_t Driver::getCmdTuples(Result res) const {
 	return stappler::StringToNumber<size_t>(_handle->PQcmdTuples(res.get()));
@@ -610,16 +603,19 @@ Driver::Result Driver::exec(Connection conn, const char *query) const {
 	return Driver::Result(_handle->PQexec(conn.get(), query));
 }
 
-Driver::Result Driver::exec(Connection conn, const char *command, int nParams, const char *const *paramValues,
-		const int *paramLengths, const int *paramFormats, int resultFormat) const {
+Driver::Result Driver::exec(Connection conn, const char *command, int nParams,
+		const char *const *paramValues, const int *paramLengths, const int *paramFormats,
+		int resultFormat) const {
 	if (_dbCtrl) {
 		_dbCtrl(false);
 	}
-	return Driver::Result(_handle->PQexecParams(conn.get(), command, nParams, nullptr, paramValues, paramLengths, paramFormats, resultFormat));
+	return Driver::Result(_handle->PQexecParams(conn.get(), command, nParams, nullptr, paramValues,
+			paramLengths, paramFormats, resultFormat));
 }
 
 BackendInterface::StorageType Driver::getTypeById(uint32_t oid) const {
-	auto it = std::lower_bound(_storageTypes.begin(), _storageTypes.end(), oid, [] (const Pair<uint32_t, BackendInterface::StorageType> &l, uint32_t r) -> bool {
+	auto it = std::lower_bound(_storageTypes.begin(), _storageTypes.end(), oid,
+			[](const Pair<uint32_t, BackendInterface::StorageType> &l, uint32_t r) -> bool {
 		return l.first < r;
 	});
 	if (it != _storageTypes.end() && it->first == oid) {
@@ -629,9 +625,8 @@ BackendInterface::StorageType Driver::getTypeById(uint32_t oid) const {
 }
 
 StringView Driver::getTypeNameById(uint32_t oid) const {
-	auto it = std::lower_bound(_customTypes.begin(), _customTypes.end(), oid, [] (const Pair<uint32_t, String> &l, uint32_t r) -> bool {
-		return l.first < r;
-	});
+	auto it = std::lower_bound(_customTypes.begin(), _customTypes.end(), oid,
+			[](const Pair<uint32_t, String> &l, uint32_t r) -> bool { return l.first < r; });
 	if (it != _customTypes.end() && it->first == oid) {
 		return it->second;
 	}
@@ -640,7 +635,8 @@ StringView Driver::getTypeNameById(uint32_t oid) const {
 
 Driver::~Driver() { }
 
-Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, const void *external) {
+Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path,
+		const void *external) {
 	auto ret = new (pool::acquire()) Driver(pool, app, path, external);
 	if (ret->_handle) {
 		return ret;
@@ -656,11 +652,11 @@ Driver::Driver(pool_t *pool, ApplicationInterface *app, StringView path, const v
 	} else {
 		StringView name = path;
 		if (path.empty() || path == "pgsql") {
-	#if WIN32
+#if WIN32
 			name = StringView("libpq.dll");
-	#else
+#else
 			name = StringView("libpq.so");
-	#endif
+#endif
 		}
 
 		l = DriverLibStorage::getInstance()->openLib(name);
@@ -710,17 +706,13 @@ ResultCursor::ResultCursor(const Driver *d, Driver::Result res) : driver(d), res
 	nrows = driver->getNTuples(result);
 }
 
-ResultCursor::~ResultCursor() {
-	clear();
-}
+ResultCursor::~ResultCursor() { clear(); }
 
 bool ResultCursor::isBinaryFormat(size_t field) const {
 	return driver->isBinaryFormat(result, field) != 0;
 }
 
-bool ResultCursor::isNull(size_t field) const {
-	return driver->isNull(result, currentRow, field);
-}
+bool ResultCursor::isNull(size_t field) const { return driver->isNull(result, currentRow, field); }
 
 StringView ResultCursor::toString(size_t field) const {
 	if (isBinaryFormat(field)) {
@@ -728,17 +720,15 @@ StringView ResultCursor::toString(size_t field) const {
 		auto s = driver->getTypeById(t);
 		switch (s) {
 		case BackendInterface::StorageType::Unknown:
-			driver->getApplicationInterface()->error("DB", "Unknown type conversion", Value(driver->getTypeNameById(t)));
+			driver->getApplicationInterface()->error("DB", "Unknown type conversion",
+					Value(driver->getTypeNameById(t)));
 			return StringView();
 			break;
-		case BackendInterface::StorageType::TsVector:
-			return StringView();
-			break;
+		case BackendInterface::StorageType::TsVector: return StringView(); break;
 		case BackendInterface::StorageType::Bool:
 			return StringView(toString(toBool(field))).pdup();
 			break;
-		case BackendInterface::StorageType::Char:
-			break;
+		case BackendInterface::StorageType::Char: break;
 		case BackendInterface::StorageType::Float4:
 		case BackendInterface::StorageType::Float8:
 			return StringView(toString(toDouble(field))).pdup();
@@ -750,10 +740,12 @@ StringView ResultCursor::toString(size_t field) const {
 			break;
 		case BackendInterface::StorageType::Text:
 		case BackendInterface::StorageType::VarChar:
-			return StringView(driver->getValue(result, currentRow, field), driver->getLength(result, currentRow, field));
+			return StringView(driver->getValue(result, currentRow, field),
+					driver->getLength(result, currentRow, field));
 			break;
 		case BackendInterface::StorageType::Numeric: {
-			stappler::BytesViewNetwork r((const uint8_t *)driver->getValue(result, currentRow, field),
+			stappler::BytesViewNetwork r(
+					(const uint8_t *)driver->getValue(result, currentRow, field),
 					driver->getLength(result, currentRow, field));
 			auto str = pg_numeric_to_string(r);
 			return StringView(str).pdup();
@@ -765,18 +757,21 @@ StringView ResultCursor::toString(size_t field) const {
 		}
 		return StringView();
 	} else {
-		return StringView(driver->getValue(result, currentRow, field), driver->getLength(result, currentRow, field));
+		return StringView(driver->getValue(result, currentRow, field),
+				driver->getLength(result, currentRow, field));
 	}
 }
 
 BytesView ResultCursor::toBytes(size_t field) const {
 	if (isBinaryFormat(field)) {
-		return BytesView((uint8_t *)driver->getValue(result, currentRow, field), driver->getLength(result, currentRow, field));
+		return BytesView((uint8_t *)driver->getValue(result, currentRow, field),
+				driver->getLength(result, currentRow, field));
 	} else {
 		auto val = driver->getValue(result, currentRow, field);
 		auto len = driver->getLength(result, currentRow, field);
 		if (len > 2 && memcmp(val, "\\x", 2) == 0) {
-			auto d = new Bytes(stappler::base16::decode<Interface>(stappler::CoderSource(val + 2, len - 2)));
+			auto d = new (std::nothrow) Bytes(
+					stappler::base16::decode<Interface>(stappler::CoderSource(val + 2, len - 2)));
 			return BytesView(*d);
 		}
 		return BytesView((uint8_t *)val, len);
@@ -833,30 +828,20 @@ Value ResultCursor::toTypedData(size_t field) const {
 	auto s = driver->getTypeById(t);
 	switch (s) {
 	case BackendInterface::StorageType::Unknown:
-		driver->getApplicationInterface()->error("DB", "Unknown type conversion", Value(driver->getTypeNameById(t)));
+		driver->getApplicationInterface()->error("DB", "Unknown type conversion",
+				Value(driver->getTypeNameById(t)));
 		return Value();
 		break;
-	case BackendInterface::StorageType::TsVector:
-		return Value();
-		break;
-	case BackendInterface::StorageType::Bool:
-		return Value(toBool(field));
-		break;
-	case BackendInterface::StorageType::Char:
-		break;
+	case BackendInterface::StorageType::TsVector: return Value(); break;
+	case BackendInterface::StorageType::Bool: return Value(toBool(field)); break;
+	case BackendInterface::StorageType::Char: break;
 	case BackendInterface::StorageType::Float4:
-	case BackendInterface::StorageType::Float8:
-		return Value(toDouble(field));
-		break;
+	case BackendInterface::StorageType::Float8: return Value(toDouble(field)); break;
 	case BackendInterface::StorageType::Int2:
 	case BackendInterface::StorageType::Int4:
-	case BackendInterface::StorageType::Int8:
-		return Value(toInteger(field));
-		break;
+	case BackendInterface::StorageType::Int8: return Value(toInteger(field)); break;
 	case BackendInterface::StorageType::Text:
-	case BackendInterface::StorageType::VarChar:
-		return Value(toString(field));
-		break;
+	case BackendInterface::StorageType::VarChar: return Value(toString(field)); break;
 	case BackendInterface::StorageType::Numeric: {
 		stappler::BytesViewNetwork r((const uint8_t *)driver->getValue(result, currentRow, field),
 				driver->getLength(result, currentRow, field));
@@ -887,7 +872,8 @@ Value ResultCursor::toCustomData(size_t field, const FieldCustom *f) const {
 
 int64_t ResultCursor::toId() const {
 	if (isBinaryFormat(0)) {
-		stappler::BytesViewNetwork r((const uint8_t *)driver->getValue(result, 0, 0), driver->getLength(result, 0, 0));
+		stappler::BytesViewNetwork r((const uint8_t *)driver->getValue(result, 0, 0),
+				driver->getLength(result, 0, 0));
 		switch (r.size()) {
 		case 1: return int64_t(r.readUnsigned()); break;
 		case 2: return int64_t(r.readUnsigned16()); break;
@@ -908,39 +894,27 @@ StringView ResultCursor::getFieldName(size_t field) const {
 	}
 	return StringView();
 }
-bool ResultCursor::isSuccess() const {
-	return result.get() && pgsql_is_success(err);
-}
-bool ResultCursor::isEmpty() const {
-	return nrows - currentRow <= 0;
-}
-bool ResultCursor::isEnded() const {
-	return currentRow >= nrows;
-}
-size_t ResultCursor::getFieldsCount() const {
-	return driver->getNFields(result);
-}
-size_t ResultCursor::getAffectedRows() const {
-	return driver->getCmdTuples(result);
-}
-size_t ResultCursor::getRowsHint() const {
-	return nrows;
-}
+bool ResultCursor::isSuccess() const { return result.get() && pgsql_is_success(err); }
+bool ResultCursor::isEmpty() const { return nrows - currentRow <= 0; }
+bool ResultCursor::isEnded() const { return currentRow >= nrows; }
+size_t ResultCursor::getFieldsCount() const { return driver->getNFields(result); }
+size_t ResultCursor::getAffectedRows() const { return driver->getCmdTuples(result); }
+size_t ResultCursor::getRowsHint() const { return nrows; }
 bool ResultCursor::next() {
 	if (!isEmpty()) {
-		++ currentRow;
+		++currentRow;
 		return !isEmpty();
 	}
 	return false;
 }
-void ResultCursor::reset() {
-	currentRow = 0;
-}
+void ResultCursor::reset() { currentRow = 0; }
 Value ResultCursor::getInfo() const {
 	return Value({
 		stappler::pair("error", Value(stappler::toInt(err))),
 		stappler::pair("status", Value(driver->getStatusMessage(err))),
-		stappler::pair("desc", Value(result.get() ? driver->getResultErrorMessage(result) : "Fatal database error")),
+		stappler::pair("desc",
+				Value(result.get() ? driver->getResultErrorMessage(result)
+								   : "Fatal database error")),
 	});
 }
 void ResultCursor::clear() {
@@ -950,11 +924,9 @@ void ResultCursor::clear() {
 	}
 }
 
-Driver::Status ResultCursor::getError() const {
-	return err;
-}
+Driver::Status ResultCursor::getError() const { return err; }
 
-}
+} // namespace stappler::db::pq
 
 namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
@@ -968,7 +940,8 @@ struct DriverExternalHandle {
 	void *driver;
 };
 
-Driver::Handle Driver::doConnect(const char * const *keywords, const char * const *values, int expand_dbname) const {
+Driver::Handle Driver::doConnect(const char *const *keywords, const char *const *values,
+		int expand_dbname) const {
 	if (_external) {
 		log::error("pq::Driver", "Driver in external mode can not do connection by itself");
 		return Driver::Handle(nullptr);
@@ -1014,4 +987,4 @@ Driver::Connection Driver::getConnection(Handle _h) const {
 	return Driver::Connection(nullptr);
 }
 
-}
+} // namespace stappler::db::pq

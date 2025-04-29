@@ -72,26 +72,26 @@ bool CommandLinePatternParsingData::parsePatternString() {
 	if (!str.empty()) {
 		// match fixed block
 		if (!target.starts_with(str)) {
-			log::error("CommandLine", "Invalid option input: ",
-					(offset > 0) ? argv[offset - 1] : target,
-					" for ", type, pattern->pattern, pattern->args);
+			log::error("CommandLine",
+					"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target, " for ",
+					type, pattern->pattern, pattern->args);
 			return false;
 		} else {
 			target += str.size();
 		}
 	}
 	if (args.is('<')) {
-		++ args;
+		++args;
 		auto tpl = args.readUntil<StringView::Chars<'>'>>();
 		if (args.is('>')) {
-			++ args;
+			++args;
 			if (tpl == "#.#") {
 				auto num = CommandLinePatternParsingData_parseFloat(target);
 				if (!num.empty()) {
 					result.emplace_back(StringView(num));
 				} else {
-					log::error("CommandLine", "Invalid option input: ",
-							(offset > 0) ? argv[offset - 1] : target,
+					log::error("CommandLine",
+							"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target,
 							" for ", type, pattern->pattern, pattern->args);
 					return false;
 				}
@@ -100,8 +100,8 @@ bool CommandLinePatternParsingData::parsePatternString() {
 				if (!num.empty()) {
 					result.emplace_back(StringView(num));
 				} else {
-					log::error("CommandLine", "Invalid option input: ",
-							(offset > 0) ? argv[offset - 1] : target,
+					log::error("CommandLine",
+							"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target,
 							" for ", type, pattern->pattern, pattern->args);
 					return false;
 				}
@@ -115,14 +115,15 @@ bool CommandLinePatternParsingData::parsePatternString() {
 				if (!data.empty()) {
 					result.emplace_back(StringView(data));
 				} else {
-					log::error("CommandLine", "Invalid option input: ",
-							(offset > 0) ? argv[offset - 1] : target,
+					log::error("CommandLine",
+							"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target,
 							" for ", type, pattern->pattern, pattern->args);
 					return false;
 				}
 			}
 		} else {
-			log::error("CommandLine", "Invalid pattern: ", pattern->args, " for ", type, pattern->pattern);
+			log::error("CommandLine", "Invalid pattern: ", pattern->args, " for ", type,
+					pattern->pattern);
 			return false;
 		}
 	}
@@ -135,17 +136,18 @@ bool CommandLinePatternParsingData::parseWhitespace() {
 		if (target.empty() || target.is<StringView::WhiteSpace>()) {
 			target.skipChars<StringView::WhiteSpace>();
 			if (target.empty()) {
-				++ offset;
+				++offset;
 				target = StringView(argv[offset - 1]);
 				if (offset > argv.size() && !args.empty()) {
-					log::error("CommandLine", "Not enough arguments for ", type, pattern->pattern, pattern->args);
+					log::error("CommandLine", "Not enough arguments for ", type, pattern->pattern,
+							pattern->args);
 					return false;
 				}
 			}
 		} else {
-			log::error("CommandLine", "Invalid option input: ",
-					(offset > 0) ? argv[offset - 1] : target,
-					" for ", type, pattern->pattern, pattern->args);
+			log::error("CommandLine",
+					"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target, " for ",
+					type, pattern->pattern, pattern->args);
 			return false;
 		}
 	} else if (!args.empty() && target.empty()) {
@@ -166,25 +168,26 @@ CommandLineParserBase::CommandLineParserBase() {
 	_pool = memory::pool::create(_alloc);
 
 	mem_pool::perform([&] {
-		_stringPatterns = new Vector<CommandLinePatternData>;
-		_charPatterns = new Vector<CommandLinePatternData>;
-		_options = new Vector<CommandLineParamData *>;
+		_stringPatterns = new (std::nothrow) Vector<CommandLinePatternData>;
+		_charPatterns = new (std::nothrow) Vector<CommandLinePatternData>;
+		_options = new (std::nothrow) Vector<CommandLineParamData *>;
 	}, _pool);
 }
 
-bool CommandLineParserBase::parse(void *output, int argc, const char * argv[], const Callback<void(void *, StringView)> &argCallback) const {
+bool CommandLineParserBase::parse(void *output, int argc, const char *argv[],
+		const Callback<void(void *, StringView)> &argCallback) const {
 	if (argc == 0) {
 		return false;
 	}
 
 	bool success = true;
 
-	mem_pool::perform_temporary([&] () {
+	mem_pool::perform_temporary([&]() {
 		Vector<StringView> argsVec;
 		while (argc > 0) {
 			argsVec.emplace_back(argv[0]);
-			-- argc;
-			++ argv;
+			--argc;
+			++argv;
 		}
 
 		size_t i = 0;
@@ -195,13 +198,15 @@ bool CommandLineParserBase::parse(void *output, int argc, const char * argv[], c
 					StringView tmp = value.sub(2);
 					auto init = tmp.readUntil<StringView::WhiteSpace, StringView::Chars<'='>>();
 
-					auto it = std::lower_bound(_stringPatterns->begin(), _stringPatterns->end(), init);
+					auto it = std::lower_bound(_stringPatterns->begin(), _stringPatterns->end(),
+							init);
 					if (it != _stringPatterns->end() && it->pattern == init) {
 						if (tmp.is('=')) {
-							++ tmp;
+							++tmp;
 							i += parseStringPattern(output, *it, tmp, success);
 						} else {
-							i += parseStringPattern(output, *it, makeSpanView(argsVec).sub(i + 1), success);
+							i += parseStringPattern(output, *it, makeSpanView(argsVec).sub(i + 1),
+									success);
 						}
 					} else {
 						log::error("CommandLine", "Unknown command line option: --", init);
@@ -210,14 +215,17 @@ bool CommandLineParserBase::parse(void *output, int argc, const char * argv[], c
 				} else {
 					StringView init = value.sub(1);
 					while (!init.empty()) {
-						auto it = std::lower_bound(_charPatterns->begin(), _charPatterns->end(), init.sub(0, 1));
+						auto it = std::lower_bound(_charPatterns->begin(), _charPatterns->end(),
+								init.sub(0, 1));
 
 						if (it != _charPatterns->end() && init.starts_with(it->pattern)) {
 							init += it->pattern.size();
-							i += parseCharPattern(output, *it, init, makeSpanView(argsVec).sub(i + 1), success);
+							i += parseCharPattern(output, *it, init,
+									makeSpanView(argsVec).sub(i + 1), success);
 						} else {
-							log::error("CommandLine", "Unknown command line option: -", init.sub(0, 1));
-							++ init;
+							log::error("CommandLine", "Unknown command line option: -",
+									init.sub(0, 1));
+							++init;
 							success = false;
 						}
 					}
@@ -234,7 +242,7 @@ bool CommandLineParserBase::parse(void *output, int argc, const char * argv[], c
 					argCallback(output, value);
 				}
 			}
-			++ i;
+			++i;
 		}
 	}, _pool);
 
@@ -266,15 +274,16 @@ struct CommandLineQuoteReader {
 		while (!str.empty() && !str.is<C>()) {
 			out << str.readUntil<StringView::WhiteSpace, StringView::Chars<C, '\\'>>();
 			if (str.is<'\\'>()) {
-				++ str;
+				++str;
 				out << str.at(0);
-				++ str;
+				++str;
 			}
 		}
 	}
 };
 
-size_t CommandLineParserBase::parseStringPattern(void *output, const CommandLinePatternData &pattern, StringView str, bool &success) const {
+size_t CommandLineParserBase::parseStringPattern(void *output,
+		const CommandLinePatternData &pattern, StringView str, bool &success) const {
 	Vector<StringView> args;
 
 	StringStream out;
@@ -288,10 +297,10 @@ size_t CommandLineParserBase::parseStringPattern(void *output, const CommandLine
 			}
 			str.skipChars<StringView::WhiteSpace>();
 		} else if (str.is<'"'>()) {
-			++ str;
+			++str;
 			CommandLineQuoteReader<'"'>::read(out, str);
 		} else if (str.is<'\''>()) {
-			++ str;
+			++str;
 			CommandLineQuoteReader<'\''>::read(out, str);
 		}
 	}
@@ -304,8 +313,8 @@ size_t CommandLineParserBase::parseStringPattern(void *output, const CommandLine
 	return 0;
 }
 
-size_t CommandLineParserBase::parseStringPattern(void *output, const CommandLinePatternData &pattern,
-		SpanView<StringView> argv, bool &success) const {
+size_t CommandLineParserBase::parseStringPattern(void *output,
+		const CommandLinePatternData &pattern, SpanView<StringView> argv, bool &success) const {
 	if (pattern.args.empty()) {
 		pattern.target->callback(output, pattern.pattern, SpanView<StringView>());
 		return 0;
@@ -319,15 +328,13 @@ size_t CommandLineParserBase::parseStringPattern(void *output, const CommandLine
 
 	Vector<StringView> result;
 
-	CommandLinePatternParsingData data = {
-		.pattern = &pattern,
+	CommandLinePatternParsingData data = {.pattern = &pattern,
 		.argv = argv,
 		.result = result,
 
 		.offset = 1,
 		.args = args,
-		.target = argv[data.offset - 1]
-	};
+		.target = argv[data.offset - 1]};
 
 	if (!data.parse()) {
 		success = false;
@@ -349,15 +356,13 @@ size_t CommandLineParserBase::parseCharPattern(void *output, const CommandLinePa
 
 	Vector<StringView> result;
 
-	CommandLinePatternParsingData data = {
-		.pattern = &pattern,
+	CommandLinePatternParsingData data = {.pattern = &pattern,
 		.argv = argv,
 		.result = result,
 		.offset = 0,
 		.args = StringView(pattern.args),
 		.target = input,
-		.type = StringView("-")
-	};
+		.type = StringView("-")};
 
 	if (!data.parse()) {
 		success = false;
@@ -376,4 +381,4 @@ size_t CommandLineParserBase::parseCharPattern(void *output, const CommandLinePa
 	return data.offset;
 }
 
-}
+} // namespace stappler::detail

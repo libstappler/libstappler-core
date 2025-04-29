@@ -20,6 +20,9 @@
  THE SOFTWARE.
  **/
 
+// Do not use autoformatter for this file - it can break things
+// clang-format off
+
 #ifndef CORE_CORE_DETAIL_SPPLATFORMDETECTION_H_
 #define CORE_CORE_DETAIL_SPPLATFORMDETECTION_H_
 
@@ -92,7 +95,7 @@
 //
 // Note that, not like `__func__`, this returns name by constructing argument
 // in place of a call, instead of macro substitution in place of occurrence
-#if __cplusplus >= 202'002L
+#if __cplusplus >= 202002L
 #define STAPPLER_LOCATION (std::source_location::current().function_name())
 #else
 #define STAPPLER_LOCATION ("")
@@ -227,7 +230,7 @@ using iter_reference_t = typename T::reference;
 #ifdef __cplusplus
 #if __LCC__ && __LCC__ <= 127
 #define SP_HAVE_THREE_WAY_COMPARISON 0
-#elif __cpp_impl_three_way_comparison >= 201'711
+#elif __cpp_impl_three_way_comparison >= 201711
 #define SP_HAVE_THREE_WAY_COMPARISON 1
 #else
 #define SP_HAVE_THREE_WAY_COMPARISON 0

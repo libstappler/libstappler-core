@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPData.h"
+#include "SPMemInterface.h"
 #include "SPString.h"
 #include "SPStringView.h"
 
@@ -51,106 +52,211 @@ namespace serenity {
 bool shouldEncodePercent(char c) {
 #define V16 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 	static uint8_t s_decTable[256] = {
-		V16, V16, // 0-1, 0-F
-		1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, // 2, 0-F
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, // 3, 0-F
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 4, 0-F
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, // 5, 0-F
-		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 6, 0-F
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, // 7, 0-F
-		V16, V16, V16, V16, V16, V16, V16, V16,
+		V16,
+		V16, // 0-1, 0-F
+		1,
+		0,
+		1,
+		1,
+		0,
+		1,
+		1,
+		0,
+		1,
+		1,
+		0,
+		0,
+		1,
+		0,
+		0,
+		0, // 2, 0-F
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		1,
+		1,
+		1,
+		1,
+		1,
+		0, // 3, 0-F
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0, // 4, 0-F
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		1,
+		1,
+		1,
+		1,
+		0, // 5, 0-F
+		1,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0, // 6, 0-F
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		1,
+		1,
+		1,
+		1,
+		1, // 7, 0-F
+		V16,
+		V16,
+		V16,
+		V16,
+		V16,
+		V16,
+		V16,
+		V16,
 	};
 
 	return bool(s_decTable[*((uint8_t *)(&c))]);
 }
 
-}
+} // namespace serenity
 
 template <>
 template <>
-auto ValueTemplate<memory::PoolInterface>::convert<memory::PoolInterface>() const -> ValueTemplate<memory::PoolInterface> {
+auto ValueTemplate<memory::PoolInterface>::convert<memory::PoolInterface>() const
+		-> ValueTemplate<memory::PoolInterface> {
 	return ValueTemplate<memory::PoolInterface>(*this);
 }
 
 template <>
 template <>
-auto ValueTemplate<memory::StandartInterface>::convert<memory::StandartInterface>() const -> ValueTemplate<memory::StandartInterface> {
+auto ValueTemplate<memory::StandartInterface>::convert<memory::StandartInterface>() const
+		-> ValueTemplate<memory::StandartInterface> {
 	return ValueTemplate<memory::StandartInterface>(*this);
 }
 
 template <>
 template <>
-auto ValueTemplate<memory::PoolInterface>::convert<memory::StandartInterface>() const -> ValueTemplate<memory::StandartInterface> {
+auto ValueTemplate<memory::PoolInterface>::convert<memory::StandartInterface>() const
+		-> ValueTemplate<memory::StandartInterface> {
 	switch (_type) {
 	case Type::INTEGER: return ValueTemplate<memory::StandartInterface>(intVal); break;
 	case Type::DOUBLE: return ValueTemplate<memory::StandartInterface>(doubleVal); break;
 	case Type::BOOLEAN: return ValueTemplate<memory::StandartInterface>(boolVal); break;
 	case Type::CHARSTRING:
-		return ValueTemplate<memory::StandartInterface>(memory::StandartInterface::StringType(strVal->data(), strVal->size()));
+		return ValueTemplate<memory::StandartInterface>(
+				memory::StandartInterface::StringType(strVal->data(), strVal->size()));
 		break;
 	case Type::BYTESTRING:
-		return ValueTemplate<memory::StandartInterface>(memory::StandartInterface::BytesType(bytesVal->data(), bytesVal->data() + bytesVal->size()));
+		return ValueTemplate<memory::StandartInterface>(memory::StandartInterface::BytesType(
+				bytesVal->data(), bytesVal->data() + bytesVal->size()));
 		break;
 	case Type::ARRAY: {
-		ValueTemplate<memory::StandartInterface> ret(ValueTemplate<memory::StandartInterface>::Type::ARRAY);
+		ValueTemplate<memory::StandartInterface> ret(
+				ValueTemplate<memory::StandartInterface>::Type::ARRAY);
 		auto &arr = ret.asArray();
 		arr.reserve(arrayVal->size());
-		for (auto &it : *arrayVal) {
-			arr.emplace_back(it.convert<memory::StandartInterface>());
-		}
+		for (auto &it : *arrayVal) { arr.emplace_back(it.convert<memory::StandartInterface>()); }
 		return ret;
 		break;
 	}
 	case Type::DICTIONARY: {
-		ValueTemplate<memory::StandartInterface> ret(ValueTemplate<memory::StandartInterface>::Type::DICTIONARY);
+		ValueTemplate<memory::StandartInterface> ret(
+				ValueTemplate<memory::StandartInterface>::Type::DICTIONARY);
 		auto &dict = ret.asDict();
 		for (auto &it : *dictVal) {
-			dict.emplace(StringView(it.first).str<memory::StandartInterface>(), it.second.convert<memory::StandartInterface>());
+			dict.emplace(StringView(it.first).str<memory::StandartInterface>(),
+					it.second.convert<memory::StandartInterface>());
 		}
 		return ret;
 		break;
 	}
-	default:
-		break;
+	default: break;
 	}
 	return ValueTemplate<memory::StandartInterface>();
 }
 
 template <>
 template <>
-auto ValueTemplate<memory::StandartInterface>::convert<memory::PoolInterface>() const -> ValueTemplate<memory::PoolInterface> {
+auto ValueTemplate<memory::StandartInterface>::convert<memory::PoolInterface>() const
+		-> ValueTemplate<memory::PoolInterface> {
 	switch (_type) {
 	case Type::INTEGER: return ValueTemplate<memory::PoolInterface>(intVal); break;
 	case Type::DOUBLE: return ValueTemplate<memory::PoolInterface>(doubleVal); break;
 	case Type::BOOLEAN: return ValueTemplate<memory::PoolInterface>(boolVal); break;
 	case Type::CHARSTRING:
-		return ValueTemplate<memory::PoolInterface>(memory::PoolInterface::StringType(strVal->data(), strVal->size()));
+		return ValueTemplate<memory::PoolInterface>(
+				memory::PoolInterface::StringType(strVal->data(), strVal->size()));
 		break;
 	case Type::BYTESTRING:
-		return ValueTemplate<memory::PoolInterface>(memory::PoolInterface::BytesType(bytesVal->data(), bytesVal->data() + bytesVal->size()));
+		return ValueTemplate<memory::PoolInterface>(memory::PoolInterface::BytesType(
+				bytesVal->data(), bytesVal->data() + bytesVal->size()));
 		break;
 	case Type::ARRAY: {
 		ValueTemplate<memory::PoolInterface> ret(ValueTemplate<memory::PoolInterface>::Type::ARRAY);
 		auto &arr = ret.asArray();
 		arr.reserve(arrayVal->size());
-		for (auto &it : *arrayVal) {
-			arr.emplace_back(it.convert<memory::PoolInterface>());
-		}
+		for (auto &it : *arrayVal) { arr.emplace_back(it.convert<memory::PoolInterface>()); }
 		return ret;
 		break;
 	}
 	case Type::DICTIONARY: {
-		ValueTemplate<memory::PoolInterface> ret(ValueTemplate<memory::PoolInterface>::Type::DICTIONARY);
+		ValueTemplate<memory::PoolInterface> ret(
+				ValueTemplate<memory::PoolInterface>::Type::DICTIONARY);
 		auto &dict = ret.asDict();
 		dict.reserve(dictVal->size());
 		for (auto &it : *dictVal) {
-			dict.emplace(StringView(it.first).str<memory::PoolInterface>(), it.second.convert<memory::PoolInterface>());
+			dict.emplace(StringView(it.first).str<memory::PoolInterface>(),
+					it.second.convert<memory::PoolInterface>());
 		}
 		return ret;
 		break;
 	}
-	default:
-		break;
+	default: break;
 	}
 	return ValueTemplate<memory::PoolInterface>();
 }
@@ -173,8 +279,7 @@ size_t getCompressBounds(size_t size, EncodeFormat::Compression c) {
 		return 0;
 		break;
 #endif
-	case EncodeFormat::NoCompression:
-		break;
+	case EncodeFormat::NoCompression: break;
 	}
 	return 0;
 }
@@ -182,15 +287,15 @@ size_t getCompressBounds(size_t size, EncodeFormat::Compression c) {
 thread_local uint8_t tl_lz4HCEncodeState[std::max(sizeof(LZ4_streamHC_t), sizeof(LZ4_stream_t))];
 thread_local uint8_t tl_compressBuffer[128_KiB];
 
-uint8_t *getLZ4EncodeState() {
-	return tl_lz4HCEncodeState;
-}
+uint8_t *getLZ4EncodeState() { return tl_lz4HCEncodeState; }
 
-size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t destSize, EncodeFormat::Compression c) {
+size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t destSize,
+		EncodeFormat::Compression c) {
 	switch (c) {
 	case EncodeFormat::LZ4Compression: {
 		const int offSize = ((srcSize <= 0xFFFF) ? 2 : 4);
-		const int ret = LZ4_compress_fast_extState(tl_lz4HCEncodeState, (const char *)src, (char *)dest + offSize, int(srcSize), int(destSize - offSize), 1);
+		const int ret = LZ4_compress_fast_extState(tl_lz4HCEncodeState, (const char *)src,
+				(char *)dest + offSize, int(srcSize), int(destSize - offSize), 1);
 		if (ret > 0) {
 			if (srcSize <= 0xFFFF) {
 				uint16_t sz = srcSize;
@@ -205,7 +310,8 @@ size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t de
 	}
 	case EncodeFormat::LZ4HCCompression: {
 		const int offSize = ((srcSize <= 0xFFFF) ? 2 : 4);
-		const int ret = LZ4_compress_HC_extStateHC(tl_lz4HCEncodeState, (const char *)src, (char *)dest + offSize, int(srcSize), int(destSize - offSize), LZ4HC_CLEVEL_MAX);
+		const int ret = LZ4_compress_HC_extStateHC(tl_lz4HCEncodeState, (const char *)src,
+				(char *)dest + offSize, int(srcSize), int(destSize - offSize), LZ4HC_CLEVEL_MAX);
 		if (ret > 0) {
 			if (srcSize <= 0xFFFF) {
 				uint16_t sz = srcSize;
@@ -222,8 +328,9 @@ size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t de
 	case EncodeFormat::Brotli: {
 		const int offSize = ((srcSize <= 0xFFFF) ? 2 : 4);
 		size_t ret = destSize - offSize;
-		if (BrotliEncoderCompress(10, BROTLI_MAX_WINDOW_BITS, BROTLI_DEFAULT_MODE,
-				srcSize, (const uint8_t *)src, &ret,dest + offSize) == BROTLI_TRUE) {
+		if (BrotliEncoderCompress(10, BROTLI_MAX_WINDOW_BITS, BROTLI_DEFAULT_MODE, srcSize,
+					(const uint8_t *)src, &ret, dest + offSize)
+				== BROTLI_TRUE) {
 			if (srcSize <= 0xFFFF) {
 				uint16_t sz = srcSize;
 				memcpy(dest, &sz, sizeof(sz));
@@ -236,13 +343,13 @@ size_t compressData(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t de
 		break;
 	}
 #endif
-	case EncodeFormat::NoCompression:
-		break;
+	case EncodeFormat::NoCompression: break;
 	}
 	return 0;
 }
 
-void writeCompressionMark(uint8_t *data, size_t sourceSize, EncodeFormat::Compression c, uint8_t padding) {
+void writeCompressionMark(uint8_t *data, size_t sourceSize, EncodeFormat::Compression c,
+		uint8_t padding) {
 	switch (c) {
 	case EncodeFormat::LZ4Compression:
 	case EncodeFormat::LZ4HCCompression:
@@ -281,30 +388,36 @@ void writeCompressionMark(uint8_t *data, size_t sourceSize, EncodeFormat::Compre
 		}
 		break;
 #endif
-	case EncodeFormat::NoCompression:
-		break;
+	case EncodeFormat::NoCompression: break;
 	}
 }
 
 template <typename Interface>
-static inline auto doCompress(const uint8_t *src, size_t size, EncodeFormat::Compression c, bool conditional) -> typename Interface::BytesType {
+static inline auto doCompress(const uint8_t *src, size_t size, EncodeFormat::Compression c,
+		bool conditional) -> typename Interface::BytesType {
 	auto bufferSize = getCompressBounds(size, c);
 	if (bufferSize == 0) {
 		return typename Interface::BytesType();
 	} else if (bufferSize <= sizeof(tl_compressBuffer)) {
 		auto encodeSize = compressData(src, size, tl_compressBuffer, sizeof(tl_compressBuffer), c);
-		if (encodeSize == 0 || (conditional && encodeSize + 4 > size)) { return typename Interface::BytesType(); }
+		if (encodeSize == 0 || (conditional && encodeSize + 4 > size)) {
+			return typename Interface::BytesType();
+		}
 		auto targetSize = encodeSize + 4;
 		auto targetExtra = 4 - (targetSize) % sizeof(uint32_t);
 		targetSize += ((targetExtra == 4) ? 0 : targetExtra);
-		typename Interface::BytesType ret; ret.resize(targetSize);
+		typename Interface::BytesType ret;
+		ret.resize(targetSize);
 		writeCompressionMark(ret.data(), size, c, (targetExtra == 4) ? 0 : targetExtra);
 		memcpy(ret.data() + 4, tl_compressBuffer, encodeSize);
 		return ret;
 	} else {
-		typename Interface::BytesType ret; ret.resize(bufferSize + 4);
+		typename Interface::BytesType ret;
+		ret.resize(bufferSize + 4);
 		auto encodeSize = compressData(src, size, ret.data() + 4, bufferSize, c);
-		if (encodeSize == 0 || (conditional && encodeSize + 4 > size)) { return typename Interface::BytesType(); }
+		if (encodeSize == 0 || (conditional && encodeSize + 4 > size)) {
+			return typename Interface::BytesType();
+		}
 		auto targetSize = encodeSize + 4;
 		auto targetExtra = 4 - (targetSize) % sizeof(uint32_t);
 		writeCompressionMark(ret.data(), size, c, (targetExtra == 4) ? 0 : targetExtra);
@@ -317,28 +430,33 @@ static inline auto doCompress(const uint8_t *src, size_t size, EncodeFormat::Com
 }
 
 template <>
-auto compress<memory::PoolInterface>(const uint8_t *src, size_t size, EncodeFormat::Compression c, bool conditional) -> memory::PoolInterface::BytesType {
+auto compress<memory::PoolInterface>(const uint8_t *src, size_t size, EncodeFormat::Compression c,
+		bool conditional) -> memory::PoolInterface::BytesType {
 	return doCompress<memory::PoolInterface>(src, size, c, conditional);
 }
 
 template <>
-auto compress<memory::StandartInterface>(const uint8_t *src, size_t size, EncodeFormat::Compression c, bool conditional) -> memory::StandartInterface::BytesType {
+auto compress<memory::StandartInterface>(const uint8_t *src, size_t size,
+		EncodeFormat::Compression c, bool conditional) -> memory::StandartInterface::BytesType {
 	return doCompress<memory::StandartInterface>(src, size, c, conditional);
 }
 
 template <>
-auto compress<memory::PoolInterface>(BytesView src, EncodeFormat::Compression c, bool conditional) -> memory::PoolInterface::BytesType {
+auto compress<memory::PoolInterface>(BytesView src, EncodeFormat::Compression c, bool conditional)
+		-> memory::PoolInterface::BytesType {
 	return doCompress<memory::PoolInterface>(src.data(), src.size(), c, conditional);
 }
 
 template <>
-auto compress<memory::StandartInterface>(BytesView src, EncodeFormat::Compression c, bool conditional) -> memory::StandartInterface::BytesType {
+auto compress<memory::StandartInterface>(BytesView src, EncodeFormat::Compression c,
+		bool conditional) -> memory::StandartInterface::BytesType {
 	return doCompress<memory::StandartInterface>(src.data(), src.size(), c, conditional);
 }
 
 using decompress_ptr = const uint8_t *;
 
-static bool doDecompressLZ4Frame(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t destSize) {
+static bool doDecompressLZ4Frame(const uint8_t *src, size_t srcSize, uint8_t *dest,
+		size_t destSize) {
 	return LZ4_decompress_safe((const char *)src, (char *)dest, int(srcSize), int(destSize)) > 0;
 }
 
@@ -352,7 +470,8 @@ static inline auto doDecompressLZ4(BytesView data, bool sh) -> ValueTemplate<Int
 			ret = data::read<Interface>(BytesView(tl_compressBuffer, size));
 		}
 	} else {
-		typename Interface::BytesType res; res.resize(size);
+		typename Interface::BytesType res;
+		res.resize(size);
 		if (doDecompressLZ4Frame(data.data(), data.size(), res.data(), size)) {
 			ret = data::read<Interface>(res);
 		}
@@ -361,17 +480,20 @@ static inline auto doDecompressLZ4(BytesView data, bool sh) -> ValueTemplate<Int
 }
 
 template <>
-auto decompressLZ4(const uint8_t *srcPtr, size_t srcSize, bool sh) -> ValueTemplate<memory::PoolInterface> {
+auto decompressLZ4(const uint8_t *srcPtr, size_t srcSize, bool sh)
+		-> ValueTemplate<memory::PoolInterface> {
 	return doDecompressLZ4<memory::PoolInterface>(BytesView(srcPtr, srcSize), sh);
 }
 
 template <>
-auto decompressLZ4(const uint8_t *srcPtr, size_t srcSize, bool sh) -> ValueTemplate<memory::StandartInterface> {
+auto decompressLZ4(const uint8_t *srcPtr, size_t srcSize, bool sh)
+		-> ValueTemplate<memory::StandartInterface> {
 	return doDecompressLZ4<memory::StandartInterface>(BytesView(srcPtr, srcSize), sh);
 }
 
 #ifdef MODULE_STAPPLER_BROTLI_LIB
-static bool doDecompressBrotliFrame(const uint8_t *src, size_t srcSize, uint8_t *dest, size_t destSize) {
+static bool doDecompressBrotliFrame(const uint8_t *src, size_t srcSize, uint8_t *dest,
+		size_t destSize) {
 	size_t ret = destSize;
 	return BrotliDecoderDecompress(srcSize, src, &ret, dest) == BROTLI_DECODER_RESULT_SUCCESS;
 }
@@ -385,7 +507,8 @@ static inline auto doDecompressBrotli(BytesView data, bool sh) -> ValueTemplate<
 			ret = data::read<Interface>(BytesView(tl_compressBuffer, size));
 		}
 	} else {
-		typename Interface::BytesType res; res.resize(size);
+		typename Interface::BytesType res;
+		res.resize(size);
 		if (doDecompressBrotliFrame(data.data(), data.size(), res.data(), size)) {
 			ret = data::read<Interface>(res);
 		}
@@ -394,12 +517,14 @@ static inline auto doDecompressBrotli(BytesView data, bool sh) -> ValueTemplate<
 }
 
 template <>
-auto decompressBrotli(const uint8_t *srcPtr, size_t srcSize, bool sh) -> ValueTemplate<memory::PoolInterface> {
+auto decompressBrotli(const uint8_t *srcPtr, size_t srcSize, bool sh)
+		-> ValueTemplate<memory::PoolInterface> {
 	return doDecompressBrotli<memory::PoolInterface>(BytesView(srcPtr, srcSize), sh);
 }
 
 template <>
-auto decompressBrotli(const uint8_t *srcPtr, size_t srcSize, bool sh) -> ValueTemplate<memory::StandartInterface> {
+auto decompressBrotli(const uint8_t *srcPtr, size_t srcSize, bool sh)
+		-> ValueTemplate<memory::StandartInterface> {
 	return doDecompressBrotli<memory::StandartInterface>(BytesView(srcPtr, srcSize), sh);
 }
 
@@ -478,4 +603,38 @@ size_t getDecompressedSize(const uint8_t *d, size_t size) {
 	return decompress(d, size, nullptr, 0);
 }
 
-}
+template <>
+const typename ValueTemplate<memory::StandartInterface>::StringType
+		ValueTemplate<memory::StandartInterface>::StringNull{};
+
+template <>
+const typename ValueTemplate<memory::StandartInterface>::BytesType
+		ValueTemplate<memory::StandartInterface>::BytesNull{};
+
+template <>
+const typename ValueTemplate<memory::StandartInterface>::ArrayType
+		ValueTemplate<memory::StandartInterface>::ArrayNull{};
+
+template <>
+const typename ValueTemplate<memory::StandartInterface>::DictionaryType
+		ValueTemplate<memory::StandartInterface>::DictionaryNull{};
+
+
+template <>
+const typename ValueTemplate<memory::PoolInterface>::StringType
+		ValueTemplate<memory::PoolInterface>::StringNull(memory::get_zero_pool());
+
+template <>
+const typename ValueTemplate<memory::PoolInterface>::BytesType
+		ValueTemplate<memory::PoolInterface>::BytesNull(memory::get_zero_pool());
+
+template <>
+const typename ValueTemplate<memory::PoolInterface>::ArrayType
+		ValueTemplate<memory::PoolInterface>::ArrayNull(memory::get_zero_pool());
+
+template <>
+const typename ValueTemplate<memory::PoolInterface>::DictionaryType
+		ValueTemplate<memory::PoolInterface>::DictionaryNull(memory::get_zero_pool());
+
+
+} // namespace stappler::data

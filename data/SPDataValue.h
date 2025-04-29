@@ -28,11 +28,14 @@ THE SOFTWARE.
 #include "SPLog.h"
 #include "SPTime.h"
 #include "SPDataTraits.h"
+#include <new>
 
 namespace STAPPLER_VERSIONIZED stappler::data {
 
-template <typename Interface> class JsonBuffer;
-template <typename Interface> class CborBuffer;
+template <typename Interface>
+class JsonBuffer;
+template <typename Interface>
+class CborBuffer;
 
 namespace json {
 
@@ -58,7 +61,7 @@ struct Decoder;
 template <typename Interface>
 class ValueTemplate;
 
-}
+} // namespace stappler::data
 
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
@@ -68,7 +71,7 @@ struct mem_sso_test<data::ValueTemplate<Interface>> {
 	static constexpr bool value = true;
 };
 
-}
+} // namespace stappler::memory
 
 
 namespace STAPPLER_VERSIONIZED stappler::data {
@@ -128,104 +131,224 @@ public:
 #endif
 
 	explicit ValueTemplate(Time v) : _type(Type::INTEGER) { intVal = int64_t(v.toMicros()); }
-	explicit ValueTemplate(TimeInterval v) : _type(Type::INTEGER) { intVal = int64_t(v.toMicros()); }
+	explicit ValueTemplate(TimeInterval v) : _type(Type::INTEGER) {
+		intVal = int64_t(v.toMicros());
+	}
 	explicit ValueTemplate(float v) : _type(Type::DOUBLE) { doubleVal = v; }
 	explicit ValueTemplate(double v) : _type(Type::DOUBLE) { doubleVal = v; }
-	explicit ValueTemplate(const char *v) : _type(Type::CHARSTRING) { strVal = (v ?  new StringType(v) : new StringType()); }
-	explicit ValueTemplate(const StringView &v) : _type(Type::CHARSTRING) { strVal = new StringType(v.data(), v.size()); }
-	explicit ValueTemplate(const StringType &v): _type(Type::CHARSTRING) { strVal = new StringType(v); }
-	explicit ValueTemplate(StringType &&v) : _type(Type::CHARSTRING) { strVal = new StringType(sp::move(v)); }
-	explicit ValueTemplate(const BytesType &v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(v); }
-	explicit ValueTemplate(BytesType &&v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(sp::move(v)); }
-	explicit ValueTemplate(const BytesViewTemplate<Endian::Big> &v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(v.data(), v.data() + v.size()); }
-	explicit ValueTemplate(const BytesViewTemplate<Endian::Little> &v) : _type(Type::BYTESTRING) { bytesVal = new BytesType(v.data(), v.data() + v.size()); }
-	explicit ValueTemplate(const ArrayType &v) : _type(Type::ARRAY) { arrayVal = new ArrayType(v); }
-	explicit ValueTemplate(ArrayType &&v) : _type(Type::ARRAY) { arrayVal = new ArrayType(sp::move(v)); }
-	explicit ValueTemplate(const DictionaryType &v) : _type(Type::DICTIONARY) { dictVal = new DictionaryType(v); }
-	explicit ValueTemplate(DictionaryType &&v) : _type(Type::DICTIONARY) { dictVal = new DictionaryType(sp::move(v)); }
+	explicit ValueTemplate(const char *v) : _type(Type::CHARSTRING) {
+		strVal = (v ? new (std::nothrow) StringType(v) : new (std::nothrow) StringType());
+	}
+	explicit ValueTemplate(const StringView &v) : _type(Type::CHARSTRING) {
+		strVal = new (std::nothrow) StringType(v.data(), v.size());
+	}
+	explicit ValueTemplate(const StringType &v) : _type(Type::CHARSTRING) {
+		strVal = new (std::nothrow) StringType(v);
+	}
+	explicit ValueTemplate(StringType &&v) : _type(Type::CHARSTRING) {
+		strVal = new (std::nothrow) StringType(sp::move(v));
+	}
+	explicit ValueTemplate(const BytesType &v) : _type(Type::BYTESTRING) {
+		bytesVal = new (std::nothrow) BytesType(v);
+	}
+	explicit ValueTemplate(BytesType &&v) : _type(Type::BYTESTRING) {
+		bytesVal = new (std::nothrow) BytesType(sp::move(v));
+	}
+	explicit ValueTemplate(const BytesViewTemplate<Endian::Big> &v) : _type(Type::BYTESTRING) {
+		bytesVal = new (std::nothrow) BytesType(v.data(), v.data() + v.size());
+	}
+	explicit ValueTemplate(const BytesViewTemplate<Endian::Little> &v) : _type(Type::BYTESTRING) {
+		bytesVal = new (std::nothrow) BytesType(v.data(), v.data() + v.size());
+	}
+	explicit ValueTemplate(const ArrayType &v) : _type(Type::ARRAY) {
+		arrayVal = new (std::nothrow) ArrayType(v);
+	}
+	explicit ValueTemplate(ArrayType &&v) : _type(Type::ARRAY) {
+		arrayVal = new (std::nothrow) ArrayType(sp::move(v));
+	}
+	explicit ValueTemplate(const DictionaryType &v) : _type(Type::DICTIONARY) {
+		dictVal = new (std::nothrow) DictionaryType(v);
+	}
+	explicit ValueTemplate(DictionaryType &&v) : _type(Type::DICTIONARY) {
+		dictVal = new (std::nothrow) DictionaryType(sp::move(v));
+	}
 
-	Self& operator= (const Self& other) noexcept;
-	Self& operator= (Self&& other) noexcept;
+	Self &operator=(const Self &other) noexcept;
+	Self &operator=(Self &&other) noexcept;
 
 	template <typename OtherInterface>
-	Self& operator= (const ValueTemplate<OtherInterface> &) noexcept;
+	Self &operator=(const ValueTemplate<OtherInterface> &) noexcept;
 
-	Self& operator= (nullptr_t) { clear(); _type = Type::EMPTY; return *this; }
-	Self& operator= (bool v) { reset(Type::BOOLEAN); boolVal = v; return *this; }
-	Self& operator= (int32_t v) { reset(Type::INTEGER); intVal = int64_t(v); return *this; }
-	Self& operator= (int64_t v) { reset(Type::INTEGER); intVal = int64_t(v); return *this; }
-	Self& operator= (size_t v) { reset(Type::INTEGER); intVal = int64_t(v); return *this; }
-	Self& operator= (float v) { reset(Type::DOUBLE); doubleVal = double(v); return *this; }
-	Self& operator= (double v) { reset(Type::DOUBLE); doubleVal = double(v); return *this; }
-	Self& operator= (const char *v) { return (*this = Self(v)); }
-	Self& operator= (const StringView &v) { return (*this = Self(v)); }
-	Self& operator= (const StringType &v) { return (*this = Self(v)); }
-	Self& operator= (StringType &&v) { return (*this = Self(sp::move(v))); }
-	Self& operator= (const BytesView &v) { return (*this = Self(v)); }
-	Self& operator= (const BytesType &v) { return (*this = Self(v)); }
-	Self& operator= (BytesType &&v) { return (*this = Self(sp::move(v))); }
-	Self& operator= (const ArrayType &v) { return (*this = Self(v)); }
-	Self& operator= (ArrayType &&v) { return (*this = Self(sp::move(v))); }
-	Self& operator= (const DictionaryType &v) { return (*this = Self(v)); }
-	Self& operator= (DictionaryType &&v) { return (*this = Self(sp::move(v))); }
+	Self &operator=(nullptr_t) {
+		clear();
+		_type = Type::EMPTY;
+		return *this;
+	}
+	Self &operator=(bool v) {
+		reset(Type::BOOLEAN);
+		boolVal = v;
+		return *this;
+	}
+	Self &operator=(int32_t v) {
+		reset(Type::INTEGER);
+		intVal = int64_t(v);
+		return *this;
+	}
+	Self &operator=(int64_t v) {
+		reset(Type::INTEGER);
+		intVal = int64_t(v);
+		return *this;
+	}
+	Self &operator=(size_t v) {
+		reset(Type::INTEGER);
+		intVal = int64_t(v);
+		return *this;
+	}
+	Self &operator=(float v) {
+		reset(Type::DOUBLE);
+		doubleVal = double(v);
+		return *this;
+	}
+	Self &operator=(double v) {
+		reset(Type::DOUBLE);
+		doubleVal = double(v);
+		return *this;
+	}
+	Self &operator=(const char *v) { return (*this = Self(v)); }
+	Self &operator=(const StringView &v) { return (*this = Self(v)); }
+	Self &operator=(const StringType &v) { return (*this = Self(v)); }
+	Self &operator=(StringType &&v) { return (*this = Self(sp::move(v))); }
+	Self &operator=(const BytesView &v) { return (*this = Self(v)); }
+	Self &operator=(const BytesType &v) { return (*this = Self(v)); }
+	Self &operator=(BytesType &&v) { return (*this = Self(sp::move(v))); }
+	Self &operator=(const ArrayType &v) { return (*this = Self(v)); }
+	Self &operator=(ArrayType &&v) { return (*this = Self(sp::move(v))); }
+	Self &operator=(const DictionaryType &v) { return (*this = Self(v)); }
+	Self &operator=(DictionaryType &&v) { return (*this = Self(sp::move(v))); }
 
-	bool operator== (const Self& v) const;
+	bool operator==(const Self &v) const;
 
-	bool operator== (bool v) const { return isBasicType() ? v == asBool() : false; }
-	bool operator== (int32_t v) const { return isBasicType() ? v == asInteger() : false; }
-	bool operator== (int64_t v) const { return isBasicType() ? v == asInteger() : false; }
-	bool operator== (size_t v) const { return isBasicType() ? v == asInteger() : false; }
-	bool operator== (float v) const { return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false; }
-	bool operator== (double v) const { return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false; }
-	bool operator== (const char *v) const { return isString() ? strVal->compare(v) == 0 : false; }
-	bool operator== (const StringView &v) const { return isString() ? string::detail::compare_c(*strVal, v) == 0 : false; }
-	bool operator== (const BytesView &v) const { return isBytes() ? (*bytesVal) == v : false; }
-	bool operator== (const ArrayType &v) const { return isArray() ? compare(*arrayVal, v) : false; }
-	bool operator== (const DictionaryType &v) const { return isDictionary() ? compare(*dictVal, v) : false; }
+	bool operator==(bool v) const { return isBasicType() ? v == asBool() : false; }
+	bool operator==(int32_t v) const { return isBasicType() ? v == asInteger() : false; }
+	bool operator==(int64_t v) const { return isBasicType() ? v == asInteger() : false; }
+	bool operator==(size_t v) const { return isBasicType() ? v == asInteger() : false; }
+	bool operator==(float v) const {
+		return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false;
+	}
+	bool operator==(double v) const {
+		return isBasicType() ? fabs(v - asDouble()) < epsilon<double>() : false;
+	}
+	bool operator==(const char *v) const { return isString() ? strVal->compare(v) == 0 : false; }
+	bool operator==(const StringView &v) const {
+		return isString() ? string::detail::compare_c(*strVal, v) == 0 : false;
+	}
+	bool operator==(const BytesView &v) const { return isBytes() ? (*bytesVal) == v : false; }
+	bool operator==(const ArrayType &v) const { return isArray() ? compare(*arrayVal, v) : false; }
+	bool operator==(const DictionaryType &v) const {
+		return isDictionary() ? compare(*dictVal, v) : false;
+	}
 
-	bool operator!= (const Self& v) const { return !(*this == v); }
-	bool operator!= (bool v) const { return !(*this == v); }
-	bool operator!= (int32_t v) const { return !(*this == v); }
-	bool operator!= (int64_t v) const { return !(*this == v); }
-	bool operator!= (size_t v) const { return !(*this == v); }
-	bool operator!= (float v) const { return !(*this == v); }
-	bool operator!= (double v) const { return !(*this == v); }
-	bool operator!= (const char *v) const { return !(*this == v); }
-	bool operator!= (const StringView &v) const { return !(*this == v); }
-	bool operator!= (const BytesView &v) const { return !(*this == v); }
-	bool operator!= (const ArrayType &v) const { return !(*this == v); }
-	bool operator!= (const DictionaryType &v) const { return !(*this == v); }
+	bool operator!=(const Self &v) const { return !(*this == v); }
+	bool operator!=(bool v) const { return !(*this == v); }
+	bool operator!=(int32_t v) const { return !(*this == v); }
+	bool operator!=(int64_t v) const { return !(*this == v); }
+	bool operator!=(size_t v) const { return !(*this == v); }
+	bool operator!=(float v) const { return !(*this == v); }
+	bool operator!=(double v) const { return !(*this == v); }
+	bool operator!=(const char *v) const { return !(*this == v); }
+	bool operator!=(const StringView &v) const { return !(*this == v); }
+	bool operator!=(const BytesView &v) const { return !(*this == v); }
+	bool operator!=(const ArrayType &v) const { return !(*this == v); }
+	bool operator!=(const DictionaryType &v) const { return !(*this == v); }
 
-	template <class Val, class Key> Self &setValue(Val &&value, Key &&key);
+	template <class Val, class Key>
+	Self &setValue(Val &&value, Key &&key);
 
-	template <class Val> Self &setValue(Val &&value);
-	template <class Val> Self &addValue(Val &&value);
-	template <class Key> Self &getValue(Key &&key);
-	template <class Key> const Self &getValue(Key &&key) const;
+	template <class Val>
+	Self &setValue(Val &&value);
+	template <class Val>
+	Self &addValue(Val &&value);
+	template <class Key>
+	Self &getValue(Key &&key);
+	template <class Key>
+	const Self &getValue(Key &&key) const;
 
 	Self &emplace();
-	template <class Key> Self &emplace(Key &&);
-	template <class Key> bool hasValue(Key &&) const;
+	template <class Key>
+	Self &emplace(Key &&);
+	template <class Key>
+	bool hasValue(Key &&) const;
 
 
-	template <class Key> void setNull(Key && key) { setValue(Self(), std::forward<Key>(key)); }
-	template <class Key> void setBool(bool value, Key && key) { setValue(Self(value), std::forward<Key>(key)); }
-	template <class Key> void setInteger(int64_t value, Key && key) { setValue(Self(value), std::forward<Key>(key)); }
-	template <class Key> void setDouble(double value, Key && key) { setValue(Self(value), std::forward<Key>(key)); }
-	template <class Key> void setString(const StringType &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setString(StringType &&v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
-	template <class Key> void setString(const char *v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setString(const StringView &v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
-	template <class Key> void setBytes(const BytesType &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setBytes(BytesType &&v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
-	template <class Key> void setBytes(const BytesViewTemplate<Endian::Big> &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setBytes(const BytesViewTemplate<Endian::Little> &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setArray(const ArrayType &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setArray(ArrayType &&v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
-	template <class Key> void setDict(const DictionaryType &v, Key &&key) { setValue(Self(v), std::forward<Key>(key)); }
-	template <class Key> void setDict(DictionaryType &&v, Key &&key) { setValue(Self(sp::move(v)), std::forward<Key>(key)); }
+	template <class Key>
+	void setNull(Key &&key) {
+		setValue(Self(), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setBool(bool value, Key &&key) {
+		setValue(Self(value), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setInteger(int64_t value, Key &&key) {
+		setValue(Self(value), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setDouble(double value, Key &&key) {
+		setValue(Self(value), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setString(const StringType &v, Key &&key) {
+		setValue(Self(v), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setString(StringType &&v, Key &&key) {
+		setValue(Self(sp::move(v)), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setString(const char *v, Key &&key) {
+		setValue(Self(v), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setString(const StringView &v, Key &&key) {
+		setValue(Self(sp::move(v)), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setBytes(const BytesType &v, Key &&key) {
+		setValue(Self(v), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setBytes(BytesType &&v, Key &&key) {
+		setValue(Self(sp::move(v)), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setBytes(const BytesViewTemplate<Endian::Big> &v, Key &&key) {
+		setValue(Self(v), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setBytes(const BytesViewTemplate<Endian::Little> &v, Key &&key) {
+		setValue(Self(v), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setArray(const ArrayType &v, Key &&key) {
+		setValue(Self(v), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setArray(ArrayType &&v, Key &&key) {
+		setValue(Self(sp::move(v)), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setDict(const DictionaryType &v, Key &&key) {
+		setValue(Self(v), std::forward<Key>(key));
+	}
+	template <class Key>
+	void setDict(DictionaryType &&v, Key &&key) {
+		setValue(Self(sp::move(v)), std::forward<Key>(key));
+	}
 
-	void setNull() { clear(); _type = Type::EMPTY; }
+	void setNull() {
+		clear();
+		_type = Type::EMPTY;
+	}
 	void setBool(bool value) { *this = value; }
 	void setInteger(int32_t value) { *this = value; }
 	void setInteger(int64_t value) { *this = value; }
@@ -264,38 +387,58 @@ public:
 	double getDouble(double def = 0) const { return isBasicType() ? asDouble() : def; }
 
 	StringType &getString() { return isString() ? *strVal : const_cast<StringType &>(StringNull); }
-	BytesType &getBytes(){ return isBytes() ? *bytesVal : const_cast<BytesType &>(BytesNull); }
+	BytesType &getBytes() { return isBytes() ? *bytesVal : const_cast<BytesType &>(BytesNull); }
 	ArrayType &getArray() { return asArray(); }
 	DictionaryType &getDict() { return asDict(); }
 
-	const StringType &getString() const { return isString()  ? *strVal : StringNull; }
+	const StringType &getString() const { return isString() ? *strVal : StringNull; }
 	const BytesType &getBytes() const { return isBytes() ? *bytesVal : BytesNull; }
 	const ArrayType &getArray() const { return asArray(); }
 	const DictionaryType &getDict() const { return asDict(); }
 
-	template <class Key> bool getBool(Key &&key) const;
-	template <class Key> int64_t getInteger(Key &&key, int64_t def = 0) const;
-	template <class Key> double getDouble(Key &&key, double def = 0) const;
-	template <class Key> StringType &getString(Key &&key);
-	template <class Key> const StringType &getString(Key &&key) const;
-	template <class Key> BytesType &getBytes(Key &&key);
-	template <class Key> const BytesType &getBytes(Key &&key) const;
-	template <class Key> ArrayType &getArray(Key &&key);
-	template <class Key> const ArrayType &getArray(Key &&key) const;
-	template <class Key> DictionaryType &getDict(Key &&key);
-	template <class Key> const DictionaryType &getDict(Key &&key) const;
+	template <class Key>
+	bool getBool(Key &&key) const;
+	template <class Key>
+	int64_t getInteger(Key &&key, int64_t def = 0) const;
+	template <class Key>
+	double getDouble(Key &&key, double def = 0) const;
+	template <class Key>
+	StringType &getString(Key &&key);
+	template <class Key>
+	const StringType &getString(Key &&key) const;
+	template <class Key>
+	BytesType &getBytes(Key &&key);
+	template <class Key>
+	const BytesType &getBytes(Key &&key) const;
+	template <class Key>
+	ArrayType &getArray(Key &&key);
+	template <class Key>
+	const ArrayType &getArray(Key &&key) const;
+	template <class Key>
+	DictionaryType &getDict(Key &&key);
+	template <class Key>
+	const DictionaryType &getDict(Key &&key) const;
 
-	template <class Key> bool erase(Key &&key);
+	template <class Key>
+	bool erase(Key &&key);
 
-	template <class Key> Self& newDict(Key &&key) { return setValue(Self(Type::DICTIONARY), std::forward<Key>(key)); }
-	template <class Key> Self& newArray(Key &&key) { return setValue(Self(Type::ARRAY), std::forward<Key>(key)); }
+	template <class Key>
+	Self &newDict(Key &&key) {
+		return setValue(Self(Type::DICTIONARY), std::forward<Key>(key));
+	}
+	template <class Key>
+	Self &newArray(Key &&key) {
+		return setValue(Self(Type::ARRAY), std::forward<Key>(key));
+	}
 
-	Self& addDict() { return addValue(Self( DictionaryType() )); }
-	Self& addArray() { return addValue(Self( ArrayType() )); }
+	Self &addDict() { return addValue(Self(DictionaryType())); }
+	Self &addArray() { return addValue(Self(ArrayType())); }
 
 	Self slice(int start, int count);
 
-	explicit operator bool() const noexcept { return (_type != Type::EMPTY && _type != Type::NONE); }
+	explicit operator bool() const noexcept {
+		return (_type != Type::EMPTY && _type != Type::NONE);
+	}
 
 	int64_t asInteger() const;
 	double asDouble() const;
@@ -303,11 +446,13 @@ public:
 	StringType asString() const;
 	BytesType asBytes() const;
 
-	ArrayType& asArray() { return isArray() ? *arrayVal : const_cast<ArrayType &>(ArrayNull); }
-	const ArrayType& asArray() const { return isArray() ? *arrayVal : ArrayNull; }
+	ArrayType &asArray() { return isArray() ? *arrayVal : const_cast<ArrayType &>(ArrayNull); }
+	const ArrayType &asArray() const { return isArray() ? *arrayVal : ArrayNull; }
 
-	DictionaryType& asDict() { return isDictionary() ? *dictVal : const_cast<DictionaryType &>(DictionaryNull); }
-	const DictionaryType& asDict() const { return isDictionary() ? *dictVal : DictionaryNull; }
+	DictionaryType &asDict() {
+		return isDictionary() ? *dictVal : const_cast<DictionaryType &>(DictionaryNull);
+	}
+	const DictionaryType &asDict() const { return isDictionary() ? *dictVal : DictionaryNull; }
 
 	size_t size() const noexcept;
 	bool empty() const noexcept;
@@ -317,7 +462,9 @@ public:
 	void encode(Stream &stream) const;
 
 	inline bool isNull() const noexcept { return _type == Type::EMPTY || _type == Type::NONE; }
-	inline bool isBasicType() const noexcept { return _type != Type::ARRAY && _type != Type::DICTIONARY; }
+	inline bool isBasicType() const noexcept {
+		return _type != Type::ARRAY && _type != Type::DICTIONARY;
+	}
 	inline bool isArray() const noexcept { return _type == Type::ARRAY; }
 	inline bool isDictionary() const noexcept { return _type == Type::DICTIONARY; }
 
@@ -329,20 +476,31 @@ public:
 
 	inline Type getType() const noexcept { return _type; }
 
-	template <class Key> bool isNull(Key &&) const;
-	template <class Key> bool isBasicType(Key &&) const;
-	template <class Key> bool isArray(Key &&) const;
-	template <class Key> bool isDictionary(Key &&) const;
+	template <class Key>
+	bool isNull(Key &&) const;
+	template <class Key>
+	bool isBasicType(Key &&) const;
+	template <class Key>
+	bool isArray(Key &&) const;
+	template <class Key>
+	bool isDictionary(Key &&) const;
 
-	template <class Key> bool isBool(Key &&) const;
-	template <class Key> bool isInteger(Key &&) const;
-	template <class Key> bool isDouble(Key &&) const;
-	template <class Key> bool isString(Key &&) const;
-	template <class Key> bool isBytes(Key &&) const;
+	template <class Key>
+	bool isBool(Key &&) const;
+	template <class Key>
+	bool isInteger(Key &&) const;
+	template <class Key>
+	bool isDouble(Key &&) const;
+	template <class Key>
+	bool isString(Key &&) const;
+	template <class Key>
+	bool isBytes(Key &&) const;
 
-	template <class Key> Type getType(Key &&) const;
+	template <class Key>
+	Type getType(Key &&) const;
 
-	template <typename NewInterface> auto convert() const -> ValueTemplate<NewInterface>;
+	template <typename NewInterface>
+	auto convert() const -> ValueTemplate<NewInterface>;
 
 protected:
 	template <typename Iface>
@@ -378,27 +536,16 @@ protected:
 		double doubleVal;
 		bool boolVal;
 
-		StringType * strVal;
-		BytesType * bytesVal;
-		ArrayType * arrayVal;
-		DictionaryType * dictVal;
+		StringType *strVal;
+		BytesType *bytesVal;
+		ArrayType *arrayVal;
+		DictionaryType *dictVal;
 	};
 };
 
 template <typename Interface>
-const typename ValueTemplate<Interface>::Self ValueTemplate<Interface>::Null(ValueTemplate<Interface>::Type::NONE);
-
-template <typename Interface>
-const typename ValueTemplate<Interface>::StringType ValueTemplate<Interface>::StringNull;
-
-template <typename Interface>
-const typename ValueTemplate<Interface>::BytesType ValueTemplate<Interface>::BytesNull;
-
-template <typename Interface>
-const typename ValueTemplate<Interface>::ArrayType ValueTemplate<Interface>::ArrayNull;
-
-template <typename Interface>
-const typename ValueTemplate<Interface>::DictionaryType ValueTemplate<Interface>::DictionaryNull;
+const typename ValueTemplate<Interface>::Self ValueTemplate<Interface>::Null(
+		ValueTemplate<Interface>::Type::NONE);
 
 template <typename Interface>
 ValueTemplate<Interface>::ValueTemplate() noexcept { }
@@ -410,22 +557,28 @@ ValueTemplate<Interface>::ValueTemplate(Type type) noexcept : _type(type) {
 	case Type::BOOLEAN: boolVal = false; break;
 	case Type::INTEGER: intVal = int64_t(0); break;
 	case Type::DOUBLE: doubleVal = double(0.0); break;
-	case Type::CHARSTRING: strVal = new StringType(""); break;
-	case Type::BYTESTRING: bytesVal = new BytesType; break;
-	case Type::DICTIONARY: dictVal = new DictionaryType; break;
-	case Type::ARRAY: arrayVal = new ArrayType; break;
+	case Type::CHARSTRING: strVal = new (std::nothrow) StringType(""); break;
+	case Type::BYTESTRING: bytesVal = new (std::nothrow) BytesType; break;
+	case Type::DICTIONARY: dictVal = new (std::nothrow) DictionaryType; break;
+	case Type::ARRAY: arrayVal = new (std::nothrow) ArrayType; break;
 	default: break;
 	}
 }
 
 template <typename Interface>
-ValueTemplate<Interface>::~ValueTemplate() noexcept { clear(); }
+ValueTemplate<Interface>::~ValueTemplate() noexcept {
+	clear();
+}
 
 template <typename Interface>
-ValueTemplate<Interface>::ValueTemplate(const Self &other) noexcept { *this = other; }
+ValueTemplate<Interface>::ValueTemplate(const Self &other) noexcept {
+	*this = other;
+}
 
 template <typename Interface>
-ValueTemplate<Interface>::ValueTemplate(Self &&other) noexcept { *this = sp::move(other); }
+ValueTemplate<Interface>::ValueTemplate(Self &&other) noexcept {
+	*this = sp::move(other);
+}
 
 template <typename Interface>
 template <typename OtherInterface>
@@ -434,9 +587,7 @@ ValueTemplate<Interface>::ValueTemplate(const ValueTemplate<OtherInterface> &oth
 
 	switch (other._type) {
 	case OtherType::NONE:
-	case OtherType::EMPTY:
-		_type = Type::EMPTY;
-		break;
+	case OtherType::EMPTY: _type = Type::EMPTY; break;
 	case OtherType::BOOLEAN:
 		_type = Type::BOOLEAN;
 		boolVal = other.boolVal;
@@ -451,22 +602,22 @@ ValueTemplate<Interface>::ValueTemplate(const ValueTemplate<OtherInterface> &oth
 		break;
 	case OtherType::CHARSTRING:
 		_type = Type::CHARSTRING;
-		strVal = new StringType(other.strVal->data(), other.strVal->size());
+		strVal = new (std::nothrow) StringType(other.strVal->data(), other.strVal->size());
 		break;
 	case OtherType::BYTESTRING:
 		_type = Type::BYTESTRING;
-		bytesVal = new BytesType(other.bytesVal->begin(), other.bytesVal->end());
+		bytesVal = new (std::nothrow) BytesType(other.bytesVal->begin(), other.bytesVal->end());
 		break;
 	case OtherType::DICTIONARY:
 		_type = Type::DICTIONARY;
-		dictVal = new DictionaryType();
+		dictVal = new (std::nothrow) DictionaryType();
 		for (auto &it : (*other.dictVal)) {
 			dictVal->emplace(StringType(it.first.data(), it.first.size()), it.second);
 		}
 		break;
 	case OtherType::ARRAY:
 		_type = Type::ARRAY;
-		arrayVal = new ArrayType(other.arrayVal->begin(), other.arrayVal->end());
+		arrayVal = new (std::nothrow) ArrayType(other.arrayVal->begin(), other.arrayVal->end());
 		break;
 	}
 }
@@ -474,20 +625,20 @@ ValueTemplate<Interface>::ValueTemplate(const ValueTemplate<OtherInterface> &oth
 template <typename Interface>
 ValueTemplate<Interface>::ValueTemplate(InitializerList<Self> il) : ValueTemplate(Type::ARRAY) {
 	arrayVal->reserve(il.size());
+	for (auto &it : il) { arrayVal->emplace_back(sp::move(const_cast<Self &>(it))); }
+}
+
+template <typename Interface>
+ValueTemplate<Interface>::ValueTemplate(InitializerList<Pair<StringType, Self>> il)
+: ValueTemplate(Type::DICTIONARY) {
 	for (auto &it : il) {
-		arrayVal->emplace_back(sp::move(const_cast<Self &>(it)));
+		dictVal->emplace(sp::move(const_cast<StringType &>(it.first)),
+				sp::move(const_cast<Self &>(it.second)));
 	}
 }
 
 template <typename Interface>
-ValueTemplate<Interface>::ValueTemplate(InitializerList<Pair<StringType, Self>> il) : ValueTemplate(Type::DICTIONARY) {
-	for (auto &it : il) {
-		dictVal->emplace(sp::move(const_cast<StringType &>(it.first)), sp::move(const_cast<Self &>(it.second)));
-	}
-}
-
-template <typename Interface>
-auto ValueTemplate<Interface>::operator= (const Self& other) noexcept -> Self & {
+auto ValueTemplate<Interface>::operator=(const Self &other) noexcept -> Self & {
 	if (_type == Type::NONE) {
 		return *this;
 	}
@@ -497,14 +648,17 @@ auto ValueTemplate<Interface>::operator= (const Self& other) noexcept -> Self & 
 		memset((void *)this, 0, sizeof(Self));
 
 		switch (other._type) {
-		case Type::NONE: _type = Type::EMPTY; return *this; break;
+		case Type::NONE:
+			_type = Type::EMPTY;
+			return *this;
+			break;
 		case Type::INTEGER: intVal = other.intVal; break;
 		case Type::DOUBLE: doubleVal = other.doubleVal; break;
 		case Type::BOOLEAN: boolVal = other.boolVal; break;
-		case Type::CHARSTRING: strVal = new StringType(*other.strVal); break;
-		case Type::BYTESTRING: bytesVal = new BytesType(*other.bytesVal); break;
-		case Type::ARRAY: arrayVal = new ArrayType(*other.arrayVal); break;
-		case Type::DICTIONARY: dictVal = new DictionaryType(*other.dictVal); break;
+		case Type::CHARSTRING: strVal = new (std::nothrow) StringType(*other.strVal); break;
+		case Type::BYTESTRING: bytesVal = new (std::nothrow) BytesType(*other.bytesVal); break;
+		case Type::ARRAY: arrayVal = new (std::nothrow) ArrayType(*other.arrayVal); break;
+		case Type::DICTIONARY: dictVal = new (std::nothrow) DictionaryType(*other.dictVal); break;
 		default: break;
 		}
 
@@ -514,7 +668,7 @@ auto ValueTemplate<Interface>::operator= (const Self& other) noexcept -> Self & 
 }
 
 template <typename Interface>
-auto ValueTemplate<Interface>::operator= (Self&& other) noexcept -> Self & {
+auto ValueTemplate<Interface>::operator=(Self &&other) noexcept -> Self & {
 	if (_type == Type::NONE) {
 		return *this;
 	}
@@ -534,28 +688,32 @@ auto ValueTemplate<Interface>::operator= (Self&& other) noexcept -> Self & {
 
 template <typename Interface>
 template <typename OtherInterface>
-auto ValueTemplate<Interface>::operator= (const ValueTemplate<OtherInterface> &other) noexcept -> Self & {
+auto ValueTemplate<Interface>::operator=(const ValueTemplate<OtherInterface> &other) noexcept
+		-> Self & {
 	return *this = ValueTemplate<Interface>(other);
 }
 
 template <typename Interface>
-bool ValueTemplate<Interface>::operator== (const Self& v) const {
-	if (this == &v) return true;
-	if (v._type != this->_type) return false;
+bool ValueTemplate<Interface>::operator==(const Self &v) const {
+	if (this == &v) {
+		return true;
+	}
+	if (v._type != this->_type) {
+		return false;
+	}
 	switch (_type) {
-		case Type::INTEGER: return v.intVal == this->intVal; break;
-		case Type::BOOLEAN: return v.boolVal == this->boolVal; break;
-		case Type::CHARSTRING: return *v.strVal == *this->strVal; break;
-		case Type::BYTESTRING: return *v.bytesVal == *this->bytesVal; break;
-		case Type::DOUBLE: return fabs(v.doubleVal - this->doubleVal) <= std::numeric_limits<double>::epsilon(); break;
-		case Type::ARRAY: return compare(*(this->arrayVal), *(v.arrayVal)); break;
-		case Type::DICTIONARY: return compare(*(this->dictVal), *(v.dictVal)); break;
-		case Type::EMPTY:
-		case Type::NONE:
-			return true;
-			break;
-		default:
-			break;
+	case Type::INTEGER: return v.intVal == this->intVal; break;
+	case Type::BOOLEAN: return v.boolVal == this->boolVal; break;
+	case Type::CHARSTRING: return *v.strVal == *this->strVal; break;
+	case Type::BYTESTRING: return *v.bytesVal == *this->bytesVal; break;
+	case Type::DOUBLE:
+		return fabs(v.doubleVal - this->doubleVal) <= std::numeric_limits<double>::epsilon();
+		break;
+	case Type::ARRAY: return compare(*(this->arrayVal), *(v.arrayVal)); break;
+	case Type::DICTIONARY: return compare(*(this->dictVal), *(v.dictVal)); break;
+	case Type::EMPTY:
+	case Type::NONE: return true; break;
+	default: break;
 	};
 
 	return false;
@@ -577,7 +735,7 @@ auto ValueTemplate<Interface>::slice(int start, int count) -> Self {
 	}
 
 	Self ret;
-	for (auto it = arrayVal->begin() + start; it != arrayVal->begin() + start + count; it ++) {
+	for (auto it = arrayVal->begin() + start; it != arrayVal->begin() + start + count; it++) {
 		ret.addValue(sp::move(*it));
 	}
 
@@ -616,7 +774,9 @@ bool ValueTemplate<Interface>::asBool() const {
 	case Type::INTEGER: return intVal == 0 ? false : true; break;
 	case Type::DOUBLE: return doubleVal == 0.0 ? false : true; break;
 	case Type::BOOLEAN: return boolVal; break;
-	case Type::CHARSTRING: return (strVal->empty() || *strVal == "0" || *strVal == "false") ? false : true; break;
+	case Type::CHARSTRING:
+		return (strVal->empty() || *strVal == "0" || *strVal == "false") ? false : true;
+		break;
 	default: return false; break;
 	}
 	return false;
@@ -630,29 +790,21 @@ auto ValueTemplate<Interface>::asString() const -> StringType {
 
 	typename Interface::StringStreamType ret;
 	switch (_type) {
-	case Type::INTEGER:
-		ret << intVal;
-		break;
+	case Type::INTEGER: ret << intVal; break;
 	case Type::DOUBLE: {
-		ret << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1) << doubleVal;
+		ret << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1)
+			<< doubleVal;
 		typename Interface::StringType r = ret.str();
 		auto pos = r.find_last_of('.');
 		if (pos != Interface::StringType::npos) {
-			while (r.size() > pos + 2 && r.back() == '0') {
-				r.pop_back();
-			}
+			while (r.size() > pos + 2 && r.back() == '0') { r.pop_back(); }
 		}
 		return r;
 		break;
 	}
-	case Type::BOOLEAN:
-		ret << (boolVal ? "true" : "false");
-		break;
-	case Type::BYTESTRING:
-		ret << "BASE64:" << base64::encode<Interface>(*bytesVal);
-		break;
-	default:
-		break;
+	case Type::BOOLEAN: ret << (boolVal ? "true" : "false"); break;
+	case Type::BYTESTRING: ret << "BASE64:" << base64::encode<Interface>(*bytesVal); break;
+	default: break;
 	}
 	return ret.str();
 }
@@ -681,8 +833,7 @@ auto ValueTemplate<Interface>::asBytes() const -> BytesType {
 		ret.resize(strVal->length());
 		memcpy(ret.data(), strVal->c_str(), strVal->length());
 		break;
-	default:
-		break;
+	default: break;
 	}
 	return ret;
 }
@@ -717,7 +868,10 @@ template <typename Interface>
 bool ValueTemplate<Interface>::convertToDict() {
 	switch (_type) {
 	case Type::DICTIONARY: return true; break;
-	case Type::EMPTY: reset(Type::DICTIONARY); return true; break;
+	case Type::EMPTY:
+		reset(Type::DICTIONARY);
+		return true;
+		break;
 	default: return false; break;
 	}
 	return false;
@@ -728,7 +882,10 @@ bool ValueTemplate<Interface>::convertToArray(int size) {
 	if (size < 0) {
 		switch (_type) {
 		case Type::ARRAY: return true; break;
-		case Type::EMPTY: reset(Type::ARRAY); return true; break;
+		case Type::EMPTY:
+			reset(Type::ARRAY);
+			return true;
+			break;
 		default: return false; break;
 		}
 		return false;
@@ -751,7 +908,9 @@ bool ValueTemplate<Interface>::compare(const ArrayType &v1, const ArrayType &v2)
 	const auto size = v1.size();
 	if (size == v2.size()) {
 		for (size_t i = 0; i < size; i++) {
-			if (v1[i] != v2[i]) return false;
+			if (v1[i] != v2[i]) {
+				return false;
+			}
 		}
 		return true;
 	}
@@ -759,7 +918,8 @@ bool ValueTemplate<Interface>::compare(const ArrayType &v1, const ArrayType &v2)
 }
 
 template <typename Interface>
-bool ValueTemplate<Interface>::compare(const DictionaryType &map1, const DictionaryType &map2) const {
+bool ValueTemplate<Interface>::compare(const DictionaryType &map1,
+		const DictionaryType &map2) const {
 	if (map1.size() != map2.size()) {
 		return false;
 	}
@@ -779,10 +939,22 @@ void ValueTemplate<Interface>::clear() {
 	case Type::INTEGER: intVal = 0; break;
 	case Type::DOUBLE: doubleVal = 0.0; break;
 	case Type::BOOLEAN: boolVal = false; break;
-	case Type::CHARSTRING: delete strVal; strVal = nullptr; break;
-	case Type::BYTESTRING: delete bytesVal; bytesVal = nullptr; break;
-	case Type::ARRAY: delete arrayVal; arrayVal = nullptr; break;
-	case Type::DICTIONARY: delete dictVal; dictVal = nullptr; break;
+	case Type::CHARSTRING:
+		delete strVal;
+		strVal = nullptr;
+		break;
+	case Type::BYTESTRING:
+		delete bytesVal;
+		bytesVal = nullptr;
+		break;
+	case Type::ARRAY:
+		delete arrayVal;
+		arrayVal = nullptr;
+		break;
+	case Type::DICTIONARY:
+		delete dictVal;
+		dictVal = nullptr;
+		break;
 	default: break;
 	}
 
@@ -799,10 +971,10 @@ void ValueTemplate<Interface>::reset(Type type) {
 
 	// Allocate memory for the new value
 	switch (type) {
-	case Type::CHARSTRING: strVal = new StringType(); break;
-	case Type::BYTESTRING: bytesVal = new BytesType(); break;
-	case Type::ARRAY: arrayVal = new ArrayType(); break;
-	case Type::DICTIONARY: dictVal = new DictionaryType(); break;
+	case Type::CHARSTRING: strVal = new (std::nothrow) StringType(); break;
+	case Type::BYTESTRING: bytesVal = new (std::nothrow) BytesType(); break;
+	case Type::ARRAY: arrayVal = new (std::nothrow) ArrayType(); break;
+	case Type::DICTIONARY: dictVal = new (std::nothrow) DictionaryType(); break;
 	default: break;
 	}
 
@@ -825,10 +997,14 @@ auto ValueTemplate<Interface>::setValue(Val &&value, Key &&key) -> Self & {
 				i->second = std::forward<Val>(value);
 				return i->second;
 			} else {
-				if constexpr (std::is_same<StringView, typename std::remove_cv<typename std::remove_reference<Key>::type>::type>()) {
-					return dictVal->emplace(key.template str<Interface>(), std::forward<Val>(value)).first->second;
+				if constexpr (std::is_same<StringView,
+									  typename std::remove_cv<
+											  typename std::remove_reference<Key>::type>::type>()) {
+					return dictVal->emplace(key.template str<Interface>(), std::forward<Val>(value))
+							.first->second;
 				} else {
-					return dictVal->emplace(std::forward<Key>(key), std::forward<Val>(value)).first->second;
+					return dictVal->emplace(std::forward<Key>(key), std::forward<Val>(value))
+							.first->second;
 				}
 			}
 		}
@@ -901,7 +1077,9 @@ auto ValueTemplate<Interface>::emplace(Key &&key) -> Self & {
 	if (convertToDict()) {
 		auto it = dictVal->find(key);
 		if (it == dictVal->end()) {
-			if constexpr (std::is_same<StringView, typename std::remove_cv<typename std::remove_reference<Key>::type>::type>()) {
+			if constexpr (std::is_same<StringView,
+								  typename std::remove_cv<
+										  typename std::remove_reference<Key>::type>::type>()) {
 				return dictVal->emplace(key.template str<Interface>(), Type::EMPTY).first->second;
 			} else {
 				return dictVal->emplace(std::forward<Key>(key), Type::EMPTY).first->second;
@@ -1070,7 +1248,9 @@ template <typename Interface>
 template <class Stream, class Traits>
 void ValueTemplate<Interface>::encode(Stream &stream) const {
 	bool begin = false;
-	if constexpr (Traits::onValue) { stream.onValue(*this); }
+	if constexpr (Traits::onValue) {
+		stream.onValue(*this);
+	}
 	switch (_type) {
 	case Type::EMPTY: stream.write(nullptr); break;
 	case Type::BOOLEAN: stream.write(boolVal); break;
@@ -1079,12 +1259,16 @@ void ValueTemplate<Interface>::encode(Stream &stream) const {
 	case Type::CHARSTRING: stream.write(*strVal); break;
 	case Type::BYTESTRING: stream.write(*bytesVal); break;
 	case Type::ARRAY:
-		if constexpr (Traits::onBeginArray) { stream.onBeginArray(*arrayVal); }
+		if constexpr (Traits::onBeginArray) {
+			stream.onBeginArray(*arrayVal);
+		}
 		for (auto &it : *arrayVal) {
 			if (!begin) {
 				begin = true;
 			} else {
-				if constexpr (Traits::onNextValue) { stream.onNextValue(); }
+				if constexpr (Traits::onNextValue) {
+					stream.onNextValue();
+				}
 			}
 			if constexpr (Traits::onArrayValue) {
 				stream.onArrayValue(it);
@@ -1092,15 +1276,21 @@ void ValueTemplate<Interface>::encode(Stream &stream) const {
 				it.encode(stream);
 			}
 		}
-		if constexpr (Traits::onEndArray) { stream.onEndArray(*arrayVal); }
+		if constexpr (Traits::onEndArray) {
+			stream.onEndArray(*arrayVal);
+		}
 		break;
 	case Type::DICTIONARY:
-		if constexpr (Traits::onBeginDict) { stream.onBeginDict(*dictVal); }
+		if constexpr (Traits::onBeginDict) {
+			stream.onBeginDict(*dictVal);
+		}
 		for (auto &it : *dictVal) {
 			if (!begin) {
 				begin = true;
 			} else {
-				if constexpr (Traits::onNextValue) { stream.onNextValue(); }
+				if constexpr (Traits::onNextValue) {
+					stream.onNextValue();
+				}
 			}
 			if constexpr (Traits::onKeyValuePair) {
 				stream.onKeyValuePair(it.first, it.second);
@@ -1112,17 +1302,19 @@ void ValueTemplate<Interface>::encode(Stream &stream) const {
 				it.second.encode(stream);
 			}
 		}
-		if constexpr (Traits::onEndDict) { stream.onEndDict(*dictVal); }
+		if constexpr (Traits::onEndDict) {
+			stream.onEndDict(*dictVal);
+		}
 		break;
-	default:
-		break;
+	default: break;
 	}
 };
 
 template <typename Interface>
 template <class Key>
 bool ValueTemplate<Interface>::isNull(Key &&key) const {
-	return getType(std::forward<Key>(key)) == Type::EMPTY || getType(std::forward<Key>(key)) == Type::NONE;
+	return getType(std::forward<Key>(key)) == Type::EMPTY
+			|| getType(std::forward<Key>(key)) == Type::NONE;
 }
 
 template <typename Interface>
@@ -1195,6 +1387,6 @@ auto ValueTemplate<Interface>::getType(Key &&key) const -> Type {
 	}
 }
 
-}
+} // namespace stappler::data
 
 #endif /* STAPPLER_DATA_SPDATAVALUE_H_ */

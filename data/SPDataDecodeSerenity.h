@@ -45,9 +45,7 @@ struct Decoder : public Interface::AllocBaseType {
 		BackIsGeneric,
 	};
 
-	Decoder(StringView &r) : backType(BackIsGeneric), r(r), back(nullptr) {
-		stack.reserve(10);
-	}
+	Decoder(StringView &r) : backType(BackIsGeneric), r(r), back(nullptr) { stack.reserve(10); }
 
 	inline void parseBufferString(StringType &ref);
 	inline void parseNumber(StringView &token, ValueType &ref) SPINLINE;
@@ -60,7 +58,7 @@ struct Decoder : public Interface::AllocBaseType {
 
 	inline void push(BackType t, ValueType *v) {
 		if (t != BackIsPlain && t != BackIsGeneric) {
-			++ r;
+			++r;
 		}
 		back = v;
 		stack.push_back(pair(t, v));
@@ -69,7 +67,7 @@ struct Decoder : public Interface::AllocBaseType {
 
 	inline void pop() {
 		if (backType != BackIsPlain && backType != BackIsPlainList && backType != BackIsPlainStop) {
-			r ++;
+			r++;
 		}
 		stack.pop_back();
 		if (stack.empty()) {
@@ -96,7 +94,7 @@ inline void Decoder<Interface>::parseNumber(StringView &token, ValueType &result
 		result.doubleVal = NumericLimits<double>::infinity();
 	} else if (token == "-inf") {
 		result._type = ValueType::Type::DOUBLE;
-		result.doubleVal = - NumericLimits<double>::infinity();
+		result.doubleVal = -NumericLimits<double>::infinity();
 	} else {
 		auto data = token.data();
 		auto size = token.size();
@@ -105,15 +103,15 @@ inline void Decoder<Interface>::parseNumber(StringView &token, ValueType &result
 			return;
 		} else if (value.size() != size) {
 			result._type = ValueType::Type::CHARSTRING;
-			result.strVal = new StringType(data, size);
+			result.strVal = new (std::nothrow) StringType(data, size);
 		} else {
 			if (isFloat) {
-				value.readDouble().unwrap([&] (double v) {
+				value.readDouble().unwrap([&](double v) {
 					result._type = ValueType::Type::DOUBLE;
 					result.doubleVal = v;
 				});
 			} else {
-				value.readInteger().unwrap([&] (int64_t v) {
+				value.readInteger().unwrap([&](int64_t v) {
 					result._type = ValueType::Type::INTEGER;
 					result.intVal = v;
 				});
@@ -125,8 +123,18 @@ inline void Decoder<Interface>::parseNumber(StringView &token, ValueType &result
 template <typename Interface>
 inline void Decoder<Interface>::parsePlainToken(ValueType &current, StringView token) {
 	switch (token[0]) {
-	case '0': case '1': case '2': case '3': case '4': case '5': case '6':
-	case '7': case '8': case '9': case '+': case '-':
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+	case '+':
+	case '-':
 		parseNumber(token, current);
 		return;
 		break;
@@ -163,13 +171,13 @@ inline void Decoder<Interface>::parsePlainToken(ValueType &current, StringView t
 		break;
 	case '~':
 		current._type = ValueType::Type::BYTESTRING;
-		current.bytesVal = new BytesType();
+		current.bytesVal = new (std::nothrow) BytesType();
 		string::urldecode(*current.bytesVal, token);
 		return;
 		break;
 	}
 	current._type = ValueType::Type::CHARSTRING;
-	current.strVal = new StringType();
+	current.strVal = new (std::nothrow) StringType();
 	string::urldecode(*current.strVal, token);
 }
 
@@ -187,7 +195,8 @@ inline void Decoder<Interface>::transformToDict(ValueType &current) {
 	current = ValueType(sp::move(dict));
 }
 
-using TokenSpecials = StringView::Chars<'/', '?', '@', '-', '.', '_', '!', '$', '\'', '*', '+', '%'>;
+using TokenSpecials =
+		StringView::Chars<'/', '?', '@', '-', '.', '_', '!', '$', '\'', '*', '+', '%'>;
 
 template <typename Interface>
 void Decoder<Interface>::parse(ValueType &val) {
@@ -197,7 +206,8 @@ void Decoder<Interface>::parse(ValueType &val) {
 
 	StringType key;
 	do {
-		r.skipUntil<TokenSpecials, StringView::Chars<'(', '~', ';', ')', ','>, StringView::CharGroup<CharGroupId::Alphanumeric>, chars::UniChar>();
+		r.skipUntil<TokenSpecials, StringView::Chars<'(', '~', ';', ')', ','>,
+				StringView::CharGroup<CharGroupId::Alphanumeric>, chars::UniChar>();
 		switch (backType) {
 		case BackIsPlain:
 			if (r.is(')') || r.is(';')) {
@@ -212,23 +222,27 @@ void Decoder<Interface>::parse(ValueType &val) {
 				push(BackIsGeneric, back);
 			} else {
 				r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-				StringView token = r.readUntil<StringView::Chars<'~', ',', ';', '(', ')'>, StringView::CharGroup<CharGroupId::WhiteSpace>>();
+				StringView token = r.readUntil<StringView::Chars<'~', ',', ';', '(', ')'>,
+						StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				if (r.is(':')) {
-					log::error("DataSerenityDecoder", "Colon sequence within plain list is invalid");
+					log::error("DataSerenityDecoder",
+							"Colon sequence within plain list is invalid");
 					stop = true;
 					break;
 				} else if (token.empty()) {
 					// do nothing
 				} else if (r.is('(') || r.is("~(")) {
-					key.clear(); string::urldecode(key, token);
+					key.clear();
+					string::urldecode(key, token);
 					back->_type = ValueType::Type::DICTIONARY;
-					back->dictVal = new typename ValueType::DictionaryType();
+					back->dictVal = new (std::nothrow) typename ValueType::DictionaryType();
 					backType = stack.back().first = BackIsPlainList;
-					push(BackIsGeneric, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+					push(BackIsGeneric,
+							&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 				} else if (r.is(',')) {
 					back->_type = ValueType::Type::ARRAY;
-					back->arrayVal = new typename ValueType::ArrayType();
+					back->arrayVal = new (std::nothrow) typename ValueType::ArrayType();
 					back->arrayVal->emplace_back(ValueType::Type::EMPTY);
 					backType = stack.back().first = BackIsPlainList;
 					parsePlainToken(back->arrayVal->back(), token);
@@ -244,7 +258,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 				continue;
 			} else if (r.is('(') || r.is("~(") || r.is(",~(") || r.is(",(")) {
 				if (r.is(',')) {
-					++ r;
+					++r;
 				}
 				if (back->_type == ValueType::Type::ARRAY) {
 					back->arrayVal->emplace_back(ValueType::Type::EMPTY);
@@ -257,16 +271,19 @@ void Decoder<Interface>::parse(ValueType &val) {
 				break;
 			} else if (r.is(',') || r.is<TokenSpecials>() || r.is<CharGroupId::Alphanumeric>()) {
 				if (r.is(',')) {
-					++ r;
+					++r;
 					r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				}
 
 				r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-				StringView token = r.readUntil<StringView::Chars<'~', ':', ',', ';', '(', ')'>, StringView::CharGroup<CharGroupId::WhiteSpace>>();
+				StringView token = r.readUntil<StringView::Chars<'~', ':', ',', ';', '(', ')'>,
+						StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				if (r.is(':')) {
-					auto tmp = token; tmp.skipChars<StringView::CharGroup<CharGroupId::Numbers>>();
+					auto tmp = token;
+					tmp.skipChars<StringView::CharGroup<CharGroupId::Numbers>>();
 					if (tmp.empty()) {
-						tmp = r.readUntil<StringView::Chars<'~', ',', ';', '(', ')'>, StringView::CharGroup<CharGroupId::WhiteSpace>>();
+						tmp = r.readUntil<StringView::Chars<'~', ',', ';', '(', ')'>,
+								StringView::CharGroup<CharGroupId::WhiteSpace>>();
 						token = StringView(token.data(), token.size() + tmp.size());
 					}
 				}
@@ -274,9 +291,11 @@ void Decoder<Interface>::parse(ValueType &val) {
 				if (r.is(':')) {
 					pop();
 					if (backType == BackIsDict) {
-						push(BackIsPlain, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+						push(BackIsPlain,
+								&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 					} else {
-						log::error("DataSerenityDecoder", "Colon sequence within plain list is invalid");
+						log::error("DataSerenityDecoder",
+								"Colon sequence within plain list is invalid");
 						stop = true;
 						break;
 					}
@@ -285,9 +304,11 @@ void Decoder<Interface>::parse(ValueType &val) {
 				}
 				if (back->_type == ValueType::Type::ARRAY) {
 					if (r.is('(')) {
-						key.clear(); string::urldecode(key, token);
+						key.clear();
+						string::urldecode(key, token);
 						transformToDict(*back);
-						push(BackIsGeneric, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+						push(BackIsGeneric,
+								&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 					} else if (r.is("~(")) {
 						back->arrayVal->emplace_back(ValueType::Type::EMPTY);
 						push(BackIsGeneric, &back->arrayVal->back());
@@ -296,9 +317,11 @@ void Decoder<Interface>::parse(ValueType &val) {
 						parsePlainToken(back->arrayVal->back(), token);
 					}
 				} else {
-					key.clear(); string::urldecode(key, token);
+					key.clear();
+					string::urldecode(key, token);
 					if (r.is('(') || r.is("~(")) {
-						push(BackIsGeneric, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+						push(BackIsGeneric,
+								&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 					} else {
 						back->dictVal->emplace(key, ValueType(true));
 					}
@@ -329,7 +352,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 		case BackIsArray:
 			if (!r.is(')')) {
 				if (r.is(';') || r.is(',')) {
-					++ r;
+					++r;
 					r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				}
 				if (r.is('(')) {
@@ -338,21 +361,25 @@ void Decoder<Interface>::parse(ValueType &val) {
 					push(BackIsGeneric, &back->arrayVal->back());
 				} else {
 					r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-					StringView token = r.readUntil<StringView::Chars<'~', ':', ',', ';', '(', ')'>, StringView::CharGroup<CharGroupId::WhiteSpace>>();
+					StringView token = r.readUntil<StringView::Chars<'~', ':', ',', ';', '(', ')'>,
+							StringView::CharGroup<CharGroupId::WhiteSpace>>();
 					r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 					if (token.empty()) {
 						// do nothing
 					} else if (r.is(':')) {
-						key.clear(); string::urldecode(key, token);
+						key.clear();
+						string::urldecode(key, token);
 						transformToDict(*back);
 						backType = stack.back().first = BackIsDict;
-						push(BackIsPlain, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+						push(BackIsPlain,
+								&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 					} else if (r.is('(') || r.is("~(")) {
 						key.clear();
 						string::urldecode(key, token);
 						transformToDict(*back);
 						backType = stack.back().first = BackIsDict;
-						push(BackIsGeneric, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+						push(BackIsGeneric,
+								&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 					} else {
 						back->arrayVal->emplace_back(ValueType::Type::EMPTY);
 						parsePlainToken(back->arrayVal->back(), token);
@@ -367,7 +394,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 		case BackIsDict:
 			if (!r.is(')')) {
 				if (r.is(';') || r.is(',')) {
-					++ r;
+					++r;
 				}
 
 				r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
@@ -376,19 +403,24 @@ void Decoder<Interface>::parse(ValueType &val) {
 					continue;
 				}
 
-				if (!r.is<TokenSpecials>() && !r.is<StringView::CharGroup<CharGroupId::Alphanumeric>>()) {
+				if (!r.is<TokenSpecials>()
+						&& !r.is<StringView::CharGroup<CharGroupId::Alphanumeric>>()) {
 					stop = true;
 					log::error("DataSerenityDecoder", "Invalid key");
 					break;
 				}
 
-				StringView token = r.readUntil<StringView::Chars<'~', ':', ',', ';', '(', ')'>, StringView::CharGroup<CharGroupId::WhiteSpace>>();
+				StringView token = r.readUntil<StringView::Chars<'~', ':', ',', ';', '(', ')'>,
+						StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-				key.clear(); string::urldecode(key, token);
+				key.clear();
+				string::urldecode(key, token);
 				if (r.is(':')) {
-					push(BackIsPlain, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+					push(BackIsPlain,
+							&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 				} else if (r.is('(') || r.is("~(")) {
-					push(BackIsGeneric, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+					push(BackIsGeneric,
+							&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 				} else if (r.is(';') || r.is(',')) {
 					back->dictVal->emplace(key, ValueType(true));
 				} else {
@@ -403,19 +435,20 @@ void Decoder<Interface>::parse(ValueType &val) {
 		case BackIsGeneric:
 			if (r.is('(') || r.is("~(")) {
 				if (r.is('(')) {
-					++ r;
+					++r;
 				} else if (r.is("~(")) {
 					r += 2;
 				}
 				if (r.is('(')) {
 					back->_type = ValueType::Type::ARRAY;
-					back->arrayVal = new typename ValueType::ArrayType();
+					back->arrayVal = new (std::nothrow) typename ValueType::ArrayType();
 					back->arrayVal->emplace_back(ValueType::Type::EMPTY);
 					backType = stack.back().first = BackIsArray;
 					push(BackIsGeneric, &back->arrayVal->back());
 				} else {
 					r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
-					StringView token = r.readUntil<StringView::Chars<'~', ':', ',', ';', '(', ')'>, StringView::CharGroup<CharGroupId::WhiteSpace>>();
+					StringView token = r.readUntil<StringView::Chars<'~', ':', ',', ';', '(', ')'>,
+							StringView::CharGroup<CharGroupId::WhiteSpace>>();
 					r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 					if (token.empty()) {
 						pop();
@@ -423,23 +456,27 @@ void Decoder<Interface>::parse(ValueType &val) {
 						parsePlainToken(*back, token);
 						pop();
 					} else if (r.is(':')) {
-						key.clear(); string::urldecode(key, token);
+						key.clear();
+						string::urldecode(key, token);
 						back->_type = ValueType::Type::DICTIONARY;
-						back->dictVal = new typename ValueType::DictionaryType();
+						back->dictVal = new (std::nothrow) typename ValueType::DictionaryType();
 						backType = stack.back().first = BackIsDict;
-						push(BackIsPlain, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+						push(BackIsPlain,
+								&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 
 						r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 
 					} else if (r.is('(') || r.is("~(")) {
-						key.clear(); string::urldecode(key, token);
+						key.clear();
+						string::urldecode(key, token);
 						back->_type = ValueType::Type::DICTIONARY;
-						back->dictVal = new typename ValueType::DictionaryType();
+						back->dictVal = new (std::nothrow) typename ValueType::DictionaryType();
 						backType = stack.back().first = BackIsDict;
-						push(BackIsGeneric, &back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
+						push(BackIsGeneric,
+								&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 					} else if (r.is(',') || r.is(';')) {
 						back->_type = ValueType::Type::ARRAY;
-						back->arrayVal = new typename ValueType::ArrayType();
+						back->arrayVal = new (std::nothrow) typename ValueType::ArrayType();
 						back->arrayVal->emplace_back(ValueType::Type::EMPTY);
 						backType = stack.back().first = BackIsArray;
 						parsePlainToken(back->arrayVal->back(), token);
@@ -475,6 +512,6 @@ auto read(const StringView &r) -> ValueTemplate<Interface> {
 	return read<Interface>(tmp);
 }
 
-}
+} // namespace stappler::data::serenity
 
 #endif /* STAPPLER_DATA_SPDATADECODESERENITY_H_ */

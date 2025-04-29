@@ -31,19 +31,19 @@ namespace STAPPLER_VERSIONIZED stappler::data::json {
 inline StringView decodeNumber(StringView &r, bool &isFloat) {
 	auto tmp = r;
 	if (r.is('-')) {
-		++ r;
+		++r;
 	}
 	r.skipChars<StringView::CharGroup<CharGroupId::Numbers>>();
 	if (r.is('.')) {
 		isFloat = true;
-		++ r;
+		++r;
 		r.skipChars<StringView::CharGroup<CharGroupId::Numbers>>();
 	}
 	if (r.is('E') || r.is('e')) {
 		isFloat = true;
-		++ r;
+		++r;
 		if (r.is('+') || r.is('-')) {
-			++ r;
+			++r;
 		}
 		r.skipChars<StringView::CharGroup<CharGroupId::Numbers>>();
 	}
@@ -74,21 +74,21 @@ struct Decoder : public Interface::AllocBaseType {
 	void parseJson(ValueType &val);
 
 	inline void push(BackType t, ValueType *v) {
-		++ r;
+		++r;
 		back = v;
 		stack.push_back(v);
 		backType = t;
 	}
 
 	inline void pop() {
-		r ++;
+		r++;
 		stack.pop_back();
 		if (stack.empty()) {
 			back = nullptr;
 			backType = BackIsEmpty;
 		} else {
 			back = stack.back();
-			backType = (back->isArray())?BackIsArray:BackIsDict;
+			backType = (back->isArray()) ? BackIsArray : BackIsDict;
 		}
 	}
 
@@ -104,37 +104,40 @@ struct Decoder : public Interface::AllocBaseType {
 template <typename Interface>
 inline void Decoder<Interface>::parseBufferString(StringType &ref) {
 #define Z16 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-	static const char escape[256] = {
-		Z16, Z16, 0, 0,'\"', 0, 0, 0, 0, '\'', 0, 0, 0, 0, 0, 0, 0,'/',
-		Z16, Z16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,'\\', 0, 0, 0,
-		0, 0,'\b', 0, 0, 0,'\f', 0, 0, 0, 0, 0, 0, 0,'\n', 0,
-		0, 0,'\r', 0,'\t', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		Z16, Z16, Z16, Z16, Z16, Z16, Z16, Z16
-	};
+	static const char escape[256] = {Z16, Z16, 0, 0, '\"', 0, 0, 0, 0, '\'', 0, 0, 0, 0, 0, 0, 0,
+		'/', Z16, Z16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '\\', 0, 0, 0, 0, 0, '\b', 0, 0, 0, '\f',
+		0, 0, 0, 0, 0, 0, 0, '\n', 0, 0, 0, '\r', 0, '\t', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Z16,
+		Z16, Z16, Z16, Z16, Z16, Z16, Z16};
 #undef Z16
-	if (r.is('"')) { r ++; }
+	if (r.is('"')) {
+		r++;
+	}
 	auto s = r.readUntil<StringView::Chars<'\\', '"'>>();
 	ref.assign(s.data(), s.size());
 	while (!r.empty() && !r.is('"')) {
 		if (r.is('\\')) {
-			++ r;
+			++r;
 			if (r.is('u')) {
-				++ r;
+				++r;
 				if (r >= 4) {
-					unicode::utf8Encode(ref, char16_t(base16::hexToChar(r[0], r[1]) << 8 | base16::hexToChar(r[2], r[3]) ));
+					unicode::utf8Encode(ref,
+							char16_t(base16::hexToChar(r[0], r[1]) << 8
+									| base16::hexToChar(r[2], r[3])));
 					r += 4;
 				} else {
 					r.clear();
 				}
 			} else {
 				ref.push_back(escape[(uint8_t)r[0]]);
-				++ r;
+				++r;
 			}
 		}
 		auto s = r.readUntil<StringView::Chars<'\\', '"'>>();
 		ref.append(s.data(), s.size());
 	}
-	if (r.is('"')) { ++ r; }
+	if (r.is('"')) {
+		++r;
+	}
 }
 
 template <typename Interface>
@@ -145,12 +148,12 @@ inline void Decoder<Interface>::parseJsonNumber(ValueType &result) {
 		return;
 	} else {
 		if (isFloat) {
-			value.readDouble().unwrap([&] (double v) {
+			value.readDouble().unwrap([&](double v) {
 				result._type = ValueType::Type::DOUBLE;
 				result.doubleVal = v;
 			});
 		} else {
-			value.readInteger().unwrap([&] (int64_t v) {
+			value.readInteger().unwrap([&](int64_t v) {
 				result._type = ValueType::Type::INTEGER;
 				result.intVal = v;
 			});
@@ -160,11 +163,11 @@ inline void Decoder<Interface>::parseJsonNumber(ValueType &result) {
 
 template <typename Interface>
 inline void Decoder<Interface>::parseValue(ValueType &current) {
-	switch(r[0]) {
+	switch (r[0]) {
 	case '"':
 		current._type = ValueType::Type::CHARSTRING;
 		parseBufferString(buf);
-		current.strVal = new StringType(sp::move(buf));
+		current.strVal = new (std::nothrow) StringType(sp::move(buf));
 		break;
 	case 't':
 		current._type = ValueType::Type::BOOLEAN;
@@ -176,19 +179,27 @@ inline void Decoder<Interface>::parseValue(ValueType &current) {
 		current.boolVal = false;
 		r += 5;
 		break;
-	case '0': case '1': case '2': case '3': case '4': case '5':
-	case '6': case '7': case '8': case '9': case '+': case '-':
-		parseJsonNumber(current);
-		break;
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+	case '+':
+	case '-': parseJsonNumber(current); break;
 	case '[':
 		current._type = ValueType::Type::ARRAY;
-		current.arrayVal = new typename ValueType::ArrayType();
+		current.arrayVal = new (std::nothrow) typename ValueType::ArrayType();
 		//current.arrayVal->reserve(10);
 		push(BackIsArray, &current);
 		break;
 	case '{':
 		current._type = ValueType::Type::DICTIONARY;
-		current.dictVal = new typename ValueType::DictionaryType();
+		current.dictVal = new (std::nothrow) typename ValueType::DictionaryType();
 		push(BackIsDict, &current);
 		break;
 	case 'n':
@@ -205,11 +216,13 @@ inline void Decoder<Interface>::parseValue(ValueType &current) {
 	case ':':
 	case ',':
 		log::error("json::Decoder", "Invalid token: ", r.sub(0, 1), "; expected value");
-		r.skipUntil<StringView::Chars<'"', 't', 'f', 'n', '+', '-', '[', '{', ']', '}'>, StringView::Range<'0', '9'>>();
-		++ r;
+		r.skipUntil<StringView::Chars<'"', 't', 'f', 'n', '+', '-', '[', '{', ']', '}'>,
+				StringView::Range<'0', '9'>>();
+		++r;
 		break;
 	default:
-		r.skipUntil<StringView::Chars<'"', 't', 'f', 'n', '+', '-', '[', '{', ']', '}'>, StringView::Range<'0', '9'>>();
+		r.skipUntil<StringView::Chars<'"', 't', 'f', 'n', '+', '-', '[', '{', ']', '}'>,
+				StringView::Range<'0', '9'>>();
 		break;
 	}
 }
@@ -242,14 +255,13 @@ void Decoder<Interface>::parseJson(ValueType &val) {
 				} else {
 					r.skipChars<StringView::Chars<':', ' ', '\n', '\r', '\t'>>();
 				}
-				parseValue(back->dictVal->emplace(sp::move(buf), ValueType::Type::EMPTY).first->second);
+				parseValue(back->dictVal->emplace(sp::move(buf), ValueType::Type::EMPTY)
+								.first->second);
 			} else {
 				pop();
 			}
 			break;
-		case BackIsEmpty:
-			parseValue(val);
-			break;
+		case BackIsEmpty: parseValue(val); break;
 		}
 	} while (!r.empty() && !stack.empty() && !stop);
 }
@@ -275,6 +287,6 @@ auto read(const StringView &r) -> ValueTemplate<Interface> {
 	return read<Interface>(tmp);
 }
 
-}
+} // namespace stappler::data::json
 
 #endif /* STAPPLER_DATA_SPDATADECODEJSON_H_ */

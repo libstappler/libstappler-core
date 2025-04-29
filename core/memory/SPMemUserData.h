@@ -30,7 +30,8 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
-SP_PUBLIC void store(pool_t *, void *ptr, const StringView &key, memory::function<void()> && = nullptr);
+SP_PUBLIC void store(pool_t *, void *ptr, const StringView &key,
+		memory::function<void()> && = nullptr);
 
 template <typename T = void>
 inline T *get(pool_t *pool, const StringView &key) {
@@ -40,7 +41,7 @@ inline T *get(pool_t *pool, const StringView &key) {
 	};
 
 	void *ptr = nullptr;
-	if (pool::userdata_get(&ptr, key.data(), key.size(), pool) == SUCCESS) {
+	if (pool::userdata_get(&ptr, key.data(), key.size(), pool) == Status::Ok) {
 		if (ptr) {
 			return (T *)((Handle *)ptr)->pointer;
 		}
@@ -57,6 +58,6 @@ inline T *get(const StringView &key) {
 	return get<T>(acquire(), key);
 }
 
-}
+} // namespace stappler::memory::pool
 
 #endif /* STAPPLER_CORE_MEMORY_SPMEMUSERDATA_H_ */

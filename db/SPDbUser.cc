@@ -31,20 +31,22 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db {
 
 User *User::create(const Transaction &a, const StringView &name, const StringView &password) {
-	return create(a, Value{
-		std::make_pair("name", Value(name)),
-		std::make_pair("password", Value(password)),
-	});
+	return create(a,
+			Value{
+				std::make_pair("name", Value(name)),
+				std::make_pair("password", Value(password)),
+			});
 }
 
 User *User::setup(const Transaction &a, const StringView &name, const StringView &password) {
 	auto s = a.getAdapter().getApplicationInterface()->getUserScheme();
 	if (Worker(*s, a).asSystem().count() == 0) {
-		return create(a, Value{
-			std::make_pair("name", Value(name)),
-			std::make_pair("password", Value(password)),
-			std::make_pair("isAdmin", Value(true)),
-		});
+		return create(a,
+				Value{
+					std::make_pair("name", Value(name)),
+					std::make_pair("password", Value(password)),
+					std::make_pair("isAdmin", Value(true)),
+				});
 	}
 	return nullptr;
 }
@@ -52,7 +54,7 @@ User *User::create(const Transaction &a, Value &&val) {
 	auto s = a.getAdapter().getApplicationInterface()->getUserScheme();
 
 	auto d = Worker(*s, a).asSystem().create(val);
-	return new User(sp::move(d), *s);
+	return new (std::nothrow) User(sp::move(d), *s);
 }
 
 User *User::get(const Adapter &a, const StringView &name, const StringView &password) {
@@ -60,16 +62,19 @@ User *User::get(const Adapter &a, const StringView &name, const StringView &pass
 	return get(a, *s, name, password);
 }
 
-User *User::get(const Adapter &a, const Scheme &scheme, const StringView &name, const StringView &password) {
+User *User::get(const Adapter &a, const Scheme &scheme, const StringView &name,
+		const StringView &password) {
 	return a.authorizeUser(Auth(a.getApplicationInterface(), scheme), name, password);
 }
 
 User *User::get(const Adapter &a, const Scheme &scheme, const BytesView &key) {
 	for (auto &it : scheme.getFields()) {
-		if (it.second.getType() == db::Type::Bytes && it.second.getTransform() == db::Transform::PublicKey && it.second.isIndexed()) {
-			auto d = Worker(scheme, a).asSystem().select(db::Query().select(it.second.getName(), Value(key)));
+		if (it.second.getType() == db::Type::Bytes
+				&& it.second.getTransform() == db::Transform::PublicKey && it.second.isIndexed()) {
+			auto d = Worker(scheme, a).asSystem().select(
+					db::Query().select(it.second.getName(), Value(key)));
 			if (d.isArray() && d.size() == 1) {
-				return new User(sp::move(d.getValue(0)), scheme);
+				return new (std::nothrow) User(sp::move(d.getValue(0)), scheme);
 			}
 			break;
 		}
@@ -85,7 +90,7 @@ User *User::get(const Adapter &a, uint64_t oid) {
 User *User::get(const Adapter &a, const Scheme &s, uint64_t oid) {
 	auto d = Worker(s, a).asSystem().get(oid);
 	if (d.isDictionary()) {
-		return new User(sp::move(d), s);
+		return new (std::nothrow) User(sp::move(d), s);
 	}
 	return nullptr;
 }
@@ -95,16 +100,20 @@ User *User::get(const Transaction &a, const StringView &name, const StringView &
 	return get(a, *s, name, password);
 }
 
-User *User::get(const Transaction &a, const Scheme &scheme, const StringView &name, const StringView &password) {
-	return a.getAdapter().authorizeUser(Auth(a.getAdapter().getApplicationInterface(), scheme), name, password);
+User *User::get(const Transaction &a, const Scheme &scheme, const StringView &name,
+		const StringView &password) {
+	return a.getAdapter().authorizeUser(Auth(a.getAdapter().getApplicationInterface(), scheme),
+			name, password);
 }
 
 User *User::get(const Transaction &a, const Scheme &scheme, const BytesView &key) {
 	for (auto &it : scheme.getFields()) {
-		if (it.second.getType() == db::Type::Bytes && it.second.getTransform() == db::Transform::PublicKey && it.second.isIndexed()) {
-			auto d = Worker(scheme, a).asSystem().select(db::Query().select(it.second.getName(), Value(key)));
+		if (it.second.getType() == db::Type::Bytes
+				&& it.second.getTransform() == db::Transform::PublicKey && it.second.isIndexed()) {
+			auto d = Worker(scheme, a).asSystem().select(
+					db::Query().select(it.second.getName(), Value(key)));
 			if (d.isArray() && d.size() == 1) {
-				return new User(sp::move(d.getValue(0)), scheme);
+				return new (std::nothrow) User(sp::move(d.getValue(0)), scheme);
 			}
 			break;
 		}
@@ -120,7 +129,7 @@ User *User::get(const Transaction &a, uint64_t oid) {
 User *User::get(const Transaction &a, const Scheme &s, uint64_t oid) {
 	auto d = Worker(s, a).asSystem().get(oid);
 	if (d.isDictionary()) {
-		return new User(sp::move(d), s);
+		return new (std::nothrow) User(sp::move(d), s);
 	}
 	return nullptr;
 }
@@ -128,7 +137,7 @@ User *User::get(const Transaction &a, const Scheme &s, uint64_t oid) {
 User::User(Value &&d, const Scheme &s) : Object(sp::move(d), s) { }
 
 bool User::validatePassword(const StringView &passwd) const {
-	auto & fields = _scheme.getFields();
+	auto &fields = _scheme.getFields();
 	auto it = _scheme.getFields().find("password");
 	if (it != fields.end() && it->second.getTransform() == Transform::Password) {
 		auto f = static_cast<const FieldPassword *>(it->second.getSlot());
@@ -138,7 +147,7 @@ bool User::validatePassword(const StringView &passwd) const {
 }
 
 void User::setPassword(const StringView &passwd) {
-	auto & fields = _scheme.getFields();
+	auto &fields = _scheme.getFields();
 	auto it = _scheme.getFields().find("password");
 	if (it != fields.end() && it->second.getTransform() == Transform::Password) {
 		auto f = static_cast<const FieldPassword *>(it->second.getSlot());
@@ -146,12 +155,8 @@ void User::setPassword(const StringView &passwd) {
 	}
 }
 
-bool User::isAdmin() const {
-	return getBool("isAdmin");
-}
+bool User::isAdmin() const { return getBool("isAdmin"); }
 
-StringView User::getName() const {
-	return getString("name");
-}
+StringView User::getName() const { return getString("name"); }
 
-}
+} // namespace stappler::db

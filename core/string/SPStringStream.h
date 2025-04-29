@@ -20,10 +20,15 @@
  THE SOFTWARE.
  **/
 
+// clang-format off
+
 #ifndef CORE_CORE_STRING_SPSTRINGSTREAM_H_
 #define CORE_CORE_STRING_SPSTRINGSTREAM_H_
 
 #include "SPStringView.h"
+#include "SPBytesView.h"
+#include "SPStringDetail.h"
+#include <type_traits>
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -48,119 +53,6 @@ template <typename Interface>
 auto toUtf8(char32_t c) -> typename Interface::StringType;
 
 }
-
-#define SP_DEFINE_STREAM_OVERLOADS_GENERAL(Type, Char) \
-	inline auto operator<<(const Type &stream, const Char *val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	template <size_t N> inline auto operator<<(const Type &stream, const Char val[N]) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, double val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, float val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, int64_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, uint64_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, int32_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, uint32_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, int16_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, uint16_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, int8_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, uint8_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, char32_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, char16_t val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-	inline auto operator<<(const Type &stream, char val) -> const Type & { string::detail::streamWrite(stream, val); return stream; } \
-
-#if SP_HAVE_DEDICATED_SIZE_T
-#define SP_DEFINE_STREAM_OVERLOADS(Type, Char) SP_DEFINE_STREAM_OVERLOADS_GENERAL(Type, Char) \
-	inline auto operator<<(const Type &stream, size_t val) -> const Type & { string::detail::streamWrite(stream, int64_t(val)); return stream; }
-#else
-#define SP_DEFINE_STREAM_OVERLOADS(Type, Char) SP_DEFINE_STREAM_OVERLOADS_GENERAL(Type, Char)
-#endif
-
-inline auto operator<<(const Callback<void(StringViewBase<char>)> &cb, const StringViewBase<char> &val) -> const Callback<void(StringViewBase<char>)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(StringViewBase<char16_t>)> &cb, const StringViewBase<char16_t> &val) -> const Callback<void(StringViewBase<char16_t>)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(StringViewUtf8)> &cb, const StringViewUtf8 &val) -> const Callback<void(StringViewUtf8)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char>)> &cb, const StringViewBase<char> &val) -> const std::function<void(StringViewBase<char>)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewBase<char16_t>)> &cb, const StringViewBase<char16_t> &val) -> const std::function<void(StringViewBase<char16_t>)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(StringViewUtf8)> &cb, const StringViewUtf8 &val) -> const std::function<void(StringViewUtf8)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char>)> &cb, const StringViewBase<char> &val) -> const memory::function<void(StringViewBase<char>)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewBase<char16_t>)> &cb, const StringViewBase<char16_t> &val) -> const memory::function<void(StringViewBase<char16_t>)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(StringViewUtf8)> &cb, const StringViewUtf8 &val) -> const memory::function<void(StringViewUtf8)> & {
-	string::detail::streamWrite(cb, val);
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(BytesView)> &cb, const BytesView &val) -> const Callback<void(BytesView)> & {
-	cb(val);
-	return cb;
-}
-
-inline auto operator<<(const Callback<void(BytesView)> &cb, const uint8_t &val) -> const Callback<void(BytesView)> & {
-	cb(BytesView(&val, 1));
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(BytesView)> &cb, const BytesView &val) -> const std::function<void(BytesView)> & {
-	cb(val);
-	return cb;
-}
-
-inline auto operator<<(const std::function<void(BytesView)> &cb, const uint8_t &val) -> const std::function<void(BytesView)> & {
-	cb(BytesView(&val, 1));
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(BytesView)> &cb, const BytesView &val) -> const memory::function<void(BytesView)> & {
-	cb(val);
-	return cb;
-}
-
-inline auto operator<<(const memory::function<void(BytesView)> &cb, const uint8_t &val) -> const memory::function<void(BytesView)> & {
-	cb(BytesView(&val, 1));
-	return cb;
-}
-
-SP_DEFINE_STREAM_OVERLOADS(Callback<void(StringViewBase<char>)>,char)
-SP_DEFINE_STREAM_OVERLOADS(Callback<void(StringViewBase<char16_t>)>,char16_t)
-SP_DEFINE_STREAM_OVERLOADS(Callback<void(StringViewUtf8)>,char)
-
-SP_DEFINE_STREAM_OVERLOADS(std::function<void(StringViewBase<char>)>,char)
-SP_DEFINE_STREAM_OVERLOADS(std::function<void(StringViewBase<char16_t>)>,char16_t)
-SP_DEFINE_STREAM_OVERLOADS(std::function<void(StringViewUtf8)>,char)
-
-SP_DEFINE_STREAM_OVERLOADS(memory::function<void(StringViewBase<char>)>,char)
-SP_DEFINE_STREAM_OVERLOADS(memory::function<void(StringViewBase<char16_t>)>,char16_t)
-SP_DEFINE_STREAM_OVERLOADS(memory::function<void(StringViewUtf8)>,char)
-
-#undef SP_DEFINE_STREAM_OVERLOADS
 
 namespace string {
 
@@ -432,6 +324,26 @@ static auto toString(Args && ... args) -> typename Interface::StringType {
 	}
 }
 
+}
+
+}
+
+namespace STAPPLER_VERSIONIZED stappler::memory {
+
+template <typename T, typename ReturnType, typename... ArgumentTypes>
+const callback<ReturnType(ArgumentTypes...)> &operator<<(const callback<ReturnType(ArgumentTypes...)> &cb, const T &val) {
+	static_assert(sizeof...(ArgumentTypes) == 1, "Functional stream should accept only one argument");
+
+	using BaseType = std::tuple_element_t<0, std::tuple<ArgumentTypes...>>;
+
+	static_assert(std::is_same<BaseType, StringViewBase<char>>::value
+		|| std::is_same<BaseType, StringViewBase<char16_t>>::value
+		|| std::is_same<BaseType, StringViewUtf8>::value
+		|| std::is_same<BaseType, BytesView>::value,
+		"Functional stream argument should be one of StringView, WideStringView, StringViewUtf8, BytesView");
+
+	stappler::string::detail::streamWrite(cb, val);
+	return cb;
 }
 
 }

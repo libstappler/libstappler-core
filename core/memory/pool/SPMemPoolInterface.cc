@@ -567,6 +567,16 @@ void *alloc(pool_t *pool, size_t &size) {
 	return ((custom::Pool *)pool)->alloc(size);
 }
 
+void *alloc(pool_t *pool, size_t &size, uint32_t alignment) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
+		if (!isStappler(pool)) {
+			log::error("memory", "APR pool can not allocate aligned mem");
+			return nullptr;
+		}
+	}
+	return ((custom::Pool *)pool)->alloc(size, alignment);
+}
+
 void *palloc(pool_t *pool, size_t size) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
@@ -574,6 +584,16 @@ void *palloc(pool_t *pool, size_t size) {
 		}
 	}
 	return ((custom::Pool *)pool)->palloc(size);
+}
+
+void *palloc(pool_t *pool, size_t size, uint32_t alignment) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
+		if (!isStappler(pool)) {
+			log::error("memory", "APR pool can not allocate aligned mem");
+			return nullptr;
+		}
+	}
+	return ((custom::Pool *)pool)->palloc(size, alignment);
 }
 
 void *calloc(pool_t *pool, size_t count, size_t eltsize) {
@@ -598,7 +618,8 @@ void free(pool_t *pool, void *ptr, size_t size) {
 void cleanup_kill(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
-			apr::pool::cleanup_kill((apr::pool_t *)pool, ptr, cb);
+			apr::pool::cleanup_kill((apr::pool_t *)pool, ptr,
+					(stappler::mempool::apr::status_t(*)(void *))cb);
 			return;
 		}
 	}
@@ -608,7 +629,8 @@ void cleanup_kill(pool_t *pool, void *ptr, cleanup_fn cb) {
 void cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
-			apr::pool::cleanup_register((apr::pool_t *)pool, ptr, cb);
+			apr::pool::cleanup_register((apr::pool_t *)pool, ptr,
+					(stappler::mempool::apr::status_t(*)(void *))cb);
 			return;
 		}
 	}
@@ -618,50 +640,53 @@ void cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 void pre_cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
-			apr::pool::pre_cleanup_register((apr::pool_t *)pool, ptr, cb);
+			apr::pool::pre_cleanup_register((apr::pool_t *)pool, ptr,
+					(stappler::mempool::apr::status_t(*)(void *))cb);
 			return;
 		}
 	}
 	((custom::Pool *)pool)->pre_cleanup_register(ptr, (custom::Cleanup::Callback)cb);
 }
 
-status_t userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
+Status userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
-			return apr::pool::userdata_set(data, key, cb, (apr::pool_t *)pool);
+			return Status(apr::pool::userdata_set(data, key,
+					(stappler::mempool::apr::status_t(*)(void *))cb, (apr::pool_t *)pool));
 		}
 	}
 	return ((custom::Pool *)pool)->userdata_set(data, key, (custom::Cleanup::Callback)cb);
 }
 
-status_t userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
+Status userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *pool) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
-			return apr::pool::userdata_setn(data, key, cb, (apr::pool_t *)pool);
+			return Status(apr::pool::userdata_setn(data, key,
+					(stappler::mempool::apr::status_t(*)(void *))cb, (apr::pool_t *)pool));
 		}
 	}
 	return ((custom::Pool *)pool)->userdata_setn(data, key, (custom::Cleanup::Callback)cb);
 }
 
-status_t userdata_get(void **data, const char *key, pool_t *pool) {
+Status userdata_get(void **data, const char *key, pool_t *pool) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
-			return apr::pool::userdata_get(data, key, (apr::pool_t *)pool);
+			return Status(apr::pool::userdata_get(data, key, (apr::pool_t *)pool));
 		}
 	}
 	return ((custom::Pool *)pool)->userdata_get(data, key);
 }
 
-status_t userdata_get(void **data, const char *key, size_t klen, pool_t *pool) {
+Status userdata_get(void **data, const char *key, size_t klen, pool_t *pool) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			if (key[klen]) {
-				return apr::pool::userdata_get(data, key, (apr::pool_t *)pool);
+				return Status(apr::pool::userdata_get(data, key, (apr::pool_t *)pool));
 			} else {
 				char buf[klen + 1];
 				memcpy(buf, key, klen);
 				buf[klen] = 0;
-				return apr::pool::userdata_get(data, key, (apr::pool_t *)pool);
+				return Status(apr::pool::userdata_get(data, key, (apr::pool_t *)pool));
 			}
 		}
 	}
@@ -742,11 +767,11 @@ void set_pool_info(pool_t *pool, uint32_t tag, const void *ptr) {
 	}
 }
 
-static status_t cleanup_register_fn(void *ptr) {
+static Status cleanup_register_fn(void *ptr) {
 	if (auto fn = (memory::function<void()> *)ptr) {
 		(*fn)();
 	}
-	return 0;
+	return Status::Ok;
 }
 
 void cleanup_register(pool_t *p, memory::function<void()> &&cb) {

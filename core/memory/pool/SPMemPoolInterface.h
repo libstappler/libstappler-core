@@ -25,6 +25,7 @@ THE SOFTWARE.
 #define STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLINTERFACE_H_
 
 #include "SPMemPoolConfig.h"
+#include "SPStatus.h"
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base {
 
@@ -36,14 +37,15 @@ class OpaqueAllocator;
 using pool_t = OpaquePool;
 using allocator_t = OpaqueAllocator;
 
-using status_t = custom::Status;
-
-using cleanup_fn = status_t(*)(void *);
+using cleanup_fn = Status (*)(void *);
 
 // use when you need to create pool from application root pool
 constexpr pool_t *app_root_pool = nullptr;
 
-}
+// Use this for a static init with memory::* types
+SP_PUBLIC pool_t *get_zero_pool();
+
+} // namespace stappler::mempool::base
 
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
@@ -55,9 +57,9 @@ SP_PUBLIC void push(pool_t *);
 SP_PUBLIC void push(pool_t *, uint32_t, const void * = nullptr);
 SP_PUBLIC void pop();
 
-SP_PUBLIC void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const void *));
+SP_PUBLIC void foreach_info(void *, bool (*)(void *, pool_t *, uint32_t, const void *));
 
-}
+} // namespace stappler::mempool::base::pool
 
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::allocator {
@@ -69,12 +71,12 @@ SP_PUBLIC allocator_t *create_apr(void *mutex = nullptr);
 #endif
 
 SP_PUBLIC void owner_set(allocator_t *alloc, pool_t *pool);
-SP_PUBLIC pool_t * owner_get(allocator_t *alloc);
+SP_PUBLIC pool_t *owner_get(allocator_t *alloc);
 SP_PUBLIC void max_free_set(allocator_t *alloc, size_t size);
 
 SP_PUBLIC void destroy(allocator_t *);
 
-}
+} // namespace stappler::mempool::base::allocator
 
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
@@ -104,7 +106,15 @@ SP_PUBLIC void destroy(pool_t *);
 SP_PUBLIC void clear(pool_t *);
 
 SP_PUBLIC void *alloc(pool_t *, size_t &);
+
+// APR pools can not allocate aligned memory, returns nullptr for them
+SP_PUBLIC void *alloc(pool_t *, size_t &, uint32_t alignment); // if less then 16 - ignored
+
 SP_PUBLIC void *palloc(pool_t *, size_t);
+
+// APR pools can not allocate aligned memory, returns nullptr for them
+SP_PUBLIC void *palloc(pool_t *, size_t, uint32_t alignment); // if less then 16 - ignored
+
 SP_PUBLIC void *calloc(pool_t *, size_t count, size_t eltsize);
 SP_PUBLIC void free(pool_t *, void *ptr, size_t size);
 
@@ -114,12 +124,12 @@ SP_PUBLIC void cleanup_register(pool_t *p, memory::function<void()> &&cb);
 SP_PUBLIC void pre_cleanup_register(pool_t *, void *, cleanup_fn);
 SP_PUBLIC void pre_cleanup_register(pool_t *p, memory::function<void()> &&cb);
 
-SP_PUBLIC void foreach_info(void *, bool(*)(void *, pool_t *, uint32_t, const void *));
+SP_PUBLIC void foreach_info(void *, bool (*)(void *, pool_t *, uint32_t, const void *));
 
-SP_PUBLIC status_t userdata_set(const void *data, const char *key, cleanup_fn, pool_t *);
-SP_PUBLIC status_t userdata_setn(const void *data, const char *key, cleanup_fn, pool_t *);
-SP_PUBLIC status_t userdata_get(void **data, const char *key, pool_t *);
-SP_PUBLIC status_t userdata_get(void **data, const char *key, size_t, pool_t *);
+SP_PUBLIC Status userdata_set(const void *data, const char *key, cleanup_fn, pool_t *);
+SP_PUBLIC Status userdata_setn(const void *data, const char *key, cleanup_fn, pool_t *);
+SP_PUBLIC Status userdata_get(void **data, const char *key, pool_t *);
+SP_PUBLIC Status userdata_get(void **data, const char *key, size_t, pool_t *);
 
 SP_PUBLIC allocator_t *get_allocator(pool_t *);
 
@@ -139,8 +149,8 @@ SP_PUBLIC bool debug_begin(pool_t *pool = nullptr);
 // stop recording and return info
 SP_PUBLIC std::map<pool_t *, const char **, std::less<void>> debug_end();
 
-SP_PUBLIC void debug_foreach(void *, void(*)(void *, pool_t *));
+SP_PUBLIC void debug_foreach(void *, void (*)(void *, pool_t *));
 
-}
+} // namespace stappler::mempool::base::pool
 
 #endif /* STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLINTERFACE_H_ */

@@ -28,9 +28,9 @@
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadCallbacks {
-	void (*init) (Thread *);
-	void (*dispose) (Thread *);
-	bool (*worker) (Thread *);
+	void (*init)(Thread *);
+	void (*dispose)(Thread *);
+	bool (*worker)(Thread *);
 };
 
 static void _workerThread(const ThreadCallbacks &tm, Thread *);
@@ -58,9 +58,7 @@ static bool ThreadCallbacks_worker(const ThreadCallbacks &cb, Thread *tm) {
 	SPASSERT(tl_threadInfo.workerPool, "Thread pool should be initialized");
 	bool ret = false;
 
-	memory::pool::perform_clear([&] {
-		ret = cb.worker(tm);
-	}, tl_threadInfo.workerPool);
+	memory::pool::perform_clear([&] { ret = cb.worker(tm); }, tl_threadInfo.workerPool);
 
 	return ret;
 }
@@ -100,9 +98,9 @@ bool ThreadInfo::setThreadPool(const NotNull<memory::pool_t *> &pool) {
 	}
 
 	tl_threadInfo.threadPool = pool;
-	memory::pool::cleanup_register(pool, nullptr, [] (void *ptr) -> memory::status_t {
+	memory::pool::cleanup_register(pool, nullptr, [](void *ptr) -> Status {
 		tl_threadInfo.threadPool = nullptr;
-		return 0;
+		return Status::Ok;
 	});
 	return true;
 }
@@ -111,26 +109,18 @@ void Thread::workerThread(Thread *tm) {
 	tl_owner = tm;
 
 	ThreadCallbacks cb;
-	cb.init = [] (Thread *obj) {
-		obj->threadInit();
-	};
+	cb.init = [](Thread *obj) { obj->threadInit(); };
 
-	cb.dispose = [] (Thread *obj) {
-		obj->threadDispose();
-	};
+	cb.dispose = [](Thread *obj) { obj->threadDispose(); };
 
-	cb.worker = [] (Thread *obj) -> bool {
-		return obj->worker();
-	};
+	cb.worker = [](Thread *obj) -> bool { return obj->worker(); };
 
 	memory::pool::initialize();
 	_workerThread(cb, tm);
 	memory::pool::terminate();
 }
 
-const Thread *Thread::getCurrentThread() {
-	return tl_owner;
-}
+const Thread *Thread::getCurrentThread() { return tl_owner; }
 
 Thread::~Thread() {
 	if (std::this_thread::get_id() == _thisThreadId) {
@@ -160,9 +150,7 @@ bool Thread::run(ThreadFlags flags) {
 	return true;
 }
 
-void Thread::stop() {
-	_continueExecution.clear();
-}
+void Thread::stop() { _continueExecution.clear(); }
 
 void Thread::waitRunning() {
 	if (_running.load()) {
@@ -174,9 +162,7 @@ void Thread::waitRunning() {
 		return;
 	}
 
-	_runningVar.wait(lock, [&] {
-		return _running.load();
-	});
+	_runningVar.wait(lock, [&] { return _running.load(); });
 }
 
 void Thread::waitStopped() {
@@ -192,16 +178,10 @@ void Thread::threadInit() {
 	_runningVar.notify_all();
 }
 
-void Thread::threadDispose() {
+void Thread::threadDispose() { }
 
-}
+bool Thread::worker() { return performWorkload() && _continueExecution.test_and_set(); }
 
-bool Thread::worker() {
-	return performWorkload() && _continueExecution.test_and_set();
-}
+bool Thread::isOnThisThread() const { return _thisThreadId == std::this_thread::get_id(); }
 
-bool Thread::isOnThisThread() const {
-	return _thisThreadId == std::this_thread::get_id();
-}
-
-}
+} // namespace stappler::thread

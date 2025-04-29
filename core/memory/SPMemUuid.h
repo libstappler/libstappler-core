@@ -26,7 +26,6 @@ THE SOFTWARE.
 
 #include "SPMemString.h"
 #include "SPMemVector.h"
-#include "SPBytesView.h"
 #include "SPStringView.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
@@ -40,13 +39,9 @@ struct SP_PUBLIC uuid : AllocPool {
 	static void format(char *, const uuid_t &);
 	static uuid generate();
 
-	uuid() noexcept {
-		memset(_uuid.data(), 0, 16);
-	}
+	uuid() noexcept { memset(_uuid.data(), 0, 16); }
 
-	uuid(StringView str) noexcept {
-		parse(_uuid, str);
-	}
+	uuid(StringView str) noexcept { parse(_uuid, str); }
 
 	uuid(BytesView b) noexcept {
 		if (b.size() == 16) {
@@ -57,26 +52,29 @@ struct SP_PUBLIC uuid : AllocPool {
 	uuid(const uuid_t &u) noexcept : _uuid(u) { }
 	uuid(const uuid &u) noexcept : _uuid(u._uuid) { }
 
-	uuid &operator= (const uuid &u) noexcept { _uuid = u._uuid; return *this; }
+	uuid &operator=(const uuid &u) noexcept {
+		_uuid = u._uuid;
+		return *this;
+	}
 
-	uuid &operator= (const memory::string &str) noexcept {
+	uuid &operator=(const memory::string &str) noexcept {
 		parse(_uuid, str.data());
 		return *this;
 	}
 
-	uuid &operator= (const std::string &str) noexcept {
+	uuid &operator=(const std::string &str) noexcept {
 		parse(_uuid, str.data());
 		return *this;
 	}
 
-	uuid &operator= (const memory::vector<uint8_t> &b) noexcept {
+	uuid &operator=(const memory::vector<uint8_t> &b) noexcept {
 		if (b.size() == 16) {
 			memcpy(_uuid.data(), b.data(), 16);
 		}
 		return *this;
 	}
 
-	uuid &operator= (const std::vector<uint8_t> &b) noexcept {
+	uuid &operator=(const std::vector<uint8_t> &b) noexcept {
 		if (b.size() == 16) {
 			memcpy(_uuid.data(), b.data(), 16);
 		}
@@ -85,7 +83,7 @@ struct SP_PUBLIC uuid : AllocPool {
 
 	template <typename Str = string>
 	auto str() const -> Str {
-		char buf[FormattedLength] = { 0 };
+		char buf[FormattedLength] = {0};
 		format(buf, _uuid);
 		return Str(buf, FormattedLength);
 	}
@@ -95,13 +93,9 @@ struct SP_PUBLIC uuid : AllocPool {
 		return B(_uuid.data(), _uuid.data() + 16);
 	}
 
-	uuid_t array() const {
-		return _uuid;
-	}
+	uuid_t array() const { return _uuid; }
 
-	BytesView view() const {
-		return BytesView(_uuid);
-	}
+	BytesView view() const { return BytesView(_uuid); }
 
 	const uint8_t *data() const { return _uuid.data(); }
 	size_t size() const { return 16; }
@@ -133,6 +127,6 @@ struct SP_PUBLIC uuid : AllocPool {
 	uuid_t _uuid;
 };
 
-}
+} // namespace stappler::memory
 
 #endif /* STAPPLER_CORE_MEMORY_SPMEMUUID_H_ */

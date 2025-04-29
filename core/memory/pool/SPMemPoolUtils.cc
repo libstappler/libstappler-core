@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
+#include "SPMemPoolConfig.h"
 #include "SPMemPoolStruct.h"
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
@@ -30,7 +31,7 @@ void AllocManager::reset(void *p) {
 	pool = p;
 }
 
-void *AllocManager::alloc(size_t &sizeInBytes, AllocFn allocFn) {
+void *AllocManager::alloc(size_t &sizeInBytes, uint32_t alignment, AllocFn allocFn) {
 	if (buffered) {
 		MemAddr *c, **lastp;
 
@@ -40,12 +41,26 @@ void *AllocManager::alloc(size_t &sizeInBytes, AllocFn allocFn) {
 			if (c->size > sizeInBytes * 2) {
 				break;
 			} else if (c->size >= sizeInBytes) {
-				*lastp = c->next;
-				c->next = free_buffered;
-				free_buffered = c;
-				sizeInBytes = c->size;
-				increment_return(sizeInBytes);
-				return c->address;
+				if (alignment > DefaultAlignment) {
+					// check if we can place aligned block into cached block
+					auto newAddr = c->address;
+					size_t space = c->size;
+					if (auto a = std::align(alignment, sizeInBytes, newAddr, space)) {
+						*lastp = c->next;
+						c->next = free_buffered;
+						free_buffered = c;
+						sizeInBytes = space;
+						increment_return(sizeInBytes);
+						return a;
+					}
+				} else {
+					*lastp = c->next;
+					c->next = free_buffered;
+					free_buffered = c;
+					sizeInBytes = c->size;
+					increment_return(sizeInBytes);
+					return c->address;
+				}
 			}
 
 			lastp = &c->next;
@@ -53,7 +68,7 @@ void *AllocManager::alloc(size_t &sizeInBytes, AllocFn allocFn) {
 		}
 	}
 	increment_alloc(sizeInBytes);
-	return allocFn(pool, sizeInBytes);
+	return allocFn(pool, sizeInBytes, alignment);
 }
 
 void AllocManager::free(void *ptr, size_t sizeInBytes, AllocFn allocFn) {
@@ -66,7 +81,7 @@ void AllocManager::free(void *ptr, size_t sizeInBytes, AllocFn allocFn) {
 		addr = free_buffered;
 		free_buffered = addr->next;
 	} else {
-		addr = (MemAddr *)allocFn(pool, sizeof(MemAddr));
+		addr = (MemAddr *)allocFn(pool, sizeof(MemAddr), DefaultAlignment);
 		increment_alloc(sizeof(MemAddr));
 	}
 
@@ -113,9 +128,7 @@ void MemNode::remove() {
 	this->next->ref = this->ref;
 }
 
-size_t MemNode::free_space() const {
-	return endp - first_avail;
-}
+size_t MemNode::free_space() const { return endp - first_avail; }
 
 void Cleanup::run(Cleanup **cref) {
 	Cleanup *c = *cref;
@@ -128,4 +141,4 @@ void Cleanup::run(Cleanup **cref) {
 	}
 }
 
-}
+} // namespace stappler::mempool::custom

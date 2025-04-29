@@ -24,6 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEMIMPL_H_
 #define STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEMIMPL_H_
 
+#include "SPLogInit.h"
 #include "SPMemAlloc.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory::impl {
@@ -37,7 +38,9 @@ struct mem_small {
 	using size_type = size_t;
 	using allocator = Allocator<Type>;
 
-	static constexpr size_type max_capacity() { return (sizeof(Type) < ByteCount) ? ((ByteCount - 1) / sizeof(Type)) : 0; }
+	static constexpr size_type max_capacity() {
+		return (sizeof(Type) < ByteCount) ? ((ByteCount - 1) / sizeof(Type)) : 0;
+	}
 
 	void assign(allocator &a, const_pointer ptr, size_type s) {
 		const auto current = size();
@@ -57,9 +60,7 @@ struct mem_small {
 		set_size(count);
 	}
 
-	void force_clear() {
-		set_size(0);
-	}
+	void force_clear() { set_size(0); }
 
 	void drop_unused() {
 		const auto unused = storage[ByteCount - 1];
@@ -101,7 +102,7 @@ public:
 
 	mem_large() = default;
 	mem_large(const self &) = default;
-	self & operator= (const self &other) = default;
+	self &operator=(const self &other) = default;
 
 	mem_large(self &&other) {
 		_ptr = other._ptr;
@@ -112,7 +113,7 @@ public:
 		other._allocated = 0;
 	}
 
-	self & operator= (self &&other) {
+	self &operator=(self &&other) {
 		_ptr = other._ptr;
 		_used = other._used;
 		_allocated = other._allocated;
@@ -125,6 +126,9 @@ public:
 	void assign(allocator &a, const_pointer ptr, size_type count) {
 		if (_allocated < count) {
 			reserve(a, count);
+			if (!_ptr) {
+				reserve(a, count);
+			}
 		}
 		a.copy_rewrite(data(), size(), ptr, count);
 		if (_used > count) {
@@ -164,9 +168,7 @@ public:
 		_allocated = nalloc - Extra;
 	}
 
-	bool is_weak() const noexcept {
-		return _used > 0 && _allocated == 0;
-	}
+	bool is_weak() const noexcept { return _used > 0 && _allocated == 0; }
 
 	void reserve(allocator &a, size_type s) {
 		grow_alloc(a, s);
@@ -212,6 +214,7 @@ public:
 		// use extra memory if provided by allocator
 		size_t allocated = 0; // real memory block size returned
 		auto ptr = a.__allocate(alloc_size, allocated);
+
 		alloc_size = allocated / sizeof(Type);
 
 		if (_used > 0 && _ptr) {
@@ -268,7 +271,9 @@ public:
 
 	static constexpr size_type get_soo_size() { return 0; }
 
-	mem_soo_iface(const allocator &alloc) : _allocator(alloc) { }
+	mem_soo_iface(const allocator &alloc) : _allocator(alloc) {
+		SPASSERT(_allocator, "Allocator should be defined");
+	}
 
 	~mem_soo_iface() noexcept { clear_dealloc(_allocator); }
 
@@ -354,6 +359,7 @@ public:
 	static constexpr size_type get_soo_size() { return small_mem::max_capacity(); }
 
 	mem_soo_iface(const allocator &alloc) : _allocator(alloc) {
+		SPASSERT(_allocator, "Allocator should be defined");
 		set_large_flag();
 		_large = large_mem();
 	}
@@ -413,15 +419,14 @@ public:
 	}
 
 	// РџСЂРѕРІРµСЂРєР°, РІР»Р°РґРµРµРј Р»Рё Р±Р»РѕРєРѕРј РїР°РјСЏС‚Рё
-	bool is_weak() const noexcept {
-		return is_large() && _large.is_weak();
-	}
+	bool is_weak() const noexcept { return is_large() && _large.is_weak(); }
 
 	pointer reserve(size_type s, bool grow = false) {
 		const auto _allocated = capacity();
 		const auto _used = size();
 		if (s > _allocated) {
-			if (s <= small_mem::max_capacity() && _used <= small_mem::max_capacity()) {
+			const auto smallMaxCap = small_mem::max_capacity();
+			if (s <= smallMaxCap && _used <= smallMaxCap) {
 				if (_allocated == 0) { // РїР°РјСЏС‚СЊ РїСѓСЃС‚Р°СЏ РёР»Рё CoW
 					set_small_flag();
 					if (_large.data() != nullptr) { // CoW
@@ -495,7 +500,9 @@ public:
 	const_pointer data() const noexcept { return is_large() ? _large.data() : _small.data(); }
 
 	size_type size() const noexcept { return is_large() ? _large.size() : _small.size(); }
-	size_type capacity() const noexcept { return is_large() ? _large.capacity() : _small.capacity(); }
+	size_type capacity() const noexcept {
+		return is_large() ? _large.capacity() : _small.capacity();
+	}
 
 	bool empty() const noexcept { return is_large() ? _large.empty() : (_small.size() == 0); }
 
@@ -539,17 +546,13 @@ private:
 	bool is_small() const { return this->_allocator.test(allocator::FirstFlag); }
 	bool is_large() const { return !this->_allocator.test(allocator::FirstFlag); }
 
-	void set_large_flag() {
-		this->_allocator.reset(allocator::FirstFlag);
-	}
+	void set_large_flag() { this->_allocator.reset(allocator::FirstFlag); }
 	void set_large_flag_force() {
 		clear(); // discard content
 		set_large_flag();
 	}
 
-	void set_small_flag() {
-		this->_allocator.set(allocator::FirstFlag);
-	}
+	void set_small_flag() { this->_allocator.set(allocator::FirstFlag); }
 
 	union {
 		large_mem _large;
@@ -557,6 +560,6 @@ private:
 	};
 };
 
-}
+} // namespace stappler::memory::impl
 
 #endif /* STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEMIMPL_H_ */

@@ -48,21 +48,21 @@ static void Scheme_setOwner(const Scheme *scheme, const Map<String, Field> &map)
 }
 
 bool Scheme::initSchemes(const Map<StringView, const Scheme *> &schemes) {
-	for (auto &it : schemes) {
-		const_cast<Scheme *>(it.second)->init();
-	}
+	for (auto &it : schemes) { const_cast<Scheme *>(it.second)->init(); }
 	return true;
 }
 
 Scheme::Scheme(const StringView &ns, Options f, uint32_t v)
-: _name(ns.str<Interface>()), _version(v), _flags(f), _oidField(Field::Integer("__oid", Flags::Indexed | Flags::ForceInclude)) {
+: _name(ns.str<Interface>())
+, _version(v)
+, _flags(f)
+, _oidField(Field::Integer("__oid", Flags::Indexed | Flags::ForceInclude)) {
 	const_cast<Field::Slot *>(_oidField.getSlot())->owner = this;
-	for (size_t i = 0; i < _roles.size(); ++ i) {
-		_roles[i] = nullptr;
-	}
+	for (size_t i = 0; i < _roles.size(); ++i) { _roles[i] = nullptr; }
 }
 
-Scheme::Scheme(const StringView &name, std::initializer_list<Field> il, Options f, uint32_t v) : Scheme(name, f, v) {
+Scheme::Scheme(const StringView &name, std::initializer_list<Field> il, Options f, uint32_t v)
+: Scheme(name, f, v) {
 	for (auto &it : il) {
 		auto fname = it.getName();
 		_fields.emplace(fname.str<Interface>(), sp::move(const_cast<Field &>(it)));
@@ -71,30 +71,25 @@ Scheme::Scheme(const StringView &name, std::initializer_list<Field> il, Options 
 	updateLimits();
 }
 
-bool Scheme::hasDelta() const {
-	return (_flags & Options::WithDelta) != Options::None;
-}
+bool Scheme::hasDelta() const { return (_flags & Options::WithDelta) != Options::None; }
 
-bool Scheme::isDetouched() const {
-	return (_flags & Options::Detouched) != Options::None;
-}
+bool Scheme::isDetouched() const { return (_flags & Options::Detouched) != Options::None; }
 
-bool Scheme::isCompressed() const {
-	return (_flags & Options::Compressed) != Options::None;
-}
+bool Scheme::isCompressed() const { return (_flags & Options::Compressed) != Options::None; }
 
-bool Scheme::hasFullText() const {
-	return !_fullTextFields.empty();
-}
+bool Scheme::hasFullText() const { return !_fullTextFields.empty(); }
 
-const Scheme & Scheme::define(std::initializer_list<Field> il) {
+const Scheme &Scheme::define(std::initializer_list<Field> il) {
 	for (auto &it : il) {
 		auto fname = it.getName();
 		if (it.getType() == Type::Image) {
 			auto image = static_cast<const FieldImage *>(it.getSlot());
 			auto &thumbnails = image->thumbnails;
-			for (auto & thumb : thumbnails) {
-				auto new_f = _fields.emplace(thumb.name, Field::Image(String(thumb.name), MaxImageSize(thumb.width, thumb.height))).first;
+			for (auto &thumb : thumbnails) {
+				auto new_f = _fields.emplace(thumb.name,
+											Field::Image(String(thumb.name),
+													MaxImageSize(thumb.width, thumb.height)))
+									 .first;
 				((FieldImage *)(new_f->second.getSlot()))->primary = false;
 			}
 		}
@@ -114,14 +109,17 @@ const Scheme & Scheme::define(std::initializer_list<Field> il) {
 	return *this;
 }
 
-const Scheme & Scheme::define(Vector<Field> &&il) {
+const Scheme &Scheme::define(Vector<Field> &&il) {
 	for (auto &it : il) {
 		auto fname = it.getName();
 		if (it.getType() == Type::Image) {
 			auto image = static_cast<const FieldImage *>(it.getSlot());
 			auto &thumbnails = image->thumbnails;
-			for (auto & thumb : thumbnails) {
-				auto new_f = _fields.emplace(thumb.name, Field::Image(String(thumb.name), MaxImageSize(thumb.width, thumb.height))).first;
+			for (auto &thumb : thumbnails) {
+				auto new_f = _fields.emplace(thumb.name,
+											Field::Image(String(thumb.name),
+													MaxImageSize(thumb.width, thumb.height)))
+									 .first;
 				((FieldImage *)(new_f->second.getSlot()))->primary = false;
 			}
 		}
@@ -141,16 +139,16 @@ const Scheme & Scheme::define(Vector<Field> &&il) {
 	return *this;
 }
 
-const Scheme & Scheme::define(AccessRole &&role) {
+const Scheme &Scheme::define(AccessRole &&role) {
 	if (role.users.count() == 1) {
-		for (size_t i = 0; i < role.users.size(); ++ i) {
+		for (size_t i = 0; i < role.users.size(); ++i) {
 			if (role.users.test(i)) {
 				setAccessRole(AccessRoleId(i), sp::move(role));
 				break;
 			}
 		}
 	} else {
-		for (size_t i = 0; i < role.users.size(); ++ i) {
+		for (size_t i = 0; i < role.users.size(); ++i) {
 			if (role.users.test(i)) {
 				setAccessRole(AccessRoleId(i), AccessRole(role));
 			}
@@ -159,8 +157,9 @@ const Scheme & Scheme::define(AccessRole &&role) {
 	return *this;
 }
 
-const Scheme & Scheme::define(UniqueConstraintDef &&def) {
-	Vector<const Field *> fields; fields.reserve(def.fields.size());
+const Scheme &Scheme::define(UniqueConstraintDef &&def) {
+	Vector<const Field *> fields;
+	fields.reserve(def.fields.size());
 	for (auto &it : def.fields) {
 		if (auto f = getField(it)) {
 			auto iit = std::lower_bound(fields.begin(), fields.end(), f);
@@ -170,16 +169,19 @@ const Scheme & Scheme::define(UniqueConstraintDef &&def) {
 				fields.emplace(iit, f);
 			}
 		} else {
-			log::error("Scheme", "Field for unique constraint not found", data::EncodeFormat::Pretty, Value(it));
+			log::error("Scheme", "Field for unique constraint not found",
+					data::EncodeFormat::Pretty, Value(it));
 		}
 	}
 
-	_unique.emplace_back(StringView(
-			toString(_name, "_", string::tolower<Interface>(def.name), "_unique")).pdup(_unique.get_allocator()), sp::move(fields));
+	_unique.emplace_back(
+			StringView(toString(_name, "_", string::tolower<Interface>(def.name), "_unique"))
+					.pdup(_unique.get_allocator()),
+			sp::move(fields));
 	return *this;
 }
 
-const Scheme & Scheme::define(Bytes &&dict) {
+const Scheme &Scheme::define(Bytes &&dict) {
 	_compressDict = sp::move(dict);
 	return *this;
 }
@@ -198,7 +200,8 @@ bool Scheme::init() {
 		case Type::Object:
 		case Type::Set:
 			if (auto slot = fit.second.getSlot<FieldObject>()) {
-				if (slot->linkage == Linkage::Auto && slot->onRemove == RemovePolicy::Null && !slot->hasFlag(Flags::Reference)) {
+				if (slot->linkage == Linkage::Auto && slot->onRemove == RemovePolicy::Null
+						&& !slot->hasFlag(Flags::Reference)) {
 					if (!getForeignLink(slot)) {
 						// assume strong reference
 						auto mutSlot = const_cast<FieldObject *>(slot);
@@ -239,8 +242,7 @@ bool Scheme::init() {
 			}
 			break;
 		}
-		default:
-			break;
+		default: break;
 		}
 		if (fit.second.getSlot()->autoField.defaultFn) {
 			auto &autoF = fit.second.getSlot()->autoField;
@@ -248,7 +250,8 @@ bool Scheme::init() {
 				const_cast<Scheme &>(a_it.scheme).addAutoField(this, &fit.second, a_it);
 			}
 		}
-		if (fit.second.hasFlag(Flags::Composed) && (fit.second.getType() == Type::Object || fit.second.getType() == Type::Set)) {
+		if (fit.second.hasFlag(Flags::Composed)
+				&& (fit.second.getType() == Type::Object || fit.second.getType() == Type::Set)) {
 			auto slot = static_cast<const FieldObject *>(fit.second.getSlot());
 			if (slot->scheme) {
 				const_cast<Scheme *>(slot->scheme)->addParent(this, &fit.second);
@@ -260,19 +263,13 @@ bool Scheme::init() {
 	return true;
 }
 
-void Scheme::addFlags(Options opts) {
-	_flags |= opts;
-}
+void Scheme::addFlags(Options opts) { _flags |= opts; }
 
 void Scheme::cloneFrom(Scheme *source) {
-	for (auto &it : source->_fields) {
-		_fields.emplace(it.first, it.second);
-	}
+	for (auto &it : source->_fields) { _fields.emplace(it.first, it.second); }
 }
 
-StringView Scheme::getName() const {
-	return _name;
-}
+StringView Scheme::getName() const { return _name; }
 bool Scheme::hasAliases() const {
 	for (auto &it : _fields) {
 		if (it.second.getType() == Type::Text && it.second.getTransform() == Transform::Alias) {
@@ -290,13 +287,9 @@ bool Scheme::isProtected(const StringView &key) const {
 	return false;
 }
 
-const Set<const Field *> & Scheme::getForceInclude() const {
-	return _forceInclude;
-}
+const Set<const Field *> &Scheme::getForceInclude() const { return _forceInclude; }
 
-const Map<String, Field> & Scheme::getFields() const {
-	return _fields;
-}
+const Map<String, Field> &Scheme::getFields() const { return _fields; }
 
 const Field *Scheme::getField(const StringView &key) const {
 	auto it = _fields.find(key);
@@ -309,16 +302,13 @@ const Field *Scheme::getField(const StringView &key) const {
 	return nullptr;
 }
 
-const Vector<Scheme::UniqueConstraint> &Scheme::getUnique() const {
-	return _unique;
-}
+const Vector<Scheme::UniqueConstraint> &Scheme::getUnique() const { return _unique; }
 
-BytesView Scheme::getCompressDict() const {
-	return _compressDict;
-}
+BytesView Scheme::getCompressDict() const { return _compressDict; }
 
 const Field *Scheme::getForeignLink(const FieldObject *f) const {
-	if (!f || f->onRemove == RemovePolicy::Reference || f->onRemove == RemovePolicy::StrongReference) {
+	if (!f || f->onRemove == RemovePolicy::Reference
+			|| f->onRemove == RemovePolicy::StrongReference) {
 		return nullptr;
 	}
 	auto &link = f->link;
@@ -337,8 +327,9 @@ const Field *Scheme::getForeignLink(const FieldObject *f) const {
 		}
 	} else if (f->linkage == Linkage::Manual) {
 		auto nextField = nextScheme->getField(link);
-		if (nextField && (nextField->getType() == Type::Object
-				|| (nextField->getType() == Type::Set && f->getType() == Type::Object))) {
+		if (nextField
+				&& (nextField->getType() == Type::Object
+						|| (nextField->getType() == Type::Set && f->getType() == Type::Object))) {
 			auto nextSlot = static_cast<const FieldObject *>(nextField->getSlot());
 			if (nextSlot->scheme == this) {
 				return nextField;
@@ -368,24 +359,25 @@ bool Scheme::isAtomicPatch(const Value &val) const {
 		for (auto &it : val.asDict()) {
 			auto f = getField(it.first);
 
-			if (f && (
-					// extra field should use select-update
-					f->getType() == Type::Extra
+			if (f
+					&& (
+							// extra field should use select-update
+							f->getType() == Type::Extra
 
-					// virtual field should use select-update
-					|| f->getType() == Type::Virtual
+							// virtual field should use select-update
+							|| f->getType() == Type::Virtual
 
-					 // force-includes used to update views, so, we need select-update
-					|| _forceInclude.find(f) != _forceInclude.end()
+							// force-includes used to update views, so, we need select-update
+							|| _forceInclude.find(f) != _forceInclude.end()
 
-					// for full-text views update
-					|| _fullTextFields.find(f) != _fullTextFields.end()
+							// for full-text views update
+							|| _fullTextFields.find(f) != _fullTextFields.end()
 
-					// auto fields requires select-update
-					|| _autoFieldReq.find(f) != _autoFieldReq.end()
+							// auto fields requires select-update
+							|| _autoFieldReq.find(f) != _autoFieldReq.end()
 
-					// select-update required for replace filters
-					|| f->getSlot()->replaceFilterFn)) {
+							// select-update required for replace filters
+							|| f->getSlot()->replaceFilterFn)) {
 				return false;
 			}
 		}
@@ -396,18 +388,15 @@ bool Scheme::isAtomicPatch(const Value &val) const {
 
 uint64_t Scheme::hash(ValidationLevel l) const {
 	StringStream stream;
-	for (auto &it : _fields) {
-		it.second.hash(stream, l);
-	}
+	for (auto &it : _fields) { it.second.hash(stream, l); }
 	return std::hash<String>{}(stream.weak());
 }
 
-const Vector<Scheme::ViewScheme *> &Scheme::getViews() const {
-	return _views;
-}
+const Vector<Scheme::ViewScheme *> &Scheme::getViews() const { return _views; }
 
 Vector<const Field *> Scheme::getPatchFields(const Value &patch) const {
-	Vector<const Field *> ret; ret.reserve(patch.size());
+	Vector<const Field *> ret;
+	ret.reserve(patch.size());
 	for (auto &it : patch.asDict()) {
 		if (auto f = getField(it.first)) {
 			ret.emplace_back(f);
@@ -416,9 +405,7 @@ Vector<const Field *> Scheme::getPatchFields(const Value &patch) const {
 	return ret;
 }
 
-const Scheme::AccessTable &Scheme::getAccessTable() const {
-	return _roles;
-}
+const Scheme::AccessTable &Scheme::getAccessTable() const { return _roles; }
 
 const AccessRole *Scheme::getAccessRole(AccessRoleId id) const {
 	return _roles[stappler::toInt(id)];
@@ -426,7 +413,7 @@ const AccessRole *Scheme::getAccessRole(AccessRoleId id) const {
 
 void Scheme::setAccessRole(AccessRoleId id, AccessRole &&r) {
 	if (stappler::toInt(id) < stappler::toInt(AccessRoleId::Max)) {
-		_roles[stappler::toInt(id)] = new AccessRole(sp::move(r));
+		_roles[stappler::toInt(id)] = new (std::nothrow) AccessRole(sp::move(r));
 		_hasAccessControl = true;
 	}
 }
@@ -439,21 +426,13 @@ bool Scheme::save(const Transaction &t, Object *obj) const {
 	return t.save(w, obj->getObjectId(), tmp, obj->_data, fields) ? true : false;
 }
 
-bool Scheme::hasFiles() const {
-	return _hasFiles;
-}
+bool Scheme::hasFiles() const { return _hasFiles; }
 
-bool Scheme::hasForceExclude() const {
-	return _hasForceExclude;
-}
+bool Scheme::hasForceExclude() const { return _hasForceExclude; }
 
-bool Scheme::hasAccessControl() const {
-	return _hasAccessControl;
-}
+bool Scheme::hasAccessControl() const { return _hasAccessControl; }
 
-bool Scheme::hasVirtuals() const {
-	return _hasVirtuals;
-}
+bool Scheme::hasVirtuals() const { return _hasVirtuals; }
 
 Value Scheme::createWithWorker(Worker &w, const Value &data, bool isProtected) const {
 	if (!data.isDictionary() && !data.isArray()) {
@@ -461,11 +440,11 @@ Value Scheme::createWithWorker(Worker &w, const Value &data, bool isProtected) c
 		return Value();
 	}
 
-	auto checkRequired = [&] (StringView f, const Value &changeSet) {
+	auto checkRequired = [&](StringView f, const Value &changeSet) {
 		auto &val = changeSet.getValue(f);
 		if (val.isNull()) {
 			w.getApplicationInterface()->error("Storage", "No value for required field",
-					Value({ std::make_pair("field", Value(f)) }));
+					Value({std::make_pair("field", Value(f))}));
 			return false;
 		}
 		return true;
@@ -473,11 +452,13 @@ Value Scheme::createWithWorker(Worker &w, const Value &data, bool isProtected) c
 
 	Value changeSet = data;
 	if (data.isDictionary()) {
-		transform(changeSet, isProtected?TransformAction::ProtectedCreate:TransformAction::Create);
+		transform(changeSet,
+				isProtected ? TransformAction::ProtectedCreate : TransformAction::Create);
 	} else {
 		for (auto &it : changeSet.asArray()) {
 			if (it) {
-				transform(it, isProtected?TransformAction::ProtectedCreate:TransformAction::Create);
+				transform(it,
+						isProtected ? TransformAction::ProtectedCreate : TransformAction::Create);
 			}
 		}
 	}
@@ -486,10 +467,14 @@ Value Scheme::createWithWorker(Worker &w, const Value &data, bool isProtected) c
 	for (auto &it : _fields) {
 		if (it.second.hasFlag(Flags::Required)) {
 			if (changeSet.isDictionary()) {
-				if (!checkRequired(it.first, changeSet)) { stop = true; }
+				if (!checkRequired(it.first, changeSet)) {
+					stop = true;
+				}
 			} else {
 				for (auto &iit : changeSet.asArray()) {
-					if (!checkRequired(it.first, iit)) { iit = Value(); }
+					if (!checkRequired(it.first, iit)) {
+						iit = Value();
+					}
 				}
 			}
 		}
@@ -500,13 +485,11 @@ Value Scheme::createWithWorker(Worker &w, const Value &data, bool isProtected) c
 	}
 
 	Value retVal;
-	if (w.perform([&, this] (const Transaction &t) -> bool {
+	if (w.perform([&, this](const Transaction &t) -> bool {
 		Value patch(createFilePatch(t, data, changeSet));
 		if (auto ret = t.create(w, changeSet)) {
 			touchParents(t, ret);
-			for (auto &it : _views) {
-				updateView(t, ret, it, Vector<uint64_t>());
-			}
+			for (auto &it : _views) { updateView(t, ret, it, Vector<uint64_t>()); }
 			retVal = sp::move(ret);
 			return true;
 		} else {
@@ -532,10 +515,11 @@ Value Scheme::updateWithWorker(Worker &w, uint64_t oid, const Value &data, bool 
 	}
 
 	Value ret;
-	w.perform([&, this] (const Transaction &t) -> bool {
+	w.perform([&, this](const Transaction &t) -> bool {
 		Value filePatch(createFilePatch(t, data, changeSet));
 		if (changeSet.empty()) {
-			w.getApplicationInterface()->error("Storage", "Empty changeset for id", Value({ std::make_pair("oid", Value((int64_t)oid)) }));
+			w.getApplicationInterface()->error("Storage", "Empty changeset for id",
+					Value({std::make_pair("oid", Value((int64_t)oid))}));
 			return false;
 		}
 
@@ -544,7 +528,8 @@ Value Scheme::updateWithWorker(Worker &w, uint64_t oid, const Value &data, bool 
 			if (filePatch.isDictionary()) {
 				purgeFilePatch(t, filePatch);
 			}
-			w.getApplicationInterface()->error("Storage", "Fail to update object for id", Value({ std::make_pair("oid", Value((int64_t)oid)) }));
+			w.getApplicationInterface()->error("Storage", "Fail to update object for id",
+					Value({std::make_pair("oid", Value((int64_t)oid))}));
 			return false;
 		}
 		return true;
@@ -553,7 +538,8 @@ Value Scheme::updateWithWorker(Worker &w, uint64_t oid, const Value &data, bool 
 	return ret;
 }
 
-Value Scheme::updateWithWorker(Worker &w, const Value & obj, const Value &data, bool isProtected) const {
+Value Scheme::updateWithWorker(Worker &w, const Value &obj, const Value &data,
+		bool isProtected) const {
 	uint64_t oid = obj.getInteger("__oid");
 	if (!oid) {
 		w.getApplicationInterface()->error("Storage", "Invalid data for object");
@@ -569,10 +555,11 @@ Value Scheme::updateWithWorker(Worker &w, const Value & obj, const Value &data, 
 	}
 
 	Value ret;
-	w.perform([&, this] (const Transaction &t) -> bool {
+	w.perform([&, this](const Transaction &t) -> bool {
 		Value filePatch(createFilePatch(t, data, changeSet));
 		if (changeSet.empty()) {
-			w.getApplicationInterface()->error("Storage", "Empty changeset for id", Value({ std::make_pair("oid", Value((int64_t)oid)) }));
+			w.getApplicationInterface()->error("Storage", "Empty changeset for id",
+					Value({std::make_pair("oid", Value((int64_t)oid))}));
 			return false;
 		}
 
@@ -582,7 +569,8 @@ Value Scheme::updateWithWorker(Worker &w, const Value & obj, const Value &data, 
 			if (filePatch.isDictionary()) {
 				purgeFilePatch(t, filePatch);
 			}
-			w.getApplicationInterface()->error("Storage", "No object for id to update", Value({ std::make_pair("oid", Value((int64_t)oid)) }));
+			w.getApplicationInterface()->error("Storage", "No object for id to update",
+					Value({std::make_pair("oid", Value((int64_t)oid))}));
 			return false;
 		}
 		return true;
@@ -598,15 +586,16 @@ stappler::Pair<bool, Value> Scheme::prepareUpdate(const Value &data, bool isProt
 	}
 
 	Value changeSet = data;
-	transform(changeSet, isProtected?TransformAction::ProtectedUpdate:TransformAction::Update);
+	transform(changeSet, isProtected ? TransformAction::ProtectedUpdate : TransformAction::Update);
 
 	bool stop = false;
 	for (auto &it : _fields) {
 		if (changeSet.hasValue(it.first)) {
 			auto &val = changeSet.getValue(it.first);
 			if (val.isNull() && it.second.hasFlag(Flags::Required)) {
-				log::error("Storage", "Value for required field can not be removed", data::EncodeFormat::Pretty,
-						Value({ std::make_pair("field", Value(it.first)) }));
+				log::error("Storage", "Value for required field can not be removed",
+						data::EncodeFormat::Pretty,
+						Value({std::make_pair("field", Value(it.first))}));
 				stop = true;
 			}
 		}
@@ -620,19 +609,18 @@ stappler::Pair<bool, Value> Scheme::prepareUpdate(const Value &data, bool isProt
 }
 
 void Scheme::touchParents(const Transaction &t, const Value &obj) const {
-	t.performAsSystem([&, this] () -> bool {
+	t.performAsSystem([&, this]() -> bool {
 		if (!_parents.empty()) {
 			Map<int64_t, const Scheme *> parentsToUpdate;
 			extractParents(parentsToUpdate, t, obj, false);
-			for (auto &it : parentsToUpdate) {
-				Worker(*it.second, t).touch(it.first);
-			}
+			for (auto &it : parentsToUpdate) { Worker(*it.second, t).touch(it.first); }
 		}
 		return true;
 	});
 }
 
-void Scheme::extractParents(Map<int64_t, const Scheme *> &parentsToUpdate, const Transaction &t, const Value &obj, bool isChangeSet) const {
+void Scheme::extractParents(Map<int64_t, const Scheme *> &parentsToUpdate, const Transaction &t,
+		const Value &obj, bool isChangeSet) const {
 	auto id = obj.getInteger("__oid");
 	for (auto &it : _parents) {
 		if (it->backReference) {
@@ -641,17 +629,16 @@ void Scheme::extractParents(Map<int64_t, const Scheme *> &parentsToUpdate, const
 			}
 		} else if (!isChangeSet && id) {
 			auto vec = t.getAdapter().getReferenceParents(*this, id, it->scheme, it->pointerField);
-			for (auto &value : vec) {
-				parentsToUpdate.emplace(value, it->scheme);
-			}
+			for (auto &value : vec) { parentsToUpdate.emplace(value, it->scheme); }
 		}
 	}
 }
 
-Value Scheme::updateObject(Worker &w, Value & obj, Value &changeSet) const {
+Value Scheme::updateObject(Worker &w, Value &obj, Value &changeSet) const {
 	Set<const Field *> fieldsToUpdate;
 
-	Vector<stappler::Pair<const ViewScheme *, Vector<uint64_t>>> viewsToUpdate; viewsToUpdate.reserve(_views.size());
+	Vector<stappler::Pair<const ViewScheme *, Vector<uint64_t>>> viewsToUpdate;
+	viewsToUpdate.reserve(_views.size());
 	Map<int64_t, const Scheme *> parentsToUpdate;
 
 	Value replacements;
@@ -670,13 +657,14 @@ Value Scheme::updateObject(Worker &w, Value & obj, Value &changeSet) const {
 			if (!slot->replaceFilterFn || slot->replaceFilterFn(*this, obj, val, it.second)) {
 				fieldsToUpdate.emplace(f);
 
-				if (_forceInclude.find(f) != _forceInclude.end() || _autoFieldReq.find(f) != _autoFieldReq.end()) {
+				if (_forceInclude.find(f) != _forceInclude.end()
+						|| _autoFieldReq.find(f) != _autoFieldReq.end()) {
 					for (auto &it : _views) {
 						if (it->fields.find(f) != it->fields.end()) {
-							auto lb = std::lower_bound(viewsToUpdate.begin(), viewsToUpdate.end(), it,
-									[] (stappler::Pair<const ViewScheme *, Vector<uint64_t>> &l, const ViewScheme *r) -> bool {
-								return l.first < r;
-							});
+							auto lb = std::lower_bound(viewsToUpdate.begin(), viewsToUpdate.end(),
+									it,
+									[](stappler::Pair<const ViewScheme *, Vector<uint64_t>> &l,
+											const ViewScheme *r) -> bool { return l.first < r; });
 							if (lb == viewsToUpdate.end() && lb->first != it) {
 								viewsToUpdate.emplace(lb, stappler::pair(it, Vector<uint64_t>()));
 							}
@@ -688,29 +676,24 @@ Value Scheme::updateObject(Worker &w, Value & obj, Value &changeSet) const {
 	}
 
 	// acquire current views state
-	for (auto &it : viewsToUpdate) {
-		it.second = getLinkageForView(obj, *it.first);
-	}
+	for (auto &it : viewsToUpdate) { it.second = getLinkageForView(obj, *it.first); }
 
 	if (!viewsToUpdate.empty() || !parentsToUpdate.empty()) {
-		if (w.perform([&, this] (const Transaction &t) {
+		if (w.perform([&, this](const Transaction &t) {
 			if (t.save(w, obj.getInteger("__oid"), obj, changeSet, fieldsToUpdate)) {
-				t.performAsSystem([&] () -> bool {
-					for (auto &it : parentsToUpdate) {
-						Worker(*it.second, t).touch(it.first);
-					}
+				t.performAsSystem([&]() -> bool {
+					for (auto &it : parentsToUpdate) { Worker(*it.second, t).touch(it.first); }
 					return true;
 				});
-				for (auto &it : viewsToUpdate) {
-					updateView(t, obj, it.first, it.second);
-				}
+				for (auto &it : viewsToUpdate) { updateView(t, obj, it.first, it.second); }
 				return true;
 			}
 			return false;
 		})) {
 			return obj;
 		}
-	} else if (auto ret = w.transaction().save(w, obj.getInteger("__oid"), obj, changeSet, fieldsToUpdate)) {
+	} else if (auto ret = w.transaction().save(w, obj.getInteger("__oid"), obj, changeSet,
+					   fieldsToUpdate)) {
 		return ret;
 	}
 
@@ -724,7 +707,7 @@ void Scheme::touchWithWorker(Worker &w, uint64_t id) const {
 	patchOrUpdate(w, id, patch);
 }
 
-void Scheme::touchWithWorker(Worker &w, const Value & obj) const {
+void Scheme::touchWithWorker(Worker &w, const Value &obj) const {
 	Value tmp(obj);
 	Value patch;
 	transform(patch, TransformAction::Touch);
@@ -732,16 +715,15 @@ void Scheme::touchWithWorker(Worker &w, const Value & obj) const {
 	patchOrUpdate(w, tmp, patch);
 }
 
-Value Scheme::fieldWithWorker(Action a, Worker &w, uint64_t oid, const Field &f, Value &&patch) const {
+Value Scheme::fieldWithWorker(Action a, Worker &w, uint64_t oid, const Field &f,
+		Value &&patch) const {
 	switch (a) {
 	case Action::Get:
-	case Action::Count:
-		return w.transaction().field(a, w, oid, f, sp::move(patch));
-		break;
+	case Action::Count: return w.transaction().field(a, w, oid, f, sp::move(patch)); break;
 	case Action::Set:
 		if (f.transform(*this, oid, patch)) {
 			Value ret;
-			w.perform([&] (const Transaction &t) -> bool {
+			w.perform([&](const Transaction &t) -> bool {
 				ret = t.field(a, w, oid, f, sp::move(patch));
 				return !ret.isNull();
 			});
@@ -749,14 +731,14 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, uint64_t oid, const Field &f,
 		}
 		break;
 	case Action::Remove:
-		return Value(w.perform([&] (const Transaction &t) -> bool {
+		return Value(w.perform([&](const Transaction &t) -> bool {
 			return t.field(a, w, oid, f, sp::move(patch)) ? true : false;
 		}));
 		break;
 	case Action::Append:
 		if (f.transform(*this, oid, patch)) {
 			Value ret;
-			w.perform([&] (const Transaction &t) -> bool {
+			w.perform([&](const Transaction &t) -> bool {
 				ret = t.field(a, w, oid, f, sp::move(patch));
 				return !ret.isNull();
 			});
@@ -767,16 +749,15 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, uint64_t oid, const Field &f,
 	return Value();
 }
 
-Value Scheme::fieldWithWorker(Action a, Worker &w, const Value &obj, const Field &f, Value &&patch) const {
+Value Scheme::fieldWithWorker(Action a, Worker &w, const Value &obj, const Field &f,
+		Value &&patch) const {
 	switch (a) {
 	case Action::Get:
-	case Action::Count:
-		return w.transaction().field(a, w, obj, f, sp::move(patch));
-		break;
+	case Action::Count: return w.transaction().field(a, w, obj, f, sp::move(patch)); break;
 	case Action::Set:
 		if (f.transform(*this, obj, patch)) {
 			Value ret;
-			w.perform([&] (const Transaction &t) -> bool {
+			w.perform([&](const Transaction &t) -> bool {
 				ret = t.field(a, w, obj, f, sp::move(patch));
 				return !ret.isNull();
 			});
@@ -784,14 +765,14 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, const Value &obj, const Field
 		}
 		break;
 	case Action::Remove:
-		return Value(w.perform([&] (const Transaction &t) -> bool {
+		return Value(w.perform([&](const Transaction &t) -> bool {
 			return t.field(a, w, obj, f, sp::move(patch)).asBool();
 		}));
 		break;
 	case Action::Append:
 		if (f.transform(*this, obj, patch)) {
 			Value ret;
-			w.perform([&] (const Transaction &t) -> bool {
+			w.perform([&](const Transaction &t) -> bool {
 				ret = t.field(a, w, obj, f, sp::move(patch));
 				return !ret.isNull();
 			});
@@ -804,7 +785,7 @@ Value Scheme::fieldWithWorker(Action a, Worker &w, const Value &obj, const Field
 
 Value Scheme::setFileWithWorker(Worker &w, uint64_t oid, const Field &f, InputFile &file) const {
 	Value ret;
-	w.perform([&, this] (const Transaction &t) -> bool {
+	w.perform([&, this](const Transaction &t) -> bool {
 		Value patch;
 		transform(patch, TransformAction::Update);
 		auto d = createFile(t, f, file);
@@ -825,7 +806,7 @@ Value Scheme::setFileWithWorker(Worker &w, uint64_t oid, const Field &f, InputFi
 	return ret;
 }
 
-Value Scheme::doPatch(Worker &w, const Transaction &t, uint64_t id, Value & patch) const {
+Value Scheme::doPatch(Worker &w, const Transaction &t, uint64_t id, Value &patch) const {
 	if (auto ret = t.patch(w, id, patch)) {
 		touchParents(t, ret);
 		return ret;
@@ -833,14 +814,15 @@ Value Scheme::doPatch(Worker &w, const Transaction &t, uint64_t id, Value & patc
 	return Value();
 }
 
-Value Scheme::patchOrUpdate(Worker &w, uint64_t id, Value & patch) const {
+Value Scheme::patchOrUpdate(Worker &w, uint64_t id, Value &patch) const {
 	if (!patch.empty()) {
 		Value ret;
-		w.perform([&, this] (const Transaction &t) {
+		w.perform([&, this](const Transaction &t) {
 			auto r = getAccessRole(t.getRole());
 			auto d = getAccessRole(AccessRoleId::Default);
 			// if we have save callback - we unable to do patches
-			if (!isAtomicPatch(patch) || (r && r->onSave && !r->onPatch) || (d && d->onSave && !d->onPatch)) {
+			if (!isAtomicPatch(patch) || (r && r->onSave && !r->onPatch)
+					|| (d && d->onSave && !d->onPatch)) {
 				if (auto obj = makeObjectForPatch(t, id, Value(), patch)) {
 					t.setObject(id, Value(obj));
 					if ((ret = updateObject(w, obj, patch))) {
@@ -860,8 +842,8 @@ Value Scheme::patchOrUpdate(Worker &w, uint64_t id, Value & patch) const {
 	return Value();
 }
 
-Value Scheme::patchOrUpdate(Worker &w, Value & obj, Value & patch) const {
-	auto isObjectValid = [&, this] (const Value &obj) -> bool {
+Value Scheme::patchOrUpdate(Worker &w, Value &obj, Value &patch) const {
+	auto isObjectValid = [&, this](const Value &obj) -> bool {
 		for (auto &it : patch.asDict()) {
 			if (!obj.hasValue(it.first)) {
 				return false;
@@ -877,14 +859,14 @@ Value Scheme::patchOrUpdate(Worker &w, Value & obj, Value & patch) const {
 
 	if (!patch.empty()) {
 		Value ret;
-		w.perform([&, this] (const Transaction &t) {
+		w.perform([&, this](const Transaction &t) {
 			if (isAtomicPatch(patch)) {
 				ret = doPatch(w, t, obj.getInteger("__oid"), patch);
 				if (ret) {
 					return true;
 				}
 			} else {
-				auto id =  obj.getInteger("__oid");
+				auto id = obj.getInteger("__oid");
 				if (isObjectValid(obj)) {
 					if ((ret = updateObject(w, obj, patch))) {
 						return true;
@@ -913,7 +895,7 @@ bool Scheme::removeWithWorker(Worker &w, uint64_t oid) const {
 	}
 
 	if (!_parents.empty() || hasAuto) {
-		return w.perform([&, this] (const Transaction &t) {
+		return w.perform([&, this](const Transaction &t) {
 			Query query;
 			prepareGetQuery(query, oid, true);
 			for (auto &it : _parents) {
@@ -938,14 +920,12 @@ bool Scheme::removeWithWorker(Worker &w, uint64_t oid) const {
 			return false;
 		});
 	} else {
-		return w.perform([&] (const Transaction &t) {
-			return t.remove(w, oid);
-		});
+		return w.perform([&](const Transaction &t) { return t.remove(w, oid); });
 	}
 }
 
 bool Scheme::foreachWithWorker(Worker &w, const Query &q, const Callback<bool(Value &)> &cb) const {
-	return w.transaction().foreach(w, q, cb);
+	return w.transaction().foreach (w, q, cb);
 }
 
 Value Scheme::selectWithWorker(Worker &w, const Query &q) const {
@@ -967,15 +947,19 @@ Value &Scheme::transform(Value &d, TransformAction a) const {
 				|| f_it->second.getType() == Type::FullTextView
 
 				// we can write into readonly field only in protected mode
-				|| (f_it->second.hasFlag(Flags::ReadOnly) && a != TransformAction::ProtectedCreate && a != TransformAction::ProtectedUpdate)
+				|| (f_it->second.hasFlag(Flags::ReadOnly) && a != TransformAction::ProtectedCreate
+						&& a != TransformAction::ProtectedUpdate)
 
 				// we can drop files in all modes...
-				|| (f_it->second.isFile() && !it->second.isNull()
+				|| (f_it->second.isFile()
+						&& !it->second.isNull()
 						// but we can write files as ints only in protected mode
-						&& ((a != TransformAction::ProtectedCreate && a != TransformAction::ProtectedUpdate) || !it->second.isInteger()))) {
+						&& ((a != TransformAction::ProtectedCreate
+									&& a != TransformAction::ProtectedUpdate)
+								|| !it->second.isInteger()))) {
 			it = dict.erase(it);
 		} else {
-			it ++;
+			it++;
 		}
 	}
 
@@ -992,7 +976,8 @@ Value &Scheme::transform(Value &d, TransformAction a) const {
 					d.setValue(sp::move(def), it.first);
 				}
 			}
-		} else if ((a == TransformAction::Update || a == TransformAction::ProtectedUpdate || a == TransformAction::Touch)
+		} else if ((a == TransformAction::Update || a == TransformAction::ProtectedUpdate
+						   || a == TransformAction::Touch)
 				&& field.hasFlag(Flags::AutoMTime)) {
 			if ((!d.empty() && !d.hasValue(it.first)) || a == TransformAction::Touch) {
 				d.setInteger(stappler::Time::now().toMicroseconds(), it.first);
@@ -1005,12 +990,16 @@ Value &Scheme::transform(Value &d, TransformAction a) const {
 		auto it = dict.begin();
 		while (it != dict.end()) {
 			auto &field = _fields.at(it->first);
-			if (it->second.isNull() && (a == TransformAction::Update || a == TransformAction::ProtectedUpdate || a == TransformAction::Touch)) {
-				it ++;
-			} else if (!field.transform(*this, d, it->second, (a == TransformAction::Create || a == TransformAction::ProtectedCreate))) {
+			if (it->second.isNull()
+					&& (a == TransformAction::Update || a == TransformAction::ProtectedUpdate
+							|| a == TransformAction::Touch)) {
+				it++;
+			} else if (!field.transform(*this, d, it->second,
+							   (a == TransformAction::Create
+									   || a == TransformAction::ProtectedCreate))) {
 				it = dict.erase(it);
 			} else {
-				it ++;
+				it++;
 			}
 		}
 	}
@@ -1040,7 +1029,8 @@ Value Scheme::createFile(const Transaction &t, const Field &field, InputFile &fi
 	return Value();
 }
 
-Value Scheme::createFile(const Transaction &t, const Field &field, const BytesView &data, const StringView &itype, int64_t mtime) const {
+Value Scheme::createFile(const Transaction &t, const Field &field, const BytesView &data,
+		const StringView &itype, int64_t mtime) const {
 	//check if content type is valid
 	String type(itype.str<Interface>());
 #if MODULE_STAPPLER_BITMAP
@@ -1064,7 +1054,8 @@ Value Scheme::createFile(const Transaction &t, const Field &field, const BytesVi
 	return Value();
 }
 
-Value Scheme::makeObjectForPatch(const Transaction &t, uint64_t oid, const Value &obj, const Value &patch) const {
+Value Scheme::makeObjectForPatch(const Transaction &t, uint64_t oid, const Value &obj,
+		const Value &patch) const {
 	Set<const Field *> includeFields;
 
 	Query query;
@@ -1088,7 +1079,8 @@ Value Scheme::makeObjectForPatch(const Transaction &t, uint64_t oid, const Value
 		if (it.second.getType() == Type::FullTextView) {
 			auto slot = it.second.getSlot<FieldFullTextView>();
 			for (auto &p_it : patch.asDict()) {
-				auto req_it = std::find(slot->requireFields.begin(), slot->requireFields.end(), p_it.first);
+				auto req_it = std::find(slot->requireFields.begin(), slot->requireFields.end(),
+						p_it.first);
 				if (req_it != slot->requireFields.end()) {
 					for (auto &it : slot->requireFields) {
 						if (auto f = getField(it)) {
@@ -1100,9 +1092,7 @@ Value Scheme::makeObjectForPatch(const Transaction &t, uint64_t oid, const Value
 		}
 	}
 
-	for (auto &it : includeFields) {
-		query.include(Query::Field(it->getName()));
-	}
+	for (auto &it : includeFields) { query.include(Query::Field(it->getName())); }
 
 	auto ret = Worker(*this, t).asSystem().reduceGetQuery(query, false);
 	if (!obj) {
@@ -1142,9 +1132,7 @@ void Scheme::finalizeField(const Transaction &t, const Field &f, const Value &va
 	}
 }
 
-void Scheme::updateLimits() {
-	_config.updateLimits(_fields);
-}
+void Scheme::updateLimits() { _config.updateLimits(_fields); }
 
 bool Scheme::validateHint(uint64_t oid, const Value &hint) {
 	if (!hint.isDictionary()) {
@@ -1195,37 +1183,45 @@ bool Scheme::validateHint(const Value &hint) {
 }
 
 Value Scheme::createFilePatch(const Transaction &t, const Value &ival, Value &iChangeSet) const {
-	auto createPatch = [&, this] (const Value &val, Value &changeSet) {
+	auto createPatch = [&, this](const Value &val, Value &changeSet) {
 		Value patch;
 		for (auto &it : val.asDict()) {
 			auto f = getField(it.first);
-			if (f && (f->getType() == Type::File || (f->getType() == Type::Image && static_cast<const FieldImage *>(f->getSlot())->primary))) {
+			if (f
+					&& (f->getType() == Type::File
+							|| (f->getType() == Type::Image
+									&& static_cast<const FieldImage *>(f->getSlot())->primary))) {
 				if (it.second.isInteger() && it.second.getInteger() < 0) {
-					auto file = t.getAdapter().getApplicationInterface()->getFileFromContext(it.second.getInteger());
+					auto file = t.getAdapter().getApplicationInterface()->getFileFromContext(
+							it.second.getInteger());
 					if (file && file->isOpen()) {
 						auto d = createFile(t, *f, *file);
 						if (d.isInteger()) {
 							patch.setValue(d, f->getName().str<Interface>());
 						} else if (d.isDictionary()) {
-							for (auto & it : d.asDict()) {
+							for (auto &it : d.asDict()) {
 								patch.setValue(sp::move(it.second), it.first);
 							}
 						}
 					}
 				} else if (it.second.isDictionary()) {
-					if ((it.second.isBytes("content") || it.second.isString("content")) && it.second.isString("type")) {
+					if ((it.second.isBytes("content") || it.second.isString("content"))
+							&& it.second.isString("type")) {
 						auto &c = it.second.getValue("content");
 						Value d;
 						if (c.isBytes()) {
-							d = createFile(t, *f, c.getBytes(), it.second.getString("type"), it.second.getInteger("mtime"));
+							d = createFile(t, *f, c.getBytes(), it.second.getString("type"),
+									it.second.getInteger("mtime"));
 						} else {
 							auto &str = it.second.getString("content");
-							d = createFile(t, *f, BytesView((const uint8_t *)str.data(), str.size()), it.second.getString("type"), it.second.getInteger("mtime"));
+							d = createFile(t, *f,
+									BytesView((const uint8_t *)str.data(), str.size()),
+									it.second.getString("type"), it.second.getInteger("mtime"));
 						}
 						if (d.isInteger()) {
 							patch.setValue(d, f->getName().str<Interface>());
 						} else if (d.isDictionary()) {
-							for (auto & it : d.asDict()) {
+							for (auto &it : d.asDict()) {
 								patch.setValue(sp::move(it.second), it.first);
 							}
 						}
@@ -1234,9 +1230,7 @@ Value Scheme::createFilePatch(const Transaction &t, const Value &ival, Value &iC
 			}
 		}
 		if (patch.isDictionary()) {
-			for (auto &it : patch.asDict()) {
-				changeSet.setValue(it.second, it.first);
-			}
+			for (auto &it : patch.asDict()) { changeSet.setValue(it.second, it.first); }
 		}
 		return patch;
 	};
@@ -1253,7 +1247,7 @@ Value Scheme::createFilePatch(const Transaction &t, const Value &ival, Value &iC
 					ret.addValue(sp::move(vl));
 				}
 			}
-			++ i;
+			++i;
 		}
 		return ret;
 	}
@@ -1281,7 +1275,7 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 	pool::context<pool_t *> ctx(_views.get_allocator(), pool::context<pool_t *>::conditional);
 
 	if (auto view = static_cast<const FieldView *>(f->getSlot())) {
-		_views.emplace_back(new ViewScheme{s, f, *view});
+		_views.emplace_back(new (std::nothrow) ViewScheme{s, f, *view});
 		auto viewScheme = _views.back();
 
 		bool linked = false;
@@ -1299,10 +1293,10 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 				viewScheme->fields.emplace(&fit->second);
 				_forceInclude.emplace(&fit->second);
 			} else {
-				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty, Value({
-					stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
-					stappler::pair("field", Value(toString(getName(), ".", it)))
-				}));
+				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty,
+						Value({stappler::pair("view",
+									   Value(toString(s->getName(), ".", f->getName()))),
+							stappler::pair("field", Value(toString(getName(), ".", it)))}));
 			}
 		}
 		if (!view->linkage && !linked) {
@@ -1325,9 +1319,10 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 			linked = true;
 		}
 		if (!linked) {
-			log::error("Scheme", "Failed to autolink view field", data::EncodeFormat::Pretty, Value({
-				stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
-			}));
+			log::error("Scheme", "Failed to autolink view field", data::EncodeFormat::Pretty,
+					Value({
+						stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
+					}));
 		}
 	}
 }
@@ -1335,7 +1330,7 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme &a) {
 	pool::context<pool_t *> ctx(_views.get_allocator(), pool::context<pool_t *>::conditional);
 
-	_views.emplace_back(new ViewScheme{s, f, a});
+	_views.emplace_back(new (std::nothrow) ViewScheme{s, f, a});
 	auto viewScheme = _views.back();
 
 	if (this == s && !a.linkage) {
@@ -1344,10 +1339,9 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				viewScheme->fields.emplace(f);
 				_autoFieldReq.emplace(f);
 			} else {
-				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty, Value({
-					stappler::pair("view", Value(toString(s->getName(), ".", it))),
-					stappler::pair("field", Value(toString(getName(), ".", it)))
-				}));
+				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty,
+						Value({stappler::pair("view", Value(toString(s->getName(), ".", it))),
+							stappler::pair("field", Value(toString(getName(), ".", it)))}));
 			}
 		}
 	} else {
@@ -1365,10 +1359,9 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				viewScheme->fields.emplace(f);
 				_forceInclude.emplace(f);
 			} else {
-				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty, Value({
-					stappler::pair("view", Value(toString(s->getName(), ".", it))),
-					stappler::pair("field", Value(toString(getName(), ".", it)))
-				}));
+				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty,
+						Value({stappler::pair("view", Value(toString(s->getName(), ".", it))),
+							stappler::pair("field", Value(toString(getName(), ".", it)))}));
 			}
 		}
 		for (auto &it : a.requiresForAuto) {
@@ -1376,10 +1369,9 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				viewScheme->fields.emplace(f);
 				_autoFieldReq.emplace(f);
 			} else {
-				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty, Value({
-					stappler::pair("view", Value(toString(s->getName(), ".", it))),
-					stappler::pair("field", Value(toString(getName(), ".", it)))
-				}));
+				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty,
+						Value({stappler::pair("view", Value(toString(s->getName(), ".", it))),
+							stappler::pair("field", Value(toString(getName(), ".", it)))}));
 			}
 		}
 		if (!a.linkage && !linked) {
@@ -1402,9 +1394,10 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 			linked = true;
 		}
 		if (!linked) {
-			log::error("Scheme", "Failed to autolink view field", data::EncodeFormat::Pretty, Value({
-				stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
-			}));
+			log::error("Scheme", "Failed to autolink view field", data::EncodeFormat::Pretty,
+					Value({
+						stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
+					}));
 		}
 	}
 }
@@ -1412,7 +1405,7 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 void Scheme::addParent(const Scheme *s, const Field *f) {
 	pool::context<pool_t *> ctx(_parents.get_allocator(), pool::context<pool_t *>::conditional);
 
-	_parents.emplace_back(new ParentScheme(s, f));
+	_parents.emplace_back(new (std::nothrow) ParentScheme(s, f));
 	auto &p = _parents.back();
 
 	auto slot = static_cast<const FieldObject *>(f->getSlot());
@@ -1426,7 +1419,8 @@ void Scheme::addParent(const Scheme *s, const Field *f) {
 }
 
 Vector<uint64_t> Scheme::getLinkageForView(const Value &obj, const ViewScheme &s) const {
-	Vector<uint64_t> ids; ids.reserve(1);
+	Vector<uint64_t> ids;
+	ids.reserve(1);
 	if (s.autoLink && s.autoLink->getSlot()) {
 		if (auto id = obj.getInteger(s.autoLink->getName())) {
 			ids.push_back(id);
@@ -1450,7 +1444,8 @@ Vector<uint64_t> Scheme::getLinkageForView(const Value &obj, const ViewScheme &s
 	return ids;
 }
 
-void Scheme::updateView(const Transaction &t, const Value & obj, const ViewScheme *scheme, const Vector<uint64_t> &orig) const {
+void Scheme::updateView(const Transaction &t, const Value &obj, const ViewScheme *scheme,
+		const Vector<uint64_t> &orig) const {
 	const FieldView *view = nullptr;
 	if (scheme->viewField->getType() == Type::View) {
 		view = static_cast<const FieldView *>(scheme->viewField->getSlot());
@@ -1473,11 +1468,9 @@ void Scheme::updateView(const Transaction &t, const Value & obj, const ViewSchem
 			t.scheduleAutoField(*scheme->scheme, *scheme->viewField, it);
 		}
 
-		for (auto &it : ids) {
-			t.scheduleAutoField(*scheme->scheme, *scheme->viewField, it);
-		}
+		for (auto &it : ids) { t.scheduleAutoField(*scheme->scheme, *scheme->viewField, it); }
 	} else {
-		t.performAsSystem([&, this] () -> bool {
+		t.performAsSystem([&, this]() -> bool {
 			t.removeFromView(*scheme->scheme, *view, objId, obj);
 
 			if (!ids.empty()) {
@@ -1497,4 +1490,4 @@ void Scheme::updateView(const Transaction &t, const Value & obj, const ViewSchem
 	}
 }
 
-}
+} // namespace stappler::db

@@ -24,6 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_SPMEMORY_H_
 #define STAPPLER_CORE_SPMEMORY_H_
 
+#include "SPMemFunction.h"
 #include "SPMemInterface.h"
 #include "SPSpanView.h"
 #include "SPString.h"
@@ -47,11 +48,11 @@ template <typename T>
 class SP_PUBLIC VectorAdapter {
 public:
 	size_t size() const { return size_fn(target); }
-	T & back() const { return back_fn(target); }
-	T & front() const { return front_fn(target); }
+	T &back() const { return back_fn(target); }
+	T &front() const { return front_fn(target); }
 	bool empty() const { return empty_fn(target); }
-	T & at(size_t pos) const { return at_fn(target, pos); }
-	T & emplace_back(T &&v) const { return emplace_back_fn(target, move(v)); }
+	T &at(size_t pos) const { return at_fn(target, pos); }
+	T &emplace_back(T &&v) const { return emplace_back_fn(target, move(v)); }
 
 	T *begin() const { return begin_fn(target); }
 	T *end() const { return end_fn(target); }
@@ -60,7 +61,7 @@ public:
 	void reserve(size_t count) const { reserve_fn(target, count); }
 	void resize(size_t count) const { resize_fn(target, count); }
 
-	explicit operator bool () const noexcept { return target != nullptr; }
+	explicit operator bool() const noexcept { return target != nullptr; }
 
 	VectorAdapter() noexcept = default;
 
@@ -69,36 +70,30 @@ public:
 
 public:
 	void *target = nullptr;
-	size_t (*size_fn) (void *) = nullptr;
-	T & (*back_fn) (void *) = nullptr;
-	T & (*front_fn) (void *) = nullptr;
-	bool (*empty_fn) (void *) = nullptr;
-	T & (*at_fn) (void *, size_t) = nullptr;
-	T & (*emplace_back_fn) (void *, T&&) = nullptr;
-	T * (*begin_fn) (void *) = nullptr;
-	T * (*end_fn) (void *) = nullptr;
-	void (*clear_fn) (void *) = nullptr;
-	void (*reserve_fn) (void *, size_t) = nullptr;
-	void (*resize_fn) (void *, size_t) = nullptr;
+	size_t (*size_fn)(void *) = nullptr;
+	T &(*back_fn)(void *) = nullptr;
+	T &(*front_fn)(void *) = nullptr;
+	bool (*empty_fn)(void *) = nullptr;
+	T &(*at_fn)(void *, size_t) = nullptr;
+	T &(*emplace_back_fn)(void *, T &&) = nullptr;
+	T *(*begin_fn)(void *) = nullptr;
+	T *(*end_fn)(void *) = nullptr;
+	void (*clear_fn)(void *) = nullptr;
+	void (*reserve_fn)(void *, size_t) = nullptr;
+	void (*resize_fn)(void *, size_t) = nullptr;
 };
 
 class SP_PUBLIC PoolRef : public Ref {
 public:
-	virtual ~PoolRef() {
-		memory::pool::destroy(_pool);
-	}
+	virtual ~PoolRef() { memory::pool::destroy(_pool); }
 
-	PoolRef(memory::pool_t *root = nullptr) {
-		_pool = memory::pool::create(root);
-	}
+	PoolRef(memory::pool_t *root = nullptr) { _pool = memory::pool::create(root); }
 
 	PoolRef(PoolRef *p) : PoolRef(p->_pool) { }
 
 	memory::pool_t *getPool() const { return _pool; }
 
-	void *palloc(size_t size) {
-		return memory::pool::palloc(_pool, size);
-	}
+	void *palloc(size_t size) { return memory::pool::palloc(_pool, size); }
 
 	template <typename Callable>
 	auto perform(const Callable &cb) {
@@ -110,7 +105,7 @@ protected:
 	memory::pool_t *_pool = nullptr;
 };
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace STAPPLER_VERSIONIZED stappler::mem_pool {
 
@@ -167,14 +162,15 @@ using memory::pool::perform;
 using memory::pool::perform_clear;
 using memory::pool::perform_temporary;
 using memory::pool::perform_main;
+using memory::makeCallback;
 
 template <typename Container, typename T>
 bool emplace_ordered(Container &vec, T val);
 
 template <typename Container, typename T>
-bool exists_ordered(const Container &vec, const T & val);
+bool exists_ordered(const Container &vec, const T &val);
 
-}
+} // namespace stappler::mem_pool
 
 
 namespace STAPPLER_VERSIONIZED stappler::mem_std {
@@ -233,14 +229,15 @@ using memory::pool::perform;
 using memory::pool::perform_clear;
 using memory::pool::perform_temporary;
 using memory::pool::perform_main;
+using memory::makeCallback;
 
 template <typename Container, typename T>
 bool emplace_ordered(Container &vec, T val);
 
 template <typename Container, typename T>
-bool exists_ordered(const Container &vec, const T & val);
+bool exists_ordered(const Container &vec, const T &val);
 
-}
+} // namespace stappler::mem_std
 
 
 //
@@ -257,9 +254,8 @@ using Dictionary = Value::DictionaryType;
 using EncodeFormat = stappler::data::EncodeFormat;
 
 inline bool emplace_ordered(Vector<Value> &vec, const Value &val) {
-	auto lb = std::lower_bound(vec.begin(), vec.end(), val, [&] (const Value &l, const Value &r) {
-		return l.getInteger() < r.getInteger();
-	});
+	auto lb = std::lower_bound(vec.begin(), vec.end(), val,
+			[&](const Value &l, const Value &r) { return l.getInteger() < r.getInteger(); });
 	if (lb == vec.end()) {
 		vec.emplace_back(val);
 		return true;
@@ -270,7 +266,7 @@ inline bool emplace_ordered(Vector<Value> &vec, const Value &val) {
 	return false;
 }
 
-}
+} // namespace stappler::mem_pool
 
 
 namespace STAPPLER_VERSIONIZED stappler::mem_std {
@@ -281,9 +277,8 @@ using Dictionary = Value::DictionaryType;
 using EncodeFormat = stappler::data::EncodeFormat;
 
 inline bool emplace_ordered(Vector<Value> &vec, const Value &val) {
-	auto lb = std::lower_bound(vec.begin(), vec.end(), val, [&] (const Value &l, const Value &r) {
-		return l.getInteger() < r.getInteger();
-	});
+	auto lb = std::lower_bound(vec.begin(), vec.end(), val,
+			[&](const Value &l, const Value &r) { return l.getInteger() < r.getInteger(); });
 	if (lb == vec.end()) {
 		vec.emplace_back(val);
 		return true;
@@ -294,7 +289,7 @@ inline bool emplace_ordered(Vector<Value> &vec, const Value &val) {
 	return false;
 }
 
-}
+} // namespace stappler::mem_std
 
 #endif // MODULE_STAPPLER_DATA
 
@@ -319,7 +314,7 @@ inline bool emplace_ordered(Container &vec, T val) {
 }
 
 template <typename Container, typename T>
-inline bool exists_ordered(const Container &vec, const T & val) {
+inline bool exists_ordered(const Container &vec, const T &val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
 	if (lb == vec.end() || *lb != val) {
 		return false;
@@ -327,7 +322,7 @@ inline bool exists_ordered(const Container &vec, const T & val) {
 	return true;
 }
 
-}
+} // namespace stappler::mem_pool
 
 
 namespace STAPPLER_VERSIONIZED stappler::mem_std {
@@ -346,7 +341,7 @@ inline bool emplace_ordered(Container &vec, T val) {
 }
 
 template <typename Container, typename T>
-inline bool exists_ordered(const Container &vec, const T & val) {
+inline bool exists_ordered(const Container &vec, const T &val) {
 	auto lb = std::lower_bound(vec.begin(), vec.end(), val);
 	if (lb == vec.end() || *lb != val) {
 		return false;
@@ -354,62 +349,44 @@ inline bool exists_ordered(const Container &vec, const T & val) {
 	return true;
 }
 
-}
+} // namespace stappler::mem_std
 
 namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename T>
 VectorAdapter<T>::VectorAdapter(memory::StandartInterface::VectorType<T> &vec) noexcept
-: target(&vec), size_fn([] (void *target) {
-	return ((mem_std::Vector<T> *)target)->size();
-}), back_fn([] (void *target) -> T & {
-	return ((mem_std::Vector<T> *)target)->back();
-}), front_fn([] (void *target) -> T & {
-	return ((mem_std::Vector<T> *)target)->front();
-}), empty_fn([] (void *target) {
-	return ((mem_std::Vector<T> *)target)->empty();
-}), at_fn([] (void *target, size_t pos) -> T & {
-	return ((mem_std::Vector<T> *)target)->at(pos);
-}), emplace_back_fn([] (void *target, T &&v) -> T & {
+: target(&vec)
+, size_fn([](void *target) { return ((mem_std::Vector<T> *)target)->size(); })
+, back_fn([](void *target) -> T & { return ((mem_std::Vector<T> *)target)->back(); })
+, front_fn([](void *target) -> T & { return ((mem_std::Vector<T> *)target)->front(); })
+, empty_fn([](void *target) { return ((mem_std::Vector<T> *)target)->empty(); })
+, at_fn([](void *target, size_t pos) -> T & { return ((mem_std::Vector<T> *)target)->at(pos); })
+, emplace_back_fn([](void *target, T &&v) -> T & {
 	return ((mem_std::Vector<T> *)target)->emplace_back(move(v));
-}), begin_fn([] (void *target) -> T * {
-	return &*((mem_std::Vector<T> *)target)->begin();
-}), end_fn([] (void *target) -> T * {
-	return &*((mem_std::Vector<T> *)target)->end();
-}), clear_fn([] (void *target) {
-	((mem_std::Vector<T> *)target)->clear();
-}), reserve_fn([] (void *target, size_t s) {
-	((mem_std::Vector<T> *)target)->reserve(s);
-}), resize_fn([] (void *target, size_t s) {
-	((mem_std::Vector<T> *)target)->resize(s);
-}) { }
+})
+, begin_fn([](void *target) -> T * { return &*((mem_std::Vector<T> *)target)->begin(); })
+, end_fn([](void *target) -> T * { return &*((mem_std::Vector<T> *)target)->end(); })
+, clear_fn([](void *target) { ((mem_std::Vector<T> *)target)->clear(); })
+, reserve_fn([](void *target, size_t s) { ((mem_std::Vector<T> *)target)->reserve(s); })
+, resize_fn([](void *target, size_t s) { ((mem_std::Vector<T> *)target)->resize(s); }) { }
 
 template <typename T>
 VectorAdapter<T>::VectorAdapter(memory::PoolInterface::VectorType<T> &vec) noexcept
-: target(&vec), size_fn([] (void *target) {
-	return ((mem_pool::Vector<T> *)target)->size();
-}), back_fn([] (void *target) -> T & {
-	return ((mem_pool::Vector<T> *)target)->back();
-}), front_fn([] (void *target) -> T & {
-	return ((mem_pool::Vector<T> *)target)->front();
-}), empty_fn([] (void *target) {
-	return ((mem_pool::Vector<T> *)target)->empty();
-}), at_fn([] (void *target, size_t pos) -> T & {
-	return ((mem_pool::Vector<T> *)target)->at(pos);
-}), emplace_back_fn([] (void *target, T &&v) -> T & {
+: target(&vec)
+, size_fn([](void *target) { return ((mem_pool::Vector<T> *)target)->size(); })
+, back_fn([](void *target) -> T & { return ((mem_pool::Vector<T> *)target)->back(); })
+, front_fn([](void *target) -> T & { return ((mem_pool::Vector<T> *)target)->front(); })
+, empty_fn([](void *target) { return ((mem_pool::Vector<T> *)target)->empty(); })
+, at_fn([](void *target, size_t pos) -> T & { return ((mem_pool::Vector<T> *)target)->at(pos); })
+, emplace_back_fn([](void *target, T &&v) -> T & {
 	return ((mem_pool::Vector<T> *)target)->emplace_back(move(v));
-}), begin_fn([] (void *target) -> T * {
-	return &*((mem_pool::Vector<T> *)target)->begin();
-}), end_fn([] (void *target) -> T * {
-	return &*((mem_pool::Vector<T> *)target)->end();
-}), clear_fn([] (void *target) {
-	((mem_pool::Vector<T> *)target)->clear();
-}), reserve_fn([] (void *target, size_t s) {
-	((mem_pool::Vector<T> *)target)->reserve(s);
-}), resize_fn([] (void *target, size_t s) {
-	((mem_pool::Vector<T> *)target)->resize(s);
-}) { }
+})
+, begin_fn([](void *target) -> T * { return &*((mem_pool::Vector<T> *)target)->begin(); })
+, end_fn([](void *target) -> T * { return &*((mem_pool::Vector<T> *)target)->end(); })
+, clear_fn([](void *target) { ((mem_pool::Vector<T> *)target)->clear(); })
+, reserve_fn([](void *target, size_t s) { ((mem_pool::Vector<T> *)target)->reserve(s); })
+, resize_fn([](void *target, size_t s) { ((mem_pool::Vector<T> *)target)->resize(s); }) { }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* STAPPLER_CORE_SPMEMORY_H_ */

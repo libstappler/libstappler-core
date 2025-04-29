@@ -56,17 +56,22 @@ public:
 	using base::get_soo_size;
 
 	// default init with current context allocator or specified allocator
-	storage_mem_soo(const allocator &alloc = allocator()) noexcept : base(alloc) { }
+	storage_mem_soo(const allocator &alloc = allocator()) noexcept : base(alloc) {
+		SPASSERT(_allocator, "Allocator should be defined");
+	}
 
-	storage_mem_soo(pointer p, size_type s, const allocator &alloc) noexcept : storage_mem_soo(alloc) {
+	storage_mem_soo(pointer p, size_type s, const allocator &alloc) noexcept
+	: storage_mem_soo(alloc) {
 		assign(p, s);
 	}
 
-	storage_mem_soo(const_pointer p, size_type s, const allocator &alloc = allocator()) noexcept : storage_mem_soo(alloc) {
+	storage_mem_soo(const_pointer p, size_type s, const allocator &alloc = allocator()) noexcept
+	: storage_mem_soo(alloc) {
 		assign(p, s);
 	}
 
-	storage_mem_soo(const self &other, size_type pos, size_type len, const allocator &alloc = allocator()) noexcept
+	storage_mem_soo(const self &other, size_type pos, size_type len,
+			const allocator &alloc = allocator()) noexcept
 	: storage_mem_soo(alloc) {
 		if (pos < other.size()) {
 			assign(other.data() + pos, min(len, other.size() - pos));
@@ -92,12 +97,12 @@ public:
 		other.clear_dealloc(_allocator);
 	}
 
-	storage_mem_soo & operator = (const self &other) noexcept {
+	storage_mem_soo &operator=(const self &other) noexcept {
 		assign(other);
 		return *this;
 	}
 
-	storage_mem_soo & operator = (self &&other) noexcept {
+	storage_mem_soo &operator=(self &&other) noexcept {
 		if (other._allocator == _allocator) {
 			// clear and deallocate our memory, self-move-assignment is UB
 			clear_dealloc(_allocator);
@@ -114,16 +119,14 @@ public:
 	using base::assign_mem;
 	using base::is_weak;
 
-	void assign(const self &other) {
-		assign(other.data(), other.size());
-	}
+	void assign(const self &other) { assign(other.data(), other.size()); }
 
 	void assign(const self &other, size_type pos, size_type len) {
 		assign(other.data() + pos, min(len, other.size() - pos));
 	}
 
-	template <typename ...Args>
-	reference emplace_back(Args &&  ...args) {
+	template <typename... Args>
+	reference emplace_back(Args &&...args) {
 		reserve(size() + 1, true); // reserve should switch mode if required
 		return emplace_back_unsafe(std::forward<Args>(args)...);
 	}
@@ -137,8 +140,8 @@ public:
 		}
 	}
 
-	template <typename ...Args>
-	reference emplace_back_unsafe(Args &&  ...args) {
+	template <typename... Args>
+	reference emplace_back_unsafe(Args &&...args) {
 		const auto s = modify_size(1);
 		auto ptr = data() + s - 1;
 		_allocator.construct(data() + s - 1, std::forward<Args>(args)...);
@@ -146,7 +149,7 @@ public:
 	}
 
 	template <typename... Args>
-	iterator emplace( const_iterator it, Args&&... args ) {
+	iterator emplace(const_iterator it, Args &&...args) {
 		const auto _size = size();
 		auto _ptr = data();
 		size_type pos = it - _ptr;
@@ -163,7 +166,7 @@ public:
 	}
 
 	template <typename... Args>
-	iterator emplace_safe( const_iterator it, Args&&... args ) {
+	iterator emplace_safe(const_iterator it, Args &&...args) {
 		const auto _used = size();
 		auto _ptr = data();
 		size_type pos = it - _ptr;
@@ -187,9 +190,7 @@ public:
 		modify_size(s);
 	}
 
-	void insert_back(const self &other) {
-		insert_back(other.data(), other.size());
-	}
+	void insert_back(const self &other) { insert_back(other.data(), other.size()); }
 
 	void insert_back(const self &other, size_type pos, size_type len) {
 		insert_back(other.data() + pos, std::min(other.size() - pos, len));
@@ -203,16 +204,14 @@ public:
 		modify_size(s);
 	}
 
-	void insert(size_type pos, const self &other) {
-		insert(pos, other.data(), other.size());
-	}
+	void insert(size_type pos, const self &other) { insert(pos, other.data(), other.size()); }
 
 	void insert(size_type spos, const self &other, size_type pos, size_type len) {
 		insert(spos, other.data() + pos, min(other.size() - pos, len));
 	}
 
-	template< class... Args >
-	void insert(size_type pos, size_type s, Args && ... args) {
+	template < class... Args >
+	void insert(size_type pos, size_type s, Args &&...args) {
 		const auto _used = size();
 		auto _ptr = reserve(_used + s, true);
 		_allocator.move(_ptr + pos + s, _ptr + pos, _used - pos);
@@ -222,15 +221,15 @@ public:
 		modify_size(s);
 	}
 
-	template< class... Args >
-	iterator insert(const_iterator it, size_type len, Args && ... args) {
+	template < class... Args >
+	iterator insert(const_iterator it, size_type len, Args &&...args) {
 		size_type pos = it - data();
 		insert(pos, len, std::forward<Args>(args)...);
 		return iterator(data() + pos);
 	}
 
-	template< class InputIt >
-	iterator insert( const_iterator it, InputIt first, InputIt last ) {
+	template < class InputIt >
+	iterator insert(const_iterator it, InputIt first, InputIt last) {
 		auto _ptr = data();
 		const auto _used = size();
 		auto pos = it - _ptr;
@@ -240,9 +239,7 @@ public:
 			_allocator.move(_ptr + pos + size, _ptr + pos, _used - pos);
 		}
 		auto i = pos;
-		for (auto it = first; it != last; ++ it, ++ i) {
-			_allocator.construct(_ptr + i, *it);
-		}
+		for (auto it = first; it != last; ++it, ++i) { _allocator.construct(_ptr + i, *it); }
 		modify_size(size);
 		return iterator(_ptr + pos);
 	}
@@ -263,7 +260,7 @@ public:
 		auto _ptr = data();
 		const auto _used = size();
 		auto pos = it - _ptr;
-		_allocator.destroy(const_cast<pointer>( & (*it) ));
+		_allocator.destroy(const_cast<pointer>(&(*it)));
 		if (pos < _used - 1) {
 			_allocator.move(_ptr + pos, _ptr + pos + 1, _used - pos - 1);
 		}
@@ -285,7 +282,8 @@ public:
 		auto _ptr = reserve(_used - len + nlen, true);
 		_allocator.destroy(_ptr + pos, len);
 		if (pos + len < _used) {
-			_allocator.move(_ptr + pos + nlen, _ptr + pos + len, _used - pos - len); // смещаем данные
+			_allocator.move(_ptr + pos + nlen, _ptr + pos + len,
+					_used - pos - len); // смещаем данные
 		}
 		return _ptr + pos;
 	}
@@ -314,9 +312,7 @@ public:
 		len = min(len, _used - pos);
 		prepare_replace(pos, len, nlen);
 		auto _ptr = data();
-		for (size_type i = pos; i < pos + nlen; i++) {
-			_allocator.construct(_ptr + i, t);
-		}
+		for (size_type i = pos; i < pos + nlen; i++) { _allocator.construct(_ptr + i, t); }
 
 		const auto s = modify_size(nlen - len);
 
@@ -325,8 +321,8 @@ public:
 		}
 	}
 
-	template< class InputIt >
-	iterator replace( const_iterator first, const_iterator last, InputIt first2, InputIt last2 ) {
+	template < class InputIt >
+	iterator replace(const_iterator first, const_iterator last, InputIt first2, InputIt last2) {
 		auto pos = size_t(first - data());
 		auto len = size_t(last - first);
 		auto nlen = std::distance(first2, last2);
@@ -334,9 +330,7 @@ public:
 		prepare_replace(pos, len, nlen);
 		auto i = pos;
 		auto _ptr = data();
-		for (auto it = first2; it != last2; it ++, i++) {
-			_allocator.construct(_ptr + i, *it);
-		}
+		for (auto it = first2; it != last2; it++, i++) { _allocator.construct(_ptr + i, *it); }
 
 		const auto s = modify_size(nlen - len);
 
@@ -346,8 +340,8 @@ public:
 		return iterator(pos);
 	}
 
-	template <typename ...Args>
-	void fill(size_type s, Args && ... args) {
+	template <typename... Args>
+	void fill(size_type s, Args &&...args) {
 		clear();
 		auto _ptr = reserve(s, true);
 		for (size_type i = 0; i < s; i++) {
@@ -357,8 +351,8 @@ public:
 		set_size(s);
 	}
 
-	template <typename ...Args>
-	void resize(size_type n, Args && ... args) {
+	template <typename... Args>
+	void resize(size_type n, Args &&...args) {
 		auto _ptr = reserve(n, true);
 
 		const auto _used = size();
@@ -384,13 +378,9 @@ public:
 	using base::size;
 	using base::capacity;
 
-	reference at(size_type s) noexcept {
-		return data()[s];
-	}
+	reference at(size_type s) noexcept { return data()[s]; }
 
-	const_reference at(size_type s) const noexcept {
-		return data()[s];
-	}
+	const_reference at(size_type s) const noexcept { return data()[s]; }
 
 	reference back() noexcept { return *(data() + (size() - 1)); }
 	const_reference back() const noexcept { return *(data() + (size() - 1)); }
@@ -407,14 +397,14 @@ public:
 	const_iterator cbegin() const noexcept { return const_iterator(data()); }
 	const_iterator cend() const noexcept { return const_iterator(data() + size()); }
 
-    reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
-    reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+	reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+	reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
 
-    const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
-    const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
+	const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
+	const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
 
-    const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
-    const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
+	const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
+	const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
 
 	void shrink_to_fit() noexcept {
 		if (size() == 0) {
@@ -422,7 +412,7 @@ public:
 		}
 	}
 
-	const allocator & get_allocator() const noexcept { return _allocator; }
+	const allocator &get_allocator() const noexcept { return _allocator; }
 
 private:
 	using base::perform_move;
@@ -436,6 +426,6 @@ private:
 template <typename Type, size_t Extra = 0>
 using storage_mem = storage_mem_soo<Type, Extra>;
 
-}
+} // namespace stappler::memory
 
 #endif /* STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEM_H_ */

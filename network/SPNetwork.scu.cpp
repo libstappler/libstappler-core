@@ -45,25 +45,25 @@ static constexpr auto NetworkUserdataKey = "org.stappler.Network.Handle";
 struct CurlHandle {
 public:
 	static CURL *alloc() {
-		++ s_activeHandles;
+		++s_activeHandles;
 		return curl_easy_init();
 	}
 
 	static void release(CURL *curl) {
-		-- s_activeHandles;
+		--s_activeHandles;
 		curl_easy_cleanup(curl);
 	}
 
-	static CURL * getHandle(bool reuse, memory::pool_t *pool) {
+	static CURL *getHandle(bool reuse, memory::pool_t *pool) {
 		if (reuse) {
 			if (pool) {
 				void *data = nullptr;
 				memory::pool::userdata_get(&data, NetworkUserdataKey, pool);
 				if (!data) {
 					data = new CurlHandle();
-					memory::pool::userdata_set(data, NetworkUserdataKey, [] (void *obj) {
+					memory::pool::userdata_set(data, NetworkUserdataKey, [](void *obj) {
 						((CurlHandle *)obj)->~CurlHandle();
-						return 0;
+						return Status::Ok;
 					}, pool);
 				}
 
@@ -103,26 +103,20 @@ public:
 		}
 	}
 
-	static uint32_t getActiveHandles() {
-		return s_activeHandles;
-	}
+	static uint32_t getActiveHandles() { return s_activeHandles; }
 
-	CurlHandle() {
-		_curl = alloc();
-	}
+	CurlHandle() { _curl = alloc(); }
 
-	CurlHandle(CurlHandle &&other) : _curl(other._curl) {
-		other._curl = nullptr;
-	}
+	CurlHandle(CurlHandle &&other) : _curl(other._curl) { other._curl = nullptr; }
 
-	CurlHandle & operator = (CurlHandle &&other) {
+	CurlHandle &operator=(CurlHandle &&other) {
 		_curl = other._curl;
 		other._curl = nullptr;
 		return *this;
 	}
 
 	CurlHandle(const CurlHandle &) = delete;
-	CurlHandle & operator = (const CurlHandle &) = delete;
+	CurlHandle &operator=(const CurlHandle &) = delete;
 
 	~CurlHandle() {
 		if (_curl) {
@@ -132,9 +126,9 @@ public:
 	}
 
 	CURL *get() { return _curl; }
-	explicit operator bool () { return _curl != nullptr; }
+	explicit operator bool() { return _curl != nullptr; }
 
-	void invalidate(CURL * curl) {
+	void invalidate(CURL *curl) {
 		if (_curl == curl) {
 			curl_easy_cleanup(_curl);
 			_curl = curl_easy_init();
@@ -156,27 +150,22 @@ protected:
 std::atomic<uint32_t> CurlHandle::s_activeHandles = 0;
 thread_local CurlHandle *CurlHandle::tl_handle = nullptr;
 
-SPUNUSED static CURL *CurlHandle_alloc() {
-	return CurlHandle::alloc();
-}
+SPUNUSED static CURL *CurlHandle_alloc() { return CurlHandle::alloc(); }
 
-SPUNUSED static void CurlHandle_release(CURL *curl) {
-	CurlHandle::release(curl);
-}
+SPUNUSED static void CurlHandle_release(CURL *curl) { CurlHandle::release(curl); }
 
-SPUNUSED static CURL * CurlHandle_getHandle(bool reuse, memory::pool_t *pool) {
+SPUNUSED static CURL *CurlHandle_getHandle(bool reuse, memory::pool_t *pool) {
 	return CurlHandle::getHandle(reuse, pool);
 }
 
-SPUNUSED static void CurlHandle_releaseHandle(CURL *curl, bool reuse, bool success, memory::pool_t *pool) {
+SPUNUSED static void CurlHandle_releaseHandle(CURL *curl, bool reuse, bool success,
+		memory::pool_t *pool) {
 	CurlHandle::releaseHandle(curl, reuse, success, pool);
 }
 
-uint32_t getActiveHandles() {
-	return CurlHandle::getActiveHandles();
-}
+uint32_t getActiveHandles() { return CurlHandle::getActiveHandles(); }
 
-}
+} // namespace stappler::network
 
 #include "SPNetworkCABundle.cc"
 #include "SPNetworkSetup.cc"

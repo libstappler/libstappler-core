@@ -30,22 +30,21 @@ struct Pool_StoreHandle : AllocPool {
 	memory::function<void()> callback;
 };
 
-static status_t sa_request_store_custom_cleanup(void *ptr) {
+static Status sa_request_store_custom_cleanup(void *ptr) {
 	if (ptr) {
 		auto ref = (Pool_StoreHandle *)ptr;
 		if (ref->callback) {
-			memory::pool::perform_conditional([&] {
-				ref->callback();
-			}, ref->callback.get_allocator());
+			memory::pool::perform_conditional([&] { ref->callback(); },
+					ref->callback.get_allocator());
 		}
 	}
-	return SUCCESS;
+	return Status::Ok;
 }
 
 void store(pool_t *pool, void *ptr, const StringView &key, memory::function<void()> &&cb) {
 	pool::context<pool_t *> ctx(pool, pool::context<pool_t *>::conditional);
 
-	void * ret = nullptr;
+	void *ret = nullptr;
 	pool::userdata_get(&ret, key.data(), key.size(), pool);
 	if (ret) {
 		auto h = (Pool_StoreHandle *)ret;
@@ -73,4 +72,4 @@ void store(pool_t *pool, void *ptr, const StringView &key, memory::function<void
 	}
 }
 
-}
+} // namespace stappler::memory::pool

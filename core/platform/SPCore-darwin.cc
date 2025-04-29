@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::platform {
 
 static char32_t convertChar(char32_t c, const Callback<void(CFMutableStringRef, CFLocaleRef)> &cb) {
 	auto locale = CFLocaleCopyCurrent();
-	UniChar buf[4] = { 0 };
+	UniChar buf[4] = {0};
 	char32_t buf2[2];
 	auto num = unicode::utf16EncodeBuf((char16_t *)buf, c);
 	auto str = CFStringCreateMutable(nullptr, 2);
@@ -42,9 +42,9 @@ static char32_t convertChar(char32_t c, const Callback<void(CFMutableStringRef, 
 	auto bytes = CFStringGetCStringPtr(str, kCFStringEncodingUTF32);
 
 	if (bytes == NULL) {
-	    if (CFStringGetCString(str, (char *)buf2, 2 * sizeof(char32_t), kCFStringEncodingUTF32)) {
-	    	c = buf2[0];
-	    }
+		if (CFStringGetCString(str, (char *)buf2, 2 * sizeof(char32_t), kCFStringEncodingUTF32)) {
+			c = buf2[0];
+		}
 	} else {
 		c = ((char32_t *)bytes)[0];
 	}
@@ -62,8 +62,8 @@ static CFMutableStringRef makeString(WideStringView str) {
 
 static CFMutableStringRef makeString(StringViewUtf8 str) {
 	auto ret = CFStringCreateMutable(nullptr, str.code_size());
-	UniChar buf[4] = { 0 };
-	str.foreach([&] (char32_t c) {
+	UniChar buf[4] = {0};
+	str.foreach ([&](char32_t c) {
 		auto num = unicode::utf16EncodeBuf((char16_t *)buf, c);
 		CFStringAppendCharacters(ret, buf, num);
 	});
@@ -76,9 +76,9 @@ static memory::PoolInterface::StringType toPoolString(CFMutableStringRef str) {
 
 	if (bytes == NULL) {
 		char16_t buf[len + 1];
-	    if (CFStringGetCString(str, (char *)buf, len * sizeof(char32_t), kCFStringEncodingUTF16)) {
-	    	return string::toUtf8<memory::PoolInterface>(WideStringView(buf, len));
-	    }
+		if (CFStringGetCString(str, (char *)buf, len * sizeof(char32_t), kCFStringEncodingUTF16)) {
+			return string::toUtf8<memory::PoolInterface>(WideStringView(buf, len));
+		}
 	} else {
 		return string::toUtf8<memory::PoolInterface>(WideStringView(bytes, len));
 	}
@@ -91,9 +91,9 @@ static memory::PoolInterface::WideStringType toPoolWideString(CFMutableStringRef
 
 	if (bytes == NULL) {
 		char16_t buf[len + 1];
-	    if (CFStringGetCString(str, (char *)buf, len * sizeof(char32_t), kCFStringEncodingUTF16)) {
-	    	return memory::PoolInterface::WideStringType(buf, len);
-	    }
+		if (CFStringGetCString(str, (char *)buf, len * sizeof(char32_t), kCFStringEncodingUTF16)) {
+			return memory::PoolInterface::WideStringType(buf, len);
+		}
 	} else {
 		return memory::PoolInterface::WideStringType(bytes, len);
 	}
@@ -106,9 +106,9 @@ static memory::StandartInterface::StringType toStdString(CFMutableStringRef str)
 
 	if (bytes == NULL) {
 		char16_t buf[len + 1];
-	    if (CFStringGetCString(str, (char *)buf, len * sizeof(char32_t), kCFStringEncodingUTF16)) {
-	    	return string::toUtf8<memory::StandartInterface>(WideStringView(buf, len));
-	    }
+		if (CFStringGetCString(str, (char *)buf, len * sizeof(char32_t), kCFStringEncodingUTF16)) {
+			return string::toUtf8<memory::StandartInterface>(WideStringView(buf, len));
+		}
 	} else {
 		return string::toUtf8<memory::StandartInterface>(WideStringView(bytes, len));
 	}
@@ -121,9 +121,9 @@ static memory::StandartInterface::WideStringType toStdWideString(CFMutableString
 
 	if (bytes == NULL) {
 		char16_t buf[len + 1];
-	    if (CFStringGetCString(str, (char *)buf, len * sizeof(char32_t), kCFStringEncodingUTF16)) {
-	    	return memory::StandartInterface::WideStringType(buf, len);
-	    }
+		if (CFStringGetCString(str, (char *)buf, len * sizeof(char32_t), kCFStringEncodingUTF16)) {
+			return memory::StandartInterface::WideStringType(buf, len);
+		}
 	} else {
 		return memory::StandartInterface::WideStringType(bytes, len);
 	}
@@ -131,21 +131,18 @@ static memory::StandartInterface::WideStringType toStdWideString(CFMutableString
 }
 
 char32_t tolower(char32_t c) {
-	return convertChar(c, [] (CFMutableStringRef str, CFLocaleRef locale) {
-		CFStringLowercase(str, locale);
-	});
+	return convertChar(c,
+			[](CFMutableStringRef str, CFLocaleRef locale) { CFStringLowercase(str, locale); });
 }
 
 char32_t toupper(char32_t c) {
-	return convertChar(c, [] (CFMutableStringRef str, CFLocaleRef locale) {
-		CFStringUppercase(str, locale);
-	});
+	return convertChar(c,
+			[](CFMutableStringRef str, CFLocaleRef locale) { CFStringUppercase(str, locale); });
 }
 
 char32_t totitle(char32_t c) {
-	return convertChar(c, [] (CFMutableStringRef str, CFLocaleRef locale) {
-		CFStringCapitalize(str, locale);
-	});
+	return convertChar(c,
+			[](CFMutableStringRef str, CFLocaleRef locale) { CFStringCapitalize(str, locale); });
 }
 
 template <>
@@ -247,7 +244,8 @@ auto tolower<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto tolower<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto tolower<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	auto locale = CFLocaleCopyCurrent();
 	auto str = makeString(data);
 
@@ -275,7 +273,8 @@ auto toupper<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto toupper<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto toupper<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	auto locale = CFLocaleCopyCurrent();
 	auto str = makeString(data);
 
@@ -303,7 +302,8 @@ auto totitle<memory::PoolInterface>(WideStringView data) -> memory::PoolInterfac
 }
 
 template <>
-auto totitle<memory::StandartInterface>(WideStringView data) -> memory::StandartInterface::WideStringType {
+auto totitle<memory::StandartInterface>(WideStringView data)
+		-> memory::StandartInterface::WideStringType {
 	auto locale = CFLocaleCopyCurrent();
 	auto str = makeString(data);
 
@@ -321,7 +321,8 @@ int compare_u(StringView l, StringView r) {
 	auto lstr = makeString(l);
 	auto rstr = makeString(r);
 
-	auto res = CFStringCompareWithOptionsAndLocale(lstr, rstr, CFRangeMake(0, CFStringGetLength(lstr)), kCFCompareLocalized, locale);
+	auto res = CFStringCompareWithOptionsAndLocale(lstr, rstr,
+			CFRangeMake(0, CFStringGetLength(lstr)), kCFCompareLocalized, locale);
 
 	CFRelease(rstr);
 	CFRelease(lstr);
@@ -334,7 +335,8 @@ int compare_u(WideStringView l, WideStringView r) {
 	auto lstr = makeString(l);
 	auto rstr = makeString(r);
 
-	auto res = CFStringCompareWithOptionsAndLocale(lstr, rstr, CFRangeMake(0, CFStringGetLength(lstr)), kCFCompareLocalized, locale);
+	auto res = CFStringCompareWithOptionsAndLocale(lstr, rstr,
+			CFRangeMake(0, CFStringGetLength(lstr)), kCFCompareLocalized, locale);
 
 	CFRelease(rstr);
 	CFRelease(lstr);
@@ -347,7 +349,9 @@ int caseCompare_u(StringView l, StringView r) {
 	auto lstr = makeString(l);
 	auto rstr = makeString(r);
 
-	auto res = CFStringCompareWithOptionsAndLocale(lstr, rstr, CFRangeMake(0, CFStringGetLength(lstr)), kCFCompareLocalized | kCFCompareCaseInsensitive, locale);
+	auto res =
+			CFStringCompareWithOptionsAndLocale(lstr, rstr, CFRangeMake(0, CFStringGetLength(lstr)),
+					kCFCompareLocalized | kCFCompareCaseInsensitive, locale);
 
 	CFRelease(rstr);
 	CFRelease(lstr);
@@ -360,7 +364,9 @@ int caseCompare_u(WideStringView l, WideStringView r) {
 	auto lstr = makeString(l);
 	auto rstr = makeString(r);
 
-	auto res = CFStringCompareWithOptionsAndLocale(lstr, rstr, CFRangeMake(0, CFStringGetLength(lstr)), kCFCompareLocalized | kCFCompareCaseInsensitive, locale);
+	auto res =
+			CFStringCompareWithOptionsAndLocale(lstr, rstr, CFRangeMake(0, CFStringGetLength(lstr)),
+					kCFCompareLocalized | kCFCompareCaseInsensitive, locale);
 
 	CFRelease(rstr);
 	CFRelease(lstr);
@@ -368,11 +374,11 @@ int caseCompare_u(WideStringView l, WideStringView r) {
 	return int(res);
 }
 
-size_t makeRandomBytes(uint8_t * buf, size_t count) {
+size_t makeRandomBytes(uint8_t *buf, size_t count) {
 	::getentropy(buf, count);
 	return count;
 }
 
-}
+} // namespace stappler::platform
 
 #endif

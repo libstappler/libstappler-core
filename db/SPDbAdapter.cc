@@ -30,6 +30,7 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db {
 
 void ApplicationInterface::defineUserScheme(Scheme &scheme) {
+	// clang-format off
 	scheme.define({
 		db::Field::Text("name", db::Transform::Alias, db::Flags::Required),
 		db::Field::Bytes("pubkey", db::Transform::PublicKey, db::Flags::Indexed),
@@ -44,10 +45,13 @@ void ApplicationInterface::defineUserScheme(Scheme &scheme) {
 				})),
 		db::Field::Text("email", db::Transform::Email, db::Flags::Unique),
 	});
+	// clang-format on
 }
 
 void ApplicationInterface::defineFileScheme(Scheme &scheme) {
-	scheme.define({db::Field::Text("location", db::Transform::Url),
+	// clang-format off
+	scheme.define({
+		db::Field::Text("location", db::Transform::Url),
 		db::Field::Text("type", db::Flags::ReadOnly),
 		db::Field::Integer("size", db::Flags::ReadOnly),
 		db::Field::Integer("mtime", db::Flags::AutoMTime | db::Flags::ReadOnly),
@@ -56,28 +60,33 @@ void ApplicationInterface::defineFileScheme(Scheme &scheme) {
 					db::Field::Integer("width"),
 					db::Field::Integer("height"),
 				})});
+	// clang-format on
 }
 
 void ApplicationInterface::defineErrorScheme(Scheme &scheme) {
-	scheme.define({db::Field::Boolean("hidden", Value(false)),
+	// clang-format off
+	scheme.define({
+		db::Field::Boolean("hidden", Value(false)),
 		db::Field::Boolean("delivered", Value(false)), db::Field::Text("name"),
 		db::Field::Text("documentRoot"), db::Field::Text("url"), db::Field::Text("request"),
 		db::Field::Text("ip"), db::Field::Data("headers"), db::Field::Data("data"),
 		db::Field::Integer("time"),
-		db::Field::Custom(new db::FieldTextArray("tags", db::Flags::Indexed,
+		db::Field::Custom(new (std::nothrow) db::FieldTextArray("tags", db::Flags::Indexed,
 				db::DefaultFn([&](const Value &data) -> Value {
-		Vector<String> tags;
-		for (auto &it : data.getArray("data")) {
-			auto text = it.getString("source");
-			if (!text.empty()) {
-				emplace_ordered(tags, text);
+			Vector<String> tags;
+			for (auto &it : data.getArray("data")) {
+				auto text = it.getString("source");
+				if (!text.empty()) {
+					emplace_ordered(tags, text);
+				}
 			}
-		}
-
-		Value ret;
-		for (auto &it : tags) { ret.addString(it); }
-		return ret;
-	})))});
+	
+			Value ret;
+			for (auto &it : tags) { ret.addString(it); }
+			return ret;
+		})))
+	});
+	// clang-format on
 }
 
 ApplicationInterface::~ApplicationInterface() { }
