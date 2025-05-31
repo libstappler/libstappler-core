@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,10 +25,28 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_UTILS_SPHTMLPARSER_H_
 #define STAPPLER_CORE_UTILS_SPHTMLPARSER_H_
 
+#include "SPEnum.h"
 #include "SPString.h"
 #include "SPStringView.h"
 
 namespace STAPPLER_VERSIONIZED stappler::html {
+
+enum class ParserFlags {
+	None = 0,
+
+	// Parse only root tag content, stop when it's closed
+	RootOnly = 1 << 0,
+
+	// do not parse single-quoted content as opaque
+	IgnoreSingleQuote = 1 << 1,
+
+	// do not parse double-quoted content as opaque
+	IgnoreDoubleQuote = 1 << 2,
+
+	Relaxed = IgnoreSingleQuote | IgnoreDoubleQuote
+};
+
+SP_DEFINE_ENUM_AS_MASK(ParserFlags)
 
 /* Reader sample:
 struct Reader {
@@ -69,12 +88,10 @@ template <typename StringReader>
 struct Tag;
 
 template <typename ReaderType, typename StringReader = StringViewUtf8,
-	typename TagType = typename std::conditional<
-		std::is_same<typename ReaderType::Tag, html::Tag<StringReader>>::value,
-		html::Tag<StringReader>,
-		typename ReaderType::Tag
-	>::type>
-void parse(ReaderType &r, const StringReader &s, bool rootOnly = true);
+		typename TagType = typename std::conditional<
+				std::is_same<typename ReaderType::Tag, html::Tag<StringReader>>::value,
+				html::Tag<StringReader>, typename ReaderType::Tag >::type>
+void parse(ReaderType &r, const StringReader &s, ParserFlags = ParserFlags::None);
 
 template <typename T>
 struct ParserTraits {
@@ -93,11 +110,14 @@ struct ParserTraits {
 	InvokerCallTest_MakeCallTest(onReadAttributeValue, success, failure);
 	InvokerCallTest_MakeCallTest(shouldParseTag, success, failure);
 
-	InvokerCallTest_MakeCallTest(onSchemeTag, success, failure); // tags like <?tag ""?> or <!TAG tag>
+	InvokerCallTest_MakeCallTest(onSchemeTag, success,
+			failure); // tags like <?tag ""?> or <!TAG tag>
 	InvokerCallTest_MakeCallTest(onCommentTag, success, failure); // tags like <!-- -->
-	InvokerCallTest_MakeCallTest(onTagAttributeList, success, failure); // string with all attributes
+	InvokerCallTest_MakeCallTest(onTagAttributeList, success,
+			failure); // string with all attributes
 
-	InvokerCallTest_MakeCallTest(readTagContent, success, failure); // replace default content reader
+	InvokerCallTest_MakeCallTest(readTagContent, success,
+			failure); // replace default content reader
 };
 
 template <typename StringReader>
@@ -144,7 +164,7 @@ struct Parser {
 	using CharType = typename StringReader::MatchCharType;
 	using Tag = TagType;
 
-	template <CharType ... Args>
+	template <CharType... Args>
 	using Chars = chars::Chars<CharType, Args...>;
 
 	template <CharType First, CharType Last>
@@ -157,9 +177,7 @@ struct Parser {
 
 	using LtChar = Chars<CharType('<')>;
 
-	Parser(ReaderType &r) : reader(&r) {
-		tagStack.reserve_block_optimal();
-	}
+	Parser(ReaderType &r) : reader(&r) { tagStack.reserve_block_optimal(); }
 
 	inline void cancel() {
 		current.clear();
@@ -169,7 +187,7 @@ struct Parser {
 	template <CharType C>
 	void skipQuoted() {
 		if (current.template is<C>()) {
-			++ current;
+			++current;
 		}
 		while (!current.empty() && !current.template is<C>()) {
 			current.template skipUntil<Chars<CharType('\\'), C>>();
@@ -178,11 +196,12 @@ struct Parser {
 			}
 		}
 		if (current.template is<C>()) {
-			++ current;
+			++current;
 		}
 	}
 
-	bool parse(const StringReader &r, bool rootOnly) {
+	bool parse(const StringReader &r, ParserFlags f) {
+		flags = f;
 		current = r;
 		while (!current.empty()) {
 			auto prefix = readTagContent();
@@ -202,45 +221,45 @@ struct Parser {
 				break; // next tag not found
 			}
 
-			++ current; // drop '<'
+			++current; // drop '<'
 			if (current.is('/')) { // close some parsed tag
-				++ current; // drop '/'
+				++current; // drop '/'
 
 				auto tag = current.template readUntil<Chars<CharType('>')>>();
 				if (!tag.empty() && current.is('>') && !tagStack.empty()) {
 					tag.template trimChars<typename StringReader::WhiteSpace>();
 					auto it = tagStack.end();
 					do {
-						-- it;
+						--it;
 						auto &name = it->getName();
 						if (tag.size() == name.size() && tag.equals(name.data(), name.size())) {
 							// close all tag after <tag>
 							auto nit = tagStack.end();
 							do {
-								-- nit;
+								--nit;
 								onPopTag(*nit);
 								tagStack.pop_back();
 							} while (nit != it);
 							break;
 						}
-					} while(it != tagStack.begin());
+					} while (it != tagStack.begin());
 
-					if (rootOnly && tagStack.empty()) {
+					if (hasFlag(flags, ParserFlags::RootOnly) && tagStack.empty()) {
 						if (current.is('>')) {
-							++ current; // drop '>'
+							++current; // drop '>'
 						}
 						break;
 					}
 				} else if (current.empty()) {
 					break; // fail to parse tag
 				}
-				++ current; // drop '>'
+				++current; // drop '>'
 			} else {
 				auto name = onReadTagName(current);
 				if (name.empty()) { // found tag without readable name
 					current.template skipUntil<Chars<CharType('>')>>();
 					if (current.is('>')) {
-						current ++;
+						current++;
 					}
 					continue;
 				}
@@ -248,14 +267,16 @@ struct Parser {
 				if constexpr (sizeof(OrigCharType) == 2) {
 					if (name.prefix(u"!--", u"!--"_len)) { // process comment
 						current.skipUntilString(u"-->", true);
-						onCommentTag(StringReader(name.data() + u"!--"_len,  current.data() - name.data() - u"!--"_len));
+						onCommentTag(StringReader(name.data() + u"!--"_len,
+								current.data() - name.data() - u"!--"_len));
 						current += u"!--"_len;
 						continue;
 					}
 				} else {
 					if (name.prefix("!--", "!--"_len)) { // process comment
 						current.skipUntilString("-->", true);
-						auto tmp = StringReader(name.data() + "!--"_len, current.data() - name.data() - "!--"_len);
+						auto tmp = StringReader(name.data() + "!--"_len,
+								current.data() - name.data() - "!--"_len);
 						onCommentTag(tmp);
 						current += "!--"_len;
 						continue;
@@ -293,7 +314,8 @@ struct Parser {
 						current.template skipChars<typename StringReader::WhiteSpace>();
 						auto tmp = current;
 						while (!current.empty() && !current.is('>')) {
-							current.template skipUntil<Chars<CharType('>'), CharType('"'), CharType('\'')>>();
+							current.template skipUntil<
+									Chars<CharType('>'), CharType('"'), CharType('\'')>>();
 							if (current.is('\'')) {
 								skipQuoted<CharType('\'')>();
 							} else if (current.is('"')) {
@@ -303,7 +325,7 @@ struct Parser {
 						if (current.is('>')) {
 							auto tag = StringReader(tmp.data(), current.data() - tmp.data());
 							onSchemeTag(name, tag);
-							++ current;
+							++current;
 						}
 						continue;
 					}
@@ -340,7 +362,7 @@ struct Parser {
 
 				current.template skipUntil<Chars<CharType('>')>>();
 				if (current.is('>')) {
-					++ current;
+					++current;
 				}
 
 				onEndTag(tag, !tag.isClosable());
@@ -354,25 +376,26 @@ struct Parser {
 							if (current.is('<')) {
 								auto tmp = current.sub(1);
 								if (tmp.is('/')) {
-									++ tmp;
+									++tmp;
 									if (tmp.starts_with(tag.name)) {
 										tmp += tag.name.size();
 										tmp.template skipChars<Group<GroupId::WhiteSpace>>();
 										if (tmp.is('>')) {
-											StringReader content(start.data(), current.data() - start.data());
+											StringReader content(start.data(),
+													current.data() - start.data());
 											if (!content.empty()) {
 												onTagContent(tag, content);
 											}
 											onPopTag(tag);
 											tagStack.pop_back();
 
-											++ tmp;
+											++tmp;
 											current = tmp;
 											break;
 										}
 									}
 								}
-								++ current;
+								++current;
 							}
 						}
 					}
@@ -385,7 +408,7 @@ struct Parser {
 		if (!tagStack.empty()) {
 			auto nit = tagStack.end();
 			do {
-				nit --;
+				nit--;
 				onPopTag(*nit);
 				tagStack.pop_back();
 			} while (nit != tagStack.begin());
@@ -409,20 +432,51 @@ struct Parser {
 			nestedAllowed = tagStack.back().isNestedTagsAllowed();
 		}
 
+		enum class ParseMode {
+			All,
+			Single,
+			Double,
+			None
+		} mode;
+
+		if (hasFlag(flags, ParserFlags::IgnoreSingleQuote)
+				&& hasFlag(flags, ParserFlags::IgnoreDoubleQuote)) {
+			mode = ParseMode::None;
+		} else if (hasFlag(flags, ParserFlags::IgnoreSingleQuote)) {
+			mode = ParseMode::Double;
+		} else if (hasFlag(flags, ParserFlags::IgnoreDoubleQuote)) {
+			mode = ParseMode::Single;
+		} else {
+			mode = ParseMode::All;
+		}
+
 		while (!current.empty() && !current.is('<')) {
-			current.template skipUntil<Chars<CharType('<'), CharType('\''), CharType('"')>>(); // move to next tag
-			if (current.is('\'')) {
+			switch (mode) {
+			case ParseMode::All:
+				current.template skipUntil< Chars<CharType('<'), CharType('\''), CharType('"')>>();
+				break;
+			case ParseMode::Single:
+				current.template skipUntil< Chars<CharType('<'), CharType('\'')>>();
+				break;
+			case ParseMode::Double:
+				current.template skipUntil< Chars<CharType('<'), CharType('"')>>();
+				break;
+			case ParseMode::None: current.template skipUntil< Chars<CharType('<')>>(); break;
+			}
+
+			if (current.is('\'') && !hasFlag(flags, ParserFlags::IgnoreSingleQuote)) {
 				skipQuoted<CharType('\'')>();
-			} else if (current.is('"')) {
+			} else if (current.is('"') && !hasFlag(flags, ParserFlags::IgnoreDoubleQuote)) {
 				skipQuoted<CharType('"')>();
 			} else if (!nestedAllowed && current.is('<')) {
 				if (current[1] == '/') {
 					auto tag = current.sub(2);
-					if (tag.starts_with(tagStack.back().name) && tag[tagStack.back().name.size()] == '>') {
+					if (tag.starts_with(tagStack.back().name)
+							&& tag[tagStack.back().name.size()] == '>') {
 						break;
 					}
 				}
-				++ current;
+				++current;
 			}
 		}
 
@@ -460,52 +514,75 @@ struct Parser {
 	}
 
 	inline void onBeginTag(TagType &tag) {
-		if constexpr (Traits::onBeginTag) { reader->onBeginTag(*this, tag); }
+		if constexpr (Traits::onBeginTag) {
+			reader->onBeginTag(*this, tag);
+		}
 	}
 	inline void onEndTag(TagType &tag, bool isClosed) {
-		if constexpr (Traits::onEndTag) { reader->onEndTag(*this, tag, isClosed); }
+		if constexpr (Traits::onEndTag) {
+			reader->onEndTag(*this, tag, isClosed);
+		}
 	}
 	inline void onTagAttribute(TagType &tag, StringReader &name, StringReader &value) {
-		if constexpr (Traits::onTagAttribute) { reader->onTagAttribute(*this, tag, name, value); }
+		if constexpr (Traits::onTagAttribute) {
+			reader->onTagAttribute(*this, tag, name, value);
+		}
 	}
 	inline void onPushTag(TagType &tag) {
-		if constexpr (Traits::onPushTag) { reader->onPushTag(*this, tag); }
+		if constexpr (Traits::onPushTag) {
+			reader->onPushTag(*this, tag);
+		}
 	}
 	inline void onPopTag(TagType &tag) {
-		if constexpr (Traits::onPopTag) { reader->onPopTag(*this, tag); }
+		if constexpr (Traits::onPopTag) {
+			reader->onPopTag(*this, tag);
+		}
 	}
 	inline void onInlineTag(TagType &tag) {
-		if constexpr (Traits::onInlineTag) { reader->onInlineTag(*this, tag); }
+		if constexpr (Traits::onInlineTag) {
+			reader->onInlineTag(*this, tag);
+		}
 	}
 	inline void onTagContent(TagType &tag, StringReader &s) {
-		if constexpr (Traits::onTagContent) { reader->onTagContent(*this, tag, s); }
+		if constexpr (Traits::onTagContent) {
+			reader->onTagContent(*this, tag, s);
+		}
 	}
 	inline bool shouldParseTag(TagType &tag) {
-		if constexpr (Traits::shouldParseTag) { return reader->shouldParseTag(*this, tag); }
+		if constexpr (Traits::shouldParseTag) {
+			return reader->shouldParseTag(*this, tag);
+		}
 		return true;
 	}
 	inline void onSchemeTag(StringReader &name, StringReader &value) {
-		if constexpr (Traits::onSchemeTag) { return reader->onSchemeTag(*this, name, value); }
+		if constexpr (Traits::onSchemeTag) {
+			return reader->onSchemeTag(*this, name, value);
+		}
 	}
 	inline void onCommentTag(StringReader &comment) {
-		if constexpr (Traits::onCommentTag) { return reader->onCommentTag(*this, comment); }
+		if constexpr (Traits::onCommentTag) {
+			return reader->onCommentTag(*this, comment);
+		}
 	}
 	inline void onTagAttributeList(TagType &tag, StringReader &data) {
-		if constexpr (Traits::onTagAttributeList) { reader->onTagAttributeList(*this, tag, data); }
+		if constexpr (Traits::onTagAttributeList) {
+			reader->onTagAttributeList(*this, tag, data);
+		}
 	}
 
 	bool canceled = false;
+	ParserFlags flags = ParserFlags::None;
 	ReaderType *reader;
 	StringReader current;
 	memory::vector<TagType> tagStack;
 };
 
 template <typename ReaderType, typename StringReader, typename TagType>
-void parse(ReaderType &r, const StringReader &s, bool rootOnly) {
+void parse(ReaderType &r, const StringReader &s, ParserFlags flags) {
 	html::Parser<ReaderType, StringReader, TagType> p(r);
-	p.parse(s, rootOnly);
+	p.parse(s, flags);
 }
 
-}
+} // namespace stappler::html
 
 #endif /* STAPPLER_CORE_UTILS_SPHTMLPARSER_H_ */

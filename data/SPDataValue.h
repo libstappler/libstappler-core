@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -386,13 +387,13 @@ public:
 	int64_t getInteger(int64_t def = 0) const { return isBasicType() ? asInteger() : def; }
 	double getDouble(double def = 0) const { return isBasicType() ? asDouble() : def; }
 
-	StringType &getString() { return isString() ? *strVal : const_cast<StringType &>(StringNull); }
-	BytesType &getBytes() { return isBytes() ? *bytesVal : const_cast<BytesType &>(BytesNull); }
+	StringType &getString() { return isString() ? *strVal : getStringNull(); }
+	BytesType &getBytes() { return isBytes() ? *bytesVal : getBytesNull(); }
 	ArrayType &getArray() { return asArray(); }
 	DictionaryType &getDict() { return asDict(); }
 
-	const StringType &getString() const { return isString() ? *strVal : StringNull; }
-	const BytesType &getBytes() const { return isBytes() ? *bytesVal : BytesNull; }
+	const StringType &getString() const { return isString() ? *strVal : getStringNullConst(); }
+	const BytesType &getBytes() const { return isBytes() ? *bytesVal : getBytesNullConst(); }
 	const ArrayType &getArray() const { return asArray(); }
 	const DictionaryType &getDict() const { return asDict(); }
 
@@ -446,13 +447,13 @@ public:
 	StringType asString() const;
 	BytesType asBytes() const;
 
-	ArrayType &asArray() { return isArray() ? *arrayVal : const_cast<ArrayType &>(ArrayNull); }
-	const ArrayType &asArray() const { return isArray() ? *arrayVal : ArrayNull; }
+	ArrayType &asArray() { return isArray() ? *arrayVal : getArrayNull(); }
+	const ArrayType &asArray() const { return isArray() ? *arrayVal : getArrayNullConst(); }
 
-	DictionaryType &asDict() {
-		return isDictionary() ? *dictVal : const_cast<DictionaryType &>(DictionaryNull);
+	DictionaryType &asDict() { return isDictionary() ? *dictVal : getDictionaryNull(); }
+	const DictionaryType &asDict() const {
+		return isDictionary() ? *dictVal : getDictionaryNullConst();
 	}
-	const DictionaryType &asDict() const { return isDictionary() ? *dictVal : DictionaryNull; }
 
 	size_t size() const noexcept;
 	bool empty() const noexcept;
@@ -520,6 +521,16 @@ protected:
 
 	template <typename Iface>
 	friend class ValueTemplate;
+
+	static const StringType &getStringNullConst();
+	static const BytesType &getBytesNullConst();
+	static const ArrayType &getArrayNullConst();
+	static const DictionaryType &getDictionaryNullConst();
+
+	static StringType &getStringNull();
+	static BytesType &getBytesNull();
+	static ArrayType &getArrayNull();
+	static DictionaryType &getDictionaryNull();
 
 	void reset(Type type);
 
@@ -1144,7 +1155,7 @@ auto ValueTemplate<Interface>::getString(Key &&key) -> StringType & {
 	if (!v.isNull()) {
 		return v.getString();
 	}
-	return const_cast<StringType &>(StringNull);
+	return getStringNull();
 }
 
 template <typename Interface>
@@ -1154,7 +1165,7 @@ auto ValueTemplate<Interface>::getString(Key &&key) const -> const StringType & 
 	if (!v.isNull()) {
 		return v.getString();
 	}
-	return StringNull;
+	return getStringNullConst();
 }
 
 template <typename Interface>
@@ -1164,7 +1175,7 @@ auto ValueTemplate<Interface>::getBytes(Key &&key) -> BytesType & {
 	if (ret.isBytes()) {
 		return ret.getBytes();
 	}
-	return const_cast<BytesType &>(BytesNull);
+	return getBytesNull();
 }
 
 template <typename Interface>
@@ -1174,7 +1185,7 @@ auto ValueTemplate<Interface>::getBytes(Key &&key) const -> const BytesType & {
 	if (ret.isBytes()) {
 		return ret.getBytes();
 	}
-	return BytesNull;
+	return getBytesNullConst();
 }
 
 template <typename Interface>
@@ -1184,7 +1195,7 @@ auto ValueTemplate<Interface>::getArray(Key &&key) -> ArrayType & {
 	if (!v.isNull()) {
 		return v.getArray();
 	}
-	return const_cast<ArrayType &>(ArrayNull);
+	return getArrayNull();
 }
 
 template <typename Interface>
@@ -1194,7 +1205,7 @@ auto ValueTemplate<Interface>::getArray(Key &&key) const -> const ArrayType & {
 	if (!v.isNull()) {
 		return v.getArray();
 	}
-	return ArrayNull;
+	return getArrayNullConst();
 }
 
 template <typename Interface>
@@ -1204,7 +1215,7 @@ auto ValueTemplate<Interface>::getDict(Key &&key) -> DictionaryType & {
 	if (!v.isNull()) {
 		return v.getDict();
 	}
-	return const_cast<DictionaryType &>(DictionaryNull);
+	return getDictionaryNull();
 }
 
 template <typename Interface>
@@ -1214,7 +1225,7 @@ auto ValueTemplate<Interface>::getDict(Key &&key) const -> const DictionaryType 
 	if (!v.isNull()) {
 		return v.getDict();
 	}
-	return DictionaryNull;
+	return getDictionaryNullConst();
 }
 
 template <typename Interface>

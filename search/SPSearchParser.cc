@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -61,9 +62,7 @@ static const StringView *getLanguageStopwords(Language lang) {
 	return nullptr;
 }
 
-StringView SearchData::getLanguage() const {
-	return getLanguageName(language);
-}
+StringView SearchData::getLanguage() const { return getLanguageName(language); }
 
 bool isStopword(const StringView &word, Language lang) {
 	if (lang == Language::Unknown) {
@@ -111,28 +110,51 @@ StringView getLanguageName(Language lang) {
 }
 
 Language parseLanguage(const StringView &lang) {
-	if (lang == "arabic") { return Language::Arabic; }
-	else if (lang == "danish") { return Language::Danish; }
-	else if (lang == "dutch") { return Language::Dutch; }
-	else if (lang == "english") { return Language::English; }
-	else if (lang == "finnish") { return Language::Finnish; }
-	else if (lang == "french") { return Language::French; }
-	else if (lang == "german") { return Language::German; }
-	else if (lang == "greek") { return Language::Greek; }
-	else if (lang == "hungarian") { return Language::Hungarian; }
-	else if (lang == "indonesian") { return Language::Indonesian; }
-	else if (lang == "irish") { return Language::Irish; }
-	else if (lang == "italian") { return Language::Italian; }
-	else if (lang == "nepali") { return Language::Nepali; }
-	else if (lang == "norwegian") { return Language::Norwegian; }
-	else if (lang == "portuguese") { return Language::Portuguese; }
-	else if (lang == "romanian") { return Language::Romanian; }
-	else if (lang == "russian") { return Language::Russian; }
-	else if (lang == "spanish") { return Language::Spanish; }
-	else if (lang == "swedish") { return Language::Swedish; }
-	else if (lang == "tamil") { return Language::Tamil; }
-	else if (lang == "turkish") { return Language::Turkish; }
-	else if (lang == "simple") { return Language::Simple; }
+	if (lang == "arabic") {
+		return Language::Arabic;
+	} else if (lang == "danish") {
+		return Language::Danish;
+	} else if (lang == "dutch") {
+		return Language::Dutch;
+	} else if (lang == "english") {
+		return Language::English;
+	} else if (lang == "finnish") {
+		return Language::Finnish;
+	} else if (lang == "french") {
+		return Language::French;
+	} else if (lang == "german") {
+		return Language::German;
+	} else if (lang == "greek") {
+		return Language::Greek;
+	} else if (lang == "hungarian") {
+		return Language::Hungarian;
+	} else if (lang == "indonesian") {
+		return Language::Indonesian;
+	} else if (lang == "irish") {
+		return Language::Irish;
+	} else if (lang == "italian") {
+		return Language::Italian;
+	} else if (lang == "nepali") {
+		return Language::Nepali;
+	} else if (lang == "norwegian") {
+		return Language::Norwegian;
+	} else if (lang == "portuguese") {
+		return Language::Portuguese;
+	} else if (lang == "romanian") {
+		return Language::Romanian;
+	} else if (lang == "russian") {
+		return Language::Russian;
+	} else if (lang == "spanish") {
+		return Language::Spanish;
+	} else if (lang == "swedish") {
+		return Language::Swedish;
+	} else if (lang == "tamil") {
+		return Language::Tamil;
+	} else if (lang == "turkish") {
+		return Language::Turkish;
+	} else if (lang == "simple") {
+		return Language::Simple;
+	}
 	return Language::Unknown;
 }
 
@@ -143,9 +165,9 @@ Language detectLanguage(const StringView &word) {
 		StringViewUtf8 r(word.data(), word.size());
 		while (!r.empty()) {
 			r.skipUntil<StringViewUtf8::MatchCharGroup<CharGroupId::Latin>,
-				StringViewUtf8::MatchCharGroup<CharGroupId::Cyrillic>,
-				StringViewUtf8::MatchCharGroup<CharGroupId::GreekBasic>,
-				StringViewUtf8::MatchCharGroup<CharGroupId::Numbers>>();
+					StringViewUtf8::MatchCharGroup<CharGroupId::Cyrillic>,
+					StringViewUtf8::MatchCharGroup<CharGroupId::GreekBasic>,
+					StringViewUtf8::MatchCharGroup<CharGroupId::Numbers>>();
 			if (r.is<StringViewUtf8::MatchCharGroup<CharGroupId::Latin>>()) {
 				return Language::English;
 			} else if (r.is<StringViewUtf8::MatchCharGroup<CharGroupId::Cyrillic>>()) {
@@ -189,11 +211,8 @@ bool isWordPart(ParserToken tok) {
 	switch (tok) {
 	case ParserToken::HyphenatedWord_NumPart:
 	case ParserToken::HyphenatedWord_Part:
-	case ParserToken::HyphenatedWord_AsciiPart:
-		return true;
-		break;
-	default:
-		break;
+	case ParserToken::HyphenatedWord_AsciiPart: return true; break;
+	default: break;
 	}
 	return false;
 }
@@ -202,34 +221,30 @@ bool isComplexWord(ParserToken tok) {
 	switch (tok) {
 	case ParserToken::NumHyphenatedWord:
 	case ParserToken::AsciiHyphenatedWord:
-	case ParserToken::HyphenatedWord:
-		return true;
-		break;
-	default:
-		break;
+	case ParserToken::HyphenatedWord: return true; break;
+	default: break;
 	}
 	return false;
 }
 
-struct UsedCharGroup : chars::Compose<char16_t,
-	chars::CharGroup<char16_t, CharGroupId::Alphanumeric>,
-	chars::CharGroup<char16_t, CharGroupId::Cyrillic>,
-	chars::CharGroup<char16_t, CharGroupId::LatinSuppl1>,
-	chars::CharGroup<char16_t, CharGroupId::GreekBasic>,
-	chars::CharGroup<char16_t, CharGroupId::GreekAdvanced>,
-	chars::Chars<char16_t, u'-', u'_', u'&', u'/'>
-> { };
+struct UsedCharGroup
+: chars::Compose<char16_t, chars::CharGroup<char16_t, CharGroupId::Alphanumeric>,
+		  chars::CharGroup<char16_t, CharGroupId::Cyrillic>,
+		  chars::CharGroup<char16_t, CharGroupId::LatinSuppl1>,
+		  chars::CharGroup<char16_t, CharGroupId::GreekBasic>,
+		  chars::CharGroup<char16_t, CharGroupId::GreekAdvanced>,
+		  chars::Chars<char16_t, u'-', u'_', u'&', u'/'> > { };
 
-struct WordCharGroup : chars::Compose<char16_t,
-	chars::CharGroup<char16_t, CharGroupId::Alphanumeric>,
-	chars::CharGroup<char16_t, CharGroupId::Cyrillic>,
-	chars::CharGroup<char16_t, CharGroupId::LatinSuppl1>,
-	chars::CharGroup<char16_t, CharGroupId::GreekBasic>,
-	chars::CharGroup<char16_t, CharGroupId::GreekAdvanced>,
-	chars::Chars<char16_t, char16_t(0xAD)>
-> { };
+struct WordCharGroup
+: chars::Compose<char16_t, chars::CharGroup<char16_t, CharGroupId::Alphanumeric>,
+		  chars::CharGroup<char16_t, CharGroupId::Cyrillic>,
+		  chars::CharGroup<char16_t, CharGroupId::LatinSuppl1>,
+		  chars::CharGroup<char16_t, CharGroupId::GreekBasic>,
+		  chars::CharGroup<char16_t, CharGroupId::GreekAdvanced>,
+		  chars::Chars<char16_t, char16_t(0xAD)> > { };
 
-static ParserStatus parseUrlToken(StringView &r, const Callback<ParserStatus(StringView, ParserToken)> &cb) {
+static ParserStatus parseUrlToken(StringView &r,
+		const Callback<ParserStatus(StringView, ParserToken)> &cb) {
 	UrlView view;
 	if (!view.parse(r)) {
 		return ParserStatus::PreventSubdivide;
@@ -252,10 +267,12 @@ static ParserStatus parseUrlToken(StringView &r, const Callback<ParserStatus(Str
 	return ParserStatus::Continue;
 }
 
-static ParserStatus tryParseUrl(StringViewUtf8 &tmp2, StringView r, const Callback<ParserStatus(StringView, ParserToken)> &cb) {
-	if (tmp2.is('_') || tmp2.is('.') || tmp2.is(':') || tmp2.is('@') || tmp2.is('/') || tmp2.is('?') || tmp2.is('#')) {
+static ParserStatus tryParseUrl(StringViewUtf8 &tmp2, StringView r,
+		const Callback<ParserStatus(StringView, ParserToken)> &cb) {
+	if (tmp2.is('_') || tmp2.is('.') || tmp2.is(':') || tmp2.is('@') || tmp2.is('/') || tmp2.is('?')
+			|| tmp2.is('#')) {
 		auto tmp3 = tmp2;
-		++ tmp3;
+		++tmp3;
 		if (tmp3.is<WordCharGroup>() || tmp3.is('/')) {
 			StringView rv(r.data(), tmp2.size() + (tmp2.data() - r.data()));
 			switch (parseUrlToken(rv, cb)) {
@@ -263,23 +280,21 @@ static ParserStatus tryParseUrl(StringViewUtf8 &tmp2, StringView r, const Callba
 				tmp2 = rv;
 				return ParserStatus::Continue;
 				break;
-			case ParserStatus::Stop:
-				return ParserStatus::Stop;
-				break;
-			default:
-				break;
+			case ParserStatus::Stop: return ParserStatus::Stop; break;
+			default: break;
 			}
 		}
 	}
 	return ParserStatus::PreventSubdivide;
 }
 
-static ParserStatus parseDotNumber(StringViewUtf8 &r, StringView tmp, const Callback<ParserStatus(StringView, ParserToken)> &cb, bool allowVersion) {
+static ParserStatus parseDotNumber(StringViewUtf8 &r, StringView tmp,
+		const Callback<ParserStatus(StringView, ParserToken)> &cb, bool allowVersion) {
 	if (r.is<chars::CharGroup<char16_t, CharGroupId::Numbers>>()) {
 		auto num = r.readChars<chars::CharGroup<char16_t, CharGroupId::Numbers>>();
 		if (r.is('.') && allowVersion) {
 			while (r.is('.')) {
-				++ r;
+				++r;
 				num = r.readChars<chars::CharGroup<char16_t, CharGroupId::Alphanumeric>>();
 				if (num.empty()) {
 					return ParserStatus::PreventSubdivide;
@@ -288,68 +303,95 @@ static ParserStatus parseDotNumber(StringViewUtf8 &r, StringView tmp, const Call
 			if (r.is('_') || r.is('@') || r.is(':') || r.is('/') || r.is('?') || r.is('#')) {
 				switch (tryParseUrl(r, tmp, cb)) {
 				case ParserStatus::PreventSubdivide:
-					if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::Version) == ParserStatus::Stop) { return ParserStatus::Stop; }
-					if (cb(r.sub(0, 1), ParserToken::Blank) == ParserStatus::Stop) { return ParserStatus::Stop; }
-					++ r;
+					if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::Version)
+							== ParserStatus::Stop) {
+						return ParserStatus::Stop;
+					}
+					if (cb(r.sub(0, 1), ParserToken::Blank) == ParserStatus::Stop) {
+						return ParserStatus::Stop;
+					}
+					++r;
 					break;
-				case ParserStatus::Stop:
-					return ParserStatus::Stop;
-					break;
-				default:
-					break;
+				case ParserStatus::Stop: return ParserStatus::Stop; break;
+				default: break;
 				}
 				return ParserStatus::Continue;
 			} else if (!r.is<WordCharGroup>()) {
-				if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::Version) == ParserStatus::Stop) { return ParserStatus::Stop; }
+				if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::Version)
+						== ParserStatus::Stop) {
+					return ParserStatus::Stop;
+				}
 				return ParserStatus::Continue;
 			}
 		} else if (r.is('e') || r.is('E')) {
-			++ r;
+			++r;
 			num = r.readChars<chars::CharGroup<char16_t, CharGroupId::Numbers>>();
 			if (!num.empty()) {
 				if (!r.is<WordCharGroup>()) {
-					if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::ScientificFloat) == ParserStatus::Stop) { return ParserStatus::Stop; }
+					if (cb(StringView(tmp.data(), r.data() - tmp.data()),
+								ParserToken::ScientificFloat)
+							== ParserStatus::Stop) {
+						return ParserStatus::Stop;
+					}
 					return ParserStatus::Continue;
 				}
 			}
 		} else if (r.is('@') || r.is(':') || r.is('/') || r.is('?') || r.is('#')) {
 			switch (tryParseUrl(r, tmp, cb)) {
 			case ParserStatus::PreventSubdivide:
-				if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::Float) == ParserStatus::Stop) { return ParserStatus::Stop; }
-				if (cb(r.sub(0, 1), ParserToken::Blank) == ParserStatus::Stop) { return ParserStatus::Stop; }
-				++ r;
+				if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::Float)
+						== ParserStatus::Stop) {
+					return ParserStatus::Stop;
+				}
+				if (cb(r.sub(0, 1), ParserToken::Blank) == ParserStatus::Stop) {
+					return ParserStatus::Stop;
+				}
+				++r;
 				break;
-			case ParserStatus::Stop:
-				return ParserStatus::Stop;
-				break;
-			default:
-				break;
+			case ParserStatus::Stop: return ParserStatus::Stop; break;
+			default: break;
 			}
 			return ParserStatus::Continue;
 		} else if (r.is<WordCharGroup>()) {
 			return ParserStatus::PreventSubdivide;
 		} else {
-			if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::Float) == ParserStatus::Stop) { return ParserStatus::Stop; }
+			if (cb(StringView(tmp.data(), r.data() - tmp.data()), ParserToken::Float)
+					== ParserStatus::Stop) {
+				return ParserStatus::Stop;
+			}
 			return ParserStatus::Continue;
 		}
 	}
 	return ParserStatus::PreventSubdivide;
 }
 
-static bool pushWord(StringView word, const Callback<ParserStatus(StringView, ParserToken)> &cb, bool hyph = false) {
+static bool pushWord(StringView word, const Callback<ParserStatus(StringView, ParserToken)> &cb,
+		bool hyph = false) {
 	StringView r(word);
 	r.readChars<StringView::CharGroup<CharGroupId::Latin>>();
 	if (r.empty()) {
-		if (cb(word, hyph ? ParserToken::HyphenatedWord_AsciiPart : ParserToken::AsciiWord) == ParserStatus::Stop) { return false; }
+		if (cb(word, hyph ? ParserToken::HyphenatedWord_AsciiPart : ParserToken::AsciiWord)
+				== ParserStatus::Stop) {
+			return false;
+		}
 	} else if (!r.is<StringView::CharGroup<CharGroupId::Numbers>>()) {
 		r.readUntil<StringView::CharGroup<CharGroupId::Numbers>>();
 		if (r.empty()) {
-			if (cb(word, hyph ? ParserToken::HyphenatedWord_Part : ParserToken::Word) == ParserStatus::Stop) { return false; }
+			if (cb(word, hyph ? ParserToken::HyphenatedWord_Part : ParserToken::Word)
+					== ParserStatus::Stop) {
+				return false;
+			}
 		} else {
-			if (cb(word, hyph ? ParserToken::HyphenatedWord_NumPart : ParserToken::NumWord) == ParserStatus::Stop) { return false; }
+			if (cb(word, hyph ? ParserToken::HyphenatedWord_NumPart : ParserToken::NumWord)
+					== ParserStatus::Stop) {
+				return false;
+			}
 		}
 	} else {
-		if (cb(word, hyph ? ParserToken::HyphenatedWord_NumPart : ParserToken::NumWord) == ParserStatus::Stop) { return false; }
+		if (cb(word, hyph ? ParserToken::HyphenatedWord_NumPart : ParserToken::NumWord)
+				== ParserStatus::Stop) {
+			return false;
+		}
 	}
 	return true;
 }
@@ -380,7 +422,9 @@ static bool pushHWord(StringView word, const Callback<ParserStatus(StringView, P
 	while (!word.empty()) {
 		auto sep = word.readChars<StringView::Chars<'-'>>();
 		if (!sep.empty()) {
-			if (cb(sep, ParserToken::Blank) == ParserStatus::Stop) { return false; }
+			if (cb(sep, ParserToken::Blank) == ParserStatus::Stop) {
+				return false;
+			}
 		}
 		auto tmp = word.readUntil<StringView::Chars<'-'>>();
 		if (!tmp.empty()) {
@@ -392,7 +436,8 @@ static bool pushHWord(StringView word, const Callback<ParserStatus(StringView, P
 	return true;
 }
 
-static bool parseHyphenatedWord(StringViewUtf8 &tmp, StringView r, const Callback<ParserStatus(StringView, ParserToken)> &cb, size_t depth) {
+static bool parseHyphenatedWord(StringViewUtf8 &tmp, StringView r,
+		const Callback<ParserStatus(StringView, ParserToken)> &cb, size_t depth) {
 	auto tmp2 = tmp;
 	tmp2.skipChars<WordCharGroup>();
 
@@ -406,37 +451,42 @@ static bool parseHyphenatedWord(StringViewUtf8 &tmp, StringView r, const Callbac
 
 	if (tmp2.is('-')) {
 		tmp2.skipChars<StringViewUtf8::Chars<u'-'>>();
-		if (!parseHyphenatedWord(tmp2, StringView(r.data(), tmp.data() - r.data()), cb, depth + 1)) {
+		if (!parseHyphenatedWord(tmp2, StringView(r.data(), tmp.data() - r.data()), cb,
+					depth + 1)) {
 			return false;
 		}
-	} else if (tmp2.is('_') || tmp2.is('.') || tmp2.is(':') || tmp2.is('@') || tmp2.is('/') || tmp2.is('?') || tmp2.is('#')) {
+	} else if (tmp2.is('_') || tmp2.is('.') || tmp2.is(':') || tmp2.is('@') || tmp2.is('/')
+			|| tmp2.is('?') || tmp2.is('#')) {
 		switch (tryParseUrl(tmp2, r, cb)) {
 		case ParserStatus::PreventSubdivide:
-			if (!doPushWord()) { return false; }
-			if (cb(tmp2.sub(0, 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-			++ tmp2;
+			if (!doPushWord()) {
+				return false;
+			}
+			if (cb(tmp2.sub(0, 1), ParserToken::Blank) == ParserStatus::Stop) {
+				return false;
+			}
+			++tmp2;
 			break;
-		case ParserStatus::Stop:
-			return false;
-			break;
-		default:
-			break;
+		case ParserStatus::Stop: return false; break;
+		default: break;
 		}
 	} else {
-		if (!doPushWord()) { return false; }
+		if (!doPushWord()) {
+			return false;
+		}
 	}
 	tmp = tmp2;
 	return true;
 }
 
-static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp, const Callback<ParserStatus(StringView, ParserToken)> &cb) {
+static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp,
+		const Callback<ParserStatus(StringView, ParserToken)> &cb) {
 	using Numbers = StringViewUtf8::MatchCharGroup<CharGroupId::Numbers>;
 
-	using WhiteSpace = chars::Compose<char16_t,
-			chars::Range<char16_t, u'\u2000', u'\u200D'>,
-			chars::Chars<char16_t, u'\u0009', u'\u000B', u'\u000C', u'\u0020', u'\u0085', u'\u00A0', u'\u1680', u'\u2028', u'\u2029',
-					 u'\u202F', u'\u205F', u'\u2060', u'\u3000', u'\uFEFF', u'\uFFFF'>
-	>;
+	using WhiteSpace = chars::Compose<char16_t, chars::Range<char16_t, u'\u2000', u'\u200D'>,
+			chars::Chars<char16_t, u'\u0009', u'\u000B', u'\u000C', u'\u0020', u'\u0085', u'\u00A0',
+					u'\u1680', u'\u2028', u'\u2029', u'\u202F', u'\u205F', u'\u2060', u'\u3000',
+					u'\uFEFF', u'\uFFFF'> >;
 
 	if (tmp.size() != 2) {
 		return ParserStatus::PreventSubdivide;
@@ -456,13 +506,14 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp, const 
 					return ParserStatus::PreventSubdivide;
 				}
 			} else if (rv.is(':')) {
-				++ segments;
+				++segments;
 			} else if (rv.is<WhiteSpace>()) {
 				if (segments >= 3) {
 					auto tmp = rv;
 					tmp.skipChars<WhiteSpace>();
 					nums = rv.readChars<Numbers>();
-					if ((nums.size() == 2 && (tmp.is(':') || tmp.is('-') || tmp.is(u'–'))) || nums.empty()) {
+					if ((nums.size() == 2 && (tmp.is(':') || tmp.is('-') || tmp.is(u'–')))
+							|| nums.empty()) {
 						r = rv;
 						break;
 					}
@@ -471,7 +522,7 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp, const 
 					tmp.skipChars<WhiteSpace>();
 					if (tmp.is(':')) {
 						rv = tmp;
-						++ segments;
+						++segments;
 					}
 				}
 			} else {
@@ -485,8 +536,11 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp, const 
 		if (segments >= 3) {
 			auto code = StringView(tmp.data(), r.data() - tmp.data());
 			code.trimUntil<StringView::CharGroup<CharGroupId::Alphanumeric>>();
-			if (cb(code, ParserToken::Custom) == ParserStatus::Stop) { return ParserStatus::Stop; }
-			r = StringViewUtf8(code.data() + code.size(), (r.data() - code.data() - code.size()) + r.size());
+			if (cb(code, ParserToken::Custom) == ParserStatus::Stop) {
+				return ParserStatus::Stop;
+			}
+			r = StringViewUtf8(code.data() + code.size(),
+					(r.data() - code.data() - code.size()) + r.size());
 			return ParserStatus::Continue;
 		}
 	} else if (r.is('-') || r.is(u'–')) {
@@ -494,7 +548,7 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp, const 
 		size_t segments = 1;
 		size_t nonWsSegments = 0;
 		if (!r.is<WhiteSpace>()) {
-			++ nonWsSegments;
+			++nonWsSegments;
 		}
 		while (rv.is('-') || rv.is(u'–') || rv.is<WhiteSpace>() || rv.is('/') || rv.is(':')) {
 			rv.skipChars<StringViewUtf8::Chars<'-', u'–', '/', ':'>, WhiteSpace>();
@@ -507,20 +561,20 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp, const 
 					return ParserStatus::PreventSubdivide;
 				}
 			} else if (rv.is('-') || rv.is(u'–')) {
-				++ segments;
-				++ nonWsSegments;
+				++segments;
+				++nonWsSegments;
 			} else if (rv.is('/') && segments > 1) {
-				++ segments;
-				++ nonWsSegments;
+				++segments;
+				++nonWsSegments;
 			} else if (rv.is(':') && segments > 1) {
-				++ segments;
-				++ nonWsSegments;
+				++segments;
+				++nonWsSegments;
 			} else if (rv.is<WhiteSpace>()) {
 				if (segments >= 5) {
 					r = rv;
 					break;
 				}
-				++ segments;
+				++segments;
 			} else {
 				if (segments >= 5) {
 					r = rv;
@@ -532,8 +586,11 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp, const 
 		if (segments >= 5 && nonWsSegments >= 2) {
 			auto code = StringView(tmp.data(), r.data() - tmp.data());
 			code.trimUntil<StringView::CharGroup<CharGroupId::Alphanumeric>>();
-			if (cb(code, ParserToken::Custom) == ParserStatus::Stop) { return ParserStatus::Stop; }
-			r = StringViewUtf8(code.data() + code.size(), (r.data() - code.data() - code.size()) + r.size());
+			if (cb(code, ParserToken::Custom) == ParserStatus::Stop) {
+				return ParserStatus::Stop;
+			}
+			r = StringViewUtf8(code.data() + code.size(),
+					(r.data() - code.data() - code.size()) + r.size());
 			return ParserStatus::Continue;
 		}
 	}
@@ -541,8 +598,9 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp, const 
 	return ParserStatus::PreventSubdivide;
 }
 
-static bool parseToken(StringViewUtf8 &r, const Callback<ParserStatus(StringView, ParserToken)> &cb) {
-	auto readWord = [&] () {
+static bool parseToken(StringViewUtf8 &r,
+		const Callback<ParserStatus(StringView, ParserToken)> &cb) {
+	auto readWord = [&]() {
 		auto tmp = r;
 		if (!parseHyphenatedWord(tmp, StringView(r.data(), 0), cb, 0)) {
 			return false;
@@ -553,142 +611,166 @@ static bool parseToken(StringViewUtf8 &r, const Callback<ParserStatus(StringView
 
 	if (r.is('-')) {
 		auto tmp = r;
-		++ tmp;
+		++tmp;
 		if (tmp.is<chars::CharGroup<char16_t, CharGroupId::Numbers>>()) {
 			tmp.readChars<chars::CharGroup<char16_t, CharGroupId::Numbers>>();
 			if (tmp.is('.')) {
 				auto tmp2 = tmp;
-				++ tmp2;
-				switch (parseDotNumber(tmp2, StringView(r.data(), tmp.data() - r.data()), cb, false)) {
-				case ParserStatus::Continue:
-					r = tmp2;
-					break;
+				++tmp2;
+				switch (parseDotNumber(tmp2, StringView(r.data(), tmp.data() - r.data()), cb,
+						false)) {
+				case ParserStatus::Continue: r = tmp2; break;
 				case ParserStatus::PreventSubdivide:
-					if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer) == ParserStatus::Stop) { return false; }
+					if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer)
+							== ParserStatus::Stop) {
+						return false;
+					}
 					r = tmp;
-					if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-					++ r;
+					if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) {
+						return false;
+					}
+					++r;
 					break;
-				case ParserStatus::Stop:
-					return false;
-					break;
+				case ParserStatus::Stop: return false; break;
 				}
 			} else if (r.is<WordCharGroup>()) {
-				if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-				++ r;
+				if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) {
+					return false;
+				}
+				++r;
 				return true;
 			} else {
-				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer) == ParserStatus::Stop) { return false; }
+				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer)
+						== ParserStatus::Stop) {
+					return false;
+				}
 				r = tmp;
 			}
 		} else {
-			if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-			++ r;
+			if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) {
+				return false;
+			}
+			++r;
 		}
 	} else if (r.is('/')) {
 		switch (tryParseUrl(r, StringView(r.data(), 0), cb)) {
 		case ParserStatus::PreventSubdivide:
-			if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-			++ r;
+			if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) {
+				return false;
+			}
+			++r;
 			break;
-		case ParserStatus::Stop:
-			return false;
-			break;
-		default:
-			break;
+		case ParserStatus::Stop: return false; break;
+		default: break;
 		}
 	} else if (r.is('&')) {
 		StringView tmp(r.data(), std::min(size_t(8), r.size()));
 		tmp.readUntil<StringView::Chars<';'>>();
 		if (tmp.is(';')) {
-			++ tmp;
-			if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::XMLEntity) == ParserStatus::Stop) { return false; }
+			++tmp;
+			if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::XMLEntity)
+					== ParserStatus::Stop) {
+				return false;
+			}
 			r = StringViewUtf8(tmp.data(), r.size() - (tmp.data() - r.data()));
 		} else {
-			if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-			++ r;
+			if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) {
+				return false;
+			}
+			++r;
 		}
 	} else if (r.is('_')) {
 		switch (tryParseUrl(r, StringView(r.data(), 0), cb)) {
 		case ParserStatus::PreventSubdivide:
-			if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-			++ r;
+			if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) {
+				return false;
+			}
+			++r;
 			break;
-		case ParserStatus::Stop:
-			return false;
-			break;
-		default:
-			break;
+		case ParserStatus::Stop: return false; break;
+		default: break;
 		}
 	} else if (r.is<chars::CharGroup<char16_t, CharGroupId::Numbers>>()) {
 		auto tmp = r;
 		auto num = tmp.readChars<chars::CharGroup<char16_t, CharGroupId::Numbers>>();
 		if (tmp.is('.')) {
 			auto tmp2 = tmp;
-			++ tmp2;
+			++tmp2;
 			switch (parseDotNumber(tmp2, StringView(r.data(), tmp.data() - r.data()), cb, true)) {
-			case ParserStatus::Continue:
-				r = tmp2;
-				break;
+			case ParserStatus::Continue: r = tmp2; break;
 			case ParserStatus::PreventSubdivide:
-				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer) == ParserStatus::Stop) { return false; }
+				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer)
+						== ParserStatus::Stop) {
+					return false;
+				}
 				r = tmp;
-				if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-				++ r;
+				if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) {
+					return false;
+				}
+				++r;
 				break;
-			case ParserStatus::Stop:
-				return false;
-				break;
+			case ParserStatus::Stop: return false; break;
 			}
 		} else if ((tmp.is(':') || tmp.is('-') || tmp.is(u'–')) && num.size() == 2) {
 			switch (readCadasterString(tmp, num, cb)) {
-			case ParserStatus::Continue:
-				r = tmp;
-				break;
-			case ParserStatus::Stop:
-				return false;
-				break;
+			case ParserStatus::Continue: r = tmp; break;
+			case ParserStatus::Stop: return false; break;
 			default:
-				if (cb(num, ParserToken::Integer) == ParserStatus::Stop) { return false; }
+				if (cb(num, ParserToken::Integer) == ParserStatus::Stop) {
+					return false;
+				}
 				r = tmp;
-				if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) { return false; }
-				++ r;
+				if (cb(StringView(r.data(), 1), ParserToken::Blank) == ParserStatus::Stop) {
+					return false;
+				}
+				++r;
 				break;
 			}
 		} else if (tmp.is<StringViewUtf8::CharGroup<CharGroupId::WhiteSpace>>()) {
 			auto tmp2 = tmp;
 			tmp2.skipChars<StringViewUtf8::CharGroup<CharGroupId::WhiteSpace>>();
 			if (tmp2.is<StringViewUtf8::CharGroup<CharGroupId::Numbers>>()) {
-				if (cb(num, ParserToken::Integer) == ParserStatus::Stop) { return false; }
+				if (cb(num, ParserToken::Integer) == ParserStatus::Stop) {
+					return false;
+				}
 				r = tmp;
 			} else {
-				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer) == ParserStatus::Stop) { return false; }
+				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer)
+						== ParserStatus::Stop) {
+					return false;
+				}
 				r = tmp;
 			}
 		} else if (tmp.is('@')) {
 			StringView rv(r.data(), r.size());
 			switch (parseUrlToken(rv, cb)) {
-			case ParserStatus::Continue:
-				r = rv;
-				break;
+			case ParserStatus::Continue: r = rv; break;
 			case ParserStatus::PreventSubdivide:
-				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer) == ParserStatus::Stop) { return false; }
+				if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer)
+						== ParserStatus::Stop) {
+					return false;
+				}
 				r = tmp;
 				break;
-			case ParserStatus::Stop:
-				return false;
-				break;
+			case ParserStatus::Stop: return false; break;
 			}
 		} else if (tmp.is<WordCharGroup>()) {
-			if (!readWord()) { return false; }
+			if (!readWord()) {
+				return false;
+			}
 		} else {
-			if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer) == ParserStatus::Stop) { return false; }
+			if (cb(StringView(r.data(), tmp.data() - r.data()), ParserToken::Integer)
+					== ParserStatus::Stop) {
+				return false;
+			}
 			r = tmp;
 		}
 	} else if (r.is<WordCharGroup>()) {
-		if (!readWord()) { return false; }
+		if (!readWord()) {
+			return false;
+		}
 	} else {
-		++ r;
+		++r;
 	}
 
 	return true;
@@ -735,16 +817,14 @@ struct Stemmer_Reader {
 	}
 
 	Type getTypeByName(const StringView &r) const {
-		if (r == "a" || r == "abbr" || r == "acronym" || r == "b"
-			|| r == "br" || r == "code" || r == "em" || r == "font"
-			|| r == "i" || r == "img" || r == "ins" || r == "kbd"
-			|| r == "map" || r == "samp" || r == "small" || r == "span"
-			|| r == "strong") {
+		if (r == "a" || r == "abbr" || r == "acronym" || r == "b" || r == "br" || r == "code"
+				|| r == "em" || r == "font" || r == "i" || r == "img" || r == "ins" || r == "kbd"
+				|| r == "map" || r == "samp" || r == "small" || r == "span" || r == "strong") {
 			return Inline;
 		} else if (r == "sub" || r == "sup") {
 			return Drop;
-		} else if (r == "p" || r == "h1" || r == "h2" || r == "h3"
-			|| r == "h4" || r == "h5" || r == "h6") {
+		} else if (r == "p" || r == "h1" || r == "h2" || r == "h3" || r == "h4" || r == "h5"
+				|| r == "h6") {
 			return Content;
 		}
 		return None;
@@ -786,14 +866,13 @@ struct Stemmer_Reader {
 	Function<void(Parser &, const StringView &)> callback;
 };
 
-static void Stemmer_Reader_run(StringView origin, Function<void(const StringView &, const Callback<void()> &cancelCb)> &&cb) {
+static void Stemmer_Reader_run(StringView origin,
+		Function<void(const StringView &, const Callback<void()> &cancelCb)> &&cb) {
 	Stemmer_Reader r;
-	r.callback = [&] (Stemmer_Reader::Parser &parser, const StringView &str) {
-		cb(str, [&] {
-			parser.cancel();
-		});
+	r.callback = [&](Stemmer_Reader::Parser &parser, const StringView &str) {
+		cb(str, [&] { parser.cancel(); });
 	};
-	html::parse(r, origin, false);
+	html::parse(r, origin);
 }
 
 void parseHtml(StringView str, const Callback<void(StringView)> &cb) {
@@ -802,10 +881,8 @@ void parseHtml(StringView str, const Callback<void(StringView)> &cb) {
 	}
 
 	Stemmer_Reader r;
-	r.callback = [&] (Stemmer_Reader::Parser &p, const StringView &str) {
-		cb(str);
-	};
-	html::parse(r, str, false);
+	r.callback = [&](Stemmer_Reader::Parser &p, const StringView &str) { cb(str); };
+	html::parse(r, str);
 }
 
 bool parsePhrase(StringView str, const Callback<ParserStatus(StringView, ParserToken)> &cb) {
@@ -832,16 +909,16 @@ bool parsePhrase(StringView str, const Callback<ParserStatus(StringView, ParserT
 	return true;
 }
 
-static void * staticPoolAlloc(void* userData, unsigned int size) {
+static void *staticPoolAlloc(void *userData, unsigned int size) {
 	memory::pool_t *pool = (memory::pool_t *)userData;
 	size_t s = size;
 	auto mem = memory::pool::alloc(pool, s);
-	memset(mem,0, s);
+	memset(mem, 0, s);
 	return mem;
 }
 
 SP_COVERAGE_TRIVIAL
-static void staticPoolFree(void * userData, void * ptr) { }
+static void staticPoolFree(void *userData, void *ptr) { }
 
 StemmerEnv *getStemmer(Language lang) {
 	auto pool = memory::pool::acquire();
@@ -888,7 +965,7 @@ bool isStopword(const StringView &word, const StringView *stopwords) {
 			if (word == *stopwords) {
 				return true;
 			} else {
-				++ stopwords;
+				++stopwords;
 			}
 		}
 	}
@@ -900,7 +977,7 @@ bool stemWord(StringView word, const Callback<void(StringView)> &cb, StemmerEnv 
 		return false;
 	}
 	auto w = sb_stemmer_stem(env, (const unsigned char *)word.data(), int(word.size()));
-	cb(StringView((const char *)w,  size_t(env->l)));
+	cb(StringView((const char *)w, size_t(env->l)));
 	return true;
 }
 
@@ -934,4 +1011,4 @@ String normalizeWord(const StringView &str) {
 	return string::toUtf8<Interface>(filtered);
 }
 
-}
+} // namespace stappler::search

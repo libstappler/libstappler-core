@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -39,15 +40,18 @@ namespace STAPPLER_VERSIONIZED stappler {
 
 // numbers::pi replacement from std
 namespace numbers {
-template<typename T> inline constexpr T pi_v =
+template <typename T>
+inline constexpr T pi_v =
 		std::enable_if_t<std::is_floating_point_v<T>, T>(3.141592653589793238462643383279502884L);
 
 inline constexpr double pi = pi_v<double>;
 
-}
+} // namespace numbers
 
-constexpr long double operator""_to_rad ( long double val ) { return val * numbers::pi / 180.0; }
-constexpr long double operator""_to_rad ( unsigned long long int val ) { return val * numbers::pi / 180.0; }
+constexpr long double operator""_to_rad(long double val) { return val * numbers::pi / 180.0; }
+constexpr long double operator""_to_rad(unsigned long long int val) {
+	return val * numbers::pi / 180.0;
+}
 
 template <typename T>
 using NumericLimits = std::numeric_limits<T>;
@@ -63,7 +67,7 @@ inline constexpr auto epsilon() -> T {
 }
 
 template <typename T>
-inline auto isnan(T && t) -> bool {
+inline auto isnan(T &&t) -> bool {
 	return std::isnan(std::forward<T>(t));
 }
 
@@ -95,90 +99,94 @@ inline constexpr long double minOf<long double>() {
 
 template <typename T, typename V>
 struct HasMultiplication {
-	template<class A, class B>
+	template <class A, class B>
 	static auto test(A *, B *) -> decltype(std::declval<A>() * std::declval<B>());
 
-	template<typename, typename>
+	template <typename, typename>
 	static auto test(...) -> std::false_type;
 
 	using type = typename std::is_same<T, decltype(test<T, V>(0, 0))>::type;
 };
 
 template <class T>
-constexpr inline T progress(const T &a, const T &b, float p) { return (a * (1.0f - p) + b * p); }
+constexpr inline T progress(const T &a, const T &b, float p) {
+	return (a * (1.0f - p) + b * p);
+}
 
 template <typename E>
 constexpr typename std::underlying_type<E>::type toInt(const E &e) {
-    return static_cast<typename std::underlying_type<E>::type>(e);
+	return static_cast<typename std::underlying_type<E>::type>(e);
 }
 
-template <typename T> auto StringToNumber(const char *ptr, char ** tail, int base) -> T;
+template <typename T>
+auto StringToNumber(const char *ptr, char **tail, int base) -> T;
 
-template <> inline auto
-StringToNumber<unsigned int>(const char *ptr, char ** tail, int base) -> unsigned int {
+template <>
+inline auto StringToNumber<unsigned int>(const char *ptr, char **tail, int base) -> unsigned int {
 	if (ptr) {
 		return (unsigned int)::strtoul(ptr, tail, base);
 	}
 	return 0;
 }
 
-template <> inline auto
-StringToNumber<unsigned long>(const char *ptr, char ** tail, int base) -> unsigned long {
+template <>
+inline auto StringToNumber<unsigned long>(const char *ptr, char **tail, int base) -> unsigned long {
 	if (ptr) {
 		return ::strtoul(ptr, tail, base);
 	}
 	return 0;
 }
 
-template <> inline auto
-StringToNumber<unsigned long long>(const char *ptr, char ** tail, int base) -> unsigned long long {
+template <>
+inline auto StringToNumber<unsigned long long>(const char *ptr, char **tail, int base)
+		-> unsigned long long {
 	if (ptr) {
 		return ::strtoull(ptr, tail, base);
 	}
 	return 0;
 }
 
-template <> inline auto
-StringToNumber<int>(const char *ptr, char ** tail, int base) -> int {
+template <>
+inline auto StringToNumber<int>(const char *ptr, char **tail, int base) -> int {
 	if (ptr) {
 		return (int)::strtol(ptr, tail, base);
 	}
 	return 0;
 }
 
-template <> inline auto
-StringToNumber<long>(const char *ptr, char ** tail, int base) -> long {
+template <>
+inline auto StringToNumber<long>(const char *ptr, char **tail, int base) -> long {
 	if (ptr) {
 		return ::strtol(ptr, tail, base);
 	}
 	return 0;
 }
 
-template <> inline auto
-StringToNumber<long long>(const char *ptr, char ** tail, int base) -> long long {
+template <>
+inline auto StringToNumber<long long>(const char *ptr, char **tail, int base) -> long long {
 	if (ptr) {
 		return ::strtoll(ptr, tail, base);
 	}
 	return 0;
 }
 
-template <> inline auto
-StringToNumber<float>(const char *ptr, char ** tail, int base) -> float {
+template <>
+inline auto StringToNumber<float>(const char *ptr, char **tail, int base) -> float {
 	if (ptr) {
 		return ::strtof(ptr, tail);
 	}
 	return 0.0f;
 }
 
-template <> inline auto
-StringToNumber<double>(const char *ptr, char ** tail, int base) -> double {
+template <>
+inline auto StringToNumber<double>(const char *ptr, char **tail, int base) -> double {
 	if (ptr) {
 		return ::strtod(ptr, tail);
 	}
 	return 0.0;
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace STAPPLER_VERSIONIZED stappler::math {
 
@@ -193,8 +201,8 @@ constexpr float MATH_TOLERANCE = 2e-37f;
  * to the given elapsed time. */
 
 // avoid constexpr to support SIMD-based implementation
-template <typename T> inline
-T smooth(const T &source, const T &target, float elapsed, float response) {
+template <typename T>
+constexpr inline T smooth(const T &source, const T &target, float elapsed, float response) {
 	if (elapsed > 0) {
 		return source + (target - source) * (elapsed / (elapsed + response));
 	}
@@ -202,48 +210,54 @@ T smooth(const T &source, const T &target, float elapsed, float response) {
 }
 
 // avoid constexpr to support SIMD-based implementation
-template <typename T, typename V = float> inline
-T lerp(const T &a, const T &b, const V &alpha) {
-	return (a * (- alpha + 1.0f) + b * alpha);
+template <typename T, typename V = float>
+constexpr inline T lerp(const T &a, const T &b, const V &alpha) {
+	return (a * (-alpha + 1.0f) + b * alpha);
 }
 
-template <typename T, typename Compare> constexpr inline
-const T& clamp(const T &v, const T &lo, const T &hi, Compare comp) {
+template <typename T, typename Compare>
+constexpr inline const T &clamp(const T &v, const T &lo, const T &hi, Compare comp) {
 	if (comp(hi, lo)) {
-	    return comp(v, hi) ? hi : comp(lo, v) ? lo : v;
+		return comp(v, hi) ? hi : comp(lo, v) ? lo : v;
 	} else {
-	    return comp(v, lo) ? lo : comp(hi, v) ? hi : v;
+		return comp(v, lo) ? lo : comp(hi, v) ? hi : v;
 	}
 }
 
-template <typename T> constexpr inline
-const T& clamp(const T &v, const T &lo, const T &hi) {
-    return math::clamp( v, lo, hi, std::less<T>() );
+template <typename T>
+constexpr inline const T &clamp(const T &v, const T &lo, const T &hi) {
+	return math::clamp(v, lo, hi, std::less<T>());
 }
 
-template <typename T, typename Compare> constexpr inline
-T clamp_distance(const T &v, const T &lo, const T &hi, Compare comp, const T &z) {
-	assert( !comp(hi, lo) );
+template <typename T, typename Compare>
+constexpr inline T clamp_distance(const T &v, const T &lo, const T &hi, Compare comp, const T &z) {
+	assert(!comp(hi, lo));
 	return comp(v, lo) ? (lo - v) : comp(hi, v) ? (v - hi) : z;
 }
 
-template <typename T, typename Compare> constexpr inline
-T clamp_distance(const T &v, const T &lo, const T &hi, Compare comp) {
+template <typename T, typename Compare>
+constexpr inline T clamp_distance(const T &v, const T &lo, const T &hi, Compare comp) {
 	return clamp_distance(v, lo, hi, comp, T(0));
 }
 
-template <typename T> constexpr inline
-T clamp_distance(const T &v, const T &lo, const T &hi, const T &z) {
+template <typename T>
+constexpr inline T clamp_distance(const T &v, const T &lo, const T &hi, const T &z) {
 	return clamp_distance(v, lo, hi, std::less<T>(), z);
 }
 
-template <typename T> constexpr inline
-T clamp_distance(const T &v, const T &lo, const T &hi) {
+template <typename T>
+constexpr inline T clamp_distance(const T &v, const T &lo, const T &hi) {
 	return clamp_distance(v, lo, hi, std::less<T>(), T(0));
 }
 
-template <typename T> constexpr inline
-T add_cyclic(const T &value, const T &increment,  const T &lo,  const T &hi) {
+template <typename T>
+constexpr inline T smoothstep(const T &edge0, const T &edge1, const T &x) {
+	auto t = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+	return t * t * (3.0f - 2.0f * t);
+}
+
+template <typename T>
+constexpr inline T add_cyclic(const T &value, const T &increment, const T &lo, const T &hi) {
 	auto cycle = (hi - lo + T(1));
 	auto incr = increment % cycle;
 	auto tmp = value + incr;
@@ -254,8 +268,8 @@ T add_cyclic(const T &value, const T &increment,  const T &lo,  const T &hi) {
 	}
 }
 
-template <typename T> constexpr inline
-T sub_cyclic(const T &value, const T &decrement,  const T &lo,  const T &hi) {
+template <typename T>
+constexpr inline T sub_cyclic(const T &value, const T &decrement, const T &lo, const T &hi) {
 	auto cycle = (hi - lo + T(1));
 	auto decr = decrement % cycle;
 	if (value < lo + decr) {
@@ -267,34 +281,34 @@ T sub_cyclic(const T &value, const T &decrement,  const T &lo,  const T &hi) {
 
 // next power of two
 inline uint32_t npot(uint32_t n) {
-    --n;
+	--n;
 
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
+	n |= n >> 1;
+	n |= n >> 2;
+	n |= n >> 4;
+	n |= n >> 8;
+	n |= n >> 16;
 
-    return n + 1;
+	return n + 1;
 }
 
 inline uint64_t npot(uint64_t n) {
-    --n;
+	--n;
 
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    n |= n >> 32;
+	n |= n >> 1;
+	n |= n >> 2;
+	n |= n >> 4;
+	n |= n >> 8;
+	n |= n >> 16;
+	n |= n >> 32;
 
-    return n + 1;
+	return n + 1;
 }
 
 // Align on a power of 2 boundary
 template <typename T = uint64_t>
 static constexpr auto align(T size, T boundary) -> T {
-	return (((size) + ((boundary) - 1)) & ~((boundary) - 1));
+	return (((size) + ((boundary)-1)) & ~((boundary)-1));
 }
 
 // convert degrees to radians
@@ -309,6 +323,6 @@ constexpr auto to_deg(T val) -> T {
 	return T(val) * T(180) / numbers::pi_v<T>;
 }
 
-}
+} // namespace stappler::math
 
 #endif /* CORE_CORE_DETAIL_SPMATH_H_ */

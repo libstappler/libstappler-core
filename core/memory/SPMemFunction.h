@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -417,7 +418,7 @@ struct callback_traits<ReturnType (ClassType::*)(Args...)> {
 };
 
 template <typename T>
-auto makeCallback(T &&t) ->
+inline auto makeCallback(T &&t) ->
 		typename std::enable_if<!std::is_function<T>::value && !std::is_bind_expression<T>::value,
 				typename callback_traits<decltype(&T::operator())>::type>::type {
 	using Type = typename callback_traits<decltype(&T::operator())>::type;
@@ -426,12 +427,12 @@ auto makeCallback(T &&t) ->
 }
 
 template <typename Sig>
-auto makeCallback(const std::function<Sig> &fn) {
+inline auto makeCallback(const std::function<Sig> &fn) {
 	return callback<Sig>(fn);
 }
 
 template <typename Sig>
-auto makeCallback(const memory::function<Sig> &fn) {
+inline auto makeCallback(const memory::function<Sig> &fn) {
 	return callback<Sig>(fn);
 }
 

@@ -255,6 +255,11 @@ struct FunctionalStreamCharTraits<StringViewUtf8> {
 	using CharType = StringViewUtf8::CharType;
 };
 
+template <Endian E>
+struct FunctionalStreamCharTraits<BytesViewTemplate<E>> {
+	using CharType = BytesViewTemplate<E>::CharType;
+};
+
 template <typename FunctionalStream>
 struct FunctionalStreamTraits { };
 

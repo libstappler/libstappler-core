@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -40,10 +41,14 @@ struct SP_PUBLIC PoolInterface final {
 	using WideStringType = memory::u16string;
 	using BytesType = memory::vector<uint8_t>;
 
-	template <typename Value> using BasicStringType = memory::basic_string<Value>;
-	template <typename Value> using ArrayType = memory::vector<Value>;
-	template <typename Value> using DictionaryType = memory::map<StringType, Value, std::less<>>;
-	template <typename Value> using VectorType = memory::vector<Value>;
+	template <typename Value>
+	using BasicStringType = memory::basic_string<Value>;
+	template <typename Value>
+	using ArrayType = memory::vector<Value>;
+	template <typename Value>
+	using DictionaryType = memory::map<StringType, Value, std::less<>>;
+	template <typename Value>
+	using VectorType = memory::vector<Value>;
 
 	template <typename K, typename V, typename Compare = std::less<>>
 	using MapType = memory::map<K, V, Compare>;
@@ -61,24 +66,37 @@ struct SP_PUBLIC PoolInterface final {
 
 struct SP_PUBLIC StandartInterface final {
 	struct SP_PUBLIC AllocBaseType {
-		static void * operator new (size_t size, const std::nothrow_t& tag) noexcept { return ::operator new(size, tag); }
-		static void * operator new (size_t size, std::align_val_t al, const std::nothrow_t& tag) noexcept { return ::operator new(size, al, tag); }
-		static void * operator new (size_t size, void* ptr) noexcept { return ::operator new(size, ptr); }
+		static void *operator new(size_t size, const std::nothrow_t &tag) noexcept {
+			return ::operator new(size, tag);
+		}
+		static void *operator new(size_t size, std::align_val_t al,
+				const std::nothrow_t &tag) noexcept {
+			return ::operator new(size, al, tag);
+		}
+		static void *operator new(size_t size, void *ptr) noexcept {
+			return ::operator new(size, ptr);
+		}
 
-		static void * operator new (size_t size, memory::pool_t* ptr) noexcept = delete;
+		static void *operator new(size_t size, memory::pool_t *ptr) noexcept = delete;
 
 		static void operator delete(void *ptr) noexcept { return ::operator delete(ptr); }
-		static void operator delete(void *ptr, std::align_val_t al) noexcept { return ::operator delete(ptr, al); }
+		static void operator delete(void *ptr, std::align_val_t al) noexcept {
+			return ::operator delete(ptr, al);
+		}
 	};
 
 	using StringType = std::string;
 	using WideStringType = std::u16string;
 	using BytesType = std::vector<uint8_t>;
 
-	template <typename Value> using BasicStringType = std::basic_string<Value>;
-	template <typename Value> using ArrayType = std::vector<Value>;
-	template <typename Value> using DictionaryType = std::map<StringType, Value, std::less<>>;
-	template <typename Value> using VectorType = std::vector<Value>;
+	template <typename Value>
+	using BasicStringType = std::basic_string<Value>;
+	template <typename Value>
+	using ArrayType = std::vector<Value>;
+	template <typename Value>
+	using DictionaryType = std::map<StringType, Value, std::less<>>;
+	template <typename Value>
+	using VectorType = std::vector<Value>;
 
 	template <typename K, typename V, typename Compare = std::less<>>
 	using MapType = std::map<K, V, Compare>;
@@ -94,7 +112,7 @@ struct SP_PUBLIC StandartInterface final {
 	static constexpr bool usesMemoryPool() { return false; }
 };
 
-}
+} // namespace stappler::memory
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -126,7 +144,7 @@ struct InterfaceObject {
 	using StringStream = typename Interface::StringStreamType;
 };
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 
 namespace STAPPLER_VERSIONIZED stappler {
@@ -138,7 +156,8 @@ class Ref;
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
-class PoolObject : public memory::PoolInterface::AllocBaseType, public InterfaceObject<memory::PoolInterface> {
+class PoolObject : public memory::PoolInterface::AllocBaseType,
+				   public InterfaceObject<memory::PoolInterface> {
 public:
 	virtual ~PoolObject() = default;
 
@@ -158,7 +177,7 @@ protected:
 	memory::pool_t *_pool = nullptr;
 };
 
-}
+} // namespace stappler::memory
 
 namespace STAPPLER_VERSIONIZED stappler::traits {
 
@@ -185,26 +204,30 @@ struct SelectStringStream<memory::basic_string<char16_t>> {
 	using Type = memory::basic_ostringstream<char16_t>;
 };
 
-
-}
+} // namespace stappler::traits
 
 namespace STAPPLER_VERSIONIZED stappler {
 
 template <typename T>
 using Callback = memory::callback<T>;
 
-template <typename T> auto StringToNumber(const memory::StandartInterface::StringType &str) -> T {
+using memory::makeCallback;
+
+template <typename T>
+auto StringToNumber(const memory::StandartInterface::StringType &str) -> T {
 	return StringToNumber<T>(str.data(), nullptr, 0);
 }
 
-template <typename T> auto StringToNumber(const memory::PoolInterface::StringType &str) -> T {
+template <typename T>
+auto StringToNumber(const memory::PoolInterface::StringType &str) -> T {
 	return StringToNumber<T>(str.data(), nullptr, 0);
 }
 
-template <typename T> auto StringToNumber(const char *str) -> T {
+template <typename T>
+auto StringToNumber(const char *str) -> T {
 	return StringToNumber<T>(str, nullptr, 0);
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* STAPPLER_CORE_MEMORY_SPMEMINTERFACE_H_ */

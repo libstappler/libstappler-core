@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -42,6 +43,8 @@ namespace STAPPLER_VERSIONIZED stappler {
 //   reader.readChars<Chars<'-', '+', '.', 'e'>, Range<'0', '9'>>();
 //
 
+using CallbackStream = Callback<void(StringView)>;
+
 SP_PUBLIC StringView getStatusName(Status);
 
 // Returns status description (strerror), thread-safe
@@ -49,5 +52,14 @@ SP_PUBLIC StringView getStatusName(Status);
 SP_PUBLIC void getStatusDescription(Status, const Callback<void(StringView)> &cb);
 
 } // namespace STAPPLER_VERSIONIZED stappler
+
+namespace STAPPLER_VERSIONIZED stappler::memory {
+
+template <typename Char>
+inline auto makeCallback(std::basic_ostream<Char> &stream) {
+	return makeCallback([&](StringViewBase<Char> str) { stream << str; });
+}
+
+} // namespace stappler::memory
 
 #endif /* STAPPLER_CORE_STRING_SPSTRINGVIEW_H_ */

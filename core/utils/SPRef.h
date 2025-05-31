@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_UTILS_SPREF_H_
 #define STAPPLER_CORE_UTILS_SPREF_H_
 
+#include "SPLogInit.h"
 #include "SPTime.h"
 
 // enable Ref debug mode to track retain/release sources
@@ -290,6 +292,8 @@ public:
 	_Base *get() const noexcept;
 
 	operator _Base *() const noexcept;
+
+	operator NotNull<_Base *>() const noexcept;
 
 	_Base *operator->() const noexcept;
 
@@ -878,6 +882,13 @@ inline auto Rc<_Base>::get() const noexcept -> _Base * {
 template <typename _Base>
 inline Rc<_Base>::operator _Base *() const noexcept {
 	return *this ? get() : nullptr;
+}
+
+template <typename _Base>
+inline Rc<_Base>::operator NotNull<_Base *>() const noexcept {
+	auto ptr = get();
+	SPASSERT(ptr, "");
+	return ptr;
 }
 
 template <typename _Base>

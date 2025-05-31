@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,7 @@
 #define CORE_GEOM_SPGEOM_H_
 
 #include "SPCommon.h"
+#include "SPMath.h"
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
@@ -93,16 +95,14 @@ struct _ApplyTrait<float> {
 	}
 };
 
-}
+} // namespace
 
 template <typename T>
 inline constexpr T fill(float v) {
 	return T::fill(v);
 }
 
-inline constexpr float fill(float v) {
-	return v;
-}
+inline constexpr float fill(float v) { return v; }
 
 template <typename T, typename Functor>
 inline constexpr T apply(const T &t, const Functor &f) {
@@ -115,38 +115,40 @@ inline constexpr T apply(const T &t1, const T &t2, const Functor &f) {
 }
 
 template <typename T, typename Functor>
-inline constexpr auto bitop(const T &t, const Functor &f) -> std::bitset<_StructFieldCount<T>::Count> {
+inline constexpr auto bitop(const T &t, const Functor &f)
+		-> std::bitset<_StructFieldCount<T>::Count> {
 	return _ApplyTrait<T>::bitop(t, f);
 }
 
 template <typename T, typename Functor>
-inline constexpr auto bitop(const T &t1, const T &t2, const Functor &f) -> std::bitset<_StructFieldCount<T>::Count> {
+inline constexpr auto bitop(const T &t1, const T &t2, const Functor &f)
+		-> std::bitset<_StructFieldCount<T>::Count> {
 	return _ApplyTrait<T>::bitop(t1, t2, f);
 }
 
 template <typename T>
 inline constexpr T _abs(const T &t) {
-	return apply(t, [] (float v) { return std::abs(v); });
+	return apply(t, [](float v) { return std::abs(v); });
 }
 
 template <typename T>
 inline constexpr T _ceil(const T &t) {
-	return apply(t, [] (float v) { return std::ceil(v); });
+	return apply(t, [](float v) { return std::ceil(v); });
 }
 
 template <typename T>
 inline constexpr T _floor(const T &t) {
-	return apply(t, [] (float v) { return std::floor(v); });
+	return apply(t, [](float v) { return std::floor(v); });
 }
 
 template <typename T>
 inline constexpr T _trunc(const T &t) {
-	return apply(t, [] (float v) { return std::trunc(v); });
+	return apply(t, [](float v) { return std::trunc(v); });
 }
 
 template <typename T>
 inline constexpr T _fract(const T &t) {
-	return apply(t, [] (float v) {
+	return apply(t, [](float v) {
 		float tmp;
 		return std::modf(v, &tmp);
 	});
@@ -154,97 +156,94 @@ inline constexpr T _fract(const T &t) {
 
 template <typename T>
 inline constexpr T _round(const T &t) {
-	return apply(t, [] (float v) { return std::round(v); });
+	return apply(t, [](float v) { return std::round(v); });
 }
 
 template <typename T, typename V>
-inline constexpr T _mix(const T & x, const T & y, const V &a) {
+inline constexpr T _mix(const T &x, const T &y, const V &a) {
 	return math::lerp(x, y, a);
 }
 
 template <typename T>
-inline constexpr T _mix(const T & x, const T & y, bool a) {
+inline constexpr T _mix(const T &x, const T &y, bool a) {
 	return a ? x : y;
 }
 
 template <typename T>
-inline constexpr T _smoothstep(const float & edge0, const float & edge1, const T &x) {
-	return apply(x, [&] (float v) {
-		auto t = stappler::math::clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-		return t * t * (3.0 - 2.0 * t);
-	});
+inline constexpr T _smoothstep(const float &edge0, const float &edge1, const T &x) {
+	return apply(x, [&](float v) { return stappler::math::smoothstep(edge0, edge1, v); });
 }
 
 template <typename T>
 inline constexpr T _sign(const T &t) {
-	return apply(t, [] (float v) { return std::copysign(1.0f, v); });
+	return apply(t, [](float v) { return std::copysign(1.0f, v); });
 }
 
 template <typename T>
 inline constexpr T _inversesqrt(const T &t) {
-	return apply(t, [] (float v) { return 1.0f / std::sqrt(v); });
+	return apply(t, [](float v) { return 1.0f / std::sqrt(v); });
 }
 
 template <typename T>
 inline constexpr T _max(const T &t1, const T &t2) {
-	return apply(t1, t2, [] (float v1, float v2) { return std::max(v1, v2); });
+	return apply(t1, t2, [](float v1, float v2) { return std::max(v1, v2); });
 }
 
 template <typename T>
 inline constexpr T _min(const T &t1, const T &t2) {
-	return apply(t1, t2, [] (float v1, float v2) { return std::min(v1, v2); });
+	return apply(t1, t2, [](float v1, float v2) { return std::min(v1, v2); });
 }
 
 template <typename T>
 inline constexpr T _mod(const T &t1, const T &t2) {
-	return apply(t1, t2, [] (float x, float y) { return x - y * std::floor(x / y); });
+	return apply(t1, t2, [](float x, float y) { return x - y * std::floor(x / y); });
 }
 
 template <typename T>
 inline constexpr T _step(const T &t1, const T &t2) {
-	return apply(t1, t2, [] (float edge, float x) { return (x < edge) ? 0.0f : 1.0f; });
+	return apply(t1, t2, [](float edge, float x) { return (x < edge) ? 0.0f : 1.0f; });
 }
 
 template <typename T>
 inline constexpr auto _equal(const T &l, const T &r) {
-	return bitop(l, r, [] (float lv, float rv) { return lv == rv; });
+	return bitop(l, r, [](float lv, float rv) { return lv == rv; });
 }
 
 template <typename T>
 inline constexpr auto _greaterThan(const T &l, const T &r) {
-	return bitop(l, r, [] (float lv, float rv) { return lv > rv; });
+	return bitop(l, r, [](float lv, float rv) { return lv > rv; });
 }
 
 template <typename T>
 inline constexpr auto _greaterThanEqual(const T &l, const T &r) {
-	return bitop(l, r, [] (float lv, float rv) { return lv >= rv; });
+	return bitop(l, r, [](float lv, float rv) { return lv >= rv; });
 }
 
 template <typename T>
 inline constexpr auto _lessThan(const T &l, const T &r) {
-	return bitop(l, r, [] (float lv, float rv) { return lv < rv; });
+	return bitop(l, r, [](float lv, float rv) { return lv < rv; });
 }
 
 template <typename T>
 inline constexpr auto _lessThanEqual(const T &l, const T &r) {
-	return bitop(l, r, [] (float lv, float rv) { return lv <= rv; });
+	return bitop(l, r, [](float lv, float rv) { return lv <= rv; });
 }
 
 template <typename T>
 inline constexpr auto _notEqual(const T &l, const T &r) {
-	return bitop(l, r, [] (float lv, float rv) { return lv != rv; });
+	return bitop(l, r, [](float lv, float rv) { return lv != rv; });
 }
 
 template <typename T>
 inline constexpr auto _isinf(const T &t) {
-	return bitop(t, [] (float v) { return std::isinf(v); });
+	return bitop(t, [](float v) { return std::isinf(v); });
 }
 
 template <typename T>
 inline constexpr auto _isnan(const T &t) {
-	return bitop(t, [] (float v) { return std::isnan(v); });
+	return bitop(t, [](float v) { return std::isnan(v); });
 }
 
-}
+} // namespace stappler::geom
 
 #endif /* CORE_GEOM_SPGEOM_H_ */

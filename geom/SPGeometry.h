@@ -3,6 +3,7 @@ Copyright (c) 2010-2012 cocos2d-x.org
 Copyright (c) 2013-2014 Chukong Technologies
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -58,11 +59,8 @@ struct SP_PUBLIC Metric {
 		case Units::Vw:
 		case Units::Vh:
 		case Units::VMin:
-		case Units::VMax:
-			return true;
-			break;
-		default:
-			break;
+		case Units::VMax: return true; break;
+		default: break;
 		}
 		return false;
 	}
@@ -76,8 +74,8 @@ struct SP_PUBLIC Metric {
 
 	bool readStyleValue(StringView r, bool resolutionMetric, bool allowEmptyMetric);
 
-	inline bool operator == (const Metric &other) const = default;
-	inline bool operator != (const Metric &other) const = default;
+	inline bool operator==(const Metric &other) const = default;
+	inline bool operator!=(const Metric &other) const = default;
 };
 
 struct SP_PUBLIC Size2 {
@@ -97,9 +95,10 @@ struct SP_PUBLIC Size2 {
 
 	constexpr operator Vec2() const { return Vec2(width, height); }
 
-	constexpr Size2& operator= (const Size2 &other) = default;
-	constexpr Size2& operator= (const Vec2 &point) {
-		this->width = point.x; this->height = point.y;
+	constexpr Size2 &operator=(const Size2 &other) = default;
+	constexpr Size2 &operator=(const Vec2 &point) {
+		this->width = point.x;
+		this->height = point.y;
 		return *this;
 	}
 
@@ -109,16 +108,13 @@ struct SP_PUBLIC Size2 {
 	constexpr Size2 operator-(const Size2 &right) const {
 		return Size2(this->width - right.width, this->height - right.height);
 	}
-	constexpr Size2 operator*(float a) const {
-		return Size2(this->width * a, this->height * a);
-	}
-	constexpr Size2 operator/(float a) const {
-		return Size2(this->width / a, this->height / a);
-	}
+	constexpr Size2 operator*(float a) const { return Size2(this->width * a, this->height * a); }
+	constexpr Size2 operator/(float a) const { return Size2(this->width / a, this->height / a); }
 
-	constexpr void setSize(float w, float h) {  }
+	constexpr void setSize(float w, float h) { }
 
-	constexpr bool fuzzyEquals(const Size2 &target, float var = NumericLimits<float>::epsilon()) const {
+	constexpr bool fuzzyEquals(const Size2 &target,
+			float var = NumericLimits<float>::epsilon()) const {
 		return (std::fabs(this->width - target.width) < var)
 				&& (std::fabs(this->height - target.height) < var);
 	}
@@ -138,29 +134,31 @@ struct SP_PUBLIC Size3 {
 	constexpr Size3(float w, float h, float d) : width(w), height(h), depth(d) { }
 
 	template <typename Functor>
-	constexpr Size3(const Size3 &v, const Functor &f) : width(f(v.width)), height(f(v.height)), depth(f(v.depth)) { }
+	constexpr Size3(const Size3 &v, const Functor &f)
+	: width(f(v.width)), height(f(v.height)), depth(f(v.depth)) { }
 
-	constexpr Size3(const Size3& other) = default;
-	constexpr explicit Size3(const Vec3& point) : width(point.x), height(point.y), depth(point.z) { }
+	constexpr Size3(const Size3 &other) = default;
+	constexpr explicit Size3(const Vec3 &point)
+	: width(point.x), height(point.y), depth(point.z) { }
 
 	constexpr operator Vec3() const { return Vec3(width, height, depth); }
 
-	constexpr Size3& operator= (const Size3& other) = default;
-	constexpr Size3& operator= (const Vec3& point) {
+	constexpr Size3 &operator=(const Size3 &other) = default;
+	constexpr Size3 &operator=(const Vec3 &point) {
 		width = point.x;
 		height = point.y;
 		depth = point.z;
 		return *this;
 	}
 
-	constexpr Size3 operator+(const Size3& right) const {
+	constexpr Size3 operator+(const Size3 &right) const {
 		Size3 ret(*this);
 		ret.width += right.width;
 		ret.height += right.height;
 		ret.depth += right.depth;
 		return ret;
 	}
-	constexpr Size3 operator-(const Size3& right) const {
+	constexpr Size3 operator-(const Size3 &right) const {
 		Size3 ret(*this);
 		ret.width -= right.width;
 		ret.height -= right.height;
@@ -182,7 +180,8 @@ struct SP_PUBLIC Size3 {
 		return ret;
 	}
 
-	constexpr bool fuzzyEquals(const Size3 &target, float var = NumericLimits<float>::epsilon()) const {
+	constexpr bool fuzzyEquals(const Size3 &target,
+			float var = NumericLimits<float>::epsilon()) const {
 		return (std::fabs(this->width - target.width) < var)
 				&& (std::fabs(this->height - target.height) < var)
 				&& (std::fabs(this->depth - target.depth) < var);
@@ -202,17 +201,25 @@ struct SP_PUBLIC Extent2 {
 	constexpr Extent2(uint32_t w, uint32_t h) : width(w), height(h) { }
 
 	constexpr Extent2(const Extent2 &other) = default;
-	constexpr Extent2& operator= (const Extent2 &other) = default;
+	constexpr Extent2 &operator=(const Extent2 &other) = default;
 
 	constexpr explicit Extent2(const Size2 &size) : width(size.width), height(size.height) { }
 	constexpr explicit Extent2(const Vec2 &point) : width(point.x), height(point.y) { }
 
-	constexpr Extent2& operator= (const Size2 &size) { width = size.width; height = size.width; return *this; }
-	constexpr Extent2& operator= (const Vec2 &other) { width = other.x; height = other.y; return *this; }
+	constexpr Extent2 &operator=(const Size2 &size) {
+		width = size.width;
+		height = size.width;
+		return *this;
+	}
+	constexpr Extent2 &operator=(const Vec2 &other) {
+		width = other.x;
+		height = other.y;
+		return *this;
+	}
 
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Extent2)
 
-	constexpr operator Size2 () const { return Size2(width, height); }
+	constexpr operator Size2() const { return Size2(width, height); }
 };
 
 
@@ -227,60 +234,119 @@ struct SP_PUBLIC Extent3 {
 	constexpr Extent3(uint32_t w, uint32_t h, uint32_t d) : width(w), height(h), depth(d) { }
 	constexpr Extent3(Extent2 e, uint32_t d) : width(e.width), height(e.height), depth(d) { }
 
-	constexpr Extent3(const Extent3& other) = default;
-	constexpr Extent3& operator= (const Extent3& other) = default;
+	constexpr Extent3(const Extent3 &other) = default;
+	constexpr Extent3 &operator=(const Extent3 &other) = default;
 
-	constexpr Extent3(const Extent2& other) : width(other.width), height(other.height), depth(1) { }
-	constexpr Extent3& operator= (const Extent2& other) { width = other.width; height = other.height; depth = 1; return *this; }
+	constexpr Extent3(const Extent2 &other) : width(other.width), height(other.height), depth(1) { }
+	constexpr Extent3 &operator=(const Extent2 &other) {
+		width = other.width;
+		height = other.height;
+		depth = 1;
+		return *this;
+	}
 
-	constexpr explicit Extent3(const Size3 &size) : width(size.width), height(size.height), depth(size.depth) { }
-	constexpr explicit Extent3(const Vec3 &point) : width(point.x), height(point.y), depth(point.z) { }
+	constexpr explicit Extent3(const Size3 &size)
+	: width(size.width), height(size.height), depth(size.depth) { }
+	constexpr explicit Extent3(const Vec3 &point)
+	: width(point.x), height(point.y), depth(point.z) { }
 
-	constexpr Extent3& operator= (const Size3 &size) { width = size.width; height = size.width; depth = size.depth; return *this; }
-	constexpr Extent3& operator= (const Vec3 &other) { width = other.x; height = other.y; depth = other.z; return *this; }
+	constexpr Extent3 &operator=(const Size3 &size) {
+		width = size.width;
+		height = size.width;
+		depth = size.depth;
+		return *this;
+	}
+	constexpr Extent3 &operator=(const Vec3 &other) {
+		width = other.x;
+		height = other.y;
+		depth = other.z;
+		return *this;
+	}
 
 #if SP_HAVE_THREE_WAY_COMPARISON
 	SP_THREE_WAY_COMPARISON_TYPE(Extent3)
 #else
 	constexpr bool operator==(const Extent3 &other) const {
-		return width == other.width
-			&& height == other.height
-			&& depth == other.depth
-			;
+		return width == other.width && height == other.height && depth == other.depth;
 	}
 	constexpr bool operator!=(const Extent3 &other) const {
-		return width != other.width
-			|| height != other.height
-			|| depth != other.depth
-			;
+		return width != other.width || height != other.height || depth != other.depth;
 	}
 	constexpr bool operator<(const Extent3 &other) const {
-		if (width < other.width) { return true; } else if (width > other.width) { return false; }
-		if (height < other.height) { return true; } else if (height > other.height) { return false; }
-		if (depth < other.depth) { return true; } else if (depth > other.depth) { return false; }
+		if (width < other.width) {
+			return true;
+		} else if (width > other.width) {
+			return false;
+		}
+		if (height < other.height) {
+			return true;
+		} else if (height > other.height) {
+			return false;
+		}
+		if (depth < other.depth) {
+			return true;
+		} else if (depth > other.depth) {
+			return false;
+		}
 		return false;
 	}
 	constexpr bool operator>(const Extent3 &other) const {
-		if (width < other.width) { return false; } else if (width > other.width) { return true; }
-		if (height < other.height) { return false; } else if (height > other.height) { return true; }
-		if (depth < other.depth) { return false; } else if (depth > other.depth) { return true; }
+		if (width < other.width) {
+			return false;
+		} else if (width > other.width) {
+			return true;
+		}
+		if (height < other.height) {
+			return false;
+		} else if (height > other.height) {
+			return true;
+		}
+		if (depth < other.depth) {
+			return false;
+		} else if (depth > other.depth) {
+			return true;
+		}
 		return false;
 	}
 	constexpr bool operator<=(const Extent3 &other) const {
-		if (width < other.width) { return true; } else if (width > other.width) { return false; }
-		if (height < other.height) { return true; } else if (height > other.height) { return false; }
-		if (depth < other.depth) { return true; } else if (depth > other.depth) { return false; }
+		if (width < other.width) {
+			return true;
+		} else if (width > other.width) {
+			return false;
+		}
+		if (height < other.height) {
+			return true;
+		} else if (height > other.height) {
+			return false;
+		}
+		if (depth < other.depth) {
+			return true;
+		} else if (depth > other.depth) {
+			return false;
+		}
 		return true;
 	}
 	constexpr bool operator>=(const Extent3 &other) const {
-		if (width < other.width) { return false; } else if (width > other.width) { return true; }
-		if (height < other.height) { return false; } else if (height > other.height) { return true; }
-		if (depth < other.depth) { return false; } else if (depth > other.depth) { return true; }
+		if (width < other.width) {
+			return false;
+		} else if (width > other.width) {
+			return true;
+		}
+		if (height < other.height) {
+			return false;
+		} else if (height > other.height) {
+			return true;
+		}
+		if (depth < other.depth) {
+			return false;
+		} else if (depth > other.depth) {
+			return true;
+		}
 		return true;
 	}
 #endif
 
-	constexpr operator Size3 () const { return Size3(width, height, depth); }
+	constexpr operator Size3() const { return Size3(width, height, depth); }
 };
 
 
@@ -291,15 +357,17 @@ struct SP_PUBLIC Rect {
 	Size2 size;
 
 	constexpr Rect() = default;
-	constexpr Rect(float x, float y, float width, float height) : origin(x, y), size(width, height) { }
+	constexpr Rect(float x, float y, float width, float height)
+	: origin(x, y), size(width, height) { }
 	constexpr Rect(const Vec2 &o, const Size2 &s) : origin(o), size(s) { }
 
 	template <typename Functor>
-	constexpr Rect(const Rect &v, const Functor &f) : origin(Vec2(v.origin, f)), size(Size2(v.size, f)) { }
+	constexpr Rect(const Rect &v, const Functor &f)
+	: origin(Vec2(v.origin, f)), size(Size2(v.size, f)) { }
 
-	constexpr Rect(const Rect& other) = default;
+	constexpr Rect(const Rect &other) = default;
 
-	constexpr Rect& operator= (const Rect& other) = default;
+	constexpr Rect &operator=(const Rect &other) = default;
 
 	constexpr float getMaxX() const { return origin.x + size.width; }
 	constexpr float getMidX() const { return origin.x + size.width / 2.0f; }
@@ -308,24 +376,32 @@ struct SP_PUBLIC Rect {
 	constexpr float getMidY() const { return origin.y + size.height / 2.0f; }
 	constexpr float getMinY() const { return origin.y; }
 
-	constexpr bool equals(const Rect& rect) const {
+	constexpr bool equals(const Rect &rect) const {
 		return (origin == rect.origin) && (size == rect.size);
 	}
 
-	bool containsPoint(const Vec2& point, float padding = 0.0f) const;
-	bool intersectsRect(const Rect& rect) const;
-	bool intersectsCircle(const Vec2& center, float radius) const;
+	bool containsPoint(const Vec2 &point, float padding = 0.0f) const;
+	bool intersectsRect(const Rect &rect) const;
+	bool intersectsCircle(const Vec2 &center, float radius) const;
 
 	/** Get the min rect which can contain this and rect. */
-	Rect unionWithRect(const Rect & rect) const;
+	Rect unionWithRect(const Rect &rect) const;
 
 	/** Compute the min rect which can contain this and rect, assign it to this. */
-	void merge(const Rect& rect);
+	void merge(const Rect &rect);
 
 	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Rect)
 };
 
 struct SP_PUBLIC UVec2 {
+	static constexpr size_t DIMENSIONS = 2;
+
+	static UVec2 convertFromPacked(uint64_t v) {
+		UVec2 ret;
+		memcpy(&ret, &v, sizeof(uint64_t));
+		return ret;
+	}
+
 	uint32_t x;
 	uint32_t y;
 
@@ -333,6 +409,8 @@ struct SP_PUBLIC UVec2 {
 };
 
 struct SP_PUBLIC UVec3 {
+	static constexpr size_t DIMENSIONS = 3;
+
 	uint32_t x;
 	uint32_t y;
 	uint32_t z;
@@ -341,6 +419,8 @@ struct SP_PUBLIC UVec3 {
 };
 
 struct SP_PUBLIC UVec4 {
+	static constexpr size_t DIMENSIONS = 4;
+
 	uint32_t x;
 	uint32_t y;
 	uint32_t z;
@@ -358,8 +438,7 @@ struct SP_PUBLIC URect {
 	URect() = default;
 	URect(const UVec2 &origin, const Extent2 &size)
 	: x(origin.x), y(origin.y), width(size.width), height(size.height) { }
-	URect(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
-	: x(x), y(y), width(w), height(h) { }
+	URect(uint32_t x, uint32_t y, uint32_t w, uint32_t h) : x(x), y(y), width(w), height(h) { }
 
 	constexpr UVec2 origin() const { return UVec2{x, y}; }
 
@@ -386,50 +465,52 @@ constexpr Rect Rect::ZERO = Rect(0.0f, 0.0f, 0.0f, 0.0f);
 
 #endif
 
-SP_PUBLIC Rect TransformRect(const Rect& rect, const Mat4& transform);
+SP_PUBLIC Rect TransformRect(const Rect &rect, const Mat4 &transform);
 
-inline std::ostream & operator<<(std::ostream & stream, const Rect & obj) {
-	stream << "Rect(x:" << obj.origin.x << " y:" << obj.origin.y
-			<< " width:" << obj.size.width << " height:" << obj.size.height << ");";
+inline std::ostream &operator<<(std::ostream &stream, const Rect &obj) {
+	stream << "Rect(x:" << obj.origin.x << " y:" << obj.origin.y << " width:" << obj.size.width
+		   << " height:" << obj.size.height << ");";
 	return stream;
 }
 
-inline std::ostream & operator<<(std::ostream & stream, const URect & obj) {
-	stream << "URect(x:" << obj.x << " y:" << obj.y
-			<< " width:" << obj.width << " height:" << obj.height << ");";
+inline std::ostream &operator<<(std::ostream &stream, const URect &obj) {
+	stream << "URect(x:" << obj.x << " y:" << obj.y << " width:" << obj.width
+		   << " height:" << obj.height << ");";
 	return stream;
 }
 
-inline std::ostream & operator<<(std::ostream & stream, const Size2 & obj) {
+inline std::ostream &operator<<(std::ostream &stream, const Size2 &obj) {
 	stream << "Size2(width:" << obj.width << " height:" << obj.height << ");";
 	return stream;
 }
 
-inline std::ostream & operator<<(std::ostream & stream, const Size3 & obj) {
-	stream << "Size3(width:" << obj.width << " height:" << obj.height << " depth:" << obj.depth << ");";
+inline std::ostream &operator<<(std::ostream &stream, const Size3 &obj) {
+	stream << "Size3(width:" << obj.width << " height:" << obj.height << " depth:" << obj.depth
+		   << ");";
 	return stream;
 }
 
-inline std::ostream & operator<<(std::ostream & stream, const Extent2 & obj) {
+inline std::ostream &operator<<(std::ostream &stream, const Extent2 &obj) {
 	stream << "Extent2(width:" << obj.width << " height:" << obj.height << ");";
 	return stream;
 }
 
-inline std::ostream & operator<<(std::ostream & stream, const Extent3 & obj) {
-	stream << "Extent3(width:" << obj.width << " height:" << obj.height << " depth:" << obj.depth << ");";
+inline std::ostream &operator<<(std::ostream &stream, const Extent3 &obj) {
+	stream << "Extent3(width:" << obj.width << " height:" << obj.height << " depth:" << obj.depth
+		   << ");";
 	return stream;
 }
 
-inline std::ostream & operator<<(std::ostream & stream, const UVec2 & obj) {
+inline std::ostream &operator<<(std::ostream &stream, const UVec2 &obj) {
 	stream << "UVec2(x:" << obj.x << " y:" << obj.y << ");";
 	return stream;
 }
 
-inline std::ostream & operator<<(std::ostream & stream, const UVec3 & obj) {
+inline std::ostream &operator<<(std::ostream &stream, const UVec3 &obj) {
 	stream << "UVec3(x:" << obj.x << " y:" << obj.y << " z:" << obj.z << ");";
 	return stream;
 }
 
-}
+} // namespace stappler::geom
 
 #endif /* CORE_GEOM_SPGEOMETRY_H_ */

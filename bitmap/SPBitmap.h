@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -63,19 +64,22 @@ public:
 
 	// init with raw data
 	BitmapTemplate(const uint8_t *d, uint32_t width, uint32_t height,
-			PixelFormat c = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Premultiplied, uint32_t stride = 0);
+			PixelFormat c = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Premultiplied,
+			uint32_t stride = 0);
 
 	BitmapTemplate(BytesView d, uint32_t width, uint32_t height,
-			PixelFormat c = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Premultiplied, uint32_t stride = 0);
+			PixelFormat c = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Premultiplied,
+			uint32_t stride = 0);
 
 	BitmapTemplate(typename Interface::BytesType &&d, uint32_t width, uint32_t height,
-			PixelFormat c = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Premultiplied, uint32_t stride = 0);
+			PixelFormat c = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Premultiplied,
+			uint32_t stride = 0);
 
 	BitmapTemplate(const BitmapTemplate &) = delete;
-	BitmapTemplate &operator =(const BitmapTemplate &) = delete;
+	BitmapTemplate &operator=(const BitmapTemplate &) = delete;
 
 	BitmapTemplate(BitmapTemplate &&);
-	BitmapTemplate &operator =(BitmapTemplate &&);
+	BitmapTemplate &operator=(BitmapTemplate &&);
 
 	uint32_t width() const { return _width; }
 	uint32_t height() const { return _height; }
@@ -96,24 +100,29 @@ public:
 	bool truncate(PixelFormat, const StrideFn &strideFn = nullptr);
 
 	// target should be large enough
-	size_t convertWithTarget(uint8_t *target, PixelFormat, const StrideFn &strideFn = nullptr) const;
+	size_t convertWithTarget(uint8_t *target, PixelFormat,
+			const StrideFn &strideFn = nullptr) const;
 
 	// init with jpeg or png data
-	bool loadData(const uint8_t * data, size_t dataLen, const StrideFn &strideFn = nullptr);
+	bool loadData(const uint8_t *data, size_t dataLen, const StrideFn &strideFn = nullptr);
 	bool loadData(BytesView, const StrideFn &strideFn = nullptr);
 
 	// init with raw data
-	void loadBitmap(const uint8_t *d, uint32_t w, uint32_t h,
-			PixelFormat = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
-	void loadBitmap(BytesView d, uint32_t w, uint32_t h,
-			PixelFormat = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
+	void loadBitmap(const uint8_t *d, uint32_t w, uint32_t h, PixelFormat = PixelFormat::RGBA8888,
+			AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
+	void loadBitmap(BytesView d, uint32_t w, uint32_t h, PixelFormat = PixelFormat::RGBA8888,
+			AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
 	void loadBitmap(typename Interface::BytesType &&d, uint32_t w, uint32_t h,
-			PixelFormat = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
+			PixelFormat = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Unpremultiplied,
+			uint32_t stride = 0);
 
-	void alloc(uint32_t w, uint32_t h,
-			PixelFormat = PixelFormat::RGBA8888, AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
+	void alloc(uint32_t w, uint32_t h, PixelFormat = PixelFormat::RGBA8888,
+			AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
 
-	explicit operator bool () const { return _data.size() != 0; }
+	void alloc(uint8_t, uint32_t w, uint32_t h, PixelFormat = PixelFormat::RGBA8888,
+			AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
+
+	explicit operator bool() const { return _data.size() != 0; }
 
 	void clear() { _data.clear(); }
 	bool empty() const { return _data.empty(); }
@@ -132,10 +141,12 @@ public:
 	// resample with default filter (usually Lanczos4)
 	BitmapTemplate resample(uint32_t width, uint32_t height, uint32_t stride = 0) const;
 
-	BitmapTemplate resample(ResampleFilter, uint32_t width, uint32_t height, uint32_t stride = 0) const;
+	BitmapTemplate resample(ResampleFilter, uint32_t width, uint32_t height,
+			uint32_t stride = 0) const;
 
 protected:
-	void setInfo(uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
+	void setInfo(uint32_t w, uint32_t h, PixelFormat c,
+			AlphaFormat a = AlphaFormat::Unpremultiplied, uint32_t stride = 0);
 
 	PixelFormat _color = PixelFormat::RGBA8888;
 	AlphaFormat _alpha = AlphaFormat::Opaque;
@@ -159,7 +170,8 @@ BitmapTemplate<Interface>::BitmapTemplate(BytesView data, const StrideFn &stride
 
 
 template <typename Interface>
-BitmapTemplate<Interface>::BitmapTemplate(const uint8_t *data, size_t size, const StrideFn &strideFn) {
+BitmapTemplate<Interface>::BitmapTemplate(const uint8_t *data, size_t size,
+		const StrideFn &strideFn) {
 	if (!loadData(data, size, strideFn)) {
 		_data.clear();
 	}
@@ -168,31 +180,49 @@ BitmapTemplate<Interface>::BitmapTemplate(const uint8_t *data, size_t size, cons
 template <typename Interface>
 BitmapTemplate<Interface>::BitmapTemplate(const uint8_t *d, uint32_t width, uint32_t height,
 		PixelFormat c, AlphaFormat a, uint32_t stride)
-: _color(c), _alpha(a), _width(width), _height(height)
-, _stride(max(stride, width * getBytesPerPixel(c))), _data(d, d + _stride * height) {
-	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
+: _color(c)
+, _alpha(a)
+, _width(width)
+, _height(height)
+, _stride(max(stride, width * getBytesPerPixel(c)))
+, _data(d, d + _stride * height) {
+	SPASSERT(c != PixelFormat::Auto,
+			"Bitmap: Format::Auto should not be used with Bitmap directly");
 }
 
 template <typename Interface>
 BitmapTemplate<Interface>::BitmapTemplate(BytesView d, uint32_t width, uint32_t height,
 		PixelFormat c, AlphaFormat a, uint32_t stride)
-: _color(c), _alpha(a), _width(width), _height(height)
-, _stride(max(stride, width * getBytesPerPixel(c))), _data(d.bytes<Interface>()) {
-	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
+: _color(c)
+, _alpha(a)
+, _width(width)
+, _height(height)
+, _stride(max(stride, width * getBytesPerPixel(c)))
+, _data(d.bytes<Interface>()) {
+	SPASSERT(c != PixelFormat::Auto,
+			"Bitmap: Format::Auto should not be used with Bitmap directly");
 }
 
 template <typename Interface>
-BitmapTemplate<Interface>::BitmapTemplate(typename Interface::BytesType &&d, uint32_t width, uint32_t height,
-		PixelFormat c, AlphaFormat a, uint32_t stride)
-: _color(c), _alpha(a), _width(width), _height(height)
-, _stride(max(stride, width * getBytesPerPixel(c))), _data(sp::move(d)) {
-	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
+BitmapTemplate<Interface>::BitmapTemplate(typename Interface::BytesType &&d, uint32_t width,
+		uint32_t height, PixelFormat c, AlphaFormat a, uint32_t stride)
+: _color(c)
+, _alpha(a)
+, _width(width)
+, _height(height)
+, _stride(max(stride, width * getBytesPerPixel(c)))
+, _data(sp::move(d)) {
+	SPASSERT(c != PixelFormat::Auto,
+			"Bitmap: Format::Auto should not be used with Bitmap directly");
 }
 
 template <typename Interface>
 BitmapTemplate<Interface>::BitmapTemplate(BitmapTemplate &&other)
-: _color(other._color), _alpha(other._alpha)
-, _width(other._width), _height(other._height), _stride(other._stride)
+: _color(other._color)
+, _alpha(other._alpha)
+, _width(other._width)
+, _height(other._height)
+, _stride(other._stride)
 , _data(sp::move(other._data))
 , _originalFormat(other._originalFormat)
 , _originalFormatName(move(other._originalFormatName)) {
@@ -200,7 +230,7 @@ BitmapTemplate<Interface>::BitmapTemplate(BitmapTemplate &&other)
 }
 
 template <typename Interface>
-auto BitmapTemplate<Interface>::operator =(BitmapTemplate &&other) -> BitmapTemplate & {
+auto BitmapTemplate<Interface>::operator=(BitmapTemplate &&other) -> BitmapTemplate & {
 	_alpha = other._alpha;
 	_color = other._color;
 	_width = other._width;
@@ -214,8 +244,10 @@ auto BitmapTemplate<Interface>::operator =(BitmapTemplate &&other) -> BitmapTemp
 }
 
 template <typename Interface>
-void BitmapTemplate<Interface>::loadBitmap(const uint8_t *d, uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
+void BitmapTemplate<Interface>::loadBitmap(const uint8_t *d, uint32_t w, uint32_t h, PixelFormat c,
+		AlphaFormat a, uint32_t stride) {
+	SPASSERT(c != PixelFormat::Auto,
+			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
 	_data.clear();
 	_data.resize(_stride * h);
@@ -225,8 +257,10 @@ void BitmapTemplate<Interface>::loadBitmap(const uint8_t *d, uint32_t w, uint32_
 }
 
 template <typename Interface>
-void BitmapTemplate<Interface>::loadBitmap(BytesView d, uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
+void BitmapTemplate<Interface>::loadBitmap(BytesView d, uint32_t w, uint32_t h, PixelFormat c,
+		AlphaFormat a, uint32_t stride) {
+	SPASSERT(c != PixelFormat::Auto,
+			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
 	_data = d.bytes<Interface>();
 	_originalFormat = FileFormat::Custom;
@@ -234,8 +268,10 @@ void BitmapTemplate<Interface>::loadBitmap(BytesView d, uint32_t w, uint32_t h, 
 }
 
 template <typename Interface>
-void BitmapTemplate<Interface>::loadBitmap(typename Interface::BytesType &&d, uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
+void BitmapTemplate<Interface>::loadBitmap(typename Interface::BytesType &&d, uint32_t w,
+		uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
+	SPASSERT(c != PixelFormat::Auto,
+			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
 	_data = sp::move(d);
 	_originalFormat = FileFormat::Custom;
@@ -243,18 +279,28 @@ void BitmapTemplate<Interface>::loadBitmap(typename Interface::BytesType &&d, ui
 }
 
 template <typename Interface>
-void BitmapTemplate<Interface>::alloc(uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
+void BitmapTemplate<Interface>::alloc(uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a,
+		uint32_t stride) {
+	alloc(0, w, h, c, a, stride);
+}
+
+template <typename Interface>
+void BitmapTemplate<Interface>::alloc(uint8_t val, uint32_t w, uint32_t h, PixelFormat c,
+		AlphaFormat a, uint32_t stride) {
+	SPASSERT(c != PixelFormat::Auto,
+			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
 	_data.clear();
-	_data.resize(_stride * h);
+	_data.resize(_stride * h, val);
 	_originalFormat = FileFormat::Custom;
 	_originalFormatName.clear();
 }
 
 template <typename Interface>
-void BitmapTemplate<Interface>::setInfo(uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto, "Bitmap: Format::Auto should not be used with Bitmap directly");
+void BitmapTemplate<Interface>::setInfo(uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a,
+		uint32_t stride) {
+	SPASSERT(c != PixelFormat::Auto,
+			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	_width = w;
 	_height = h;
 	_stride = max(stride, w * getBytesPerPixel(c));
@@ -264,12 +310,14 @@ void BitmapTemplate<Interface>::setInfo(uint32_t w, uint32_t h, PixelFormat c, A
 
 template <typename Interface>
 bool BitmapTemplate<Interface>::updateStride(const StrideFn &strideFn) {
-	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(_color, _width), _width * getBytesPerPixel(_color)):_width * getBytesPerPixel(_color);
+	uint32_t outStride = (strideFn != nullptr)
+			? max(strideFn(_color, _width), _width * getBytesPerPixel(_color))
+			: _width * getBytesPerPixel(_color);
 	if (outStride != _stride) {
 		typename Interface::BytesType out;
 		out.resize(_height * outStride);
 		size_t minStride = _width * getBytesPerPixel(_color);
-		for (size_t j = 0; j < _height; j ++) {
+		for (size_t j = 0; j < _height; j++) {
 			memcpy(out.data() + j * outStride, _data.data() + j * _stride, minStride);
 		}
 		_data = sp::move(out);
@@ -290,7 +338,9 @@ bool BitmapTemplate<Interface>::convert(PixelFormat color, const StrideFn &strid
 
 	bool ret = false;
 	typename Interface::BytesType out;
-	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
+	uint32_t outStride = (strideFn != nullptr)
+			? max(strideFn(color, _width), _width * getBytesPerPixel(color))
+			: _width * getBytesPerPixel(color);
 	out.resize(_height * outStride);
 
 	ret = convertWithTarget(out.data(), color, strideFn);
@@ -323,24 +373,22 @@ bool BitmapTemplate<Interface>::truncate(PixelFormat color, const StrideFn &stri
 	auto bppIn = getBytesPerPixel(_color);
 
 	typename Interface::BytesType out;
-	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
+	uint32_t outStride = (strideFn != nullptr)
+			? max(strideFn(color, _width), _width * getBytesPerPixel(color))
+			: _width * getBytesPerPixel(color);
 	out.resize(height * outStride);
 	auto bppOut = getBytesPerPixel(color);
 
 	auto fillBytes = min(bppIn, bppOut);
 	auto clearBytes = bppOut - fillBytes;
 
-	for (size_t j = 0; j < height; j ++) {
+	for (size_t j = 0; j < height; j++) {
 		auto inData = data + _stride * j;
 		auto outData = out.data() + outStride * j;
-	    for (size_t i = 0; i < _stride; i += bppIn) {
-	    	for (uint8_t k = 0; k < fillBytes; ++ k) {
-		        *outData++ = inData[i * bppIn + k];
-	    	}
-	    	for (uint8_t k = 0; k < clearBytes; ++ k) {
-		        *outData++ = 0;
-	    	}
-	    }
+		for (size_t i = 0; i < _stride; i += bppIn) {
+			for (uint8_t k = 0; k < fillBytes; ++k) { *outData++ = inData[i * bppIn + k]; }
+			for (uint8_t k = 0; k < clearBytes; ++k) { *outData++ = 0; }
+		}
 	}
 
 	_color = color;
@@ -351,58 +399,132 @@ bool BitmapTemplate<Interface>::truncate(PixelFormat color, const StrideFn &stri
 }
 
 template <typename Interface>
-size_t BitmapTemplate<Interface>::convertWithTarget(uint8_t *target, PixelFormat color, const StrideFn &strideFn) const {
-	uint32_t outStride = (strideFn != nullptr) ? max(strideFn(color, _width), _width * getBytesPerPixel(color)) : _width * getBytesPerPixel(color);
+size_t BitmapTemplate<Interface>::convertWithTarget(uint8_t *target, PixelFormat color,
+		const StrideFn &strideFn) const {
+	uint32_t outStride = (strideFn != nullptr)
+			? max(strideFn(color, _width), _width * getBytesPerPixel(color))
+			: _width * getBytesPerPixel(color);
 	BytesView out(target, _height * outStride);
 
 	switch (_color) {
 	case PixelFormat::A8:
 		switch (color) {
-		case PixelFormat::A8: memcpy(target, _data.data(), out.size()); return out.size(); break;
-		case PixelFormat::I8: memcpy(target, _data.data(), out.size()); return out.size(); break;
-		case PixelFormat::IA88: return convertData<PixelFormat::A8, PixelFormat::IA88>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGB888: return convertData<PixelFormat::A8, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGBA8888: return convertData<PixelFormat::A8, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
+		case PixelFormat::A8:
+			memcpy(target, _data.data(), out.size());
+			return out.size();
+			break;
+		case PixelFormat::I8:
+			memcpy(target, _data.data(), out.size());
+			return out.size();
+			break;
+		case PixelFormat::IA88:
+			return convertData<PixelFormat::A8, PixelFormat::IA88>(_data, out, _stride, outStride);
+			break;
+		case PixelFormat::RGB888:
+			return convertData<PixelFormat::A8, PixelFormat::RGB888>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::RGBA8888:
+			return convertData<PixelFormat::A8, PixelFormat::RGBA8888>(_data, out, _stride,
+					outStride);
+			break;
 		case PixelFormat::Auto: return 0; break;
 		}
 		break;
 	case PixelFormat::I8:
 		switch (color) {
-		case PixelFormat::A8: memcpy(target, _data.data(), out.size()); return out.size(); break;
-		case PixelFormat::I8: memcpy(target, _data.data(), out.size()); return out.size(); break;
-		case PixelFormat::IA88: return convertData<PixelFormat::I8, PixelFormat::IA88>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGB888: return convertData<PixelFormat::I8, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGBA8888: return convertData<PixelFormat::I8, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
+		case PixelFormat::A8:
+			memcpy(target, _data.data(), out.size());
+			return out.size();
+			break;
+		case PixelFormat::I8:
+			memcpy(target, _data.data(), out.size());
+			return out.size();
+			break;
+		case PixelFormat::IA88:
+			return convertData<PixelFormat::I8, PixelFormat::IA88>(_data, out, _stride, outStride);
+			break;
+		case PixelFormat::RGB888:
+			return convertData<PixelFormat::I8, PixelFormat::RGB888>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::RGBA8888:
+			return convertData<PixelFormat::I8, PixelFormat::RGBA8888>(_data, out, _stride,
+					outStride);
+			break;
 		case PixelFormat::Auto: return 0; break;
 		}
 		break;
 	case PixelFormat::IA88:
 		switch (color) {
-		case PixelFormat::A8: return convertData<PixelFormat::IA88, PixelFormat::A8>(_data, out, _stride, outStride); break;
-		case PixelFormat::I8: return convertData<PixelFormat::IA88, PixelFormat::I8>(_data, out, _stride, outStride); break;
-		case PixelFormat::IA88: memcpy(target, _data.data(), out.size()); return out.size(); break;
-		case PixelFormat::RGB888: return convertData<PixelFormat::IA88, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGBA8888: return convertData<PixelFormat::IA88, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
+		case PixelFormat::A8:
+			return convertData<PixelFormat::IA88, PixelFormat::A8>(_data, out, _stride, outStride);
+			break;
+		case PixelFormat::I8:
+			return convertData<PixelFormat::IA88, PixelFormat::I8>(_data, out, _stride, outStride);
+			break;
+		case PixelFormat::IA88:
+			memcpy(target, _data.data(), out.size());
+			return out.size();
+			break;
+		case PixelFormat::RGB888:
+			return convertData<PixelFormat::IA88, PixelFormat::RGB888>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::RGBA8888:
+			return convertData<PixelFormat::IA88, PixelFormat::RGBA8888>(_data, out, _stride,
+					outStride);
+			break;
 		case PixelFormat::Auto: return 0; break;
 		}
 		break;
 	case PixelFormat::RGB888:
 		switch (color) {
-		case PixelFormat::A8: return convertData<PixelFormat::RGB888, PixelFormat::A8>(_data, out, _stride, outStride); break;
-		case PixelFormat::I8: return convertData<PixelFormat::RGB888, PixelFormat::I8>(_data, out, _stride, outStride); break;
-		case PixelFormat::IA88: return convertData<PixelFormat::RGB888, PixelFormat::IA88>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGB888: memcpy(target, _data.data(), out.size()); return out.size(); break;
-		case PixelFormat::RGBA8888: return convertData<PixelFormat::RGB888, PixelFormat::RGBA8888>(_data, out, _stride, outStride); break;
+		case PixelFormat::A8:
+			return convertData<PixelFormat::RGB888, PixelFormat::A8>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::I8:
+			return convertData<PixelFormat::RGB888, PixelFormat::I8>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::IA88:
+			return convertData<PixelFormat::RGB888, PixelFormat::IA88>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::RGB888:
+			memcpy(target, _data.data(), out.size());
+			return out.size();
+			break;
+		case PixelFormat::RGBA8888:
+			return convertData<PixelFormat::RGB888, PixelFormat::RGBA8888>(_data, out, _stride,
+					outStride);
+			break;
 		case PixelFormat::Auto: return 0; break;
 		}
 		break;
 	case PixelFormat::RGBA8888:
 		switch (color) {
-		case PixelFormat::A8: return convertData<PixelFormat::RGBA8888, PixelFormat::A8>(_data, out, _stride, outStride); break;
-		case PixelFormat::I8: return convertData<PixelFormat::RGBA8888, PixelFormat::I8>(_data, out, _stride, outStride); break;
-		case PixelFormat::IA88: return convertData<PixelFormat::RGBA8888, PixelFormat::IA88>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGB888: return convertData<PixelFormat::RGBA8888, PixelFormat::RGB888>(_data, out, _stride, outStride); break;
-		case PixelFormat::RGBA8888: memcpy(target, _data.data(), out.size()); return out.size(); break;
+		case PixelFormat::A8:
+			return convertData<PixelFormat::RGBA8888, PixelFormat::A8>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::I8:
+			return convertData<PixelFormat::RGBA8888, PixelFormat::I8>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::IA88:
+			return convertData<PixelFormat::RGBA8888, PixelFormat::IA88>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::RGB888:
+			return convertData<PixelFormat::RGBA8888, PixelFormat::RGB888>(_data, out, _stride,
+					outStride);
+			break;
+		case PixelFormat::RGBA8888:
+			memcpy(target, _data.data(), out.size());
+			return out.size();
+			break;
 		case PixelFormat::Auto: return 0; break;
 		}
 		break;
@@ -431,7 +553,7 @@ bool BitmapTemplate<Interface>::loadData(BytesView d, const StrideFn &strideFn) 
 	return loadData(d.data(), d.size(), strideFn);
 }
 
-}
+} // namespace stappler::bitmap
 
 namespace STAPPLER_VERSIONIZED stappler::mem_std {
 

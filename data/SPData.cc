@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -49,119 +50,23 @@ int EncodeFormat::EncodeStreamIndex = std::ios_base::xalloc();
 
 namespace serenity {
 
+// clang-format off
 bool shouldEncodePercent(char c) {
 #define V16 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 	static uint8_t s_decTable[256] = {
-		V16,
-		V16, // 0-1, 0-F
-		1,
-		0,
-		1,
-		1,
-		0,
-		1,
-		1,
-		0,
-		1,
-		1,
-		0,
-		0,
-		1,
-		0,
-		0,
-		0, // 2, 0-F
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		1,
-		1,
-		1,
-		1,
-		1,
-		0, // 3, 0-F
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0, // 4, 0-F
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		1,
-		1,
-		1,
-		1,
-		0, // 5, 0-F
-		1,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0, // 6, 0-F
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		1,
-		1,
-		1,
-		1,
-		1, // 7, 0-F
-		V16,
-		V16,
-		V16,
-		V16,
-		V16,
-		V16,
-		V16,
-		V16,
+		V16, V16, // 0-1, 0-F
+		1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, // 2, 0-F
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, // 3, 0-F
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 4, 0-F
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, // 5, 0-F
+		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 6, 0-F
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, // 7, 0-F
+		V16, V16, V16, V16, V16, V16, V16, V16,
 	};
 
 	return bool(s_decTable[*((uint8_t *)(&c))]);
 }
+// clang-format on
 
 } // namespace serenity
 
@@ -636,5 +541,84 @@ template <>
 const typename ValueTemplate<memory::PoolInterface>::DictionaryType
 		ValueTemplate<memory::PoolInterface>::DictionaryNull(memory::get_zero_pool());
 
+template <>
+auto ValueTemplate<memory::StandartInterface>::getStringNullConst() -> const StringType & {
+	return StringNull;
+}
+
+template <>
+auto ValueTemplate<memory::StandartInterface>::getBytesNullConst() -> const BytesType & {
+	return BytesNull;
+}
+
+template <>
+auto ValueTemplate<memory::StandartInterface>::getArrayNullConst() -> const ArrayType & {
+	return ArrayNull;
+}
+
+template <>
+auto ValueTemplate<memory::StandartInterface>::getDictionaryNullConst() -> const DictionaryType & {
+	return DictionaryNull;
+}
+
+template <>
+auto ValueTemplate<memory::PoolInterface>::getStringNullConst() -> const StringType & {
+	return StringNull;
+}
+
+template <>
+auto ValueTemplate<memory::PoolInterface>::getBytesNullConst() -> const BytesType & {
+	return BytesNull;
+}
+
+template <>
+auto ValueTemplate<memory::PoolInterface>::getArrayNullConst() -> const ArrayType & {
+	return ArrayNull;
+}
+
+template <>
+auto ValueTemplate<memory::PoolInterface>::getDictionaryNullConst() -> const DictionaryType & {
+	return DictionaryNull;
+}
+
+template <>
+auto ValueTemplate<memory::StandartInterface>::getStringNull() -> StringType & {
+	return const_cast<StringType &>(StringNull);
+}
+
+template <>
+auto ValueTemplate<memory::StandartInterface>::getBytesNull() -> BytesType & {
+	return const_cast<BytesType &>(BytesNull);
+}
+
+template <>
+auto ValueTemplate<memory::StandartInterface>::getArrayNull() -> ArrayType & {
+	return const_cast<ArrayType &>(ArrayNull);
+}
+
+template <>
+auto ValueTemplate<memory::StandartInterface>::getDictionaryNull() -> DictionaryType & {
+	return const_cast<DictionaryType &>(DictionaryNull);
+}
+
+template <>
+auto ValueTemplate<memory::PoolInterface>::getStringNull() -> StringType & {
+	return const_cast<StringType &>(StringNull);
+}
+
+template <>
+auto ValueTemplate<memory::PoolInterface>::getBytesNull() -> BytesType & {
+	return const_cast<BytesType &>(BytesNull);
+}
+
+template <>
+auto ValueTemplate<memory::PoolInterface>::getArrayNull() -> ArrayType & {
+	return const_cast<ArrayType &>(ArrayNull);
+}
+
+template <>
+auto ValueTemplate<memory::PoolInterface>::getDictionaryNull() -> DictionaryType & {
+	return const_cast<DictionaryType &>(DictionaryNull);
+}
 
 } // namespace stappler::data
