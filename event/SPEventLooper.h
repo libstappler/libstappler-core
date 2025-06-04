@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,9 +29,12 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+class Bus;
+
 struct SP_PUBLIC LooperInfo {
 	StringView name = StringView("Main");
-	uint16_t workersCount = uint16_t(std::thread::hardware_concurrency()); // 0 if no workers required
+	uint16_t workersCount =
+			uint16_t(std::thread::hardware_concurrency()); // 0 if no workers required
 	thread::ThreadPoolFlags workersFlags = thread::ThreadPoolFlags::LazyInit;
 	QueueEngine engineMask = QueueEngine::Any;
 };
@@ -54,7 +58,8 @@ public:
 
 	Rc<TimerHandle> scheduleTimer(TimerInfo &&, Ref * = nullptr);
 
-	Rc<Handle> schedule(TimeInterval, mem_std::Function<void(Handle *, bool success)> &&, Ref * = nullptr);
+	Rc<Handle> schedule(TimeInterval, mem_std::Function<void(Handle *, bool success)> &&,
+			Ref * = nullptr);
 
 	// Perform task on this thread (only Complete callback will be executed)
 	// If current thread is looper thread - performs in place
@@ -62,14 +67,15 @@ public:
 
 	// Perform function on this thread
 	// If current thread is looper thread - performs in place
-	Status performOnThread(mem_std::Function<void()> &&func, Ref *target,
-			bool immediate = false, StringView tag = STAPPLER_LOCATION);
+	Status performOnThread(mem_std::Function<void()> &&func, Ref *target, bool immediate = false,
+			StringView tag = STAPPLER_LOCATION);
 
 	// Perform task in workers pool (if there is one)
 	Status performAsync(Rc<thread::Task> &&task, bool first = false);
 
 	// Perform function in workers pool (if there is one)
-	Status performAsync(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false, StringView tag = STAPPLER_LOCATION);
+	Status performAsync(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false,
+			StringView tag = STAPPLER_LOCATION);
 
 	// Perform Handle in queue (if supported)
 	Status performHandle(Handle *);
@@ -105,6 +111,9 @@ public:
 
 	bool isOnThisThread() const;
 
+	void attachBus(Bus *);
+	void detachBus(Bus *);
+
 protected:
 	friend class Rc<Looper>; // for Rc<>::alloc
 
@@ -115,6 +124,6 @@ protected:
 	Data *_data = nullptr;
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_SPEVENTLOOP_H_ */

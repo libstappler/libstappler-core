@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -63,16 +64,18 @@ Status EPollData::runPoll(TimeInterval ival, bool infinite) {
 
 		nevents = ::epoll_pwait2(_epollFd, _events.data(), _events.size(), &timeout, sigset);
 	} else {
-		nevents = ::epoll_pwait(_epollFd, _events.data(), _events.size(), infinite ? -1 : ival.toMillis(), sigset);
+		nevents = ::epoll_pwait(_epollFd, _events.data(), _events.size(),
+				infinite ? -1 : ival.toMillis(), sigset);
 	}
 #else
-	nevents = ::epoll_pwait(_epollFd, _events.data(), _events.size(), infinite ? -1 : ival.toMillis(), sigset);
+	nevents = ::epoll_pwait(_epollFd, _events.data(), _events.size(),
+			infinite ? -1 : ival.toMillis(), sigset);
 #endif
 
-	_processedEvents = 0;
-	_receivedEvents = nevents;
-
 	if (nevents >= 0) {
+		_processedEvents = 0;
+		_receivedEvents = nevents;
+
 		return Status::Ok;
 	} else {
 		return status::errnoToStatus(errno);
@@ -84,28 +87,27 @@ uint32_t EPollData::processEvents() {
 	NotifyData data;
 
 	while (_processedEvents < _receivedEvents) {
-		auto &ev = _events.at(_processedEvents ++);
+		auto &ev = _events.at(_processedEvents++);
 
 		auto h = (Handle *)ev.data.ptr;
+		if (h) {
+			auto refId = h->retain();
 
-		auto refId = h->retain();
+			data.result = 0;
+			data.queueFlags = ev.events;
+			data.userFlags = 0;
 
-		data.result = 0;
-		data.queueFlags = ev.events;
-		data.userFlags = 0;
+			_data->notify(h, data);
 
-		_data->notify(h, data);
-
-		h->release(refId);
-		++ count;
+			h->release(refId);
+		}
+		++count;
 	}
 	_receivedEvents = _processedEvents = 0;
 	return count;
 }
 
-Status EPollData::submit() {
-	return Status::Ok;
-}
+Status EPollData::submit() { return Status::Ok; }
 
 uint32_t EPollData::poll() {
 	auto status = runPoll(TimeInterval());
@@ -133,7 +135,8 @@ Status EPollData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval w
 	Rc<Handle> timerHandle;
 	if (ival) {
 		// set timeout
-		timerHandle = _queue->get()->schedule(ival, [this, wakeupFlags] (Handle *handle, bool success) {
+		timerHandle =
+				_queue->get()->schedule(ival, [this, wakeupFlags](Handle *handle, bool success) {
 			if (success) {
 				doWakeupInterrupt(wakeupFlags, false);
 			}
@@ -207,7 +210,8 @@ Status EPollData::doWakeupInterrupt(WakeupFlags flags, bool externalCall) {
 		return Status::Suspended; // do not rearm eventfd
 	} else {
 		_runContext->shouldWakeup.clear();
-		_runContext->wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
+		_runContext->wakeupStatus =
+				externalCall ? Status::Suspended : Status::Done; // forced wakeup
 		return Status::Ok; // rearm eventfd
 	}
 }
@@ -223,16 +227,14 @@ void EPollData::runInternalHandles() {
 	_data->runHandle(_eventFd);
 }
 
-void EPollData::cancel() {
-	doWakeupInterrupt(WakeupFlags::None, false);
-}
+void EPollData::cancel() { doWakeupInterrupt(WakeupFlags::None, false); }
 
 EPollData::EPollData(QueueRef *q, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs)
 : _queue(q), _data(data), _flags(info.flags) {
 
 	_eventFd = Rc<EventFdEPollHandle>::create(&data->_epollEventFdClass,
 			CompletionHandle<EventFdEPollHandle>::create<EPollData>(this,
-					[] (EPollData *data, EventFdEPollHandle *h, uint32_t value, Status st) {
+					[](EPollData *data, EventFdEPollHandle *h, uint32_t value, Status st) {
 		if (st == Status::Ok && data->_runContext) {
 			data->doWakeupInterrupt(WakeupFlags(data->_runContext->wakeupFlags.exchange(0)), true);
 		}
@@ -282,7 +284,6 @@ EPollData::EPollData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 		size = info.submitQueueSize;
 	}
 	_events.resize(size);
-
 }
 
 EPollData::~EPollData() {
@@ -292,4 +293,4 @@ EPollData::~EPollData() {
 	}
 }
 
-}
+} // namespace stappler::event

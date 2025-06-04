@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +23,10 @@
 
 #include "SPEventLooper.h"
 #include "SPMemPoolInterface.h"
+#include "SPMemory.h"
 #include "SPThread.h"
+#include "SPEventThreadHandle.h"
+#include "SPEventBus.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event::platform {
 
@@ -45,6 +49,9 @@ struct Looper::Data : public memory::AllocPool {
 	std::thread::id thisThreadId;
 	bool suspendThreadsOnWakeup = false;
 
+	std::mutex mutex;
+	mem_std::Set<Bus *> buses;
+
 	thread::ThreadPool *getThreadPool() {
 		if (!threadPool) {
 			threadPool = Rc<thread::ThreadPool>::create(thread::ThreadPoolInfo(threadPoolInfo));
@@ -52,10 +59,16 @@ struct Looper::Data : public memory::AllocPool {
 		return threadPool;
 	}
 
-	void cleanup() {
+	void cleanup(Looper *l) {
+		std::unique_lock lock(mutex);
 		if (!queue) {
 			return;
 		}
+
+		auto tmp = sp::move(buses);
+		buses.clear();
+
+		for (auto &it : tmp) { it->invalidateLooper(l); }
 
 		auto q = queue;
 		if (threadPool) {
@@ -86,6 +99,16 @@ struct Looper::Data : public memory::AllocPool {
 		}
 		queue = nullptr;
 #endif
+	}
+
+	void attachBus(Bus *bus) {
+		std::unique_lock lock(mutex);
+		buses.emplace(bus);
+	}
+
+	void detachBus(Bus *bus) {
+		std::unique_lock lock(mutex);
+		buses.erase(bus);
 	}
 };
 
@@ -122,7 +145,7 @@ Looper *Looper::getIfExists() { return tl_looper; }
 
 Looper::~Looper() {
 	if (_data) {
-		_data->cleanup();
+		_data->cleanup(this);
 		_data = nullptr;
 	}
 }
@@ -233,7 +256,7 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 			_data->threadMemPool = _data->threadInfo->threadPool;
 			memory::pool::cleanup_register(_data->threadMemPool, this, [](void *d) -> Status {
 				auto l = (Looper *)d;
-				l->_data->cleanup();
+				l->_data->cleanup(l);
 				l->_data = nullptr;
 				tl_looper = nullptr;
 				return Status::Ok;
@@ -242,6 +265,18 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 
 		_data->thisThreadId = std::this_thread::get_id();
 	}, pool);
+}
+
+void Looper::attachBus(Bus *bus) {
+	if (_data) {
+		_data->attachBus(bus);
+	}
+}
+
+void Looper::detachBus(Bus *bus) {
+	if (_data) {
+		_data->detachBus(bus);
+	}
 }
 
 } // namespace stappler::event

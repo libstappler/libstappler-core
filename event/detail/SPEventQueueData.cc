@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -35,9 +36,9 @@ Status PerformEngine::perform(Rc<thread::Task> &&task) {
 		if (_emptyBlocks) {
 			next = _emptyBlocks;
 			_emptyBlocks = next->next;
-			-- _blocksFree;
+			--_blocksFree;
 		} else {
-			++ _blocksAllocated;
+			++_blocksAllocated;
 			next = new (_pool) Block;
 		}
 
@@ -53,7 +54,7 @@ Status PerformEngine::perform(Rc<thread::Task> &&task) {
 		} else {
 			_pendingBlocksFront = _pendingBlocksTail = next;
 		}
-		++ _blocksWaiting;
+		++_blocksWaiting;
 		//log::debug("PerformEngine", this, " perform ", _blocksWaiting, " ", _blocksFree, " ", next->tag);
 	}, _pool);
 
@@ -70,9 +71,9 @@ Status PerformEngine::perform(mem_std::Function<void()> &&fn, Ref *ref, StringVi
 		if (_emptyBlocks) {
 			next = _emptyBlocks;
 			_emptyBlocks = next->next;
-			-- _blocksFree;
+			--_blocksFree;
 		} else {
-			++ _blocksAllocated;
+			++_blocksAllocated;
 			next = new (_pool) Block;
 		}
 
@@ -88,7 +89,7 @@ Status PerformEngine::perform(mem_std::Function<void()> &&fn, Ref *ref, StringVi
 		} else {
 			_pendingBlocksFront = _pendingBlocksTail = next;
 		}
-		++ _blocksWaiting;
+		++_blocksWaiting;
 		//log::debug("PerformEngine", this, " perform ", _blocksWaiting, " ", _blocksFree, " ", next->tag);
 	}, _pool);
 
@@ -106,7 +107,7 @@ uint32_t PerformEngine::runAllTasks(memory::pool_t *tmpPool) {
 		}
 		_pendingBlocksFront = next->next;
 
-		-- _blocksWaiting;
+		--_blocksWaiting;
 
 		mem_pool::perform_clear([&] {
 			if (next->fn) {
@@ -117,7 +118,7 @@ uint32_t PerformEngine::runAllTasks(memory::pool_t *tmpPool) {
 				next->task->run();
 			}
 
-			++ nevents;
+			++nevents;
 
 			next->fn = nullptr;
 			next->task = nullptr;
@@ -128,7 +129,7 @@ uint32_t PerformEngine::runAllTasks(memory::pool_t *tmpPool) {
 
 		next->next = _emptyBlocks;
 		_emptyBlocks = next;
-		++ _blocksFree;
+		++_blocksFree;
 	}
 
 	//if (nevents > 0) {
@@ -146,7 +147,7 @@ void PerformEngine::cleanup() {
 		}
 		_pendingBlocksFront = next->next;
 
-		-- _blocksWaiting;
+		--_blocksWaiting;
 
 		next->fn = nullptr;
 		next->task = nullptr;
@@ -156,7 +157,7 @@ void PerformEngine::cleanup() {
 
 		next->next = _emptyBlocks;
 		_emptyBlocks = next;
-		++ _blocksFree;
+		++_blocksFree;
 	}
 }
 
@@ -169,10 +170,11 @@ uint32_t QueueData::suspendAll() {
 	for (auto &it : _suspendableHandles) {
 		if (it->getStatus() == Status::Ok || it->getStatus() == Status::Suspended) {
 			if (isSuccessful(it->suspend())) {
-				++ ret;
+				++ret;
 			}
 		} else if (it->getStatus() != Status::Declined) {
-			log::error("event::QueueData", "suspendAll: Invalid status for a resumable handle: ", it->getStatus());
+			log::error("event::QueueData",
+					"suspendAll: Invalid status for a resumable handle: ", it->getStatus());
 		}
 	}
 	return ret;
@@ -189,10 +191,11 @@ uint32_t QueueData::resumeAll() {
 	for (auto &it : _suspendableHandles) {
 		if (it->getStatus() == Status::Suspended) {
 			if (it->resume() == Status::Ok) {
-				++ ret;
+				++ret;
 			}
 		} else if (it->getStatus() != Status::Declined) {
-			log::error("event::QueueData", "resumeAll: Invalid status for a resumable handle: ", it->getStatus());
+			log::error("event::QueueData",
+					"resumeAll: Invalid status for a resumable handle: ", it->getStatus());
 		}
 	}
 	for (auto &it : _pendingHandles) {
@@ -200,7 +203,7 @@ uint32_t QueueData::resumeAll() {
 		if (!isSuccessful(status)) {
 			it->cancel(status);
 		} else {
-			++ ret;
+			++ret;
 		}
 	}
 	_pendingHandles.clear();
@@ -220,24 +223,16 @@ Status QueueData::runHandle(Handle *h) {
 	}
 }
 
-void QueueData::cancel(Handle *h) {
-	_suspendableHandles.erase(h);
-}
+void QueueData::cancel(Handle *h) { _suspendableHandles.erase(h); }
 
 void QueueData::cleanup() {
 	mem_pool::perform([&] {
 		mem_pool::Set<Rc<Handle>> tmpHandles;
-		for (auto &it : _suspendableHandles) {
-			tmpHandles.emplace(it);
-		}
+		for (auto &it : _suspendableHandles) { tmpHandles.emplace(it); }
 
-		for (auto &it : _pendingHandles) {
-			tmpHandles.emplace(it);
-		}
+		for (auto &it : _pendingHandles) { tmpHandles.emplace(it); }
 
-		for (auto &it : tmpHandles) {
-			it->cancel();
-		}
+		for (auto &it : tmpHandles) { it->cancel(); }
 	}, _tmpPool);
 
 	_suspendableHandles.clear();
@@ -254,7 +249,7 @@ void QueueData::notify(Handle *handle, const NotifyData &data) {
 	auto tmpPool = memory::pool::create(_tmpPool);
 
 	mem_pool::perform_clear([&] {
-		if (cl->notifyFn) {
+		if (cl && cl->notifyFn) {
 			cl->notifyFn(cl, handle, handle->_data, data);
 		}
 	}, tmpPool);
@@ -267,9 +262,11 @@ void QueueData::notify(Handle *handle, const NotifyData &data) {
 }
 
 QueueData::QueueData(QueueRef *ref, QueueFlags flags)
-: PerformEngine(ref->getPool()), _info(QueueHandleClassInfo{ref, this, ref->getPool()}), _flags(flags) {
+: PerformEngine(ref->getPool())
+, _info(QueueHandleClassInfo{ref, this, ref->getPool()})
+, _flags(flags) {
 	_pendingHandles.set_memory_persistent(true);
 	_suspendableHandles.set_memory_persistent(true);
 }
 
-}
+} // namespace stappler::event
