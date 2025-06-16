@@ -105,6 +105,8 @@ static bool Function_shell(const Callback<void(StringView)> &out, void *, Variab
 	FILE *fp;
 	char buf[1_KiB];
 
+	//std::cout << "CMD: " << cmd.data() << "\n";
+
 	fp = popen(cmd.data(), "r");
 	if (fp == NULL) {
 		engine.getCallContext()->err->reportError(toString("Failed to run command: '", cmd, '\''));

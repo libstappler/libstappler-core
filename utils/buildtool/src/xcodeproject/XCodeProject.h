@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,33 +20,15 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPBXPROJECT_H_
-#define CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPBXPROJECT_H_
+#ifndef CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_XCODEPROJECT_H_
+#define CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_XCODEPROJECT_H_
 
-#include "SPPBXBuildPhase.h"
+#include "xcode/SPXCodeProject.h"
 
-namespace STAPPLER_VERSIONIZED stappler::buildtool::xcode {
+namespace stappler::buildtool {
 
-struct PBXProject final : PBXObject {
-	Map<String, Value> attributes;
-	XCConfigurationList *buildConfigurationList;
-	String compatibilityVersion;
-	String developmentRegion;
-	int32_t hasScannedForEncodings;
-	Vector<String> knownRegions;
-	Vector<XCLocalSwiftPackageReference *> localPackages;
-	PBXGroup *mainGroup;
-	String name;
-	int32_t preferredProjectObjectVersion;
-	PBXGroup *productsGroup;
-	String projectDirPath;
-	Vector<String> projectRoots;
-	Vector<Map<String, PBXFileElement *>> projects;
-	Vector<XCRemoteSwiftPackageReference *> remotePackages;
-	Map<PBXTarget *, Map<String, Value>> targetAttributes;
-	Vector<PBXTarget *> targets;
-};
+bool makeXCodeProject(StringView buildRoot, FileInfo projMakefilePath);
 
-} // namespace stappler::buildtool::xcode
+}
 
-#endif /* CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPBXPROJECT_H_ */
+#endif /* CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_XCODEPROJECT_H_ */

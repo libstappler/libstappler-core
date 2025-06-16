@@ -106,7 +106,9 @@ inline size_t toStringValue(char *target, const StringView &val) {
 
 inline size_t toStringValue(char *target, const char *val) {
 	auto len = ::strlen(val);
-	memcpy(target, val, len);
+	if (len) {
+		memcpy(target, val, len);
+	}
 	return len;
 }
 
@@ -309,7 +311,6 @@ static auto toString(Args && ... args) -> typename Interface::StringType {
 			abort();
 		}
 		ret.resize(size);
-
 		return ret;
 	} else {
 		if constexpr (sizeof...(args) == 1) {
@@ -320,6 +321,271 @@ static auto toString(Args && ... args) -> typename Interface::StringType {
 		// fallback to StringStream
 		typename Interface::StringStreamType stream;
 		detail::toStringStream(stream, std::forward<Args>(args)...);
+		return stream.str();
+	}
+}
+
+
+namespace wdetail {
+
+inline size_t toStringValue(char16_t *target, double val) {
+	return string::detail::dtoa(val, target, string::detail::DOUBLE_MAX_DIGITS);
+}
+
+inline size_t toStringValue(char16_t *target, float val) {
+	return string::detail::dtoa(val, target, string::detail::DOUBLE_MAX_DIGITS);
+}
+
+inline size_t toStringValue(char16_t *target, int64_t val) {
+	auto len = string::detail::itoa(val, (char *)nullptr, 0);
+	return string::detail::itoa(val, target, len);
+}
+
+inline size_t toStringValue(char16_t *target, uint64_t val) {
+	auto len = string::detail::itoa(val, (char *)nullptr, 0);
+	return string::detail::itoa(val, target, len);
+}
+
+inline size_t toStringValue(char16_t *target, int32_t val) {
+	auto len = string::detail::itoa(int64_t(val), (char *)nullptr, 0);
+	return string::detail::itoa(int64_t(val), target, len);
+}
+
+inline size_t toStringValue(char16_t *target, uint32_t val) {
+	auto len = string::detail::itoa(uint64_t(val), (char *)nullptr, 0);
+	return string::detail::itoa(uint64_t(val), target, len);
+}
+
+inline size_t toStringValue(char16_t *target, char32_t val) {
+	return unicode::utf16EncodeBuf(target, val);
+}
+
+inline size_t toStringValue(char16_t *target, char16_t val) {
+	*target = val;
+	return 1;
+}
+
+inline size_t toStringValue(char16_t *target, char val) {
+	*target = val;
+	return 1;
+}
+
+inline size_t toStringValue(char16_t *target, const WideStringView &val) {
+	memcpy(target, val.data(), val.size() * sizeof(char16_t));
+	return val.size();
+}
+
+inline size_t toStringValue(char16_t *target, const char16_t *val) {
+	auto len = string::detail::length<char16_t>(val);
+	if (len) {
+		memcpy(target, val, len * sizeof(char16_t));
+	}
+	return len;
+}
+
+template <size_t N>
+inline size_t toStringValue(char16_t *target, const char16_t val[N]) {
+	memcpy(target, val, N * sizeof(char16_t));
+	return N;
+}
+
+inline size_t toStringValue(char16_t *target, const std::u16string &val) {
+	memcpy(target, val.data(), val.size() * sizeof(char16_t));
+	return val.size();
+}
+
+inline size_t toStringValue(char16_t *target, const memory::u16string &val) {
+	memcpy(target, val.data(), val.size() * sizeof(char16_t));
+	return val.size();
+}
+
+template <typename Interface>
+inline auto toStringType(const char *val) -> typename Interface::WideStringType {
+	return string::toUtf16<Interface>(StringView(val));
+}
+
+template <typename Interface>
+static auto toStringType(const StringView &val) -> typename Interface::WideStringType {
+	return string::toUtf16<Interface>(val);
+}
+
+template <typename Interface>
+static auto toStringType(const std::string &val) -> typename Interface::WideStringType {
+	return string::toUtf16<Interface>(val);
+}
+
+template <typename Interface>
+static auto toStringType(const memory::string &val) -> typename Interface::WideStringType {
+	return string::toUtf16<Interface>(val);
+}
+
+template <typename Interface, typename T>
+static auto toStringType(const T &t) -> typename Interface::WideStringType {
+	typename Interface::WideStringStreamType stream;
+	stream << t;
+	return stream.str();
+}
+
+template <typename T>
+struct IsFastToStringAvailableValue {
+	static constexpr bool value = false;
+};
+
+template <size_t N> struct IsFastToStringAvailableValue<char[N]> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<char16_t *> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<WideStringView> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<std::u16string> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<memory::u16string> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<char> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<char16_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<char32_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<int64_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<uint64_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<int32_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<uint32_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<int16_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<uint16_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<int8_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<uint8_t> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<double> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<float> { static constexpr bool value = true; };
+
+template <typename ... Args>
+struct IsFastToStringAvailable { };
+
+template <typename T, typename ... Args>
+struct IsFastToStringAvailable<T, Args...> {
+	static constexpr bool value = IsFastToStringAvailableValue<std::remove_cv_t<std::remove_reference_t<T>>>::value
+			&& IsFastToStringAvailable<Args...>::value;
+};
+
+template <typename T>
+struct IsFastToStringAvailable<T> {
+	static constexpr bool value = IsFastToStringAvailableValue<std::remove_cv_t<std::remove_reference_t<T>>>::value;
+};
+
+inline size_t getBufferSizeValue(const char16_t *value) { return string::detail::length(value); }
+template <size_t N> inline size_t getBufferSizeValue(const char16_t value[N]) { return N; }
+inline size_t getBufferSizeValue(const WideStringView &value) { return value.size(); }
+inline size_t getBufferSizeValue(const std::u16string &value) { return value.size(); }
+inline size_t getBufferSizeValue(const memory::u16string &value) { return value.size(); }
+inline size_t getBufferSizeValue(const char &value) { return 1; }
+inline size_t getBufferSizeValue(const char16_t &value) { return 1; }
+inline size_t getBufferSizeValue(const char32_t &value) { return unicode::utf16EncodeLength(value); }
+inline size_t getBufferSizeValue(const int64_t &value) { return string::detail::itoa(value, (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint64_t &value) { return string::detail::itoa(value, (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int32_t &value) { return string::detail::itoa(int64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint32_t &value) { return string::detail::itoa(uint64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int16_t &value) { return string::detail::itoa(int64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint16_t &value) { return string::detail::itoa(uint64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int8_t &value) { return string::detail::itoa(int64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint8_t &value) { return string::detail::itoa(uint64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const double &value) { return string::detail::dtoa(value, (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const float &value) { return string::detail::dtoa(value, (char16_t *)nullptr, 0); }
+
+inline size_t getBufferSize() {
+	return 0;
+}
+
+template <typename T>
+inline size_t getBufferSize(const T &t) {
+	return getBufferSizeValue(t);
+}
+
+template <typename T, typename ... Args>
+inline size_t getBufferSize(T &&t, Args && ...args) {
+	return getBufferSizeValue(t) + getBufferSize(std::forward<Args>(args)...);
+}
+
+inline size_t writeBuffer(char16_t *target) {
+	return 0;
+}
+
+template <typename T>
+inline size_t writeBuffer(char16_t *target, const T &t) {
+	return toStringValue(target, t);
+}
+
+template <typename T, typename ... Args>
+inline size_t writeBuffer(char16_t *target, T &&t, Args && ...args) {
+	auto off = toStringValue(target, t);
+	target += off;
+	return off + writeBuffer(target, std::forward<Args>(args)...);
+}
+
+template <typename Stream>
+inline void toStringStream(Stream &stream) { }
+
+template <typename Stream>
+inline void toStringStream(Stream &stream, char16_t val) {
+	unicode::utf8Encode(stream, val);
+}
+
+template <typename Stream>
+inline void toStringStream(Stream &stream, const char16_t *val) {
+	while (*val != char16_t(0)) {
+		unicode::utf8Encode(stream, *val++);
+	}
+}
+
+template <typename Stream>
+static void toStringStream(Stream &stream, const WideStringView &val) {
+	for (auto &it : val) {
+		unicode::utf8Encode(stream, it);
+	}
+}
+
+template <typename Stream>
+static void toStringStream(Stream &stream, const std::u16string &val) {
+	for (auto &it : val) {
+		unicode::utf8Encode(stream, it);
+	}
+}
+
+template <typename Stream>
+static void toStringStream(Stream &stream, const memory::u16string &val) {
+	for (auto &it : val) {
+		unicode::utf8Encode(stream, it);
+	}
+}
+
+template <typename Stream, typename T>
+inline void toStringStream(Stream &stream, T value) {
+	stream << value;
+}
+
+template <typename Stream, typename T, typename... Args>
+inline void toStringStream(Stream &stream, T value, Args && ... args) {
+	stream << value;
+	toStringStream(stream, std::forward<Args>(args)...);
+}
+
+}
+
+template <typename Interface, typename... Args>
+static auto toWideString(Args && ... args) -> typename Interface::WideStringType {
+	if constexpr (wdetail::IsFastToStringAvailable<Args ...>::value) {
+		// fast toString with preallocated buffer
+
+		auto size = wdetail::getBufferSize(std::forward<Args>(args)...);
+		typename Interface::WideStringType ret; ret.resize(size);
+
+		auto s = wdetail::writeBuffer(ret.data(), std::forward<Args>(args)...);
+		if (s != size) {
+			std::cout << "[core]: Invalid buffer size for toString<fast>\n";
+			abort();
+		}
+		ret.resize(size);
+		return ret;
+	} else {
+		if constexpr (sizeof...(args) == 1) {
+			// optimal toString for single argument
+			return wdetail::toStringType<Interface>(std::forward<Args>(args)...);
+		}
+
+		// fallback to StringStream
+		typename Interface::WideStringStreamType stream;
+		wdetail::toStringStream(stream, std::forward<Args>(args)...);
 		return stream.str();
 	}
 }

@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,23 +20,21 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPXCODEPROJECT_H_
-#define CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPXCODEPROJECT_H_
+#ifndef CORE_UTILS_BUILDTOOL_SRC_BUILDCONFIG_BUILDCONFIG_H_
+#define CORE_UTILS_BUILDTOOL_SRC_BUILDCONFIG_BUILDCONFIG_H_
 
-#include "SPPBXProject.h"
+#include "SPMakefile.h"
+#include "SPStringView.h"
 
-namespace STAPPLER_VERSIONIZED stappler::buildtool::xcode {
+namespace stappler::buildtool {
 
-using namespace mem_pool;
+makefile::String getExpression(makefile::Makefile *make, StringView str);
+makefile::String getVariable(makefile::Makefile *make, StringView str);
 
-struct XCodeExport {
-	uint32_t archiveVersion = 1;
-	Vector<PBXObject *> classes;
-	uint32_t objectVersion = 1;
-	Vector<PBXObject *> objects;
-	PBXProject *root = nullptr;
-};
+void makeBuildConfigHeader(makefile::Makefile *, const CallbackStream &);
+void makeAppConfigHeader(makefile::Makefile *, const CallbackStream &);
+void makeAppConfigSource(makefile::Makefile *, const CallbackStream &);
 
-} // namespace stappler::buildtool::xcode
+} // namespace stappler::buildtool
 
-#endif /* CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPXCODEPROJECT_H_ */
+#endif /* CORE_UTILS_BUILDTOOL_SRC_BUILDCONFIG_BUILDCONFIG_H_ */

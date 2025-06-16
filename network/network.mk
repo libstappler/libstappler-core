@@ -27,6 +27,7 @@ MODULE_STAPPLER_NETWORK_SRCS_OBJS :=
 MODULE_STAPPLER_NETWORK_INCLUDES_DIRS :=
 MODULE_STAPPLER_NETWORK_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/network
 MODULE_STAPPLER_NETWORK_DEPENDS_ON := stappler_idn stappler_crypto stappler_filesystem stappler_brotli_lib stappler_data
+MODULE_STAPPLER_NETWORK_GENERAL_LDFLAGS :=
 
 ifdef MACOS
 MODULE_STAPPLER_NETWORK_GENERAL_LDFLAGS += -framework SystemConfiguration -framework CoreFoundation -framework Security -liconv

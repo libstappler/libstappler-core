@@ -27,7 +27,7 @@ namespace STAPPLER_VERSIONIZED stappler::font {
 
 namespace {
 
-constexpr uint32_t LAYOUT_PADDING  = 1;
+constexpr uint32_t LAYOUT_PADDING = 1;
 
 struct LayoutNodeMemory;
 
@@ -44,9 +44,9 @@ struct LayoutNodeMemoryStorage {
 };
 
 struct LayoutNodeMemory : memory::AllocPool {
-	LayoutNodeMemory* _child[2];
+	LayoutNodeMemory *_child[2];
 	geom::URect _rc;
-	void * _char = nullptr;
+	void *_char = nullptr;
 
 	LayoutNodeMemory(const geom::URect &rect);
 	LayoutNodeMemory(const LayoutNodeMemoryStorage &, const geom::UVec2 &origin, void *c);
@@ -80,7 +80,7 @@ LayoutNodeMemory *LayoutNodeMemoryStorage::alloc(const geom::UVec2 &origin, void
 void LayoutNodeMemoryStorage::release(LayoutNodeMemory *node) {
 	node->_child[0] = nullptr;
 	node->_child[1] = nullptr;
-	node->_rc = geom::URect({0, 0, 0, 0});
+	node->_rc = geom::URect(0, 0, 0, 0);
 	node->_char = nullptr;
 	if (free) {
 		node->_child[0] = free;
@@ -94,11 +94,13 @@ LayoutNodeMemory::LayoutNodeMemory(const geom::URect &rect) {
 	_child[1] = nullptr;
 }
 
-LayoutNodeMemory::LayoutNodeMemory(const LayoutNodeMemoryStorage &storage, const geom::UVec2 &origin, void *c) {
+LayoutNodeMemory::LayoutNodeMemory(const LayoutNodeMemoryStorage &storage,
+		const geom::UVec2 &origin, void *c) {
 	_child[0] = nullptr;
 	_child[1] = nullptr;
 	_char = c;
-	_rc = geom::URect{origin.x, origin.y, storage.interface->getWidth(c), storage.interface->getHeight(c)};
+	_rc = geom::URect{origin.x, origin.y, storage.interface->getWidth(c),
+		storage.interface->getHeight(c)};
 }
 
 bool LayoutNodeMemory::insert(LayoutNodeMemoryStorage &storage, void *c) {
@@ -118,13 +120,22 @@ bool LayoutNodeMemory::insert(LayoutNodeMemoryStorage &storage, void *c) {
 
 		if (_rc.width == iwidth || _rc.height == iheight) {
 			if (_rc.height == iheight) {
-				_child[0] = storage.alloc(_rc.origin(), c); // new (pool) LayoutNode(_rc.origin(), c);
-				_child[1] = storage.alloc(geom::URect{uint32_t(_rc.x + iwidth + LAYOUT_PADDING), _rc.y,
-					(_rc.width > iwidth + LAYOUT_PADDING)?uint32_t(_rc.width - iwidth - LAYOUT_PADDING):uint32_t(0), _rc.height});
+				_child[0] =
+						storage.alloc(_rc.origin(), c); // new (pool) LayoutNode(_rc.origin(), c);
+				_child[1] =
+						storage.alloc(geom::URect{uint32_t(_rc.x + iwidth + LAYOUT_PADDING), _rc.y,
+							(_rc.width > iwidth + LAYOUT_PADDING)
+									? uint32_t(_rc.width - iwidth - LAYOUT_PADDING)
+									: uint32_t(0),
+							_rc.height});
 			} else if (_rc.width == iwidth) {
-				_child[0] = storage.alloc(_rc.origin(), c); // new (pool) LayoutNode(_rc.origin(), c);
-				_child[1] = storage.alloc(geom::URect{_rc.x, uint32_t(_rc.y + iheight + LAYOUT_PADDING),
-					_rc.width, (_rc.height > iheight + LAYOUT_PADDING)?uint32_t(_rc.height - iheight - LAYOUT_PADDING):uint32_t(0)});
+				_child[0] =
+						storage.alloc(_rc.origin(), c); // new (pool) LayoutNode(_rc.origin(), c);
+				_child[1] = storage.alloc(
+						geom::URect{_rc.x, uint32_t(_rc.y + iheight + LAYOUT_PADDING), _rc.width,
+							(_rc.height > iheight + LAYOUT_PADDING)
+									? uint32_t(_rc.height - iheight - LAYOUT_PADDING)
+									: uint32_t(0)});
 			}
 			return true;
 		}
@@ -135,10 +146,12 @@ bool LayoutNodeMemory::insert(LayoutNodeMemoryStorage &storage, void *c) {
 
 		if (dw > dh) {
 			_child[0] = storage.alloc(geom::URect{_rc.x, _rc.y, iwidth, _rc.height});
-			_child[1] = storage.alloc(geom::URect{uint32_t(_rc.x + iwidth + LAYOUT_PADDING), _rc.y, uint32_t(dw - LAYOUT_PADDING), _rc.height});
+			_child[1] = storage.alloc(geom::URect{uint32_t(_rc.x + iwidth + LAYOUT_PADDING), _rc.y,
+				uint32_t(dw - LAYOUT_PADDING), _rc.height});
 		} else {
 			_child[0] = storage.alloc(geom::URect{_rc.x, _rc.y, _rc.width, iheight});
-			_child[1] = storage.alloc(geom::URect{_rc.x, uint32_t(_rc.y + iheight + LAYOUT_PADDING), _rc.width, uint32_t(dh - LAYOUT_PADDING)});
+			_child[1] = storage.alloc(geom::URect{_rc.x, uint32_t(_rc.y + iheight + LAYOUT_PADDING),
+				_rc.width, uint32_t(dh - LAYOUT_PADDING)});
 		}
 
 		_child[0]->insert(storage, c);
@@ -163,27 +176,35 @@ void LayoutNodeMemory::finalize(LayoutNodeMemoryStorage &storage, uint8_t tex) {
 		storage.interface->setY(_char, _rc.y);
 		storage.interface->setTex(_char, tex);
 	} else {
-		if (_child[0]) { _child[0]->finalize(storage, tex); }
-		if (_child[1]) { _child[1]->finalize(storage, tex); }
+		if (_child[0]) {
+			_child[0]->finalize(storage, tex);
+		}
+		if (_child[1]) {
+			_child[1]->finalize(storage, tex);
+		}
 	}
-	 storage.release(this);
+	storage.release(this);
 }
 
-} // unnamed
+} // namespace
 
-geom::Extent2 emplaceChars(const EmplaceCharInterface &iface, const SpanView<void *> &layoutData, float totalSquare) {
+geom::Extent2 emplaceChars(const EmplaceCharInterface &iface, const SpanView<void *> &layoutData,
+		float totalSquare) {
 	if (std::isnan(totalSquare)) {
 		totalSquare = 0.0f;
-		for (auto &it : layoutData) {
-			totalSquare += iface.getWidth(it) * iface.getHeight(it);
-		}
+		for (auto &it : layoutData) { totalSquare += iface.getWidth(it) * iface.getHeight(it); }
 	}
 
 	// find potential best match square
 	bool s = true;
-	uint32_t h = 128, w = 128; uint32_t sq2 = h * w;
+	uint32_t h = 128, w = 128;
+	uint32_t sq2 = h * w;
 	for (; sq2 < totalSquare; sq2 *= 2, s = !s) {
-		if (s) { w *= 2; } else { h *= 2; }
+		if (s) {
+			w *= 2;
+		} else {
+			h *= 2;
+		}
 	}
 
 	LayoutNodeMemoryStorage storage(&iface, memory::pool::acquire());
@@ -202,8 +223,13 @@ geom::Extent2 emplaceChars(const EmplaceCharInterface &iface, const SpanView<voi
 			storage.release(l);
 			break;
 		} else {
-			if (s) { w *= 2; } else { h *= 2; }
-			sq2 *= 2; s = !s;
+			if (s) {
+				w *= 2;
+			} else {
+				h *= 2;
+			}
+			sq2 *= 2;
+			s = !s;
 		}
 		storage.release(l);
 	}
@@ -211,4 +237,4 @@ geom::Extent2 emplaceChars(const EmplaceCharInterface &iface, const SpanView<voi
 	return geom::Extent2(w, h);
 }
 
-}
+} // namespace stappler::font

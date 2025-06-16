@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -145,7 +146,12 @@ StringView Stmt::readLine(StringView &str, ErrorReporter &err) {
 	auto line = str.readUntil<StringView::Chars<'\n', '\r'>>();
 	auto start = line.data();
 	while (line.ends_with("\\")) {
-		str.skipChars<StringView::Chars<'\n', '\r'>>();
+		auto nl = str.readChars<StringView::Chars<'\n', '\r'>>();
+		if (nl != "\r" && nl != "\n" && nl != "\r\n") {
+			// multiple newlines, break
+			line = line.sub(0, line.size() - 1);
+			break;
+		}
 		++err.lineSize;
 		line = str.readUntil<StringView::Chars<'\n', '\r'>>();
 	}
@@ -193,7 +199,7 @@ Stmt *Stmt::readWord(StringView &str, ReadContext ctx, ErrorReporter &err) {
 
 	auto makeStmt = [&]() -> Stmt * {
 		if (!stmt) {
-			stmt = new Stmt(err);
+			stmt = new (std::nothrow) Stmt(err);
 			stmt->type = StmtType::Word;
 		}
 		return stmt;
@@ -247,20 +253,20 @@ Stmt *Stmt::readWord(StringView &str, ReadContext ctx, ErrorReporter &err) {
 					if (isMultiline) {
 						auto nl = countNewlines(skipWhitespace(str));
 						if (nl > 0) {
-							auto stmt = new Stmt(err, StmtType::Expansion, "\n");
+							auto stmt = new (std::nothrow) Stmt(err, StmtType::Expansion, "\n");
 							makeStmt()->add(stmt);
 						} else {
-							auto stmt = new Stmt(err, StmtType::Expansion, " ");
+							auto stmt = new (std::nothrow) Stmt(err, StmtType::Expansion, " ");
 							makeStmt()->add(stmt);
 						}
 					} else {
 						skipWhitespace(str);
-						auto stmt = new Stmt(err, StmtType::Expansion, " ");
+						auto stmt = new (std::nothrow) Stmt(err, StmtType::Expansion, " ");
 						makeStmt()->add(stmt);
 					}
 
 				} else {
-					auto stmt = new Stmt(err, StmtType::Expansion, str.sub(0, 1));
+					auto stmt = new (std::nothrow) Stmt(err, StmtType::Expansion, str.sub(0, 1));
 					makeStmt()->add(stmt);
 					++str;
 				}
@@ -315,11 +321,11 @@ Stmt *Stmt::readScoped(StringView &str, StmtType type, ReadContext ctx, ErrorRep
 
 	auto addStmtWord = [&](Stmt *s) {
 		if (!stmt) {
-			stmt = new Stmt(err);
+			stmt = new (std::nothrow) Stmt(err);
 			stmt->type = type;
-			stmt->add(new StmtValue(s));
+			stmt->add(new (std::nothrow) StmtValue(s));
 		} else if (stmt->type == type) {
-			stmt->add(new StmtValue(s));
+			stmt->add(new (std::nothrow) StmtValue(s));
 		} else if (stmt->type == StmtType::ArgumentList) {
 			stmt->tail->stmt->add(s);
 		}
@@ -327,11 +333,11 @@ Stmt *Stmt::readScoped(StringView &str, StmtType type, ReadContext ctx, ErrorRep
 
 	auto addStringWord = [&](StringView s) {
 		if (!stmt) {
-			stmt = new Stmt(err);
+			stmt = new (std::nothrow) Stmt(err);
 			stmt->type = type;
-			stmt->add(new StmtValue(s));
+			stmt->add(new (std::nothrow) StmtValue(s));
 		} else if (stmt->type == type) {
-			stmt->add(new StmtValue(s));
+			stmt->add(new (std::nothrow) StmtValue(s));
 		} else if (stmt->type == StmtType::ArgumentList) {
 			stmt->tail->stmt->add(s);
 		}
@@ -339,11 +345,12 @@ Stmt *Stmt::readScoped(StringView &str, StmtType type, ReadContext ctx, ErrorRep
 
 	auto addStmtArgument = [&](Stmt *s) {
 		if (!stmt) {
-			stmt = new Stmt(err);
+			stmt = new (std::nothrow) Stmt(err);
 			stmt->type = StmtType::ArgumentList;
-			stmt->add(new StmtValue(s));
+			stmt->add(new (std::nothrow) StmtValue(s));
 		} else if (stmt->type == StmtType::ArgumentList) {
-			stmt->add(new StmtValue(new Stmt(err, StmtType::WordList, s)));
+			stmt->add(new (std::nothrow)
+							StmtValue(new (std::nothrow) Stmt(err, StmtType::WordList, s)));
 		} else {
 			if (stmt->tail != stmt->value) {
 				auto firstArg = stmt->value->next;
@@ -351,13 +358,15 @@ Stmt *Stmt::readScoped(StringView &str, StmtType type, ReadContext ctx, ErrorRep
 				stmt->tail = stmt->value;
 				stmt->value->next = nullptr;
 				stmt->type = StmtType::WordList;
-				stmt = new Stmt(err, StmtType::ArgumentList, stmt);
-				stmt->add(new StmtValue(new Stmt(err, StmtType::WordList, firstArg, lastArg)));
+				stmt = new (std::nothrow) Stmt(err, StmtType::ArgumentList, stmt);
+				stmt->add(new (std::nothrow) StmtValue(
+						new (std::nothrow) Stmt(err, StmtType::WordList, firstArg, lastArg)));
 			} else {
-				stmt = new Stmt(err, StmtType::ArgumentList, stmt);
+				stmt = new (std::nothrow) Stmt(err, StmtType::ArgumentList, stmt);
 			}
 
-			stmt->add(new StmtValue(new Stmt(err, StmtType::WordList, s)));
+			stmt->add(new (std::nothrow)
+							StmtValue(new (std::nothrow) Stmt(err, StmtType::WordList, s)));
 		}
 	};
 
@@ -390,7 +399,7 @@ Stmt *Stmt::readScoped(StringView &str, StmtType type, ReadContext ctx, ErrorRep
 		auto sig = readContextIdentifier(tmp, ctx);
 		if (ending && tmp.is(ending)) {
 			++tmp;
-			stmt = new Stmt(err, StmtType::Expansion, sig);
+			stmt = new (std::nothrow) Stmt(err, StmtType::Expansion, sig);
 			str = tmp;
 			return stmt;
 		}
@@ -487,15 +496,15 @@ Stmt *Stmt::readScoped(StringView &str, StmtType type, ReadContext ctx, ErrorRep
 Stmt::Stmt(const FileLocation &l) : loc(l) { }
 
 Stmt::Stmt(const FileLocation &l, StringView str) : type(StmtType::Word), loc(l) {
-	tail = value = new StmtValue(str);
+	tail = value = new (std::nothrow) StmtValue(str);
 }
 
 Stmt::Stmt(const FileLocation &l, StmtType t, StringView str) : type(t), loc(l) {
-	tail = value = new StmtValue(str);
+	tail = value = new (std::nothrow) StmtValue(str);
 }
 
 Stmt::Stmt(const FileLocation &l, StmtType t, Stmt *stmt) : type(t), loc(l) {
-	tail = value = new StmtValue(stmt);
+	tail = value = new (std::nothrow) StmtValue(stmt);
 }
 
 Stmt::Stmt(const FileLocation &l, StmtType _t, StmtValue *v, StmtValue *t)
@@ -534,10 +543,10 @@ void Stmt::add(StringView str) {
 			return;
 		}
 	}
-	add(new StmtValue(str));
+	add(new (std::nothrow) StmtValue(str));
 }
 
-void Stmt::add(Stmt *stmt) { add(new StmtValue(stmt)); }
+void Stmt::add(Stmt *stmt) { add(new (std::nothrow) StmtValue(stmt)); }
 
 void Stmt::describe(const Callback<void(StringView)> &out, uint32_t level) {
 	if (level == 0) {

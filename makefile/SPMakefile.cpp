@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +41,13 @@
 #include "SPMakefileStmt.cc"
 #include "SPMakefileVariable.cc"
 
+#include "xcode/SPPBXObject.cc"
+#include "xcode/SPPBXBuildPhase.cc"
+#include "xcode/SPPBXFile.cc"
+#include "xcode/SPPBXProject.cc"
+#include "xcode/SPPBXTarget.cc"
+#include "xcode/SPXCodeProject.cc"
+
 namespace STAPPLER_VERSIONIZED stappler::makefile {
 
 bool Makefile::init() {
@@ -66,7 +74,7 @@ bool Makefile::include(StringView name, StringView data, bool copyData, ErrorRep
 		err.callback = _logCallback;
 		err.ref = _logCallbackRef;
 
-		Block *rootBlock = new Block;
+		Block *rootBlock = new (std::nothrow) Block;
 		rootBlock->loc = err;
 		rootBlock->identifier = err.filename;
 		rootBlock->content = name.pdup(_pool);
@@ -214,11 +222,12 @@ const Variable *Makefile::appendToVariable(StringView identifier, Origin varOrig
 		} else if (v->type == Variable::Type::Stmt) {
 			switch (v->stmt->type) {
 			case StmtType::Word:
-				const_cast<Variable *>(v)->stmt = new Stmt(err, StmtType::WordList, v->stmt);
-				const_cast<Variable *>(v)->stmt->add(new StmtValue(stmt));
+				const_cast<Variable *>(v)->stmt =
+						new (std::nothrow) Stmt(err, StmtType::WordList, v->stmt);
+				const_cast<Variable *>(v)->stmt->add(new (std::nothrow) StmtValue(stmt));
 				break;
 			case StmtType::WordList:
-				const_cast<Variable *>(v)->stmt->add(new StmtValue(stmt));
+				const_cast<Variable *>(v)->stmt->add(new (std::nothrow) StmtValue(stmt));
 				break;
 			default: err.reportError("Invalid variable type for '+='"); break;
 			}
@@ -318,6 +327,7 @@ bool Makefile::processMakefileContent(StringView str, ErrorReporter &err) {
 	while (!str.empty()) {
 		err.lineno += err.lineSize;
 		err.lineSize = 1;
+
 		auto line = Stmt::readLine(str, err);
 		if (_engine.getCurrentBlock()->type != Keyword::Define && line.is('#')) {
 			// skip (comment)
@@ -596,9 +606,7 @@ bool Makefile::processElseLine(StringView &str, ErrorReporter &err) {
 			err.reportError("Unexpected 'else' statement");
 			return false;
 		} else {
-			if (condBlock->outer->enabled) {
-				condBlock->enabled = !condBlock->enabled;
-			}
+			condBlock->enabled = condBlock->canEnableNext();
 			return true;
 		}
 		break;
@@ -662,7 +670,7 @@ bool Makefile::processDefineLine(StringView &str, ErrorReporter &err) {
 		return false;
 	}
 
-	auto block = new Block;
+	auto block = new (std::nothrow) Block;
 	block->loc = err;
 	block->type = Keyword::Define;
 	block->origin = varOrigin;

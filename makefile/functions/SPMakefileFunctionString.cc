@@ -287,14 +287,14 @@ struct SortNode : AllocBase {
 		if (v < 0) {
 			// add to left
 			if (!left) {
-				left = new SortNode(str);
+				left = new (std::nothrow) SortNode(str);
 			} else {
 				left->insert(str);
 			}
 		} else if (v > 0) {
 			// add to right
 			if (!right) {
-				right = new SortNode(str);
+				right = new (std::nothrow) SortNode(str);
 			} else {
 				right->insert(str);
 			}
@@ -324,7 +324,7 @@ static bool Function_sort(const Callback<void(StringView)> &out, void *, Variabl
 	}
 	text.split<StringView::WhiteSpace>([&](StringView word) {
 		if (!node) {
-			node = new SortNode(word);
+			node = new (std::nothrow) SortNode(word);
 		} else {
 			node->insert(word);
 		}

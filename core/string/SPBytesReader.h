@@ -188,16 +188,26 @@ public:
 	constexpr StringViewBase(const CharType *ptr, size_t pos, size_t len);
 	constexpr StringViewBase(const Self &, size_t pos, size_t len);
 	constexpr StringViewBase(const Self &, size_t len);
+
 	StringViewBase(const PoolString &str);
 	StringViewBase(const StdString &str);
 
+	template <size_t Size>
+	constexpr StringViewBase(const std::array<CharType, Size> &);
+
+	Self &operator=(const Self &str) = default;
 	Self &operator=(const PoolString &str);
 	Self &operator=(const StdString &str);
-	Self &operator=(const Self &str) = default;
+
+	template <size_t Size>
+	constexpr Self &operator=(const std::array<CharType, Size> &);
 
 	Self &set(const PoolString &str);
 	Self &set(const StdString &str);
 	Self &set(const Self &str);
+
+	template <size_t Size>
+	constexpr Self &set(const std::array<CharType, Size> &);
 
 	// unsafe set, without length-check
 	Self &set(const CharType *p, size_t l);

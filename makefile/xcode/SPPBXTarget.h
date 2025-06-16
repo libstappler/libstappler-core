@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,24 +21,38 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPDXTARGET_H_
-#define CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPDXTARGET_H_
+#ifndef CORE_MAKEFILE_XCODE_SPPBXTARGET_H_
+#define CORE_MAKEFILE_XCODE_SPPBXTARGET_H_
 
 #include "SPPBXObject.h"
 #include "SPPBXBuildPhase.h"
 
-namespace STAPPLER_VERSIONIZED stappler::buildtool::xcode {
+namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
 struct XCBuildConfiguration final : PBXObject {
-	PBXFileReference *baseConfiguration;
+	static const XCBuildConfiguration *create(XCodeExport &,
+			const Callback<void(XCBuildConfiguration *)> &);
+
+	static void write(const Callback<void(StringView)> &, const XCBuildConfiguration &);
+
+	const PBXFileReference *baseConfiguration = nullptr;
 	Map<String, Value> buildSettings;
 	String name;
+
+	XCBuildConfiguration(const XCodeExport &r) : PBXObject(r, ISA::XCBuildConfiguration) { }
 };
 
 struct XCConfigurationList final : PBXObject {
-	Vector<XCBuildConfiguration> buildConfigurations;
-	bool defaultConfigurationIsVisible;
-	String defaultConfigurationName;
+	static const XCConfigurationList *create(XCodeExport &,
+			const Callback<void(XCConfigurationList *)> &);
+
+	static void write(const Callback<void(StringView)> &, const XCConfigurationList &);
+
+	Vector<const XCBuildConfiguration *> buildConfigurations;
+	bool defaultConfigurationIsVisible = false;
+	const XCBuildConfiguration *defaultConfiguration = nullptr;
+
+	XCConfigurationList(const XCodeExport &r) : PBXObject(r, ISA::XCConfigurationList) { }
 };
 
 struct PBXBuildRule final : PBXObject {
@@ -64,16 +79,17 @@ struct PBXTargetDependency final : PBXObject {
 };
 
 struct PBXTarget : PBXContainerItem {
-	XCConfigurationList *buildConfigurationList;
-	Vector<PBXBuildPhase *> buildPhases;
-	Vector<PBXBuildRule *> buildRules;
-	Vector<PBXTargetDependency *> dependencies;
-	Vector<PBXFileSystemSynchronizedRootGroup *> fileSystemSynchronizedGroups;
+	const XCConfigurationList *buildConfigurationList = nullptr;
+	Vector<const PBXBuildPhase *> buildPhases;
+	Vector<const PBXBuildRule *> buildRules;
+	Vector<const PBXTargetDependency *> dependencies;
+	Vector<const PBXFileSystemSynchronizedRootGroup *> fileSystemSynchronizedGroups;
 	String name;
-	Vector<XCSwiftPackageProductDependency *> packageProductDependencies;
-	PBXFileReference *product;
-	String productName;
-	PBXProductType productType;
+	Vector<const XCSwiftPackageProductDependency *> packageProductDependencies;
+	const PBXFileReference *product = nullptr;
+	PBXProductType productType = PBXProductType::none;
+
+	PBXTarget(const XCodeExport &r, ISA i) : PBXContainerItem(r, i) { }
 };
 
 struct PBXAggregateTarget final : PBXTarget {
@@ -90,11 +106,15 @@ struct PBXLegacyTarget final : PBXTarget {
 };
 
 struct PBXNativeTarget final : PBXTarget {
-	static PBXNativeTarget *create();
+	static const PBXNativeTarget *create(XCodeExport &, const Callback<void(PBXNativeTarget *)> &);
+
+	static void write(const Callback<void(StringView)> &, const PBXNativeTarget &);
 
 	String productInstallPath;
+
+	PBXNativeTarget(const XCodeExport &r) : PBXTarget(r, ISA::PBXNativeTarget) { }
 };
 
-} // namespace stappler::buildtool::xcode
+} // namespace stappler::makefile::xcode
 
-#endif /* CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPDXTARGET_H_ */
+#endif /* CORE_MAKEFILE_XCODE_SPPBXTARGET_H_ */

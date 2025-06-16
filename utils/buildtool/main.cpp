@@ -29,6 +29,7 @@
 #include "SPMemory.h"
 
 #include "SPMakefile.h"
+#include "XCodeProject.h"
 
 namespace stappler::buildtool {
 
@@ -322,6 +323,8 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 
 			platformTestMake->assignSimpleVariable("STAPPLER_BUILD_ROOT",
 					makefile::Origin::CommandLine, root);
+			platformTestMake->assignSimpleVariable("SPBUILDTOOL", makefile::Origin::CommandLine,
+					"1");
 
 			platformTestMake->include(FileInfo{"Makefile"});
 
@@ -330,19 +333,38 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 			platformTestMake->eval([&](StringView s) { str.append(s.data(), s.size()); }, "<eval>",
 					"$(print $(call sp_detect_platform,host))");
 
-
 			auto make = Rc<makefile::MakefileRef>::create();
+			make->assignSimpleVariable("STAPPLER_BUILD_ROOT", makefile::Origin::CommandLine, root);
+			make->assignSimpleVariable("SPBUILDTOOL", makefile::Origin::CommandLine, "1");
 
 			StringView(str).split<StringView::WhiteSpace>([&](StringView val) {
 				auto name = val.readUntil<StringView::Chars<'='>>();
 				if (val.is('=')) {
 					++val;
 					make->assignSimpleVariable(name, makefile::Origin::CommandLine, val);
+					std::cout << "PLATFORM: '" << name << " = " << val << "'\n";
 				}
 			});
 
 			make->include(FileInfo{"Makefile"});
+			return 0;
+		} else if (action == "xcodegen") {
+			auto root = getBuildRoot();
+			if (root.empty()) {
+				std::cerr << "No SDK candidates found\n";
+				return -2;
+			}
 
+			if (argc < 3) {
+				std::cerr << "Invalid arguments!\n\n";
+				return -1;
+			}
+
+			auto projPath = StringView(argv[nextArg++]);
+
+			if (!makeXCodeProject(root, FileInfo(projPath))) {
+				return -3;
+			}
 
 			return 0;
 		} else {

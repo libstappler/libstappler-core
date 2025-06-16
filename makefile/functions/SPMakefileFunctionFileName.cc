@@ -212,13 +212,17 @@ static bool Function_realpath(const Callback<void(StringView)> &out, void *, Var
 				out << ' ';
 			}
 			if (filepath::isAbsolute(str)) {
-				out << str;
+				out << filepath::reconstructPath<Interface>(str);
 			} else {
 				auto path =
 						filesystem::findPath<Interface>(FileInfo{str}, filesystem::Access::Exists);
 				// note: realpath do not returns non-existent paths
 				if (!path.empty()) {
-					out << path;
+					if (!filepath::isAbsolute(path)) {
+						filesystem::currentDir<Interface>(path);
+					} else {
+						out << path;
+					}
 				}
 			}
 		});

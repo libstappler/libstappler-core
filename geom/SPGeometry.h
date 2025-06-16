@@ -440,6 +440,12 @@ struct SP_PUBLIC URect {
 	: x(origin.x), y(origin.y), width(size.width), height(size.height) { }
 	URect(uint32_t x, uint32_t y, uint32_t w, uint32_t h) : x(x), y(y), width(w), height(h) { }
 
+	explicit URect(const Rect &rect)
+	: x(std::ceil(rect.origin.x))
+	, y(std::ceil(rect.origin.y))
+	, width(std::floor(rect.size.width))
+	, height(std::floor(rect.size.height)) { }
+
 	constexpr UVec2 origin() const { return UVec2{x, y}; }
 
 	constexpr float getMaxX() const { return x + width; }
@@ -467,9 +473,21 @@ constexpr Rect Rect::ZERO = Rect(0.0f, 0.0f, 0.0f, 0.0f);
 
 SP_PUBLIC Rect TransformRect(const Rect &rect, const Mat4 &transform);
 
+inline const CallbackStream &operator<<(const CallbackStream &stream, const Rect &obj) {
+	stream << "Rect(x:" << obj.origin.x << " y:" << obj.origin.y << " width:" << obj.size.width
+		   << " height:" << obj.size.height << ");";
+	return stream;
+}
+
 inline std::ostream &operator<<(std::ostream &stream, const Rect &obj) {
 	stream << "Rect(x:" << obj.origin.x << " y:" << obj.origin.y << " width:" << obj.size.width
 		   << " height:" << obj.size.height << ");";
+	return stream;
+}
+
+inline const CallbackStream &operator<<(const CallbackStream &stream, const URect &obj) {
+	stream << "URect(x:" << obj.x << " y:" << obj.y << " width:" << obj.width
+		   << " height:" << obj.height << ");";
 	return stream;
 }
 
@@ -479,8 +497,19 @@ inline std::ostream &operator<<(std::ostream &stream, const URect &obj) {
 	return stream;
 }
 
+inline const CallbackStream &operator<<(const CallbackStream &stream, const Size2 &obj) {
+	stream << "Size2(width:" << obj.width << " height:" << obj.height << ");";
+	return stream;
+}
+
 inline std::ostream &operator<<(std::ostream &stream, const Size2 &obj) {
 	stream << "Size2(width:" << obj.width << " height:" << obj.height << ");";
+	return stream;
+}
+
+inline const CallbackStream &operator<<(const CallbackStream &stream, const Size3 &obj) {
+	stream << "Size3(width:" << obj.width << " height:" << obj.height << " depth:" << obj.depth
+		   << ");";
 	return stream;
 }
 
@@ -490,8 +519,19 @@ inline std::ostream &operator<<(std::ostream &stream, const Size3 &obj) {
 	return stream;
 }
 
+inline const CallbackStream &operator<<(const CallbackStream &stream, const Extent2 &obj) {
+	stream << "Extent2(width:" << obj.width << " height:" << obj.height << ");";
+	return stream;
+}
+
 inline std::ostream &operator<<(std::ostream &stream, const Extent2 &obj) {
 	stream << "Extent2(width:" << obj.width << " height:" << obj.height << ");";
+	return stream;
+}
+
+inline const CallbackStream &operator<<(const CallbackStream &stream, const Extent3 &obj) {
+	stream << "Extent3(width:" << obj.width << " height:" << obj.height << " depth:" << obj.depth
+		   << ");";
 	return stream;
 }
 
@@ -501,8 +541,18 @@ inline std::ostream &operator<<(std::ostream &stream, const Extent3 &obj) {
 	return stream;
 }
 
+inline const CallbackStream &operator<<(const CallbackStream &stream, const UVec2 &obj) {
+	stream << "UVec2(x:" << obj.x << " y:" << obj.y << ");";
+	return stream;
+}
+
 inline std::ostream &operator<<(std::ostream &stream, const UVec2 &obj) {
 	stream << "UVec2(x:" << obj.x << " y:" << obj.y << ");";
+	return stream;
+}
+
+inline const CallbackStream &operator<<(const CallbackStream &stream, const UVec3 &obj) {
+	stream << "UVec3(x:" << obj.x << " y:" << obj.y << " z:" << obj.z << ");";
 	return stream;
 }
 

@@ -21,35 +21,27 @@
  THE SOFTWARE.
  **/
 
-#include "SPMakefileRule.h"
+#ifndef CORE_MAKEFILE_XCODE_SPXCODEPROJECT_H_
+#define CORE_MAKEFILE_XCODE_SPXCODEPROJECT_H_
 
-namespace STAPPLER_VERSIONIZED stappler::makefile {
+#include "SPPBXProject.h"
 
-void Target::addPrerequisite(StringView str) {
-	if (!prerequisitesTail) {
-		prerequisitesTail = prerequisitesList = new (std::nothrow) Prerequisite(str.pdup());
-	} else {
-		prerequisitesTail->next = new (std::nothrow) Prerequisite(str.pdup());
-		prerequisitesTail = prerequisitesTail->next;
-	}
-}
+namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
-void Target::addOrderOnly(StringView str) {
-	if (!orderOnlyTail) {
-		orderOnlyTail = orderOnlyList = new (std::nothrow) Prerequisite(str.pdup());
-	} else {
-		orderOnlyTail->next = new (std::nothrow) Prerequisite(str.pdup());
-		orderOnlyTail = orderOnlyTail->next;
-	}
-}
+struct XCodeExport {
+	uint32_t archiveVersion = 1;
+	Vector<PBXObject *> classes;
+	uint32_t objectVersion = 77;
+	Vector<PBXObject *> objects;
+	const PBXProject *root = nullptr;
 
-void Target::addRule(Stmt *stmt) {
-	if (!rulesTail) {
-		rulesTail = rulesList = new (std::nothrow) Rule(stmt);
-	} else {
-		rulesTail->next = new (std::nothrow) Rule(stmt);
-		rulesTail = rulesTail->next;
-	}
-}
+	memory::pool_t *pool = nullptr;
 
-} // namespace stappler::makefile
+	XCodeExport();
+
+	void write(const Callback<void(StringView)> &);
+};
+
+} // namespace stappler::makefile::xcode
+
+#endif /* CORE_MAKEFILE_XCODE_SPXCODEPROJECT_H_ */

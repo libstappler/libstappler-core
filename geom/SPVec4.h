@@ -329,6 +329,11 @@ constexpr Vec4 operator-(const Vec4 &v) {
 	return result;
 }
 
+inline const CallbackStream &operator<<(const CallbackStream &stream, const Vec4 &vec) {
+	stream << "(x: " << vec.x << "; y: " << vec.y << "; z: " << vec.z << "; w: " << vec.w << ")";
+	return stream;
+}
+
 inline std::basic_ostream<char> &operator<<(std::basic_ostream<char> &os, const Vec4 &vec) {
 	os << "(x: " << vec.x << "; y: " << vec.y << "; z: " << vec.z << "; w: " << vec.w << ")";
 	return os;

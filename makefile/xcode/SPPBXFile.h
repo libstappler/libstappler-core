@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,12 +21,13 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPBXFILE_H_
-#define CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPBXFILE_H_
+#ifndef CORE_MAKEFILE_XCODE_SPPBXFILE_H_
+#define CORE_MAKEFILE_XCODE_SPPBXFILE_H_
 
 #include "SPPBXObject.h"
+#include "SPStringView.h"
 
-namespace STAPPLER_VERSIONIZED stappler::buildtool::xcode {
+namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
 struct PBXFileSystemSynchronizedBuildFileExceptionSet : PBXObject {
 	Map<String, String> additionalCompilerFlagsByRelativePath;
@@ -34,14 +36,6 @@ struct PBXFileSystemSynchronizedBuildFileExceptionSet : PBXObject {
 	Vector<String> privateHeaders;
 	Vector<String> publicHeaders;
 	PBXTarget *target;
-};
-
-struct PBXBuildFile : PBXObject {
-	PBXFileElement *file;
-	String platformFilter;
-	Vector<String> platformFilters;
-	XCSwiftPackageProductDependency *product;
-	Vector<String> settings;
 };
 
 struct PBXContainerItemProxy : PBXObject {
@@ -81,27 +75,34 @@ struct PBXContainerItemProxy : PBXObject {
 };
 
 struct PBXFileElement : PBXContainerItem {
-	bool includeInIndex;
-	uint32_t indentWidth;
+	bool includeInIndex = false;
+	uint32_t indentWidth = 0;
 	String name;
 	PBXFileElement *parent;
 	String path;
 	PBXSourceTree sourceTree;
-	uint32_t tabWidth;
-	bool usesTabs;
-	bool wrapsLines;
+	uint32_t tabWidth = 0;
+	bool usesTabs = false;
+	bool wrapsLines = false;
+
+	PBXFileElement(const XCodeExport &r, ISA i) : PBXContainerItem(r, i) { }
 };
 
 struct PBXFileReference final : PBXFileElement {
-	static PBXFileReference *create();
+	static const PBXFileReference *create(XCodeExport &,
+			const Callback<void(PBXFileReference *)> &);
+
+	static void write(const CallbackStream &, const PBXFileReference &);
 
 	String explicitFileType;
-	uint32_t fileEncoding;
+	uint32_t fileEncoding = 0;
 	String languageSpecificationIdentifier;
 	String lastKnownFileType;
-	uint32_t lineEnding;
+	uint32_t lineEnding = 0;
 	String plistStructureDefinitionIdentifier;
 	String xcLanguageSpecificationIdentifier;
+
+	PBXFileReference(const XCodeExport &r) : PBXFileElement(r, ISA::PBXFileReference) { }
 };
 
 struct PBXFileSystemSynchronizedRootGroup final : PBXFileElement {
@@ -118,7 +119,13 @@ struct PBXReferenceProxy final : PBXFileElement {
 };
 
 struct PBXGroup : PBXFileElement {
-	Vector<PBXFileElement *> children;
+	static const PBXGroup *create(XCodeExport &, const Callback<void(PBXGroup *)> &);
+
+	static void write(const CallbackStream &, const PBXGroup &);
+
+	Vector<const PBXFileElement *> children;
+
+	PBXGroup(const XCodeExport &r) : PBXFileElement(r, ISA::PBXGroup) { }
 };
 
 struct PBXVariantGroup final : PBXGroup {
@@ -132,6 +139,6 @@ struct XCVersionGroup final : PBXGroup {
 	String versionGroupType;
 };
 
-} // namespace stappler::buildtool::xcode
+} // namespace stappler::makefile::xcode
 
-#endif /* CORE_UTILS_BUILDTOOL_SRC_XCODEPROJECT_SPPBXFILE_H_ */
+#endif /* CORE_MAKEFILE_XCODE_SPPBXFILE_H_ */

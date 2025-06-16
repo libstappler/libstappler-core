@@ -158,6 +158,26 @@ public:
 
 	const char *path() const;
 
+	template <typename Interface>
+	auto readIntoMemory(size_t off = 0, size_t size = maxOf<size_t>()) ->
+			typename Interface::BytesType {
+		if (is_open()) {
+			auto fsize = this->size();
+			if (fsize <= off) {
+				return typename Interface::BytesType();
+			}
+			if (fsize - off < size) {
+				size = fsize - off;
+			}
+			typename Interface::BytesType ret;
+			ret.resize(size);
+			this->seek(off, io::Seek::Set);
+			this->read(ret.data(), size);
+			return ret;
+		}
+		return typename Interface::BytesType();
+	}
+
 protected:
 	void set_tmp_path(const char *);
 
@@ -404,18 +424,7 @@ auto readIntoMemory(const FileInfo &info, size_t off = 0, size_t size = maxOf<si
 		typename Interface::BytesType {
 	auto f = openForReading(info);
 	if (f) {
-		auto fsize = f.size();
-		if (fsize <= off) {
-			f.close();
-			return typename Interface::BytesType();
-		}
-		if (fsize - off < size) {
-			size = fsize - off;
-		}
-		typename Interface::BytesType ret;
-		ret.resize(size);
-		f.seek(off, io::Seek::Set);
-		f.read(ret.data(), size);
+		auto ret = f.readIntoMemory<Interface>();
 		f.close();
 		return ret;
 	}

@@ -684,6 +684,11 @@ StringViewBase<_CharType>::StringViewBase(const StdString &str)
 : StringViewBase(str.data(), str.size()) { }
 
 template <typename _CharType>
+template <size_t Size>
+inline constexpr StringViewBase<_CharType>::StringViewBase(const std::array<CharType, Size> &str)
+: StringViewBase(str.data(), str.size()) { }
+
+template <typename _CharType>
 auto StringViewBase<_CharType>::operator=(const PoolString &str) -> Self & {
 	this->set(str);
 	return *this;
@@ -691,6 +696,14 @@ auto StringViewBase<_CharType>::operator=(const PoolString &str) -> Self & {
 
 template <typename _CharType>
 auto StringViewBase<_CharType>::operator=(const StdString &str) -> Self & {
+	this->set(str);
+	return *this;
+}
+
+template <typename _CharType>
+template <size_t Size>
+inline constexpr auto StringViewBase<_CharType>::operator=(const std::array<CharType, Size> &str)
+		-> Self & {
 	this->set(str);
 	return *this;
 }
@@ -717,6 +730,14 @@ template <typename _CharType>
 auto StringViewBase<_CharType>::set(const CharType *p, size_t l) -> Self & {
 	this->ptr = p;
 	this->len = l;
+	return *this;
+}
+
+template <typename _CharType>
+template <size_t Size>
+constexpr auto StringViewBase<_CharType>::set(const std::array<CharType, Size> &str) -> Self & {
+	this->ptr = str.data();
+	this->len = str.size();
 	return *this;
 }
 
