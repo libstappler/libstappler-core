@@ -18,53 +18,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-STAPPLER_ROOT ?= ..
+MODULE_STAPPLER_PUG_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
+MODULE_STAPPLER_PUG_PRECOMPILED_HEADERS :=
+MODULE_STAPPLER_PUG_SRCS_DIRS := $(STAPPLER_MODULE_DIR)/pug
+MODULE_STAPPLER_PUG_SRCS_OBJS :=
+MODULE_STAPPLER_PUG_INCLUDES_DIRS := $(STAPPLER_MODULE_DIR)/pug
+MODULE_STAPPLER_PUG_INCLUDES_OBJS :=
+MODULE_STAPPLER_PUG_DEPENDS_ON := stappler_filesystem stappler_data
 
-LOCAL_LIBRARY := libstappler-core
+#spec
 
-# force to rebuild if this makefile changed
-LOCAL_MAKEFILE := $(lastword $(MAKEFILE_LIST))
+MODULE_STAPPLER_PUG_SHARED_SPEC_SUMMARY := libstappler pug template engine
 
-LOCAL_OUTDIR := stappler-build
+define MODULE_STAPPLER_PUG_SHARED_SPEC_DESCRIPTION
+Module libstappler-webserver-pug provides interface to PUG template engine
+endef
 
-LOCAL_MODULES_PATHS = \
-	$(STAPPLER_ROOT)/core/stappler-modules.mk
-
-LOCAL_MODULES ?= \
-	stappler_core \
-	stappler_backtrace \
-	stappler_bitmap \
-	stappler_crypto \
-	stappler_data \
-	stappler_filesystem \
-	stappler_db \
-	stappler_font \
-	stappler_geom \
-	stappler_idn \
-	stappler_network \
-	stappler_pug \
-	stappler_search \
-	stappler_sql \
-	stappler_tess \
-	stappler_threads \
-	stappler_vg \
-	stappler_wasm \
-	stappler_zip
-
-LOCAL_EXPORT_MODULES ?= \
-	stappler_bitmap \
-	stappler_core \
-	stappler_crypto \
-	stappler_data \
-	stappler_db \
-	stappler_font \
-	stappler_geom \
-	stappler_network \
-	stappler_pug \
-	stappler_search \
-	stappler_tess \
-	stappler_vg \
-	stappler_wasm \
-	stappler_zip
-
-include $(STAPPLER_ROOT)/build/make/shared.mk
+# module name resolution
+MODULE_stappler_pug := MODULE_STAPPLER_PUG
