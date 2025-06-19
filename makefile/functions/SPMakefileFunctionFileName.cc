@@ -170,8 +170,7 @@ static bool Function_wildcard(const Callback<void(StringView)> &out, void *, Var
 			pathSuffix = pattern;
 		}
 
-		auto targetPath = filepath::reconstructPath<Interface>(
-				filesystem::findPath<Interface>(FileInfo{path}));
+		auto targetPath = engine.getAbsolutePath(path);
 
 		filesystem::ftw(FileInfo{targetPath}, [&](const FileInfo &info, FileType type) {
 			if (info.path != targetPath) {
@@ -206,23 +205,15 @@ static bool Function_realpath(const Callback<void(StringView)> &out, void *, Var
 	for (auto &arg : args) {
 		auto content = engine.resolve(arg, 0, *engine.getCallContext()->err);
 		content.split<StringView::WhiteSpace>([&](StringView str) {
-			if (!start) {
-				start = true;
-			} else {
-				out << ' ';
-			}
-			if (filepath::isAbsolute(str)) {
-				out << filepath::reconstructPath<Interface>(str);
-			} else {
-				auto path =
-						filesystem::findPath<Interface>(FileInfo{str}, filesystem::Access::Exists);
-				// note: realpath do not returns non-existent paths
-				if (!path.empty()) {
-					if (!filepath::isAbsolute(path)) {
-						filesystem::currentDir<Interface>(path);
+			auto path = engine.getAbsolutePath(str);
+			if (!path.empty()) {
+				if (filesystem::exists(FileInfo{path})) {
+					if (!start) {
+						start = true;
 					} else {
-						out << path;
+						out << ' ';
 					}
+					out << path;
 				}
 			}
 		});
@@ -237,20 +228,14 @@ static bool Function_abspath(const Callback<void(StringView)> &out, void *, Vari
 		auto content = engine.resolve(arg, 0, *engine.getCallContext()->err);
 
 		content.split<StringView::WhiteSpace>([&](StringView str) {
-			if (!start) {
-				start = true;
-			} else {
-				out << ' ';
-			}
-			if (filepath::isAbsolute(str)) {
-				out << str;
-			} else {
-				auto path = filesystem::findPath<Interface>(FileInfo{str});
-				if (!path.empty()) {
-					out << path;
+			auto path = engine.getAbsolutePath(str);
+			if (!path.empty()) {
+				if (!start) {
+					start = true;
 				} else {
-					out << str;
+					out << ' ';
 				}
+				out << path;
 			}
 		});
 	}

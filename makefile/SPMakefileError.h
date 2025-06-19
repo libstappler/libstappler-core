@@ -51,7 +51,7 @@ struct FileLocation {
 };
 
 struct ErrorReporter : FileLocation {
-	using LogCallback = void (*)(Ref *, log::LogType, StringView);
+	using LogCallback = void (*)(void *, log::LogType, StringView);
 
 	uint32_t lineSize = 1;
 
@@ -61,7 +61,7 @@ struct ErrorReporter : FileLocation {
 	ErrorReporter *outer = nullptr;
 
 	LogCallback callback = nullptr;
-	Rc<Ref> ref;
+	void *ref;
 
 	ErrorReporter(ErrorReporter *);
 	ErrorReporter(const FileLocation &, ErrorReporter *);

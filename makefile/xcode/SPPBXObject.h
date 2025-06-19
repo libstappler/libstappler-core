@@ -187,11 +187,17 @@ struct XCSwiftPackageProductDependency : PBXContainerItem {
 };
 
 struct PBXBuildFile final : PBXObject {
-	PBXFileElement *file;
+	static const PBXBuildFile *create(XCodeExport &, const Callback<void(PBXBuildFile *)> &);
+
+	static void write(const CallbackStream &, const PBXBuildFile &);
+
+	const PBXFileElement *file = nullptr;
 	String platformFilter;
 	Vector<String> platformFilters;
-	XCSwiftPackageProductDependency product;
+	const XCSwiftPackageProductDependency *product = nullptr;
 	Map<String, Value> settings;
+
+	PBXBuildFile(const XCodeExport &r) : PBXObject(r, ISA::PBXBuildFile) { }
 };
 
 struct StringValue {
@@ -221,6 +227,12 @@ struct Array {
 	uint32_t indent = 2;
 };
 
+struct StringArray {
+	StringView name;
+	const Vector<String> &value;
+	uint32_t indent = 2;
+};
+
 template <typename Value>
 struct RefArray {
 	StringView name;
@@ -231,6 +243,12 @@ struct RefArray {
 struct ValueMap {
 	StringView name;
 	const Map<String, Value> &value;
+	uint32_t indent = 2;
+};
+
+struct StringMap {
+	StringView name;
+	const Map<String, String> &value;
 	uint32_t indent = 2;
 };
 
@@ -250,26 +268,38 @@ inline const CallbackStream &operator<<(const CallbackStream &cb, const Line<Val
 template <typename Value>
 inline const CallbackStream &operator<<(const CallbackStream &cb, const Array<Value> &val) {
 	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
-	cb << val.name << " = {\n";
+	cb << val.name << " = (\n";
 	for (auto &it : val.value) {
 		for (uint32_t i = 0; i <= val.indent; ++i) { cb << '\t'; }
 		cb << it << ",\n";
 	}
 	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
-	cb << "};\n";
+	cb << ");\n";
+	return cb;
+}
+
+inline const CallbackStream &operator<<(const CallbackStream &cb, const StringArray &val) {
+	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
+	cb << val.name << " = (\n";
+	for (auto &it : val.value) {
+		for (uint32_t i = 0; i <= val.indent; ++i) { cb << '\t'; }
+		cb << StringValue{it} << ",\n";
+	}
+	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
+	cb << ");\n";
 	return cb;
 }
 
 template <typename Value>
 inline const CallbackStream &operator<<(const CallbackStream &cb, const RefArray<Value> &val) {
 	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
-	cb << val.name << " = {\n";
+	cb << val.name << " = (\n";
 	for (auto &it : val.value) {
 		for (uint32_t i = 0; i <= val.indent; ++i) { cb << '\t'; }
 		cb << ObjectRef{it} << ",\n";
 	}
 	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
-	cb << "};\n";
+	cb << ");\n";
 	return cb;
 }
 
@@ -279,6 +309,18 @@ inline const CallbackStream &operator<<(const CallbackStream &cb, const ValueMap
 	for (auto &it : val.value) {
 		for (uint32_t i = 0; i <= val.indent; ++i) { cb << '\t'; }
 		cb << it.first << " = " << DataValue{it.second, val.indent + 1} << ";\n";
+	}
+	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
+	cb << "};\n";
+	return cb;
+}
+
+inline const CallbackStream &operator<<(const CallbackStream &cb, const StringMap &val) {
+	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
+	cb << val.name << " = {\n";
+	for (auto &it : val.value) {
+		for (uint32_t i = 0; i <= val.indent; ++i) { cb << '\t'; }
+		cb << it.first << " = " << StringValue{it.second} << ";\n";
 	}
 	for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
 	cb << "};\n";

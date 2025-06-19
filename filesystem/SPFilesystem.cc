@@ -680,11 +680,17 @@ File openForReading(const FileInfo &ipath) {
 	}
 
 	enumeratePaths(ipath, Access::Read, [&](StringView str, FileFlags) {
-		auto f = filesystem::native::fopen_fn(str, "rb");
-		if (f) {
-			ret = File(f);
+		Stat stat;
+		filesystem::native::stat_fn(str, stat);
+
+		if (stat.type == FileType::File) {
+			auto f = filesystem::native::fopen_fn(str, "rb");
+			if (f) {
+				ret = File(f);
+				return false; // stop iteration
+			}
 		}
-		return false;
+		return true; // try another
 	});
 	return ret;
 }

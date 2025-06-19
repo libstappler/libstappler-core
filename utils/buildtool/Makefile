@@ -1,4 +1,5 @@
 # Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+# Copyright (c) 2025 Stappler Team <admin@stappler.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -35,5 +36,9 @@ LOCAL_INCLUDES_DIRS := src
 
 LOCAL_MAIN := main.cpp
 
+APPCONFIG_BUNDLE_NAME := org.stappler.stappler-build
+
+STAPPLER_BUILD_ROOT ?= ../../../build/make
+
 # Use build system from repo directly
-include ../../../build/make/universal.mk
+include $(STAPPLER_BUILD_ROOT)/universal.mk

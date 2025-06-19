@@ -33,8 +33,8 @@ namespace STAPPLER_VERSIONIZED stappler::makefile {
 class Makefile : public memory::PoolObject {
 public:
 	using PathCallback = Callback<void(StringView)>;
-	using IncludeCallback = void (*)(Ref *, StringView path, const PathCallback &);
-	using LogCallback = void (*)(Ref *, log::LogType, StringView);
+	using IncludeCallback = void (*)(void *, StringView path, const PathCallback &);
+	using LogCallback = void (*)(void *, log::LogType, StringView);
 
 	using PoolObject::PoolObject;
 
@@ -42,8 +42,9 @@ public:
 
 	bool init();
 
-	void setLogCallback(LogCallback, Ref * = nullptr);
-	void setIncludeCallback(IncludeCallback, Ref * = nullptr);
+	void setLogCallback(LogCallback, void * = nullptr);
+	void setIncludeCallback(IncludeCallback, void * = nullptr);
+	void setRootPath(StringView);
 
 	bool include(StringView name, StringView data, bool copyData = true, ErrorReporter * = nullptr);
 	bool include(const FileInfo &, ErrorReporter * = nullptr, bool optional = false);
@@ -93,10 +94,10 @@ protected:
 	Vector<Target *> _currentTargets;
 	Map<StringView, Target *> _targets;
 
-	Rc<Ref> _logCallbackRef;
+	void *_logCallbackRef;
 	LogCallback _logCallback = nullptr;
 
-	Rc<Ref> _includeCallbackRef;
+	void *_includeCallbackRef;
 	IncludeCallback _includeCallback = nullptr;
 
 	VariableEngine _engine;

@@ -27,8 +27,10 @@
 #include "SPMemInterface.h"
 #include "SPMemPoolInterface.h"
 #include "SPMemory.h"
+#include "SPData.h"
 
 #include "SPMakefile.h"
+#include "SPPlatformUnistd.h"
 #include "XCodeProject.h"
 
 namespace stappler::buildtool {
@@ -50,8 +52,9 @@ static constexpr StringView SYSTEM_WIDE_PROFILE_D_FILE = "/etc/profile.d/stapple
 static constexpr StringView SYSTEM_WIDE_ENVIRONMENT_D_FILE =
 		"/etc/environment.d/50stappler-sdk.conf";
 
-static constexpr StringView USER_ENVIRONMENT_D_FILE = ".config/environment.d/50stappler-sdk.conf";
-static constexpr StringView USER_PROFILE_D_FILE = ".config/profile.d/stappler-sdk.sh";
+static constexpr StringView USER_ENVIRONMENT_D_FILE = "environment.d/50stappler-sdk.conf";
+static constexpr StringView USER_PROFILE_D_FILE = "profile.d/stappler-sdk.sh";
+static constexpr StringView USER_SDK_PROFILE = "org.stappler/sdk.json";
 
 static void printHelp() { std::cout << HELP_STRING << "\n"; }
 
@@ -125,34 +128,49 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 		}
 	}
 
-	auto home = StringView(::getenv("HOME"));
-	if (!home.empty()) {
-		auto profilePath = filepath::merge<Interface>(home, USER_PROFILE_D_FILE);
-		if (filesystem::exists(FileInfo{profilePath})) {
-			auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{profilePath});
-			auto strData = BytesView(fileData).readString();
+	filesystem::enumeratePaths(USER_PROFILE_D_FILE, FileCategory::CommonConfig, filesystem::Access::Read,
+			[&] (StringView path, FileFlags flags) {
+		auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{path});
+		auto strData = BytesView(fileData).readString();
 
-			candidate = getCandidateFromShellScript(strData);
-			if (checkCandidateDir(candidate)) {
-				if (!cb(candidate)) {
-					return;
+		candidate = getCandidateFromShellScript(strData);
+		if (checkCandidateDir(candidate)) {
+			if (!cb(candidate)) {
+				return false;
+			}
+		}
+		return true;
+	});
+
+	filesystem::enumeratePaths(USER_ENVIRONMENT_D_FILE, FileCategory::CommonConfig, filesystem::Access::Read,
+			[&] (StringView path, FileFlags flags) {
+		auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{path});
+		auto strData = BytesView(fileData).readString();
+
+		candidate = getCandidateFromEnvironmentConfig(strData);
+		if (checkCandidateDir(candidate)) {
+			if (!cb(candidate)) {
+				return false;
+			}
+		}
+		return true;
+	});
+
+	filesystem::enumeratePaths(USER_SDK_PROFILE, FileCategory::CommonConfig, filesystem::Access::Read,
+			[&] (StringView path, FileFlags flags) {
+		auto data = data::readFile<Interface>(path);
+		if (data && data.isArray("paths")) {
+			for (auto &it : data.getArray("paths")) {
+				candidate = it.getString();
+				if (checkCandidateDir(candidate)) {
+					if (!cb(candidate)) {
+						return false;
+					}
 				}
 			}
 		}
-
-		auto envPath = filepath::merge<Interface>(home, USER_ENVIRONMENT_D_FILE);
-		if (filesystem::exists(FileInfo{envPath})) {
-			auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{envPath});
-			auto strData = BytesView(fileData).readString();
-
-			candidate = getCandidateFromEnvironmentConfig(strData);
-			if (checkCandidateDir(candidate)) {
-				if (!cb(candidate)) {
-					return;
-				}
-			}
-		}
-	}
+		return true;
+	});
 
 	// try system-wide configs
 	if (filesystem::exists(SYSTEM_WIDE_PROFILE_D_FILE)) {
@@ -265,6 +283,56 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 				for (auto &it : candidates) { std::cout << it << "\n"; }
 			}
 			return 0;
+		} else if (action == "add") {
+			if (argc < 3) {
+				std::cerr << "Invalid arguments!\n\n";
+				return -1;
+			}
+
+			auto buildPath = String(argv[nextArg++]);
+
+			if (!filepath::isAbsolute(buildPath)) {
+				buildPath = filesystem::currentDir<Interface>(buildPath);
+			}
+
+			if (!checkCandidateDir(buildPath)) {
+				std::cerr << "Invalid target path\n\n";
+				return -1;
+			}
+
+			auto path = filesystem::findPath<Interface>(USER_SDK_PROFILE, FileCategory::CommonConfig, FileFlags::MakeWritableDir);
+			if (!path.empty()) {
+				if (filesystem::exists(FileInfo{path})) {
+					auto data = data::readFile<Interface>(FileInfo{path});
+					Set<String> paths;
+					auto &arr = data.getArray("paths");
+					for (auto &it : arr) {
+						paths.emplace(it.getString());
+					}
+
+					if (!paths.emplace(buildPath).second) {
+						std::cout << "Already exists: " << buildPath << "\n";
+						return 0;
+					}
+
+					arr.clear();
+					for (auto &it : paths) {
+						if (!it.empty()) {
+							arr.emplace_back(Value(it));
+						}
+					}
+					data::save(data, FileInfo{path});
+				} else {
+					Value data;
+					data.emplace("paths").addString(buildPath);
+					data::save(data, FileInfo{path});
+				}
+			} else {
+				std::cerr << "Invalid target path\n\n";
+				return -1;
+			}
+			std::cout << "Added: " << buildPath << "\n";
+			return 0;
 		} else if (action == "get-root") {
 			auto root = getBuildRoot();
 			if (!root.empty()) {
@@ -362,8 +430,20 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 
 			auto projPath = StringView(argv[nextArg++]);
 
-			if (!makeXCodeProject(root, FileInfo(projPath))) {
-				return -3;
+			filesystem::Stat stat;
+			if (!filesystem::stat(FileInfo{projPath}, stat)) {
+				std::cerr << "Invalid path to project:" << projPath << "\n";
+				return -4;
+			}
+
+			if (stat.type == FileType::File) {
+				if (!makeXCodeProject(root, FileInfo(projPath))) {
+					return -3;
+				}
+			} else if (stat.type == FileType::Dir) {
+				if (!makeXCodeProject(root, FileInfo(filepath::merge<Interface>(projPath, "Makefile")))) {
+					return -3;
+				}
 			}
 
 			return 0;

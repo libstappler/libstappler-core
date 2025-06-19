@@ -296,7 +296,11 @@ Status touch_fn(StringView path) {
 	return status::errnoToStatus(errno);
 }
 
+#ifdef O_LARGEFILE
 static constexpr int OpenDirFlags = O_DIRECTORY | O_RDONLY | O_NDELAY | O_LARGEFILE | O_CLOEXEC;
+#else
+static constexpr int OpenDirFlags = O_DIRECTORY | O_RDONLY | O_NDELAY | O_CLOEXEC;
+#endif
 
 static Status _ftw_fn(int dirfd, StringView path,
 		const Callback<bool(StringView, FileType)> &callback, int depth, bool dirFirst) {

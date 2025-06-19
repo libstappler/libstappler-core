@@ -57,6 +57,7 @@ void XCodeExport::write(const Callback<void(StringView)> &cb) {
 	cb << "\tobjects = {\n";
 
 	exportList(Vector<ISA>{ISA::PBXAggregateTarget}, "PBXAggregateTarget");
+	exportList(Vector<ISA>{ISA::PBXBuildFile}, "PBXBuildFile");
 	exportList(Vector<ISA>{ISA::PBXContainerItemProxy}, "PBXContainerItemProxy");
 	exportList(Vector<ISA>{ISA::PBXFileReference}, "PBXFileReference");
 	exportList(Vector<ISA>{ISA::PBXFileSystemSynchronizedBuildFileExceptionSet},

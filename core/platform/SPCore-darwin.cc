@@ -379,6 +379,10 @@ size_t makeRandomBytes(uint8_t *buf, size_t count) {
 	return count;
 }
 
+bool initialize(int &resultCode) { return true; }
+
+void terminate() { }
+
 } // namespace stappler::platform
 
 #endif

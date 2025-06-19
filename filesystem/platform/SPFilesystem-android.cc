@@ -501,7 +501,6 @@ struct PathSource {
 		if (!hasFlag(externalState, Access::Read)) {
 			return;
 		}
-
 		auto env = jni::Env::getEnv();
 		auto envClass = env.findClass("android/os/Environment");
 		if (envClass) {

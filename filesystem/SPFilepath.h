@@ -72,6 +72,11 @@ enum class FileFlags {
 	SharedFirst = 3 << 4,
 
 	OrderMask = SharedFirst,
+
+	// also emits Writable
+	MakeWritableDir = 1 << 7,
+
+	OptionsMask = MakeWritableDir,
 };
 
 SP_DEFINE_ENUM_AS_MASK(FileFlags)

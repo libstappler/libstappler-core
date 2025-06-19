@@ -30,12 +30,20 @@
 namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
 struct PBXFileSystemSynchronizedBuildFileExceptionSet : PBXObject {
+	static const PBXFileSystemSynchronizedBuildFileExceptionSet *create(XCodeExport &,
+			const Callback<void(PBXFileSystemSynchronizedBuildFileExceptionSet *)> &);
+
+	static void write(const CallbackStream &, const PBXFileSystemSynchronizedBuildFileExceptionSet &);
+
 	Map<String, String> additionalCompilerFlagsByRelativePath;
 	Map<String, String> attributesByRelativePath;
 	Vector<String> membershipExceptions;
 	Vector<String> privateHeaders;
 	Vector<String> publicHeaders;
-	PBXTarget *target;
+	const PBXTarget *target = nullptr;
+
+	PBXFileSystemSynchronizedBuildFileExceptionSet(const XCodeExport &r)
+	: PBXObject(r, ISA::PBXFileSystemSynchronizedBuildFileExceptionSet) { }
 };
 
 struct PBXContainerItemProxy : PBXObject {
@@ -106,11 +114,17 @@ struct PBXFileReference final : PBXFileElement {
 };
 
 struct PBXFileSystemSynchronizedRootGroup final : PBXFileElement {
-	static PBXFileSystemSynchronizedRootGroup *create();
+	static const PBXFileSystemSynchronizedRootGroup *create(XCodeExport &,
+			const Callback<void(PBXFileSystemSynchronizedRootGroup *)> &);
 
-	Vector<PBXFileSystemSynchronizedBuildFileExceptionSet *> exceptions;
+	static void write(const CallbackStream &, const PBXFileSystemSynchronizedRootGroup &);
+
+	mutable Vector<const PBXFileSystemSynchronizedBuildFileExceptionSet *> exceptions;
 	Map<String, String> explicitFileTypes;
 	Vector<String> explicitFolders;
+
+	PBXFileSystemSynchronizedRootGroup(const XCodeExport &r)
+	: PBXFileElement(r, ISA::PBXFileSystemSynchronizedRootGroup) { }
 };
 
 struct PBXReferenceProxy final : PBXFileElement {

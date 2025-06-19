@@ -139,6 +139,8 @@ public:
 	void addSubstitutionCallback(Origin, VariableCallback::Fn, void *);
 	void addSubstitutionCallback(VariableCallback *);
 
+	void setRootPath(StringView);
+
 	StringView resolve(StmtValue *, char chain, ErrorReporter &err, memory::pool_t * = nullptr);
 	StringView resolve(Stmt *, ErrorReporter &err, memory::pool_t * = nullptr);
 
@@ -163,6 +165,8 @@ public:
 
 	EngineFlags getFlags() const { return _flags; }
 
+	StringView getAbsolutePath(StringView) const;
+
 protected:
 	bool call(const Callback<void(StringView)> &out, StringView fn, StmtType type, StmtValue *args,
 			ErrorReporter &err);
@@ -179,6 +183,7 @@ protected:
 	Vector<VariableCallback *> _varCallbacks;
 	Vector<Stmt *> _subStack;
 
+	StringView _rootPath;
 	const Callback<void(StringView)> *_customOutput;
 };
 

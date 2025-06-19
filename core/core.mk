@@ -45,7 +45,7 @@ MODULE_STAPPLER_CORE_LIBS += -ldl
 endif
 
 ifdef MACOS
-MODULE_STAPPLER_CORE_GENERAL_LDFLAGS += -framework CoreFoundation
+MODULE_STAPPLER_CORE_GENERAL_LDFLAGS += -framework CoreFoundation  -framework Foundation
 endif
 
 ifdef WIN32

@@ -26,6 +26,8 @@
 #include "SPPBXObject.h"
 #include "SPPBXTarget.h"
 #include "SPPBXFile.h"
+#include "SPXCodeProject.h"
+#include "SPPlatformUnistd.h"
 
 namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
@@ -91,15 +93,15 @@ static int8_t *TSGenerateUniqueGlobalID(int8_t *buff) {
 		gid.user = output;
 
 		int32_t host_id = 0;
-		int32_t temp = gethostid(); // this is used even though it is deprecated on OS X
+		int32_t temp = static_cast<int32_t>(gethostid()); // this is used even though it is deprecated on OS X
 		if (temp != -1) {
 			host_id = temp;
 		}
 		// generate the random seed
-		int64_t time_seed = platform::nanoclock();
-		srandom(((current_pid & 0xff) << 0x10 | host_id) ^ time_seed);
+		auto time_seed = platform::nanoclock();
+		srandom(static_cast<unsigned>((current_pid & 0xff) << 0x10 | host_id) ^ static_cast<unsigned>(time_seed));
 		if (host_id == 0) {
-			host_id = random();
+			host_id = static_cast<int32_t>(random());
 		}
 
 		gid.zero = 0;
@@ -120,7 +122,7 @@ static int8_t *TSGenerateUniqueGlobalID(int8_t *buff) {
 	int32_t encoded_time = 0;
 	if (time_val > lasttime) {
 		firstseq = random_value;
-		lasttime = time_val;
+		lasttime = static_cast<int32_t>(time_val);
 	} else {
 		if (firstseq == random_value) {
 			lasttime += 1;
@@ -193,8 +195,38 @@ void PBXObject::write(const Callback<void(StringView)> &cb) const {
 	case ISA::PBXSourcesBuildPhase:
 		PBXSourcesBuildPhase::write(cb, static_cast<const PBXSourcesBuildPhase &>(*this));
 		break;
+	case ISA::PBXFileSystemSynchronizedRootGroup:
+		PBXFileSystemSynchronizedRootGroup::write(cb, static_cast<const PBXFileSystemSynchronizedRootGroup &>(*this));
+		break;
+	case ISA::PBXFileSystemSynchronizedBuildFileExceptionSet:
+		PBXFileSystemSynchronizedBuildFileExceptionSet::write(cb, static_cast<const PBXFileSystemSynchronizedBuildFileExceptionSet &>(*this));
+		break;
+	case ISA::PBXBuildFile:
+		PBXBuildFile::write(cb, static_cast<const PBXBuildFile &>(*this));
+		break;
 	default: abort(); break;
 	}
+}
+
+const PBXBuildFile *PBXBuildFile::create(XCodeExport &xctx, const Callback<void(PBXBuildFile *)> &cb) {
+	memory::pool::context ctx(xctx.pool);
+
+	auto obj = new (xctx.pool) PBXBuildFile(xctx);
+
+	cb(obj);
+
+	xctx.objects.emplace_back(obj);
+	return obj;
+}
+
+void PBXBuildFile::write(const CallbackStream &cb, const PBXBuildFile &file) {
+	cb << '\t' << getStringId(file.id) << " = {isa = PBXBuildFile;";
+
+	if (file.file) {
+		cb << " fileRef = " << getStringId(file.file->id) << ";";
+	}
+
+	cb << " };\n";
 }
 
 const CallbackStream &operator<<(const CallbackStream &cb, const StringValue &str) {
@@ -229,14 +261,14 @@ const CallbackStream &operator<<(const CallbackStream &cb, const DataValue &val)
 	case Value::Type::BOOLEAN: cb << (val.value.asBool() ? "YES" : "NO"); break;
 	case Value::Type::CHARSTRING: cb << StringValue{val.value.getString()}; break;
 	case Value::Type::ARRAY:
-		cb << "{\n";
+		cb << "(\n";
 		for (auto &iit : val.value.asArray()) {
 			for (uint32_t i = 0; i <= val.indent; ++i) { cb << '\t'; }
 			cb << DataValue{iit, val.indent + 1};
 			cb << ",\n";
 		}
 		for (uint32_t i = 0; i < val.indent; ++i) { cb << '\t'; }
-		cb << "}";
+		cb << ")";
 		break;
 	}
 	return cb;
@@ -248,8 +280,9 @@ const CallbackStream &operator<<(const CallbackStream &cb, const ObjectRef &obj)
 }
 
 const CallbackStream &operator<<(const CallbackStream &cb, const PBXProductType &productType) {
+	cb << "\"";
 	switch (productType) {
-	case PBXProductType::none: cb << "\"\""; break;
+	case PBXProductType::none: break;
 	case PBXProductType::application: cb << "com.apple.product-type.application"; break;
 	case PBXProductType::framework: cb << "com.apple.product-type.framework"; break;
 	case PBXProductType::staticFramework: cb << "com.apple.product-type.framework.static"; break;
@@ -297,6 +330,7 @@ const CallbackStream &operator<<(const CallbackStream &cb, const PBXProductType 
 	case PBXProductType::driverExtension: cb << "com.apple.product-type.driver-extension"; break;
 	case PBXProductType::systemExtension: cb << "com.apple.product-type.system-extension"; break;
 	}
+	cb << "\"";
 	return cb;
 }
 

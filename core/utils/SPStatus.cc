@@ -213,7 +213,12 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 			outCb << StringView(ptr, strlen(ptr));
 		}
 #else
+#ifdef __STDC_LIB_EXT1__
 		::strerror_s(target, STATUS_DESC_BUFFER_SIZE - len - 1, err);
+#else
+		auto ptr = strerror(err);
+		memcpy(target, ptr, std::min(STATUS_DESC_BUFFER_SIZE - len - 1, strlen(ptr)));
+#endif
 #endif
 #if WIN32
 	} else if (status::isWinApi(st)) {

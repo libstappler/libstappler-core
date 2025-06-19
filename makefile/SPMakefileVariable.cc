@@ -196,6 +196,14 @@ void VariableEngine::addSubstitutionCallback(VariableCallback *cb) {
 	});
 }
 
+void VariableEngine::setRootPath(StringView str) {
+	if (filepath::isAbsolute(str)) {
+		_rootPath = str.pdup(_pool);
+	} else {
+		_rootPath = StringView(filesystem::findPath<Interface>(FileInfo{str})).pdup(_pool);
+	}
+}
+
 StringView VariableEngine::resolve(StmtValue *val, char chain, ErrorReporter &err,
 		memory::pool_t *pool) {
 	if (!chain || !val->next) {
@@ -474,6 +482,24 @@ static uint32_t VariableEngine_parseArguments(StmtType t, StmtValue *args, StmtV
 	default: break;
 	}
 	return count;
+}
+
+StringView VariableEngine::getAbsolutePath(StringView str) const {
+	if (filepath::isAbsolute(str)) {
+		return StringView(filepath::reconstructPath<Interface>(str)).pdup(_pool);
+	} else {
+		if (!_rootPath.empty()) {
+			return StringView(filepath::reconstructPath<Interface>(
+					filepath::merge<Interface>(_rootPath, str))).pdup(_pool);
+		} else {
+			auto path =
+			filesystem::findPath<Interface>(FileInfo{str}, filesystem::Access::Exists);
+			if (!path.empty()) {
+				return StringView(path).pdup(_pool);
+			}
+		}
+	}
+	return StringView();
 }
 
 bool VariableEngine::call(const Callback<void(StringView)> &out, StringView fn, StmtType type,

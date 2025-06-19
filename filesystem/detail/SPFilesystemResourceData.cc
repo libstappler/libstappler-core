@@ -181,6 +181,9 @@ void FilesystemResourceData::enumeratePaths(ResourceLocation &res, StringView fi
 		if (pathFlags == FileFlags::None || (locFlags & pathFlags) != FileFlags::None) {
 			path = filepath::merge<Interface>(locPath, filename);
 			if (a == Access::None || filesystem::native::access_fn(path, a) == Status::Ok) {
+				if (hasFlag(flags, FileFlags::MakeWritableDir)) {
+					filesystem::mkdir_recursive(FileInfo{filepath::root(path)});
+				}
 				if (!cb(path, locFlags)) {
 					return false;
 				}
@@ -198,7 +201,11 @@ void FilesystemResourceData::enumeratePaths(FileCategory cat, StringView filenam
 
 	auto &res = _resourceLocations[toInt(cat)];
 
-	if ((flags & FileFlags::PathMask) == FileFlags::None) {
+	if (hasFlag(flags, FileFlags::MakeWritableDir)) {
+		flags |= FileFlags::Writable;
+	}
+
+	if (hasFlag(flags, FileFlags::PathMask)) {
 		flags |= res.defaultFileFlags;
 	}
 
@@ -270,7 +277,7 @@ FileCategory FilesystemResourceData::detectResourceCategory(StringView path,
 				if (path.starts_with(resPath.first) && path.at(resPath.first.size()) == '/') {
 					if (resPath.first.size() > match) {
 						targetLoc = &it;
-						match = resPath.first.size();
+						match = static_cast<uint32_t>(resPath.first.size());
 					}
 				}
 			}

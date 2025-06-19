@@ -35,6 +35,8 @@ void makeBuildConfigHeader(makefile::Makefile *, const CallbackStream &);
 void makeAppConfigHeader(makefile::Makefile *, const CallbackStream &);
 void makeAppConfigSource(makefile::Makefile *, const CallbackStream &);
 
+void makeMergedAppConfigSource(makefile::Makefile *release, makefile::Makefile *debug, const CallbackStream &);
+
 } // namespace stappler::buildtool
 
 #endif /* CORE_UTILS_BUILDTOOL_SRC_BUILDCONFIG_BUILDCONFIG_H_ */

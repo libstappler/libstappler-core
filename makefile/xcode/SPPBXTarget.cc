@@ -109,7 +109,11 @@ void PBXNativeTarget::write(const Callback<void(StringView)> &cb, const PBXNativ
 	cb << RefArray{"packageProductDependencies", target.packageProductDependencies};
 
 	if (target.product) {
-		cb << Line{"productName", StringValue{filepath::name(target.product->name)}};
+		if (!target.product->name.empty()) {
+			cb << Line{"productName", StringValue{filepath::name(target.product->name)}};
+		} else if (!target.product->path.empty()) {
+			cb << Line{"productName", StringValue{filepath::name(target.product->path)}};
+		}
 		cb << Line{"productReference", ObjectRef{target.product}};
 	}
 

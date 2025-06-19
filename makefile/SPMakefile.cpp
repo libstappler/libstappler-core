@@ -55,14 +55,18 @@ bool Makefile::init() {
 	return true;
 }
 
-void Makefile::setLogCallback(LogCallback cb, Ref *ref) {
+void Makefile::setLogCallback(LogCallback cb, void *ref) {
 	_logCallback = cb;
 	_logCallbackRef = ref;
 }
 
-void Makefile::setIncludeCallback(IncludeCallback cb, Ref *ref) {
+void Makefile::setIncludeCallback(IncludeCallback cb, void *ref) {
 	_includeCallback = cb;
 	_includeCallbackRef = ref;
+}
+
+void Makefile::setRootPath(StringView str) {
+	_engine.setRootPath(str);
 }
 
 bool Makefile::include(StringView name, StringView data, bool copyData, ErrorReporter *e) {
@@ -94,6 +98,10 @@ bool Makefile::include(StringView name, StringView data, bool copyData, ErrorRep
 
 bool Makefile::include(const FileInfo &info, ErrorReporter *err, bool optional) {
 	auto path = filesystem::findPath<Interface>(info, filesystem::Access::Read);
+	if (path.empty()) {
+		log::error("Makefile", "Fail to open ", info);
+		return false;
+	}
 	auto f = filesystem::openForReading(FileInfo{path});
 	if (f) {
 		auto fsize = f.size();
@@ -116,8 +124,10 @@ bool Makefile::includeFileByPath(StringView file, ErrorReporter *err, bool optio
 	if (_includeCallback) {
 		bool loaded = false;
 		_includeCallback(_includeCallbackRef, file, [&](StringView data) {
-			if (include(file, data, true, err)) {
-				loaded = true;
+			if (!data.empty()) {
+				if (include(file, data, true, err)) {
+					loaded = true;
+				}
 			}
 		});
 		return loaded;

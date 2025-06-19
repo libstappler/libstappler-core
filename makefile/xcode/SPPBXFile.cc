@@ -26,6 +26,27 @@
 
 namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
+const PBXFileSystemSynchronizedBuildFileExceptionSet *PBXFileSystemSynchronizedBuildFileExceptionSet::create(XCodeExport &xctx,
+		const Callback<void(PBXFileSystemSynchronizedBuildFileExceptionSet *)> &cb) {
+	memory::pool::context ctx(xctx.pool);
+
+	auto obj = new (xctx.pool) PBXFileSystemSynchronizedBuildFileExceptionSet(xctx);
+
+	cb(obj);
+
+	xctx.objects.emplace_back(obj);
+	return obj;
+}
+
+void PBXFileSystemSynchronizedBuildFileExceptionSet::write(const CallbackStream &cb,
+		const PBXFileSystemSynchronizedBuildFileExceptionSet &set) {
+	cb << '\t' << getStringId(set.id) << " = {\n";
+	cb << Line{"isa", "PBXFileSystemSynchronizedBuildFileExceptionSet"};
+	cb << StringArray{"membershipExceptions", set.membershipExceptions};
+	cb << Line{"target", ObjectRef{set.target}};
+	cb << "\t};\n";
+}
+
 const PBXFileReference *PBXFileReference::create(XCodeExport &xctx,
 		const Callback<void(PBXFileReference *)> &cb) {
 	memory::pool::context ctx(xctx.pool);
@@ -65,6 +86,41 @@ void PBXFileReference::write(const Callback<void(StringView)> &cb, const PBXFile
 	cb << " };\n";
 }
 
+const PBXFileSystemSynchronizedRootGroup *PBXFileSystemSynchronizedRootGroup::create(
+		XCodeExport &xctx, const Callback<void(PBXFileSystemSynchronizedRootGroup *)> &cb) {
+	memory::pool::context ctx(xctx.pool);
+
+	auto obj = new (xctx.pool) PBXFileSystemSynchronizedRootGroup(xctx);
+
+	obj->sourceTree = PBXSourceTree{PBXSourceTree::absolute};
+
+	cb(obj);
+
+	xctx.objects.emplace_back(obj);
+	return obj;
+}
+
+void PBXFileSystemSynchronizedRootGroup::write(const CallbackStream &cb, const PBXFileSystemSynchronizedRootGroup &group) {
+	cb << '\t' << getStringId(group.id) << " = {\n";
+
+	cb << Line{"isa", "PBXFileSystemSynchronizedRootGroup"};
+
+	cb << RefArray{"exceptions", group.exceptions};
+
+	cb << StringMap{"explicitFileTypes", group.explicitFileTypes};
+	cb << StringArray{"explicitFolders", group.explicitFolders};
+
+	if (!group.name.empty()) {
+		cb << Line{"name", StringValue{group.name}};
+	}
+
+	if (!group.path.empty()) {
+		cb << Line{"path", StringValue{group.path}};
+	}
+
+	cb << Line{"sourceTree", group.sourceTree};
+	cb << "\t};\n";
+}
 
 const PBXGroup *PBXGroup::create(XCodeExport &xctx, const Callback<void(PBXGroup *)> &cb) {
 	memory::pool::context ctx(xctx.pool);

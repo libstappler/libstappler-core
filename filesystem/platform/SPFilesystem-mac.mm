@@ -26,6 +26,11 @@ THE SOFTWARE.
 
 #if MACOS
 
+#include "SPFilesystem.h"
+#include "SPMemInterface.h"
+#include "SPSharedModule.h"
+#include "detail/SPFilesystemResourceData.h"
+
 #import <Foundation/Foundation.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
@@ -33,7 +38,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
-template <>
+/*template <>
 auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
 	char fullpath[PATH_MAX] = {0};
 	uint32_t bufsize = PATH_MAX;
@@ -136,9 +141,15 @@ struct PathSource {
 			std::string cachesPath = nsCachesPath.UTF8String;
 			std::string documentsPath = nsDocumentsPath.UTF8String;
 			
-			if (!filesystem::exists(supportPath) && !filesystem::mkdir(supportPath)) { log::error("filesystem", "Fail to create dir: ", supportPath); }
-			if (!filesystem::exists(cachesPath) && !filesystem::mkdir(cachesPath)) { log::error("filesystem", "Fail to create dir: ", cachesPath); }
-			if (!filesystem::exists(documentsPath) && !filesystem::mkdir(documentsPath)) { log::error("filesystem", "Fail to create dir: ", documentsPath); }
+			if (!filesystem::exists(supportPath) && !filesystem::mkdir(supportPath)) {
+				log::error("filesystem", "Fail to create dir: ", supportPath);
+				}
+			if (!filesystem::exists(cachesPath) && !filesystem::mkdir(cachesPath)) {
+				log::error("filesystem", "Fail to create dir: ", cachesPath);
+				}
+			if (!filesystem::exists(documentsPath) && !filesystem::mkdir(documentsPath)) {
+				log::error("filesystem", "Fail to create dir: ", documentsPath);
+				}
 
 			if (!_isSandboxed) {
 				auto bundleId = std::string(CFStringGetCStringPtr(CFBundleGetIdentifier(bundle), kCFStringEncodingUTF8));
@@ -157,170 +168,346 @@ struct PathSource {
 			_cachePath = cachesPath; _cacheInit = true;
 		}
 	}
+};*/
 
-	StringView getPlatformPath(bool readOnly) {
-		if (!readOnly) {
-			if (!_platformInit) {
-				filesystem::mkdir(_platformPath);
-				_platformInit = true;
-			}
-		}
-		return _platformPath;
-	}
-	StringView getDocumentsPath(bool readOnly) {
-		if (!readOnly) {
-			if (!_platformInit) {
-				filesystem::mkdir(_platformPath);
-				_platformInit = true;
-			}
-			if (!_documentsInit) {
-				filesystem::mkdir(_documentsPath);
-				_documentsInit = true;
-			}
-		}
-		return _documentsPath;
-	}
-	StringView getCachePath(bool readOnly) {
-		if (!readOnly) {
-			if (!_platformInit) {
-				filesystem::mkdir(_platformPath);
-				_platformInit = true;
-			}
-			if (!_cacheInit) {
-				filesystem::mkdir(_cachePath);
-				_cacheInit = true;
-			}
-		}
-		return _cachePath;
-	}
-	StringView getWritablePath(bool readOnly) {
-		if (!readOnly) {
-			if (!_writableInit) {
-				filesystem::mkdir(_writablePath);
-				_writableInit = true;
-			}
-		}
-		return _writablePath;
-	}
-	
-	template <typename Interface>
-	auto _getPlatformPath(StringView path, bool readOnly) -> typename Interface::StringType {
-		if (filepath::isBundled(path)) {
-			return filepath::merge<Interface>(getPlatformPath(readOnly), path.sub("%PLATFORM%:"_len));
-		}
-		return filepath::merge<Interface>(getPlatformPath(readOnly), path);
-	}
+static char s_execPath[PATH_MAX] = {0};
+static char s_homePath[PATH_MAX] = {0};
+static bool s_isBundled = false;
+static bool s_isSandboxed = false;
 
-	std::string getNsPath(StringView path) {
-		auto resourceName = filepath::lastComponent(path);
-		auto resourceRoot = filepath::root(path);
-		
-		auto bundle = [NSBundle mainBundle];
-		auto nsPath = [bundle pathForResource:[NSString stringWithUTF8String:resourceName.str<memory::StandartInterface>().data()]										   ofType:nil inDirectory: [NSString stringWithUTF8String:resourceRoot.str<memory::StandartInterface>().data()]];
-		return nsPath ? std::string(nsPath.UTF8String) : std::string();
+static memory::StandartInterface::StringType getEnvExt(StringView key) {
+	if (key == "EXEC_DIR") {
+		return filepath::root(StringView((char *)s_execPath)).str<memory::StandartInterface>();
+	} else if (key == "CWD") {
+		return currentDir<memory::StandartInterface>();
+	} else {
+		auto e = ::getenv(key.str<memory::StandartInterface>().data());
+		if (e) {
+			return memory::StandartInterface::StringType(e);
+		}
 	}
-	
-	bool exists(StringView path) {
-		if (_isBundle) {
-			return !getNsPath(path).empty();
+	return memory::StandartInterface::StringType();
+}
+
+static void readSingleQuoted(StringView &str, const Callback<void(StringView)> &writeCb) {
+	++str;
+	while (!str.empty()) {
+		auto v = str.readUntil<StringView::Chars<'\'', '\\'>>();
+		if (!v.empty()) {
+			writeCb << v;
+		}
+		if (str.is('\\')) {
+			++str;
+			writeCb << str[0];
+			++str;
+		} else if (str.is<'\''>()) {
+			++str;
+			return;
+		}
+	}
+}
+
+static void readDoubleQuoted(StringView &str, const Callback<void(StringView)> &writeCb) {
+	++str;
+	while (!str.empty()) {
+		auto v = str.readUntil<StringView::Chars<'"', '\\', '$', '\''>>();
+		if (!v.empty()) {
+			writeCb << v;
+		}
+		if (str.is('\\')) {
+			++str;
+			writeCb << str[0];
+			++str;
+		} else if (str.is('$')) {
+			++str;
+			auto v =
+			str.readUntil<StringView::Chars<'"', '\'', '$', '/'>, StringView::WhiteSpace>();
+			if (!v.empty()) {
+				// we need null-terminated string
+				auto env = getEnvExt(v.str<memory::StandartInterface>().data());
+				if (!env.empty()) {
+					writeCb << env;
+				}
+			}
+		} else if (str.is('\'')) {
+			readSingleQuoted(str, writeCb);
+		} else if (str.is<'"'>()) {
+			++str;
+			return;
+		}
+	}
+}
+
+static StringView readVariable(memory::pool_t *pool, StringView str) {
+	memory::StandartInterface::StringType out;
+
+	auto writer = [&](StringView s) { out.append(s.data(), s.size()); };
+
+	Callback<void(StringView)> writeCb(writer);
+
+	str.trimChars<StringView::WhiteSpace>();
+	while (!str.empty()) {
+		if (str.is('"')) {
+			readDoubleQuoted(str, writeCb);
+		} else if (str.is('\'')) {
+			readSingleQuoted(str, writeCb);
+		} else if (str.is('$')) {
+			++str;
+			auto v =
+			str.readUntil<StringView::Chars<'"', '\'', '$', '/'>, StringView::WhiteSpace>();
+			if (!v.empty()) {
+				// we need null-terminated string
+				auto env = getEnvExt(v.str<memory::StandartInterface>().data());
+				if (!env.empty()) {
+					writeCb << env;
+				}
+			}
 		} else {
-			return ::access(_getPlatformPath<memory::StandartInterface>(path, true).data(), F_OK) != -1;
+			auto v = str.readUntil<StringView::Chars<'"', '\'', '$'>>();
+			if (!v.empty()) {
+				writeCb << v;
+			}
 		}
 	}
-	
-	bool stat(StringView ipath, Stat &stat) {
-		if (_isBundle) {
-			auto path = getNsPath(ipath);
-			return filesystem::native::stat_fn(path, stat);
+
+	auto ret = StringView(out);
+	ret.backwardSkipChars<StringView::Chars<'/'>>();
+	return ret.pdup(pool);
+}
+
+void _initSystemPaths(FilesystemResourceData &data) {
+	auto home = ::getenv("HOME");
+	if (!home) {
+		log::error("filesystem", "HOME envvar is not defined");
+		return;
+	}
+
+	memcpy(s_homePath, home, strlen(home));
+
+	uint32_t bufsize = PATH_MAX;
+
+	if (_NSGetExecutablePath(s_execPath, &bufsize) != 0) {
+		log::error("filesystem", "Fail to detect app path");
+		return;
+	}
+
+	CFBundleRef bundle = CFBundleGetMainBundle();
+	CFURLRef bundleUrl = CFBundleCopyBundleURL(bundle);
+
+	CFStringRef uti;
+	CFURLCopyResourcePropertyForKey(bundleUrl, kCFURLTypeIdentifierKey, &uti, NULL);
+	if (uti) {
+		if ([UTTypeApplicationBundle conformsToType: [UTType typeWithIdentifier:(__bridge NSString *)uti]]) {
+			// within app bundle
+			s_isBundled = true;
+		}
+	}
+
+	CFRelease(bundleUrl);
+
+	auto environment = [[NSProcessInfo processInfo] environment];
+	if ([environment objectForKey:@"APP_SANDBOX_CONTAINER_ID"] != nil) {
+		s_isSandboxed = true;
+	}
+
+	// read appconfig
+	auto bundleName = SharedModule::acquireTypedSymbol<const char *>(buildconfig::MODULE_APPCONFIG_NAME, "APPCONFIG_BUNDLE_NAME");
+	auto bundlePath = SharedModule::acquireTypedSymbol<const char *>(buildconfig::MODULE_APPCONFIG_NAME, "APPCONFIG_BUNDLE_PATH");
+	auto appPathCommon = SharedModule::acquireTypedSymbol<int *>(buildconfig::MODULE_APPCONFIG_NAME, "APPCONFIG_APP_PATH_COMMON");
+
+	if (appPathCommon && *appPathCommon > 0) {
+		data._appPathCommon = true;
+	}
+
+	auto pathEnv = ::getenv("PATH");
+	if (pathEnv) {
+		auto &res = data._resourceLocations[toInt(FileCategory::Exec)];
+		StringView(pathEnv).split<StringView::Chars<':'>>([&](StringView value) {
+			res.paths.emplace_back(value.pdup(data._pool), FileFlags::Shared);
+		});
+		res.flags |= CategoryFlags::Locateable;
+	}
+
+	if (home) {
+		auto &res = data._resourceLocations[toInt(FileCategory::UserHome)];
+		res.paths.emplace_back(StringView(home).pdup(data._pool), FileFlags::Shared);
+		res.flags |= CategoryFlags::Locateable;
+	}
+
+	auto fm = [NSFileManager defaultManager];
+
+	auto checkAccess = [&] (NSString *path) {
+		if ([fm isWritableFileAtPath:path]) {
+			return FileFlags::Shared | FileFlags::Writable;
 		} else {
-			auto path = _getPlatformPath<memory::StandartInterface>(ipath, false);
-			return filesystem::native::stat_fn(path, stat);
+			return FileFlags::Shared;
 		}
-	}
+	};
 
-	File openForReading(StringView path) {
-		if (_isBundle) {
-			auto nspath = getNsPath(path);
-			return filesystem::openForReading(nspath);
+	auto updateDirs = [&] (NSSearchPathDirectory nsdir, FileCategory cat) {
+		auto &res = data._resourceLocations[toInt(cat)];
+		auto dirs = NSSearchPathForDirectoriesInDomains(nsdir, NSUserDomainMask, YES);
+
+		if (dirs.count > 0) {
+			res.flags |= CategoryFlags::Locateable;
+			res.init = true;
+
+			for (NSString *dir in dirs) {
+				res.paths.emplace_back(StringView(dir.UTF8String).pdup(data._pool), checkAccess(dir));
+				res.flags |= CategoryFlags::Locateable;
+			}
+		}
+	};
+
+	updateDirs(NSDownloadsDirectory, FileCategory::UserDownload);
+	updateDirs(NSMoviesDirectory, FileCategory::UserVideos);
+	updateDirs(NSMusicDirectory, FileCategory::UserMusic);
+	updateDirs(NSPicturesDirectory, FileCategory::UserPictures);
+	updateDirs(NSDocumentDirectory, FileCategory::UserDocuments);
+	updateDirs(NSDesktopDirectory, FileCategory::UserDesktop);
+
+	if (!s_isSandboxed) {
+		auto updateDataDirs = [&] (NSSearchPathDirectory nsdir, FileCategory common, FileCategory app) {
+			auto &commonRes = data._resourceLocations[toInt(common)];
+			auto &appRes = data._resourceLocations[toInt(app)];
+			auto dirs = NSSearchPathForDirectoriesInDomains(nsdir, NSUserDomainMask, YES);
+
+			if (dirs.count > 0) {
+				commonRes.flags |= CategoryFlags::Locateable;
+				commonRes.init = true;
+
+				appRes.flags |= CategoryFlags::Locateable;
+
+				for (NSString *dir in dirs) {
+					auto commonPath = StringView(dir.UTF8String).pdup(data._pool);
+					commonRes.paths.emplace_back(commonPath, checkAccess(dir));
+					appRes.paths.emplace_back(StringView(
+							filepath::merge<memory::StandartInterface>(commonPath, bundleName)).pdup(data._pool),
+							FileFlags::Public | FileFlags::Writable);
+				}
+			}
+		};
+
+		updateDataDirs(NSApplicationSupportDirectory, FileCategory::CommonData, FileCategory::AppData);
+		updateDataDirs(NSCachesDirectory, FileCategory::CommonCache, FileCategory::AppCache);
+		updateDataDirs(NSAutosavedInformationDirectory, FileCategory::CommonState, FileCategory::AppState);
+
+		auto allLibsDirs = NSSearchPathForDirectoriesInDomains(NSAllLibrariesDirectory,
+				NSUserDomainMask | NSSystemDomainMask | NSLocalDomainMask, YES);
+		if (allLibsDirs.count > 0) {
+			auto &commonRes = data._resourceLocations[toInt(FileCategory::CommonConfig)];
+
+			commonRes.flags |= CategoryFlags::Locateable;
+			commonRes.init = true;
+
+			for (NSString *dir in allLibsDirs) {
+				auto commonPath = StringView(dir.UTF8String).pdup(data._pool);
+				auto fontPath = filepath::merge<memory::StandartInterface>(commonPath, "Fonts");
+
+				commonRes.paths.emplace_back(commonPath, checkAccess(dir));
+
+				if (filesystem::exists(FileInfo{fontPath})) {
+					auto &fontsRes = data._resourceLocations[toInt(FileCategory::Fonts)];
+					fontsRes.flags |= CategoryFlags::Locateable;
+					fontsRes.init = true;
+
+					fontsRes.paths.emplace_back(StringView(fontPath).pdup(data._pool), FileFlags::Shared);
+				}
+			}
+		}
+
+		auto tmpDir = NSTemporaryDirectory();
+		if (tmpDir) {
+			auto commonPath = StringView(tmpDir.UTF8String).pdup(data._pool);
+
+			auto &appRuntime = data._resourceLocations[toInt(FileCategory::AppRuntime)];
+			auto &commonRuntime = data._resourceLocations[toInt(FileCategory::CommonRuntime)];
+
+			appRuntime.flags |= CategoryFlags::Locateable;
+			commonRuntime.flags |= CategoryFlags::Locateable;
+
+			commonRuntime.paths.emplace_back(commonPath, checkAccess(tmpDir));
+			appRuntime.paths.emplace_back(StringView(
+				filepath::merge<memory::StandartInterface>(commonPath, bundleName)).pdup(data._pool),
+				FileFlags::Public | FileFlags::Writable);
+
+
+			auto libDirs = NSSearchPathForDirectoriesInDomains(NSAllLibrariesDirectory, NSUserDomainMask, YES);
+			if (libDirs.count > 0) {
+				auto &appConfig = data._resourceLocations[toInt(FileCategory::AppConfig)];
+				appConfig.flags |= CategoryFlags::Locateable;
+				for (NSString *dir in libDirs) {
+					auto commonPath = StringView(dir.UTF8String).pdup(data._pool);
+					appConfig.paths.emplace_back(StringView(
+							filepath::merge<memory::StandartInterface>(commonPath, bundleName)).pdup(data._pool),
+							FileFlags::Public | FileFlags::Writable);
+				}
+			}
 		} else {
-			return filesystem::openForReading(_getPlatformPath<memory::StandartInterface>(path, false));
+			auto libDirs = NSSearchPathForDirectoriesInDomains(NSAllLibrariesDirectory, NSUserDomainMask, YES);
+			if (libDirs.count > 0) {
+				auto &appConfig = data._resourceLocations[toInt(FileCategory::AppConfig)];
+				auto &commonRuntime = data._resourceLocations[toInt(FileCategory::CommonRuntime)];
+				auto &appRuntime = data._resourceLocations[toInt(FileCategory::AppRuntime)];
+
+				appConfig.flags |= CategoryFlags::Locateable;
+				appRuntime.flags |= CategoryFlags::Locateable;
+				commonRuntime.flags |= CategoryFlags::Locateable;
+
+				for (NSString *dir in libDirs) {
+					auto commonPath = StringView(dir.UTF8String).pdup(data._pool);
+					auto runtimePath = StringView(filepath::merge<memory::StandartInterface>(commonPath, "Runtime")).pdup(data._pool);
+
+					appConfig.paths.emplace_back(StringView(
+						filepath::merge<memory::StandartInterface>(commonPath, bundleName)).pdup(data._pool),
+						 FileFlags::Public | FileFlags::Writable);
+					commonRuntime.paths.emplace_back(runtimePath, FileFlags::Shared);
+					appRuntime.paths.emplace_back(StringView(
+						filepath::merge<memory::StandartInterface>(runtimePath, bundleName)).pdup(data._pool),
+						FileFlags::Public | FileFlags::Writable);
+				}
+			}
+		}
+	} else {
+		// @TODO
+	}
+
+	if (!s_isBundled) {
+		auto &bundledLoc = data._resourceLocations[toInt(FileCategory::Bundled)];
+
+		bundledLoc.init = true;
+		bundledLoc.flags |= CategoryFlags::Locateable;
+
+		if (bundlePath) {
+			StringView(bundlePath).split<StringView::Chars<':'>>([&](StringView str) {
+				auto value = readVariable(data._pool, str);
+				if (!value.empty()) {
+					bundledLoc.paths.emplace_back(value, FileFlags::Private);
+				}
+			});
+		}
+	} else {
+		auto resPath = [NSBundle mainBundle].resourcePath;
+		if (resPath) {
+			auto &bundledLoc = data._resourceLocations[toInt(FileCategory::Bundled)];
+
+			bundledLoc.init = true;
+			bundledLoc.flags |= CategoryFlags::Locateable;
+
+			bundledLoc.paths.emplace_back(StringView(resPath.UTF8String).pdup(data._pool), FileFlags::Private);
 		}
 	}
-};
-
-template <typename Interface>
-auto _getPlatformPath(StringView path, bool readOnly) -> typename Interface::StringType {
-	if (filepath::isBundled(path)) {
-		return filepath::merge<Interface>(PathSource::getInstance()->getPlatformPath(readOnly), path.sub("%PLATFORM%:"_len));
-	}
-	return filepath::merge<Interface>(PathSource::getInstance()->getPlatformPath(readOnly), path);
 }
 
-template <>
-auto _getWritablePath<memory::StandartInterface>(bool readOnly) -> typename memory::StandartInterface::StringType {
-	return PathSource::getInstance()->getWritablePath(readOnly).str<memory::StandartInterface>();
-}
+// No PlatformSpecific categories defined for now
+void _enumerateObjects(const FilesystemResourceData &data, FileCategory, StringView path, FileFlags,
+					   Access, const Callback<bool(StringView, FileFlags)> &) { }
 
-template <>
-auto _getWritablePath<memory::PoolInterface>(bool readOnly) -> typename memory::PoolInterface::StringType {
-	return StringView(PathSource::getInstance()->getWritablePath(readOnly)).str<memory::PoolInterface>();
-}
+bool _access(FileCategory cat, StringView path, Access) { return false; }
 
-template <>
-auto _getDocumentsPath<memory::StandartInterface>(bool readOnly) -> typename memory::StandartInterface::StringType {
-	return PathSource::getInstance()->getDocumentsPath(readOnly).str<memory::StandartInterface>();
-}
+bool _stat(FileCategory cat, StringView path, Stat &stat) { return false; }
 
-template <>
-auto _getDocumentsPath<memory::PoolInterface>(bool readOnly) -> typename memory::PoolInterface::StringType {
-	return StringView(PathSource::getInstance()->getDocumentsPath(readOnly)).str<memory::PoolInterface>();
-}
-
-template <>
-auto _getCachesPath<memory::StandartInterface>(bool readOnly) -> typename memory::StandartInterface::StringType {
-	return PathSource::getInstance()->getCachePath(readOnly).str<memory::StandartInterface>();
-}
-
-template <>
-auto _getCachesPath<memory::PoolInterface>(bool readOnly) -> typename memory::PoolInterface::StringType {
-	return StringView(PathSource::getInstance()->getCachePath(readOnly)).str<memory::PoolInterface>();
-}
-
-static bool checkPlatformPath(StringView &path, bool assetsRoot) {
-	if (path.empty() || (!assetsRoot && path.front() == '/') || path.starts_with("..", 2) || path.find("/..") != maxOf<size_t>()) {
-		return false;
-	}
-
-	while (path.front() == '/') {
-		path = path.sub(1);
-	}
-
-	if (path.empty()) {
-		return false;
-	}
-
-	return true;
-}
-
-bool _exists(StringView path, bool assetsRoot) {
-	if (!checkPlatformPath(path, assetsRoot)) {
-		return false;
-	}
-
-	return PathSource::getInstance()->exists(path);
-}
-
-bool _stat(StringView ipath, Stat &stat, bool assetsRoot) {
-	if (!checkPlatformPath(ipath, assetsRoot)) {
-		return false;
-	}
-
-	return PathSource::getInstance()->stat(ipath, stat);
-}
-
-File _openForReading(StringView path) {
-	return PathSource::getInstance()->openForReading(path);
-}
+File _openForReading(FileCategory cat, StringView path) { return File(); }
 
 size_t _read(void *, uint8_t *buf, size_t nbytes) { return 0; }
 size_t _seek(void *, int64_t offset, io::Seek s) { return maxOf<size_t>(); }
@@ -328,20 +515,20 @@ size_t _tell(void *) { return 0; }
 bool _eof(void *) { return true; }
 void _close(void *) { }
 
-void _ftw(StringView path, const Callback<void(StringView path, bool isFile)> &cb, int depth, bool dirFirst, bool assetsRoot) {
-	if (!checkPlatformPath(path, assetsRoot)) {
-		return;
-	}
-	
-	return filesystem::native::ftw_fn(path, cb, depth, dirFirst);
+Status _ftw(FileCategory cat, StringView path,
+			const Callback<bool(StringView path, FileType t)> &cb, int depth, bool dirFirst) {
+	return Status::Declined;
 }
 
-bool _ftw_b(StringView path, const Callback<bool(StringView path, bool isFile)> &cb, int depth, bool dirFirst, bool assetsRoot) {
-	if (!checkPlatformPath(path, assetsRoot)) {
-		return false;
-	}
+template <>
+auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
+	return s_execPath;
+}
 
-	return filesystem::native::ftw_b_fn(path, cb, depth, dirFirst);
+template <>
+auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::StringType {
+	using Interface = memory::PoolInterface;
+	return StringView(s_execPath).str<Interface>();
 }
 
 }

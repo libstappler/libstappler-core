@@ -52,11 +52,13 @@ static clockid_t getClockSource() {
 	struct timespec ts;
 
 	auto minFrameNano = (getStaticMinFrameTime() * 1000) / 5; // clock should have at least 1/5 frame resolution
+#ifdef CLOCK_MONOTONIC_COARSE
 	if (::clock_getres(CLOCK_MONOTONIC_COARSE, &ts) == 0) {
 		if (ts.tv_sec == 0 && uint64_t(ts.tv_nsec) < minFrameNano) {
 			return CLOCK_MONOTONIC_COARSE;
 		}
 	}
+#endif
 
 	if (::clock_getres(CLOCK_MONOTONIC, &ts) == 0) {
 		if (ts.tv_sec == 0 && uint64_t(ts.tv_nsec) < minFrameNano) {

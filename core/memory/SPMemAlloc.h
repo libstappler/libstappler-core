@@ -190,7 +190,7 @@ inline void *AllocPool::operator new(size_t size, const std::nothrow_t &tag) noe
 
 inline void *AllocPool::operator new(size_t size, std::align_val_t al,
 		const std::nothrow_t &tag) noexcept {
-	return pool::alloc(pool::acquire(), size, toInt(al));
+	return pool::alloc(pool::acquire(), size, static_cast<uint32_t>(toInt(al)));
 }
 
 inline void *AllocPool::operator new(size_t size, pool_t *pool) noexcept {

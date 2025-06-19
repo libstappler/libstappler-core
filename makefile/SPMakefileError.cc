@@ -33,7 +33,7 @@ LineOffset FileLocation::makeLineOffset() {
 		tmp.skipUntil<StringView::Chars<'\n', '\r'>>();
 		if (tmp.is<StringView::Chars<'\n', '\r'>>()) {
 			tmp.skipChars<StringView::Chars<'\n', '\r'>>();
-			startString = tmp.data() - line.data();
+			startString = static_cast<uint32_t>(tmp.data() - line.data());
 			++off.lineOffset;
 		}
 	}
@@ -75,7 +75,7 @@ ErrorReporter::ErrorReporter(const FileLocation &loc, ErrorReporter *err) {
 	ref = err->ref;
 }
 
-void ErrorReporter::setPos(const StringView &str) { pos = str.data() - line.data(); }
+void ErrorReporter::setPos(const StringView &str) { pos = static_cast<uint32_t>(str.data() - line.data()); }
 
 void ErrorReporter::reportError(StringView str, Stmt *stmt, Block *block, bool showSource) {
 	report(log::LogType::Error, str, stmt, block, showSource);
