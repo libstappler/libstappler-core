@@ -303,6 +303,20 @@ void QueueData::cancel() {
 	cleanup();
 }
 
+Rc<TimerHandle> QueueData::scheduleTimer(TimerInfo &&info) {
+	if (_timer) {
+		return _timer(this, _platformQueue, move(info));
+	}
+	return nullptr;
+}
+
+Rc<ThreadHandle> QueueData::addThreadHandle() {
+	if (_thread) {
+		return _thread(this, _platformQueue);
+	}
+	return nullptr;
+}
+
 QueueData::~QueueData() {
 	if (_platformQueue && _destroy) {
 		_destroy(_platformQueue);

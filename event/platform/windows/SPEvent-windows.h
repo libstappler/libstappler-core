@@ -35,26 +35,10 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 struct IocpData;
 
 struct SP_PUBLIC Queue::Data : public QueueData {
-	IocpData *_iocp = nullptr;
-
 	HandleClass _iocpThreadClass;
 	HandleClass _iocpTimerClass;
 	HandleClass _iocpPollClass;
 
-	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
-	Rc<ThreadHandle> addThreadHandle();
-
-	Status submit();
-	uint32_t poll();
-	uint32_t wait(TimeInterval);
-	Status run(TimeInterval, QueueWakeupInfo &&);
-	Status wakeup(QueueWakeupInfo &&);
-
-	bool isValid() const;
-
-	void cancel();
-
-	~Data();
 	Data(QueueRef *q, const QueueInfo &info);
 };
 
@@ -62,25 +46,27 @@ template <typename HandleType, typename SourceType>
 void setupIocpHandleClass(QueueHandleClassInfo *info, HandleClass *cl, bool suspendable) {
 	cl->info = info;
 
-	cl->createFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
-		static_assert(sizeof(SourceType) <= Handle::DataSize && std::is_standard_layout<SourceType>::value);
+	cl->createFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		static_assert(sizeof(SourceType) <= Handle::DataSize
+				&& std::is_standard_layout<SourceType>::value);
 		new (data) SourceType;
 		return HandleClass::create(cl, handle, data);
 	};
 	cl->destroyFn = HandleClass::destroy;
 
-	cl->runFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+	cl->runFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 		auto platformData = static_cast<Queue::Data *>(cl->info->data);
 		auto source = reinterpret_cast<SourceType *>(data);
 
-		auto status = static_cast<HandleType *>(handle)->rearm(platformData->_iocp, source);
+		auto status = static_cast<HandleType *>(handle)->rearm(
+				reinterpret_cast<IocpData *>(platformData->_platformQueue), source);
 		if (status == Status::Ok || status == Status::Done) {
 			return HandleClass::run(cl, handle, data);
 		}
 		return status;
 	};
 
-	cl->cancelFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], Status st) {
+	cl->cancelFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], Status st) {
 		auto source = reinterpret_cast<SourceType *>(data);
 
 		source->cancel();
@@ -90,38 +76,42 @@ void setupIocpHandleClass(QueueHandleClassInfo *info, HandleClass *cl, bool susp
 	};
 
 	if (suspendable) {
-		cl->suspendFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		cl->suspendFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 			auto platformData = static_cast<Queue::Data *>(cl->info->data);
 			auto source = reinterpret_cast<SourceType *>(data);
 
-			auto status = static_cast<HandleType *>(handle)->disarm(platformData->_iocp, source);
+			auto status = static_cast<HandleType *>(handle)->disarm(
+					reinterpret_cast<IocpData *>(platformData->_platformQueue), source);
 			if (status == Status::Ok || status == Status::Done) {
 				return HandleClass::suspend(cl, handle, data);
 			}
 			return status;
 		};
 
-		cl->resumeFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		cl->resumeFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 			auto platformData = static_cast<Queue::Data *>(cl->info->data);
 			auto source = reinterpret_cast<SourceType *>(data);
 
 			auto status = HandleClass::resume(cl, handle, data);
 			if (status == Status::Ok || status == Status::Done) {
-				status = static_cast<HandleType *>(handle)->rearm(platformData->_iocp, source);
+				status = static_cast<HandleType *>(handle)->rearm(
+						reinterpret_cast<IocpData *>(platformData->_platformQueue), source);
 			}
 			return status;
 		};
 	}
 
-	cl->notifyFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], const NotifyData &n) {
+	cl->notifyFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize],
+						   const NotifyData &n) {
 		auto platformData = static_cast<Queue::Data *>(cl->info->data);
 		auto source = reinterpret_cast<SourceType *>(data);
 
-		static_cast<HandleType *>(handle)->notify(platformData->_iocp, source, n);
+		static_cast<HandleType *>(handle)->notify(
+				reinterpret_cast<IocpData *>(platformData->_platformQueue), source, n);
 	};
 }
 
-}
+} // namespace stappler::event
 
 #endif
 

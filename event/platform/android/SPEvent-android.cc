@@ -36,119 +36,57 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-static int SignalsToIntercept[] = { SIGUSR1, SIGUSR2 };
-
-Rc<TimerHandle> Queue::Data::scheduleTimer(TimerInfo &&info) {
-	if (_epoll) {
-		return Rc<TimerFdEPollHandle>::create(&_epollTimerFdClass, move(info));
-	} else if (_alooper) {
-		return Rc<TimerFdALooperHandle>::create(&_alooperTimerFdClass, move(info));
-	}
-	return nullptr;
-}
-
-Rc<ThreadHandle> Queue::Data::addThreadHandle() {
-	if (_epoll) {
-		return Rc<ThreadEPollHandle>::create(&_epollThreadClass);
-	} else if (_alooper) {
-		return Rc<ThreadALooperHandle>::create(&_alooperThreadClass);
-	}
-	return nullptr;
-}
-
-Status Queue::Data::submit() {
-	if (_epoll) {
-		return _epoll->submit();
-	} else if (_alooper) {
-		return _alooper->submit();
-	}
-	return Status::ErrorNotImplemented;
-}
-
-uint32_t Queue::Data::poll() {
-	if (_epoll) {
-		return _epoll->poll();
-	} else if (_alooper) {
-		return _alooper->poll();
-	}
-	return 0;
-}
-
-uint32_t Queue::Data::wait(TimeInterval ival) {
-	if (_epoll) {
-		return _epoll->wait(ival);
-	} else if (_alooper) {
-		return _alooper->wait(ival);
-	}
-	return 0;
-}
-
-Status Queue::Data::run(TimeInterval ival, QueueWakeupInfo &&info) {
-	if (_epoll) {
-		return _epoll->run(ival, info.flags, info.timeout);
-	} else if (_alooper) {
-		return _alooper->run(ival, info.flags, info.timeout);
-	}
-	return Status::ErrorNotImplemented;
-}
-
-Status Queue::Data::wakeup(QueueWakeupInfo &&info) {
-	if (_epoll) {
-		return _epoll->wakeup(info.flags, info.timeout);
-	} else if (_alooper) {
-		return _alooper->wakeup(info.flags, info.timeout);
-	}
-	return Status::ErrorNotImplemented;
-}
-
-bool Queue::Data::isValid() const {
-	return _epoll != nullptr || _alooper != nullptr;
-}
-
-void Queue::Data::cancel() {
-	if (_epoll) {
-		_epoll->cancel();
-	} else if (_alooper) {
-		_alooper->cancel();
-	}
-	cleanup();
-}
-
-Queue::Data::~Data() {
-	if (_epoll) {
-		delete _epoll;
-		_epoll = nullptr;
-	}
-	if (_alooper) {
-		delete _alooper;
-		_alooper = nullptr;
-	}
-}
+static int SignalsToIntercept[] = {SIGUSR1, SIGUSR2};
 
 Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags) {
-	if (hasFlag(info.engineMask, QueueEngine::EPoll)) {
-		setupEpollHandleClass<TimerFdEPollHandle, TimerFdSource>(&_info, &_epollTimerFdClass, true);
-		setupEpollHandleClass<ThreadEPollHandle, EventFdSource>(&_info, &_epollThreadClass, true);
-		setupEpollHandleClass<EventFdEPollHandle, EventFdSource>(&_info, &_epollEventFdClass, true);
-		setupEpollHandleClass<SignalFdEPollHandle, SignalFdSource>(&_info, &_epollSignalFdClass, true);
-		setupEpollHandleClass<PollFdEPollHandle, PollFdSource>(&_info, &_epollPollFdClass, true);
-	}
+	if (hasFlag(info.engineMask, QueueEngine::EPoll)) { }
 
-	if (hasFlag(info.engineMask, QueueEngine::ALooper)) {
-		setupALooperHandleClass<TimerFdALooperHandle, TimerFdSource>(&_info, &_alooperTimerFdClass, true);
-		setupALooperHandleClass<ThreadALooperHandle, EventFdSource>(&_info, &_alooperThreadClass, true);
-		setupALooperHandleClass<EventFdALooperHandle, EventFdSource>(&_info, &_alooperEventFdClass, true);
-		setupALooperHandleClass<SignalFdALooperHandle, SignalFdSource>(&_info, &_alooperSignalFdClass, true);
-		setupALooperHandleClass<PollFdALooperHandle, PollFdSource>(&_info, &_alooperPollFdClass, true);
-	}
+	if (hasFlag(info.engineMask, QueueEngine::ALooper)) { }
 
 	if (hasFlag(info.flags, QueueFlags::ThreadNative)
 			&& hasFlag(info.engineMask, QueueEngine::ALooper)
 			&& !hasFlag(info.flags, QueueFlags::Protected)) {
-		auto alooper = new (memory::pool::acquire()) ALooperData(_info.queue, this, info, SignalsToIntercept);
+
+		setupALooperHandleClass<TimerFdALooperHandle, TimerFdSource>(&_info, &_alooperTimerFdClass,
+				true);
+		setupALooperHandleClass<ThreadALooperHandle, EventFdSource>(&_info, &_alooperThreadClass,
+				true);
+		setupALooperHandleClass<EventFdALooperHandle, EventFdSource>(&_info, &_alooperEventFdClass,
+				true);
+		setupALooperHandleClass<SignalFdALooperHandle, SignalFdSource>(&_info,
+				&_alooperSignalFdClass, true);
+		setupALooperHandleClass<PollFdALooperHandle, PollFdSource>(&_info, &_alooperPollFdClass,
+				true);
+
+		auto alooper = new (memory::pool::acquire())
+				ALooperData(_info.queue, this, info, SignalsToIntercept);
 		if (alooper->_looper != nullptr) {
-			_alooper = alooper;
-			_alooper->runInternalHandles();
+			_submit = [](void *ptr) { return reinterpret_cast<ALooperData *>(ptr)->submit(); };
+			_poll = [](void *ptr) { return reinterpret_cast<ALooperData *>(ptr)->poll(); };
+			_wait = [](void *ptr, TimeInterval ival) {
+				return reinterpret_cast<ALooperData *>(ptr)->wait(ival);
+			};
+			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
+				return reinterpret_cast<ALooperData *>(ptr)->run(ival, info.flags, info.timeout);
+			};
+			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
+				return reinterpret_cast<ALooperData *>(ptr)->wakeup(info.flags, info.timeout);
+			};
+			_cancel = [](void *ptr) { reinterpret_cast<ALooperData *>(ptr)->cancel(); };
+			_destroy = [](void *ptr) { delete reinterpret_cast<ALooperData *>(ptr); };
+
+			_timer = [](QueueData *d, void *ptr, TimerInfo &&info) -> Rc<TimerHandle> {
+				auto data = reinterpret_cast<Queue::Data *>(d);
+				return Rc<TimerFdEPollHandle>::create(&data->_alooperTimerFdClass, move(info));
+			};
+
+			_thread = [](QueueData *d, void *ptr) -> Rc<ThreadHandle> {
+				auto data = reinterpret_cast<Queue::Data *>(d);
+				return Rc<ThreadEPollHandle>::create(&data->_alooperThreadClass);
+			};
+
+			_platformQueue = alooper;
+			alooper->runInternalHandles();
 			_engine = QueueEngine::ALooper;
 			return;
 		} else {
@@ -157,11 +95,44 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 	}
 
 	// try epoll if failed with ALooper
-	if (!_alooper && hasFlag(info.engineMask, QueueEngine::EPoll)) {
-		auto epoll = new (memory::pool::acquire()) EPollData(_info.queue, this, info, SignalsToIntercept);
+	if (!_platformQueue && hasFlag(info.engineMask, QueueEngine::EPoll)) {
+
+		setupEpollHandleClass<TimerFdEPollHandle, TimerFdSource>(&_info, &_epollTimerFdClass, true);
+		setupEpollHandleClass<ThreadEPollHandle, EventFdSource>(&_info, &_epollThreadClass, true);
+		setupEpollHandleClass<EventFdEPollHandle, EventFdSource>(&_info, &_epollEventFdClass, true);
+		setupEpollHandleClass<SignalFdEPollHandle, SignalFdSource>(&_info, &_epollSignalFdClass,
+				true);
+		setupEpollHandleClass<PollFdEPollHandle, PollFdSource>(&_info, &_epollPollFdClass, true);
+
+		auto epoll = new (memory::pool::acquire())
+				EPollData(_info.queue, this, info, SignalsToIntercept);
 		if (epoll->_epollFd >= 0) {
-			_epoll = epoll;
-			_epoll->runInternalHandles();
+			_submit = [](void *ptr) { return reinterpret_cast<EPollData *>(ptr)->submit(); };
+			_poll = [](void *ptr) { return reinterpret_cast<EPollData *>(ptr)->poll(); };
+			_wait = [](void *ptr, TimeInterval ival) {
+				return reinterpret_cast<EPollData *>(ptr)->wait(ival);
+			};
+			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
+				return reinterpret_cast<EPollData *>(ptr)->run(ival, info.flags, info.timeout);
+			};
+			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
+				return reinterpret_cast<EPollData *>(ptr)->wakeup(info.flags, info.timeout);
+			};
+			_cancel = [](void *ptr) { reinterpret_cast<EPollData *>(ptr)->cancel(); };
+			_destroy = [](void *ptr) { delete reinterpret_cast<EPollData *>(ptr); };
+
+			_timer = [](QueueData *d, void *ptr, TimerInfo &&info) -> Rc<TimerHandle> {
+				auto data = reinterpret_cast<Queue::Data *>(d);
+				return Rc<TimerFdEPollHandle>::create(&data->_epollTimerFdClass, move(info));
+			};
+
+			_thread = [](QueueData *d, void *ptr) -> Rc<ThreadHandle> {
+				auto data = reinterpret_cast<Queue::Data *>(d);
+				return Rc<ThreadEPollHandle>::create(&data->_epollThreadClass);
+			};
+
+			_platformQueue = epoll;
+			epoll->runInternalHandles();
 			_engine = QueueEngine::EPoll;
 		} else {
 			epoll->~EPollData();
@@ -169,7 +140,7 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 	}
 }
 
-}
+} // namespace stappler::event
 
 namespace STAPPLER_VERSIONIZED stappler::event::platform {
 
@@ -178,6 +149,6 @@ Rc<QueueRef> getThreadQueue(QueueInfo &&info) {
 	return Queue::create(move(info));
 }
 
-}
+} // namespace stappler::event::platform
 
 #endif

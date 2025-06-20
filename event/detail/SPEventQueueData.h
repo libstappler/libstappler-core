@@ -25,6 +25,7 @@
 
 #include "SPEventQueue.h"
 #include "SPEventHandleClass.h"
+#include <sys/select.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -60,13 +61,16 @@ struct SP_PUBLIC PerformEngine : public mem_pool::AllocBase {
 };
 
 struct SP_PUBLIC QueueData : public PerformEngine {
-	using SubmitCallback = Status (*) (void *);
-	using PollCallback = uint32_t (*) (void *);
-	using WaitCallback = uint32_t (*) (void *, TimeInterval ival);
-	using RunCallback = Status (*) (void *, TimeInterval ival, QueueWakeupInfo &&info);
-	using WakeupCallback = Status (*) (void *, QueueWakeupInfo &&info);
-	using CancelCallback = void (*) (void *);
-	using DestroyCallback = void (*) (void *);
+	using SubmitCallback = Status (*)(void *);
+	using PollCallback = uint32_t (*)(void *);
+	using WaitCallback = uint32_t (*)(void *, TimeInterval ival);
+	using RunCallback = Status (*)(void *, TimeInterval ival, QueueWakeupInfo &&info);
+	using WakeupCallback = Status (*)(void *, QueueWakeupInfo &&info);
+	using CancelCallback = void (*)(void *);
+	using DestroyCallback = void (*)(void *);
+
+	using TimerCallback = Rc<TimerHandle> (*)(QueueData *, void *, TimerInfo &&info);
+	using ThreadCallback = Rc<ThreadHandle> (*)(QueueData *, void *);
 
 	QueueHandleClassInfo _info;
 	QueueFlags _flags = QueueFlags::None;
@@ -86,6 +90,8 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	WakeupCallback _wakeup = nullptr;
 	CancelCallback _cancel = nullptr;
 	DestroyCallback _destroy = nullptr;
+	TimerCallback _timer = nullptr;
+	ThreadCallback _thread = nullptr;
 
 	bool isValid() const { return _platformQueue != nullptr; }
 
@@ -116,11 +122,14 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 
 	void cancel();
 
+	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
+	Rc<ThreadHandle> addThreadHandle();
+
 	~QueueData();
 
 	QueueData(QueueRef *, QueueFlags);
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_DETAIL_SPEVENTQUEUEDATA_H_ */

@@ -35,9 +35,6 @@
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 struct SP_PUBLIC Queue::Data : public QueueData {
-	URingData *_uring = nullptr;
-	EPollData *_epoll = nullptr;
-
 	HandleClass _uringTimerFdClass;
 	HandleClass _uringTimerClass;
 	HandleClass _uringThreadEventFdClass;
@@ -55,20 +52,6 @@ struct SP_PUBLIC Queue::Data : public QueueData {
 	//Rc<DirHandle> openDir(OpenDirInfo &&);
 	//Rc<StatHandle> stat(StatOpInfo &&);
 
-	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
-	Rc<ThreadHandle> addThreadHandle();
-
-	Status submit();
-	uint32_t poll();
-	uint32_t wait(TimeInterval);
-	Status run(TimeInterval, QueueWakeupInfo &&);
-	Status wakeup(QueueWakeupInfo &&);
-
-	bool isValid() const;
-
-	void cancel();
-
-	~Data();
 	Data(QueueRef *q, const QueueInfo &info);
 };
 
@@ -76,25 +59,27 @@ template <typename HandleType, typename SourceType>
 void setupUringHandleClass(QueueHandleClassInfo *info, HandleClass *cl, bool suspendable) {
 	cl->info = info;
 
-	cl->createFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
-		static_assert(sizeof(SourceType) <= Handle::DataSize && std::is_standard_layout<SourceType>::value);
+	cl->createFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		static_assert(sizeof(SourceType) <= Handle::DataSize
+				&& std::is_standard_layout<SourceType>::value);
 		new (data) SourceType;
 		return HandleClass::create(cl, handle, data);
 	};
 	cl->destroyFn = HandleClass::destroy;
 
-	cl->runFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+	cl->runFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 		auto platformData = static_cast<Queue::Data *>(cl->info->data);
 		auto source = reinterpret_cast<SourceType *>(data);
 
-		auto status = static_cast<HandleType *>(handle)->rearm(platformData->_uring, source);
+		auto status = static_cast<HandleType *>(handle)->rearm(
+				reinterpret_cast<URingData *>(platformData->_platformQueue), source);
 		if (status == Status::Ok || status == Status::Done) {
 			return HandleClass::run(cl, handle, data);
 		}
 		return status;
 	};
 
-	cl->cancelFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], Status st) {
+	cl->cancelFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], Status st) {
 		auto source = reinterpret_cast<SourceType *>(data);
 
 		source->cancel();
@@ -104,34 +89,38 @@ void setupUringHandleClass(QueueHandleClassInfo *info, HandleClass *cl, bool sus
 	};
 
 	if (suspendable) {
-		cl->suspendFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		cl->suspendFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 			auto platformData = static_cast<Queue::Data *>(cl->info->data);
 			auto source = reinterpret_cast<SourceType *>(data);
 
-			auto status = static_cast<HandleType *>(handle)->disarm(platformData->_uring, source);
+			auto status = static_cast<HandleType *>(handle)->disarm(
+					reinterpret_cast<URingData *>(platformData->_platformQueue), source);
 			if (status == Status::Ok || status == Status::Done) {
 				return HandleClass::suspend(cl, handle, data);
 			}
 			return status;
 		};
 
-		cl->resumeFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		cl->resumeFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 			auto platformData = static_cast<Queue::Data *>(cl->info->data);
 			auto source = reinterpret_cast<SourceType *>(data);
 
 			auto status = HandleClass::resume(cl, handle, data);
 			if (status == Status::Ok || status == Status::Done) {
-				status = static_cast<HandleType *>(handle)->rearm(platformData->_uring, source);
+				status = static_cast<HandleType *>(handle)->rearm(
+						reinterpret_cast<URingData *>(platformData->_platformQueue), source);
 			}
 			return status;
 		};
 	}
 
-	cl->notifyFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], const NotifyData &n) {
+	cl->notifyFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize],
+						   const NotifyData &n) {
 		auto platformData = static_cast<Queue::Data *>(cl->info->data);
 		auto source = reinterpret_cast<SourceType *>(data);
 
-		static_cast<HandleType *>(handle)->notify(platformData->_uring, source, n);
+		static_cast<HandleType *>(handle)->notify(
+				reinterpret_cast<URingData *>(platformData->_platformQueue), source, n);
 	};
 }
 
@@ -139,25 +128,27 @@ template <typename HandleType, typename SourceType>
 void setupEpollHandleClass(QueueHandleClassInfo *info, HandleClass *cl, bool suspendable) {
 	cl->info = info;
 
-	cl->createFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
-		static_assert(sizeof(SourceType) <= Handle::DataSize && std::is_standard_layout<SourceType>::value);
+	cl->createFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		static_assert(sizeof(SourceType) <= Handle::DataSize
+				&& std::is_standard_layout<SourceType>::value);
 		new (data) SourceType;
 		return HandleClass::create(cl, handle, data);
 	};
 	cl->destroyFn = HandleClass::destroy;
 
-	cl->runFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+	cl->runFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 		auto platformData = static_cast<Queue::Data *>(cl->info->data);
 		auto source = reinterpret_cast<SourceType *>(data);
 
-		auto status = static_cast<HandleType *>(handle)->rearm(platformData->_epoll, source);
+		auto status = static_cast<HandleType *>(handle)->rearm(
+				reinterpret_cast<EPollData *>(platformData->_platformQueue), source);
 		if (status == Status::Ok || status == Status::Done) {
 			return HandleClass::run(cl, handle, data);
 		}
 		return status;
 	};
 
-	cl->cancelFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], Status st) {
+	cl->cancelFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], Status st) {
 		auto source = reinterpret_cast<SourceType *>(data);
 
 		source->cancel();
@@ -167,38 +158,42 @@ void setupEpollHandleClass(QueueHandleClassInfo *info, HandleClass *cl, bool sus
 	};
 
 	if (suspendable) {
-		cl->suspendFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		cl->suspendFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 			auto platformData = static_cast<Queue::Data *>(cl->info->data);
 			auto source = reinterpret_cast<SourceType *>(data);
 
-			auto status = static_cast<HandleType *>(handle)->disarm(platformData->_epoll, source);
+			auto status = static_cast<HandleType *>(handle)->disarm(
+					reinterpret_cast<EPollData *>(platformData->_platformQueue), source);
 			if (status == Status::Ok || status == Status::Done) {
 				return HandleClass::suspend(cl, handle, data);
 			}
 			return status;
 		};
 
-		cl->resumeFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
+		cl->resumeFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize]) {
 			auto platformData = static_cast<Queue::Data *>(cl->info->data);
 			auto source = reinterpret_cast<SourceType *>(data);
 
 			auto status = HandleClass::resume(cl, handle, data);
 			if (status == Status::Ok || status == Status::Done) {
-				status = static_cast<HandleType *>(handle)->rearm(platformData->_epoll, source);
+				status = static_cast<HandleType *>(handle)->rearm(
+						reinterpret_cast<EPollData *>(platformData->_platformQueue), source);
 			}
 			return status;
 		};
 	}
 
-	cl->notifyFn = [] (HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize], const NotifyData &n) {
+	cl->notifyFn = [](HandleClass *cl, Handle *handle, uint8_t data[Handle::DataSize],
+						   const NotifyData &n) {
 		auto platformData = static_cast<Queue::Data *>(cl->info->data);
 		auto source = reinterpret_cast<SourceType *>(data);
 
-		static_cast<HandleType *>(handle)->notify(platformData->_epoll, source, n);
+		static_cast<HandleType *>(handle)->notify(
+				reinterpret_cast<EPollData *>(platformData->_platformQueue), source, n);
 	};
 }
 
-}
+} // namespace stappler::event
 
 #endif
 
