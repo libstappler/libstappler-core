@@ -48,17 +48,20 @@
 #include "platform/fd/SPEventTimerFd.cc"
 #include "platform/fd/SPEventDirFd.cc"
 #include "platform/fd/SPEventPollFd.cc"
-
 #endif
 
 #if WIN32
-
 #include "platform/windows/SPEvent-windows.cc"
 #include "platform/windows/SPEvent-iocp.cc"
 #include "platform/windows/SPEventTimerIocp.cc"
 #include "platform/windows/SPEventThreadIocp.cc"
 #include "platform/windows/SPEventPollIocp.cc"
+#endif
 
+#if MACOS
+#include "platform/darwin/SPEvent-darwin.cc"
+#include "platform/darwin/SPEvent-kqueue.cc"
+#include "platform/darwin/SPEvent-runloop.cc"
 #endif
 
 #include "detail/SPEventHandleClass.cc"

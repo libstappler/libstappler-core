@@ -428,12 +428,18 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 				return -1;
 			}
 
-			auto projPath = StringView(argv[nextArg++]);
+			auto projPath = StringView(argv[nextArg++]).str<memory::StandartInterface>();
 
 			filesystem::Stat stat;
 			if (!filesystem::stat(FileInfo{projPath}, stat)) {
 				std::cerr << "Invalid path to project:" << projPath << "\n";
 				return -4;
+			}
+
+			if (!filepath::isAbsolute(projPath)) {
+				// note that filesystem::currentDir argument can not point above current dir's root
+				projPath = filepath::reconstructPath<Interface>(filepath::merge<memory::StandartInterface>(
+					filesystem::currentDir<memory::StandartInterface>(), projPath));
 			}
 
 			if (stat.type == FileType::File) {

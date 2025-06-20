@@ -261,7 +261,10 @@ SP_PUBLIC bool ftw(const FileInfo &, const Callback<bool(const FileInfo &, FileT
 // returns application current work dir from getcwd (or path inside current dir, if path is set
 // if relative == false - do not merge paths, if provided path is absolute
 //
-// Current work dir is technical concept. Use it only if there is a good reason for it
+// It's forbidden to use this function to acquire path above CWD for security reasons.
+// To acquire path above cwd, use currentDir without argument, then filepath::merge and filepath::reconstructPath
+//
+// Current work dir is the technical concept. Use it only if there is a good reason for it
 template <typename Interface>
 SP_PUBLIC auto currentDir(StringView = StringView(), bool relative = false) ->
 		typename Interface::StringType;

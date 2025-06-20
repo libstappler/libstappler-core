@@ -261,6 +261,55 @@ void QueueData::notify(Handle *handle, const NotifyData &data) {
 	_performEnabled = false;
 }
 
+Status QueueData::submit() {
+	if (_submit) {
+		return _submit(_platformQueue);
+	}
+	return Status::ErrorNotImplemented;
+}
+
+uint32_t QueueData::poll() {
+	if (_poll) {
+		return _poll(_platformQueue);
+	}
+	return 0;
+}
+
+uint32_t QueueData::wait(TimeInterval ival) {
+	if (_wait) {
+		return _wait(_platformQueue, ival);
+	}
+	return 0;
+}
+
+Status QueueData::run(TimeInterval ival, QueueWakeupInfo &&info) {
+	if (_run) {
+		return _run(_platformQueue, ival, move(info));
+	}
+	return Status::ErrorNotImplemented;
+}
+
+Status QueueData::wakeup(QueueWakeupInfo &&info) {
+	if (_wakeup) {
+		return _wakeup(_platformQueue, move(info));
+	}
+	return Status::ErrorNotImplemented;
+}
+
+void QueueData::cancel() {
+	if (_cancel) {
+		_cancel(_platformQueue);
+	}
+	cleanup();
+}
+
+QueueData::~QueueData() {
+	if (_platformQueue && _destroy) {
+		_destroy(_platformQueue);
+	}
+	_platformQueue = nullptr;
+}
+
 QueueData::QueueData(QueueRef *ref, QueueFlags flags)
 : PerformEngine(ref->getPool())
 , _info(QueueHandleClassInfo{ref, this, ref->getPool()})

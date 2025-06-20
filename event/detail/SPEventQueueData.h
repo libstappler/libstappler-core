@@ -60,6 +60,14 @@ struct SP_PUBLIC PerformEngine : public mem_pool::AllocBase {
 };
 
 struct SP_PUBLIC QueueData : public PerformEngine {
+	using SubmitCallback = Status (*) (void *);
+	using PollCallback = uint32_t (*) (void *);
+	using WaitCallback = uint32_t (*) (void *, TimeInterval ival);
+	using RunCallback = Status (*) (void *, TimeInterval ival, QueueWakeupInfo &&info);
+	using WakeupCallback = Status (*) (void *, QueueWakeupInfo &&info);
+	using CancelCallback = void (*) (void *);
+	using DestroyCallback = void (*) (void *);
+
 	QueueHandleClassInfo _info;
 	QueueFlags _flags = QueueFlags::None;
 	QueueEngine _engine = QueueEngine::None;
@@ -68,6 +76,18 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 
 	mem_pool::Set<Rc<Handle>> _pendingHandles;
 	mem_pool::Set<Rc<Handle>> _suspendableHandles;
+
+	void *_platformQueue = nullptr;
+
+	SubmitCallback _submit = nullptr;
+	PollCallback _poll = nullptr;
+	WaitCallback _wait = nullptr;
+	RunCallback _run = nullptr;
+	WakeupCallback _wakeup = nullptr;
+	CancelCallback _cancel = nullptr;
+	DestroyCallback _destroy = nullptr;
+
+	bool isValid() const { return _platformQueue != nullptr; }
 
 	bool isRunning() const { return _running; }
 	bool isWithinNotify() const { return _performEnabled; }
@@ -85,6 +105,18 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	void cleanup();
 
 	void notify(Handle *, const NotifyData &);
+
+	Status submit();
+
+	uint32_t poll();
+	uint32_t wait(TimeInterval ival);
+
+	Status run(TimeInterval ival, QueueWakeupInfo &&info);
+	Status wakeup(QueueWakeupInfo &&info);
+
+	void cancel();
+
+	~QueueData();
 
 	QueueData(QueueRef *, QueueFlags);
 };

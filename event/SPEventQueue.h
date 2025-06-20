@@ -45,7 +45,9 @@ enum class QueueEngine {
 	EPoll = 1 << 1, // Linux/Android epoll backend
 	ALooper = 1 << 2, // Android ALooper backend
 	IOCP = 1 << 3, // Windows IOCP
-	Any = URing | EPoll | ALooper | IOCP,
+	KQueue = 1 << 4, // BSD/MacOS kqueue
+	RunLoop = 1 << 5, // MacOS CFRunLoop
+	Any = URing | EPoll | ALooper | IOCP | KQueue | RunLoop,
 };
 
 SP_DEFINE_ENUM_AS_MASK(QueueEngine)
