@@ -61,6 +61,8 @@ public:
 	// Timeline is monotonically increased in each suspend/resume cycle for internal synchronization
 	uint32_t getTimeline() const { return _timeline; }
 
+	const HandleClass *getClass() const { return _class; }
+
 	bool isResumable() const;
 
 	// Pause handle's execution, handle should be resumable

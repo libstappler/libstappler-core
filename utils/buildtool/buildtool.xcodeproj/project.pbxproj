@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		260E80972E04AC70007F707F /* MacOsFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 260E80962E04AC69007F707F /* MacOsFramework.framework */; };
+		260E80972E04AC70007F707F /* MacOsFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 260E80962E04AC69007F707F /* MacOsFramework.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		260E80992E04AC80007F707F /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260E80982E04AC80007F707F /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -17,6 +17,13 @@
 			containerPortal = 260E7FC62E04AC69007F707F /* stappler-build.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = C593001D417325C0008CFEB9;
+			remoteInfo = MacOsFramework;
+		};
+		260E8BE42E062BFE007F707F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 260E7FC62E04AC69007F707F /* stappler-build.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = C53D000EB8BE372000CBC3AC;
 			remoteInfo = MacOsFramework;
 		};
 /* End PBXContainerItemProxy section */
@@ -103,6 +110,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				260E8BE52E062BFE007F707F /* PBXTargetDependency */,
 			);
 			name = buildtool;
 			packageProductDependencies = (
@@ -170,6 +178,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		260E8BE52E062BFE007F707F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = MacOsFramework;
+			targetProxy = 260E8BE42E062BFE007F707F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		260E642F2E00232B007F707F /* Debug */ = {

@@ -27,7 +27,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-class SP_PUBLIC FileOpHandle : public Handle {
+/*class SP_PUBLIC FileOpHandle : public Handle {
 public:
 	virtual ~FileOpHandle() = default;
 
@@ -68,7 +68,7 @@ class SP_PUBLIC InputOutputHandle : public Handle {
 
 class SP_PUBLIC FileHandle : public InputOutputHandle {
 
-};
+};*/
 
 }
 

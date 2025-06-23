@@ -34,11 +34,11 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 class Looper;
 class Queue;
 class Handle;
-class InputOutputHandle;
+/*class InputOutputHandle;
 class FileOpHandle;
 class DirHandle;
 class StatHandle;
-class FileHandle;
+class FileHandle;*/
 class TimerHandle;
 class ThreadHandle;
 
@@ -91,7 +91,7 @@ struct SP_PUBLIC TimerInfo {
 	ClockType type = ClockType::Default;
 };
 
-struct SP_PUBLIC FileOpInfo {
+/*struct SP_PUBLIC FileOpInfo {
 	DirHandle *root = nullptr;
 	StringView path;
 };
@@ -118,7 +118,7 @@ struct SP_PUBLIC OpenFileInfo {
 	StringView path;
 	OpenFlags flags = OpenFlags::None;
 	ProtFlags prot = ProtFlags::None;
-};
+};*/
 
 }
 

@@ -23,8 +23,89 @@
 #ifndef CORE_EVENT_PLATFORM_DARWIN_SPEVENT_RUNLOOP_H_
 #define CORE_EVENT_PLATFORM_DARWIN_SPEVENT_RUNLOOP_H_
 
+#include "SPEventQueue.h"
+#include "SPPlatformUnistd.h"
+#include "SPEventTimerHandle.h"
+#include "SPEventThreadHandle.h"
+#include "detail/SPEventQueueData.h"
 
+#include "CoreFoundation/CFRunLoop.h"
 
+namespace STAPPLER_VERSIONIZED stappler::event {
 
+static constexpr bool RUNLOOP_THREAD_NONBLOCK = false;
+
+struct SP_PUBLIC RunLoopTimerSource {
+	CFRunLoopTimerRef timer = nullptr;
+	TimeInterval timeout;
+	TimeInterval interval;
+	uint32_t count = 0;
+	uint32_t value = 0;
+
+	bool init(const TimerInfo &info);
+	void cancel();
+
+	double getNextInterval() const;
+};
+
+class SP_PUBLIC RunLoopTimerHandle : public TimerHandle {
+public:
+	virtual ~RunLoopTimerHandle() = default;
+
+	bool init(HandleClass *, TimerInfo &&);
+
+	Status rearm(RunLoopData *, RunLoopTimerSource *);
+	Status disarm(RunLoopData *, RunLoopTimerSource *);
+
+	void notify(RunLoopData *, RunLoopTimerSource *source, const NotifyData &);
+};
+
+struct SP_PUBLIC RunLoopData : public PlatformQueueData {
+	CFRunLoopRef _runLoop = nullptr;
+
+	void addTimer(RunLoopTimerHandle *handle, RunLoopTimerSource *);
+	void removeTimer(RunLoopTimerHandle *handle, RunLoopTimerSource *);
+
+	void trigger(Handle *handle, NotifyData notifyData);
+
+	uint32_t enter(RunContext *ctx, TimeInterval ival);
+
+	Status submit();
+	uint32_t poll();
+	uint32_t wait(TimeInterval);
+	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
+
+	Status wakeup(WakeupFlags, TimeInterval);
+
+	void cancel();
+
+	RunLoopData(QueueRef *, Queue::Data *data, const QueueInfo &info);
+	~RunLoopData();
+};
+
+struct SP_PUBLIC RunLoopThreadSource {
+	bool init();
+	void cancel();
+};
+
+class SP_PUBLIC RunLoopThreadHandle : public ThreadHandle {
+public:
+	virtual ~RunLoopThreadHandle() = default;
+
+	bool init(HandleClass *);
+
+	Status rearm(RunLoopData *, RunLoopThreadSource *);
+	Status disarm(RunLoopData *, RunLoopThreadSource *);
+
+	void notify(RunLoopData *, RunLoopThreadSource *, const NotifyData &);
+
+	virtual Status perform(Rc<thread::Task> &&task) override;
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) override;
+
+protected:
+	std::mutex _mutex;
+};
+
+}
 
 #endif /* CORE_EVENT_PLATFORM_DARWIN_SPEVENT_RUNLOOP_H_ */

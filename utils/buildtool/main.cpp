@@ -33,6 +33,8 @@
 #include "SPPlatformUnistd.h"
 #include "XCodeProject.h"
 
+#include "stappler-appconfig.h"
+
 namespace stappler::buildtool {
 
 // Выбираем стандартную подсистему памяти для текущего пространства имён

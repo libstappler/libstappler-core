@@ -86,7 +86,7 @@ public:
 	// wait until next event, or timeout
 	uint32_t wait(TimeInterval = TimeInterval());
 
-	// run for some time or infinite (when no timeout)
+	// Run for some time or infinite
 	// QueueWakeupFlags can be defined for a wakeup on timer
 	//
 	// Done when timeout expired
@@ -95,7 +95,7 @@ public:
 	// ErrorCancelled when graceful wakeup failed on timeout
 	//
 	// You can set QueueWakeupInfo for timeout wakeup mode
-	Status run(TimeInterval = TimeInterval(), QueueWakeupInfo && = QueueWakeupInfo());
+	Status run(TimeInterval = TimeInterval::Infinite, QueueWakeupInfo && = QueueWakeupInfo());
 
 	// wakeup looper from `run`
 	// returns ErrorNotImplemented if requested parameters is not supported

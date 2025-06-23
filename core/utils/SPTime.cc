@@ -35,6 +35,8 @@ static constexpr uint64_t SP_USEC_PER_SEC(1000000);
 
 using sp_time_t = uint32_t;
 
+TimeInterval TimeInterval::Infinite(maxOf<uint64_t>());
+
 TimeInterval TimeInterval::between(const Time &v1, const Time &v2) {
 	if (v1 > v2) {
 		return TimeInterval(v1._value - v2._value);
@@ -54,6 +56,9 @@ uint64_t TimeStorage::toSeconds() const {
 }
 float TimeStorage::toFloatSeconds() const {
 	return _value / 1000000.0f;
+}
+double TimeStorage::toDoubleSeconds() const {
+	return _value / 1000000.0;
 }
 
 struct tm TimeStorage::asLocal() const {

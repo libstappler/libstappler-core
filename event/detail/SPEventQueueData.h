@@ -29,6 +29,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+struct PlatformQueueData;
+
 // PerformEngine can be used for resumable nested 'perform' variants
 // Action, that performed within engine, can safely call Queue::run, that also can cause 'perform'
 struct SP_PUBLIC PerformEngine : public mem_pool::AllocBase {
@@ -81,7 +83,7 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	mem_pool::Set<Rc<Handle>> _pendingHandles;
 	mem_pool::Set<Rc<Handle>> _suspendableHandles;
 
-	void *_platformQueue = nullptr;
+	PlatformQueueData *_platformQueue = nullptr;
 
 	SubmitCallback _submit = nullptr;
 	PollCallback _poll = nullptr;
@@ -128,6 +130,50 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	~QueueData();
 
 	QueueData(QueueRef *, QueueFlags);
+};
+
+struct SP_PUBLIC PlatformQueueData : public mem_pool::AllocBase {
+	struct RunContext {
+		enum CallMode {
+			Poll,
+			Wait,
+			Run,
+		};
+
+		enum State {
+			Running,
+			Signaled, // next control function should send CFRunLoopStop
+			Stopped, // CFRunLoopStop was sent
+		};
+
+		CallMode mode = Poll;
+		State state = Running;
+		PlatformQueueData *queue = nullptr;
+
+		WakeupFlags runWakeupFlags = WakeupFlags::None;
+		uint32_t wakeupCounter = 0;
+		Status wakeupStatus = Status::Suspended;
+
+		RunContext *prev = nullptr;
+		uint32_t nevents = 0;
+	};
+
+	using StopContextCallback = void (*) (RunContext *);
+
+	QueueRef *_queue = nullptr;
+	Queue::Data *_data = nullptr;
+	QueueFlags _flags = QueueFlags::None;
+	RunContext *_runContext;
+
+	StopContextCallback _stopContext = nullptr;
+
+	Status suspendHandles();
+	Status stopContext(RunContext *, WakeupFlags, bool external);
+
+	void pushContext(RunContext *, RunContext::CallMode);
+	void popContext(RunContext *);
+
+	PlatformQueueData(QueueRef *, Queue::Data *data, QueueFlags);
 };
 
 } // namespace stappler::event

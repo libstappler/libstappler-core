@@ -128,13 +128,13 @@ static void makeAppConfigSourceData(makefile::Makefile *make, const CallbackStre
 			++str;
 			auto expr = getExpression(make, str);
 			if (!expr.empty()) {
-				cb << "\tSharedSymbol(\"" << name << "\", &" << name << "),\n";
+				cb << "\tSharedSymbol(\"" << name << "\", " << name << "),\n";
 			}
 		}
 	});
 	cb << "};\n";
 	cb << "\n";
-	cb << "static SharedModule s_bitmapSharedModule(\"appconfig\", s_appconfigSharedSymbols, "
+	cb << "static SharedModule s_appConfigSharedModule(\"appconfig\", s_appconfigSharedSymbols, "
 	"sizeof(s_appconfigSharedSymbols) / sizeof(SharedSymbol));\n";
 	cb << "} // namespace stappler::appconfig\n";
 }

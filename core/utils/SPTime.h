@@ -92,6 +92,7 @@ public:
 	uint64_t toMilliseconds() const;
 	uint64_t toSeconds() const;
 	float toFloatSeconds() const;
+	double toDoubleSeconds() const;
 
 	uint64_t toMicros() const { return toMicroseconds(); }
 	uint64_t toMillis() const { return toMilliseconds(); }
@@ -129,6 +130,8 @@ protected:
 
 class SP_PUBLIC TimeInterval : public TimeStorage {
 public:
+	static TimeInterval Infinite;
+
 	static TimeInterval between(const Time &, const Time &);
 
 	constexpr static TimeInterval microseconds(uint64_t mksec) {

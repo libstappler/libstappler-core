@@ -55,7 +55,8 @@ SP_DEFINE_ENUM_AS_MASK(QueueEngine)
 enum class WakeupFlags {
 	None,
 	Graceful = 1 << 0,
-	SuspendThreads = 1 << 1 // Looper should suspend worker threads
+	SuspendThreads = 1 << 1, // Looper should suspend worker threads
+	ContextDefault = 1 << 2, // Use default wakeup flags, passed into 'run'
 };
 
 SP_DEFINE_ENUM_AS_MASK(WakeupFlags)
@@ -78,6 +79,8 @@ struct SP_PUBLIC QueueInfo {
 
 // If Graceful flag is set - wait until all operations are completed, and forbid a new ones from running
 // If timeout is set, queue will issue a graceful wakeup, but after timeout hard wakeup will be performed
+// Only full-async backends (like io_uring) actually use timeout value, on other backends graceful wakeup
+// blocks thread until done
 struct SP_PUBLIC QueueWakeupInfo {
 	WakeupFlags flags = WakeupFlags::None;
 	TimeInterval timeout = TimeInterval();

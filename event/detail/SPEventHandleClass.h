@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 struct QueueData;
 
 struct SP_PUBLIC NotifyData {
-	int32_t result = 0;
+	intptr_t result = 0;
 	uint32_t queueFlags = 0;
 	uint32_t userFlags = 0;
 };

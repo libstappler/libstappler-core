@@ -332,4 +332,96 @@ QueueData::QueueData(QueueRef *ref, QueueFlags flags)
 	_suspendableHandles.set_memory_persistent(true);
 }
 
+
+Status PlatformQueueData::suspendHandles() {
+	if (!_runContext) {
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	_runContext->wakeupStatus = Status::Suspended;
+
+	auto nhandles = _data->suspendAll();
+	_runContext->wakeupCounter = nhandles;
+
+	return Status::Done;
+}
+
+Status PlatformQueueData::stopContext(RunContext *contextToStop, WakeupFlags flags, bool externalCall) {
+	if (!_runContext) {
+		return Status::ErrorInvalidArguemnt;
+	}
+
+	Status status = Status::Ok;
+
+	if (contextToStop && contextToStop != _runContext) {
+		auto ctx = _runContext;
+		while (ctx && ctx != contextToStop) {
+			ctx = ctx->prev;
+		}
+
+		if (ctx && ctx == contextToStop) {
+			ctx = _runContext;
+			while (ctx && ctx != contextToStop) {
+				if (ctx->state == RunContext::Running) {
+					ctx->state = RunContext::Signaled;
+				}
+				ctx = ctx->prev;
+			}
+
+			if (contextToStop->state == RunContext::Running) {
+				contextToStop->state = RunContext::Signaled;
+			}
+		} else {
+			status = Status::ErrorNotFound;
+		}
+	} else if (_runContext->state == RunContext::Running) {
+		_runContext->state = RunContext::Signaled;
+	}
+
+	if (_runContext->state == RunContext::Signaled) {
+		if (hasFlag(flags, WakeupFlags::ContextDefault)) {
+			flags = _runContext->runWakeupFlags;
+		}
+
+		// stop top-level context
+		if (hasFlag(flags, WakeupFlags::Graceful)) {
+			if (suspendHandles() == Status::Done) {
+				_runContext->wakeupStatus = Status::Ok; // graceful wakeup
+			}
+			status = Status::Suspended;
+		} else {
+			_runContext->wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
+			status = Status::Ok;
+		}
+
+		// this stop will terminate top-level enter()
+		if (_stopContext) {
+			_stopContext(_runContext);
+		}
+
+		// prevent from multiple stops
+		_runContext->state = RunContext::Stopped;
+	}
+
+	return status;
+}
+
+void PlatformQueueData::pushContext(RunContext *ctx, RunContext::CallMode m) {
+	ctx->mode = m;
+	ctx->prev = _runContext;
+	ctx->queue = this;
+	_runContext = ctx;
+}
+
+void PlatformQueueData::popContext(RunContext *ctx) {
+	_runContext = ctx->prev;
+
+	if (_runContext && _runContext->state == RunContext::Signaled) {
+		stopContext(_runContext, _runContext->runWakeupFlags, false);
+	}
+}
+
+PlatformQueueData::PlatformQueueData(QueueRef *q, Queue::Data *data, QueueFlags f)
+: _queue(q), _data(data), _flags(f) { }
+
 } // namespace stappler::event

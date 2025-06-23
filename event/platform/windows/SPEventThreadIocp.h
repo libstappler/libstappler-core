@@ -38,7 +38,6 @@ struct SP_PUBLIC ThreadIocpSource {
 	void cancel();
 };
 
-// eventfd - based handler
 class SP_PUBLIC ThreadIocpHandle : public ThreadHandle {
 public:
 	virtual ~ThreadIocpHandle() = default;
