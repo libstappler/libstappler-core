@@ -27,15 +27,15 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 Status TaskQueue::OutputContext::perform(Rc<thread::Task> &&task) {
-    if (!task) {
-        return Status::ErrorInvalidArguemnt;
-    }
+	if (!task) {
+		return Status::ErrorInvalidArguemnt;
+	}
 
 	task->addRef(queue);
 
 	outputMutex.lock();
 	outputQueue.push_back(sp::move(task));
-	++ outputCounter;
+	++outputCounter;
 	outputMutex.unlock();
 
 	if (wakeup) {
@@ -46,11 +46,12 @@ Status TaskQueue::OutputContext::perform(Rc<thread::Task> &&task) {
 	return Status::Ok;
 }
 
-Status TaskQueue::OutputContext::perform(mem_std::Function<void()> &&func, Ref *target) {
+Status TaskQueue::OutputContext::perform(mem_std::Function<void()> &&func, Ref *target,
+		StringView) {
 	outputMutex.lock();
 	outputCallbacks.emplace_back(sp::move(func), target);
-    ++ outputCounter;
-    outputMutex.unlock();
+	++outputCounter;
+	outputMutex.unlock();
 
 	if (wakeup) {
 		wakeup();
@@ -66,12 +67,10 @@ TaskQueue::~TaskQueue() {
 }
 
 bool TaskQueue::init(TaskQueueInfo &&info) {
-	if (!ThreadPool::init(ThreadPoolInfo{
-		.flags = info.flags,
-		.name = info.name,
-		.threadCount = info.threadCount,
-		.complete = &_outContext
-	})) {
+	if (!ThreadPool::init(ThreadPoolInfo{.flags = info.flags,
+			.name = info.name,
+			.threadCount = info.threadCount,
+			.complete = &_outContext})) {
 		return false;
 	}
 
@@ -109,9 +108,7 @@ void TaskQueue::update(uint32_t *count) {
 			task->run();
 		}
 
-		for (Pair<std::function<void()>, Rc<Ref>> &task : callbacks) {
-			task.first();
-		}
+		for (Pair<std::function<void()>, Rc<Ref>> &task : callbacks) { task.first(); }
 	}, _outContext.pool->getPool());
 
 	if (count) {
@@ -123,23 +120,15 @@ void TaskQueue::update(uint32_t *count) {
 	}
 }
 
-size_t TaskQueue::getOutputCounter() const {
-	return _outContext.outputCounter.load();
-}
+size_t TaskQueue::getOutputCounter() const { return _outContext.outputCounter.load(); }
 
-void TaskQueue::lock() {
-	_context.inputMutexQueue.lock();
-}
+void TaskQueue::lock() { _context.inputMutexQueue.lock(); }
 
-void TaskQueue::unlock() {
-	_context.inputMutexQueue.unlock();
-}
+void TaskQueue::unlock() { _context.inputMutexQueue.unlock(); }
 
 Status TaskQueue::waitForAll(TimeInterval iv) {
 	update();
-	while (_context.tasksCounter.load() != 0) {
-		wait(iv, nullptr);
-	}
+	while (_context.tasksCounter.load() != 0) { wait(iv, nullptr); }
 	return Status::Ok;
 }
 
@@ -158,9 +147,9 @@ Status TaskQueue::wait(TimeInterval iv, uint32_t *count) {
 		update(count);
 		return Status::Ok;
 	}
-	auto ret = _outContext.outputCondition.wait_for(waitLock, std::chrono::microseconds(iv.toMicros()), [&, this] {
-		return _outContext.outputCounter.load() > 0;
-	});
+	auto ret =
+			_outContext.outputCondition.wait_for(waitLock, std::chrono::microseconds(iv.toMicros()),
+					[&, this] { return _outContext.outputCounter.load() > 0; });
 	if (!ret) {
 		if (count) {
 			*count = 0;
@@ -173,4 +162,4 @@ Status TaskQueue::wait(TimeInterval iv, uint32_t *count) {
 	}
 }
 
-}
+} // namespace stappler::thread

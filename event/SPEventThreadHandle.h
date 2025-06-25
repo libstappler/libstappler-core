@@ -40,16 +40,19 @@ public:
 	virtual void wakeup();
 
 	// Perform Task's complete functions on this event queue
-	virtual Status perform(Rc<thread::Task> &&task) { return Status::ErrorNotImplemented; }
+	virtual Status perform(Rc<thread::Task> &&task) override { return Status::ErrorNotImplemented; }
 
 	// Perform function on this event queue
-	virtual Status perform(mem_std::Function<void()> &&func, Ref *target = nullptr, StringView tag = STAPPLER_LOCATION) { return Status::ErrorNotImplemented; }
+	virtual Status perform(mem_std::Function<void()> &&func, Ref *target = nullptr,
+			StringView tag = STAPPLER_LOCATION) override {
+		return Status::ErrorNotImplemented;
+	}
 
 protected:
 	uint32_t performAll(const Callback<void(uint32_t)> &unlockCallback);
 
 	struct CallbackInfo {
-		mem_std::Function<void()>fn;
+		mem_std::Function<void()> fn;
 		Rc<Ref> ref;
 		StringView tag;
 	};
@@ -65,6 +68,6 @@ protected:
 	uint64_t _switchTimer = 0;
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_SPEVENTTHREADHANDLE_H_ */

@@ -57,7 +57,7 @@ Status KQueueData::runPoll(TimeInterval ival) {
 	int nevents = 0;
 	struct timespec timeout;
 	timeout.tv_sec = ival.toSeconds();
-	timeout.tv_nsec = (ival.toMicroseconds() - ival.toSeconds() * 1'000'000) * 1000;
+	timeout.tv_nsec = (ival.toMicroseconds() - ival.toSeconds() * 1'000'000) * 1'000;
 
 	nevents = kevent(_kqueueFd, nullptr, 0, _events.data(), static_cast<int>(_events.size()),
 			(ival == TimeInterval::Infinite) ? nullptr : &timeout);
@@ -75,7 +75,7 @@ Status KQueueData::runPoll(TimeInterval ival) {
 uint32_t KQueueData::processEvents(RunContext *ctx) {
 	uint32_t count = 0;
 
-	auto processHandleEvent = [&] (const struct kevent &ev) {
+	auto processHandleEvent = [&](const struct kevent &ev) {
 		if (ev.udata && ev.udata != this) {
 			auto h = (Handle *)ev.udata;
 			auto refId = h->retain();
@@ -97,28 +97,18 @@ uint32_t KQueueData::processEvents(RunContext *ctx) {
 		case EVFILT_TIMER:
 			if (ev.udata == this) {
 				// self-wakeup timer from run()
-				stopContext(reinterpret_cast<RunContext *>(ev.ident),
-					WakeupFlags::ContextDefault, false);
+				stopContext(reinterpret_cast<RunContext *>(ev.ident), WakeupFlags::ContextDefault,
+						false);
 			} else {
 				processHandleEvent(ev);
 			}
 			break;
-		case EVFILT_SIGNAL:
-			break;
+		case EVFILT_SIGNAL: break;
 		case EVFILT_USER:
 			if (ev.ident == reinterpret_cast<uintptr_t>(this)) {
 				// user wakeup signal - terminate current context
 				if (ev.fflags & KQUEUE_CANCEL_FLAG) {
-					// cancel() - terminate all calls
-					if (_runContext) {
-						// find and wakeup root context
-						auto rootCtx = _runContext;
-						while (rootCtx->prev) {
-							rootCtx = rootCtx->prev;
-						}
-
-						stopContext(rootCtx, WakeupFlags::ContextDefault, true);
-					}
+					stopRootContext(WakeupFlags::ContextDefault, true);
 				} else {
 					stopContext(ctx, WakeupFlags(ev.fflags & NOTE_FFLAGSMASK), true);
 				}
@@ -126,9 +116,7 @@ uint32_t KQueueData::processEvents(RunContext *ctx) {
 				processHandleEvent(ev);
 			}
 			break;
-		default:
-			processHandleEvent(ev);
-			break;
+		default: processHandleEvent(ev); break;
 		}
 
 		++count;
@@ -178,7 +166,7 @@ Status KQueueData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval 
 	struct kevent events[1];
 	if (ival && ival != TimeInterval::Infinite) {
 		EV_SET(&events[0], reinterpret_cast<intptr_t>(&ctx), EVFILT_TIMER, EV_ADD | EV_ONESHOT,
-			   NOTE_USECONDS, ival.toMicros(), reinterpret_cast<void *>(toInt(wakeupFlags)));
+				NOTE_USECONDS, ival.toMicros(), reinterpret_cast<void *>(toInt(wakeupFlags)));
 	}
 
 	update(makeSpanView(events, ival ? 2 : 1));
@@ -209,7 +197,7 @@ Status KQueueData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval 
 Status KQueueData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
 	struct kevent signal;
 	EV_SET(&signal, reinterpret_cast<uintptr_t>(this), EVFILT_USER, 0,
-		   NOTE_TRIGGER | (NOTE_FFLAGSMASK & toInt(flags)), 0, this);
+			NOTE_TRIGGER | (NOTE_FFLAGSMASK & toInt(flags)), 0, this);
 	update(signal);
 	return Status::Ok;
 }
@@ -217,7 +205,7 @@ Status KQueueData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
 void KQueueData::cancel() {
 	struct kevent signal;
 	EV_SET(&signal, reinterpret_cast<uintptr_t>(this), EVFILT_USER, 0,
-		   NOTE_TRIGGER | (NOTE_FFLAGSMASK & KQUEUE_CANCEL_FLAG), 0, this);
+			NOTE_TRIGGER | (NOTE_FFLAGSMASK & KQUEUE_CANCEL_FLAG), 0, this);
 	update(signal);
 }
 
@@ -247,11 +235,9 @@ KQueueData::KQueueData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Sp
 	mem_std::Vector<struct kevent> ev;
 	ev.reserve(sigs.size() + 1);
 
-	EV_SET(&ev.emplace_back(), reinterpret_cast<uintptr_t>(this), EVFILT_USER, EV_ADD | EV_CLEAR, NOTE_FFNOP,
-		   0, this);
-	for (auto &it : sigs) {
-		EV_SET(&ev.emplace_back(), it, EV_ADD, EVFILT_SIGNAL, 0, 0, this);
-	}
+	EV_SET(&ev.emplace_back(), reinterpret_cast<uintptr_t>(this), EVFILT_USER, EV_ADD | EV_CLEAR,
+			NOTE_FFNOP, 0, this);
+	for (auto &it : sigs) { EV_SET(&ev.emplace_back(), it, EV_ADD, EVFILT_SIGNAL, 0, 0, this); }
 
 	update(ev);
 }
@@ -280,7 +266,8 @@ uint64_t KQueueTimerSource::getNextInterval() const {
 }
 
 bool KQueueTimerHandle::init(HandleClass *cl, TimerInfo &&info) {
-	static_assert(sizeof(KQueueTimerSource) <= DataSize && std::is_standard_layout<KQueueTimerSource>::value);
+	static_assert(sizeof(KQueueTimerSource) <= DataSize
+			&& std::is_standard_layout<KQueueTimerSource>::value);
 
 	if (!TimerHandle::init(cl, info.completion)) {
 		return false;
@@ -301,9 +288,11 @@ Status KQueueTimerHandle::rearm(KQueueData *queue, KQueueTimerSource *source) {
 	if (status == Status::Ok) {
 		struct kevent ev;
 		if (source->oneshot) {
-			EV_SET(&ev, reinterpret_cast<intptr_t>(source), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS, source->getNextInterval(), this);
+			EV_SET(&ev, reinterpret_cast<intptr_t>(source), EVFILT_TIMER, EV_ADD | EV_ONESHOT,
+					NOTE_USECONDS, source->getNextInterval(), this);
 		} else {
-			EV_SET(&ev, reinterpret_cast<intptr_t>(source), EVFILT_TIMER, EV_ADD | EV_CLEAR, NOTE_USECONDS, source->getNextInterval(), this);
+			EV_SET(&ev, reinterpret_cast<intptr_t>(source), EVFILT_TIMER, EV_ADD | EV_CLEAR,
+					NOTE_USECONDS, source->getNextInterval(), this);
 		}
 		status = queue->update(ev);
 	}
@@ -316,14 +305,15 @@ Status KQueueTimerHandle::disarm(KQueueData *queue, KQueueTimerSource *source) {
 		struct kevent ev;
 		EV_SET(&ev, reinterpret_cast<intptr_t>(source), EVFILT_TIMER, EV_DELETE, 0, 0, this);
 		status = queue->update(ev);
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
 	return status;
 }
 
-void KQueueTimerHandle::notify(KQueueData *queue, KQueueTimerSource *source, const NotifyData &data) {
+void KQueueTimerHandle::notify(KQueueData *queue, KQueueTimerSource *source,
+		const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
@@ -336,7 +326,7 @@ void KQueueTimerHandle::notify(KQueueData *queue, KQueueTimerSource *source, con
 	auto count = source->count;
 	auto current = source->value;
 
-	++ current;
+	++current;
 	source->value = current;
 
 	if (count == TimerInfo::Infinite || current < count) {
@@ -353,14 +343,13 @@ void KQueueTimerHandle::notify(KQueueData *queue, KQueueTimerSource *source, con
 }
 
 
-bool KQueueThreadSource::init() {
-	return true;
-}
+bool KQueueThreadSource::init() { return true; }
 
 void KQueueThreadSource::cancel() { }
 
 bool KQueueThreadHandle::init(HandleClass *cl) {
-	static_assert(sizeof(KQueueThreadSource) <= DataSize && std::is_standard_layout<KQueueThreadSource>::value);
+	static_assert(sizeof(KQueueThreadSource) <= DataSize
+			&& std::is_standard_layout<KQueueThreadSource>::value);
 
 	if (!ThreadHandle::init(cl)) {
 		return false;
@@ -374,7 +363,8 @@ Status KQueueThreadHandle::rearm(KQueueData *queue, KQueueThreadSource *source) 
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
 		struct kevent ev;
-		EV_SET(&ev, reinterpret_cast<uintptr_t>(source), EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, this);
+		EV_SET(&ev, reinterpret_cast<uintptr_t>(source), EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0,
+				this);
 		status = queue->update(ev);
 	}
 	return status;
@@ -390,16 +380,13 @@ Status KQueueThreadHandle::disarm(KQueueData *queue, KQueueThreadSource *source)
 	return status;
 }
 
-void KQueueThreadHandle::notify(KQueueData *queue, KQueueThreadSource *source, const NotifyData &data) {
+void KQueueThreadHandle::notify(KQueueData *queue, KQueueThreadSource *source,
+		const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return; // just exit
 	}
 
-	auto performUnlock = [&] {
-		performAll([&] (uint32_t count) {
-			_mutex.unlock();
-		});
-	};
+	auto performUnlock = [&] { performAll([&](uint32_t count) { _mutex.unlock(); }); };
 
 	if (data.result > 0) {
 		if constexpr (KQUEUE_THREAD_NONBLOCK) {
@@ -440,4 +427,4 @@ Status KQueueThreadHandle::perform(mem_std::Function<void()> &&func, Ref *target
 	return Status::Ok;
 }
 
-}
+} // namespace stappler::event

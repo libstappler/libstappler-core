@@ -30,13 +30,14 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 struct SP_PUBLIC EventFdSource {
 	static constexpr int TARGET_BUFFER_COUNT = Handle::DataSize / sizeof(uint64_t) - 1;
 
-	int fd = -1;
+	uint32_t eventValue; // use atomic accessors
+	int32_t fd = -1;
 	union {
 		struct {
 			epoll_event event;
 			uint64_t eventTarget;
 		};
-		uint64_t target[TARGET_BUFFER_COUNT] = { 0 };
+		uint64_t target[TARGET_BUFFER_COUNT] = {0};
 	};
 
 	bool init();
@@ -50,7 +51,7 @@ public:
 	bool init(HandleClass *, CompletionHandle<void> &&);
 
 	Status read(uint64_t *target = nullptr);
-	Status write(uint64_t = 1);
+	Status write(uint64_t = 1, uint32_t value = 0);
 };
 
 #ifdef SP_EVENT_URING
@@ -87,6 +88,6 @@ public:
 };
 #endif
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_FD_SPEVENTEVENTFD_H_ */

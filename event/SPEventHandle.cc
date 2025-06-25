@@ -28,14 +28,13 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-Handle::~Handle() { }
-
-Handle::Handle() {
+Handle::~Handle() {
 	if (_class) {
 		_class->destroyFn(_class, this, _data);
 	}
-	::memset(_data, 0, DataSize);
 }
+
+Handle::Handle() { ::memset(_data, 0, DataSize); }
 
 bool Handle::init(HandleClass *cl, CompletionHandle<void> &&c) {
 	_class = cl;
@@ -45,9 +44,7 @@ bool Handle::init(HandleClass *cl, CompletionHandle<void> &&c) {
 	return true;
 }
 
-bool Handle::isResumable() const {
-	return _class->suspendFn && _class->resumeFn;
-}
+bool Handle::isResumable() const { return _class->suspendFn && _class->resumeFn; }
 
 Status Handle::pause() {
 	if (!isResumable()) {
@@ -95,8 +92,10 @@ Status Handle::resume() {
 
 Status Handle::cancel(Status st, uint32_t value) {
 	if (!isValidCancelStatus(st)) {
-		log::warn("event::Handle", "Handle::cancel should be called with Status::Done or one of the error statuses."
-				" It's undefined behavior otherwise");
+		log::
+				warn("event::Handle",
+						"Handle::cancel should be called with Status::Done or one of the error "
+						"statuses." " It's undefined behavior otherwise");
 		return Status::ErrorInvalidArguemnt;
 	}
 
@@ -111,17 +110,19 @@ Status Handle::cancel(Status st, uint32_t value) {
 			if (status != Status::Ok) {
 				return Status::ErrorNotPermitted;
 			}
+			_status = Status::Declined;
 		} else {
 			return Status::ErrorNotPermitted;
 		}
 	}
 
 	if (_status == Status::Suspended || _status == Status::Declined) {
+		auto prevStatus = _status;
 		_status = st;
 
 		finalize(value, _status);
 
-		return _class->cancelFn(_class, this, _data, _status);
+		return _class->cancelFn(_class, this, _data, prevStatus);
 	} else {
 		return Status::ErrorAlreadyPerformed;
 	}
@@ -236,9 +237,7 @@ bool DirHandle::init(QueueRef *q, QueueData *d, OpenDirInfo &&info) {
 	return true;
 }*/
 
-ThreadHandle::~ThreadHandle() {
-	_engine->cleanup();
-}
+ThreadHandle::~ThreadHandle() { _engine->cleanup(); }
 
 bool ThreadHandle::init(HandleClass *cl) {
 	if (!Handle::init(cl, CompletionHandle<void>())) {
@@ -273,18 +272,10 @@ uint32_t ThreadHandle::performAll(const Callback<void(uint32_t)> &unlockCallback
 
 	unlockCallback(static_cast<uint32_t>(stack.size() + callbacks.size()));
 
-	for (auto &it : stack) {
-		_engine->perform(move(it));
-	}
-	for (auto &it : callbacks) {
-		_engine->perform(sp::move(it.fn), move(it.ref), it.tag);
-	}
-	for (auto &it : _unsafeQueue) {
-		_engine->perform(move(it));
-	}
-	for (auto &it : _unsafeCallbacks) {
-		_engine->perform(sp::move(it.fn), move(it.ref), it.tag);
-	}
+	for (auto &it : stack) { _engine->perform(move(it)); }
+	for (auto &it : callbacks) { _engine->perform(sp::move(it.fn), move(it.ref), it.tag); }
+	for (auto &it : _unsafeQueue) { _engine->perform(move(it)); }
+	for (auto &it : _unsafeCallbacks) { _engine->perform(sp::move(it.fn), move(it.ref), it.tag); }
 
 	stack.clear();
 	callbacks.clear();
@@ -300,4 +291,4 @@ uint32_t ThreadHandle::performAll(const Callback<void(uint32_t)> &unlockCallback
 	return ret;
 }
 
-}
+} // namespace stappler::event

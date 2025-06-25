@@ -62,8 +62,11 @@ Status EventFdHandle::read(uint64_t *target) {
 	return Status::Ok;
 }
 
-Status EventFdHandle::write(uint64_t val) {
+Status EventFdHandle::write(uint64_t val, uint32_t value) {
 	auto source = reinterpret_cast<EventFdSource *>(_data);
+	if (value) {
+		__atomic_or_fetch(&source->eventValue, value, __ATOMIC_SEQ_CST);
+	}
 	auto ret = ::eventfd_write(source->fd, val);
 	if (ret < 0) {
 		return status::errnoToStatus(errno);
@@ -79,7 +82,7 @@ Status EventFdURingHandle::rearm(URingData *uring, EventFdSource *source) {
 
 		status = uring->pushRead(source->fd, (uint8_t *)source->target, sizeof(uint64_t),
 				reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
-				| (_timeline & URING_USERDATA_SERIAL_MASK));
+						| (_timeline & URING_USERDATA_SERIAL_MASK));
 	}
 	return status;
 }
@@ -88,8 +91,9 @@ Status EventFdURingHandle::disarm(URingData *uring, EventFdSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
-				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
-		++ _timeline;
+						| (_timeline & URING_USERDATA_SERIAL_MASK),
+				URingCancelFlags::Suspend);
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
@@ -105,8 +109,8 @@ void EventFdURingHandle::notify(URingData *uring, EventFdSource *source, const N
 
 	if (notify.result == sizeof(uint64_t)) {
 		rearm(uring, source);
-		sendCompletion(0, Status::Ok);
-	} else{
+		sendCompletion(__atomic_exchange_n(&source->eventValue, 0, __ATOMIC_SEQ_CST), Status::Ok);
+	} else {
 		cancel(URingData::getErrnoStatus(notify.result));
 	}
 }
@@ -118,6 +122,7 @@ Status EventFdEPollHandle::rearm(EPollData *epoll, EventFdSource *source) {
 		source->event.data.ptr = this;
 		source->event.events = EPOLLIN;
 		source->eventTarget = 0;
+		source->eventValue = 0;
 
 		status = epoll->add(source->fd, source->event);
 	}
@@ -128,7 +133,7 @@ Status EventFdEPollHandle::disarm(EPollData *epoll, EventFdSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = epoll->remove(source->fd);
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
@@ -143,15 +148,13 @@ void EventFdEPollHandle::notify(EPollData *epoll, EventFdSource *source, const N
 	bool notify = false;
 
 	if (data.queueFlags & EPOLLIN) {
-		while (read(&source->eventTarget) == Status::Ok) {
-			notify = true;
-		}
+		while (read(&source->eventTarget) == Status::Ok) { notify = true; }
 	}
 
 	if ((data.queueFlags & EPOLLERR) || (data.queueFlags & EPOLLHUP)) {
 		cancel();
 	} else if (notify) {
-		sendCompletion(0, Status::Ok);
+		sendCompletion(__atomic_exchange_n(&source->eventValue, 0, __ATOMIC_SEQ_CST), Status::Ok);
 	}
 }
 
@@ -168,14 +171,15 @@ Status EventFdALooperHandle::disarm(ALooperData *alooper, EventFdSource *source)
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = alooper->remove(source->fd);
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
 	return status;
 }
 
-void EventFdALooperHandle::notify(ALooperData *alooper, EventFdSource *source, const NotifyData &data) {
+void EventFdALooperHandle::notify(ALooperData *alooper, EventFdSource *source,
+		const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
@@ -183,13 +187,10 @@ void EventFdALooperHandle::notify(ALooperData *alooper, EventFdSource *source, c
 	bool notify = false;
 
 	if (data.queueFlags & ALOOPER_EVENT_INPUT) {
-		while (read(&source->eventTarget) == Status::Ok) {
-			notify = true;
-		}
+		while (read(&source->eventTarget) == Status::Ok) { notify = true; }
 	}
 
-	if ((data.queueFlags & ALOOPER_EVENT_ERROR)
-			|| (data.queueFlags & ALOOPER_EVENT_HANGUP)
+	if ((data.queueFlags & ALOOPER_EVENT_ERROR) || (data.queueFlags & ALOOPER_EVENT_HANGUP)
 			|| (data.queueFlags & ALOOPER_EVENT_INVALID)) {
 		cancel();
 	} else if (notify) {
@@ -198,4 +199,4 @@ void EventFdALooperHandle::notify(ALooperData *alooper, EventFdSource *source, c
 }
 #endif
 
-}
+} // namespace stappler::event

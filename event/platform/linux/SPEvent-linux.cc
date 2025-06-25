@@ -21,6 +21,7 @@
  **/
 
 #include "SPEvent-linux.h"
+#include "SPEventQueue.h"
 #include "SPEventThreadHandle.h"
 #include "detail/SPEventQueueData.h"
 #include "platform/uring/SPEvent-uring.h"
@@ -67,8 +68,8 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
 				return reinterpret_cast<URingData *>(ptr)->run(ival, info.flags, info.timeout);
 			};
-			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
-				return reinterpret_cast<URingData *>(ptr)->wakeup(info.flags, info.timeout);
+			_wakeup = [](void *ptr, WakeupFlags flags) {
+				return reinterpret_cast<URingData *>(ptr)->wakeup(flags);
 			};
 			_cancel = [](void *ptr) { reinterpret_cast<URingData *>(ptr)->cancel(); };
 			_destroy = [](void *ptr) { delete reinterpret_cast<URingData *>(ptr); };
@@ -128,8 +129,8 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
 				return reinterpret_cast<EPollData *>(ptr)->run(ival, info.flags, info.timeout);
 			};
-			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
-				return reinterpret_cast<EPollData *>(ptr)->wakeup(info.flags, info.timeout);
+			_wakeup = [](void *ptr, WakeupFlags flags) {
+				return reinterpret_cast<EPollData *>(ptr)->wakeup(flags);
 			};
 			_cancel = [](void *ptr) { reinterpret_cast<EPollData *>(ptr)->cancel(); };
 			_destroy = [](void *ptr) { delete reinterpret_cast<EPollData *>(ptr); };
@@ -159,6 +160,7 @@ namespace STAPPLER_VERSIONIZED stappler::event::platform {
 
 Rc<QueueRef> getThreadQueue(QueueInfo &&info) {
 	// Just create the queue, Linux has no specifics
+	info.engineMask = QueueEngine::URing;
 	return Queue::create(move(info));
 }
 

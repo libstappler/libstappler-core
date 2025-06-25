@@ -151,7 +151,7 @@ constexpr size_t length(const _CharT *__p, size_t max) {
 		return std::char_traits<_CharT>::length(__p);
 	} else {
 		size_t __i = 0;
-		while (__i < max && __p[__i] != _CharT()) { ++__i; }
+		while (__i < max && __p[__i] != _CharT(0)) { ++__i; }
 		return __i;
 	}
 }

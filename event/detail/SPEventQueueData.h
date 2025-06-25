@@ -25,7 +25,11 @@
 
 #include "SPEventQueue.h"
 #include "SPEventHandleClass.h"
-#include <sys/select.h>
+#include "SPTime.h"
+
+#if LINUX
+#include <linux/time_types.h>
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -67,7 +71,7 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	using PollCallback = uint32_t (*)(void *);
 	using WaitCallback = uint32_t (*)(void *, TimeInterval ival);
 	using RunCallback = Status (*)(void *, TimeInterval ival, QueueWakeupInfo &&info);
-	using WakeupCallback = Status (*)(void *, QueueWakeupInfo &&info);
+	using WakeupCallback = Status (*)(void *, WakeupFlags);
 	using CancelCallback = void (*)(void *);
 	using DestroyCallback = void (*)(void *);
 
@@ -114,13 +118,15 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 
 	void notify(Handle *, const NotifyData &);
 
+	void notifySuspendedAll();
+
 	Status submit();
 
 	uint32_t poll();
 	uint32_t wait(TimeInterval ival);
 
 	Status run(TimeInterval ival, QueueWakeupInfo &&info);
-	Status wakeup(QueueWakeupInfo &&info);
+	Status wakeup(WakeupFlags flags);
 
 	void cancel();
 
@@ -132,7 +138,9 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	QueueData(QueueRef *, QueueFlags);
 };
 
-struct SP_PUBLIC PlatformQueueData : public mem_pool::AllocBase {
+struct SP_PUBLIC PlatformQueueData;
+
+struct alignas(32) PlatformQueueData : public mem_pool::AllocBase {
 	struct RunContext {
 		enum CallMode {
 			Poll,
@@ -143,6 +151,7 @@ struct SP_PUBLIC PlatformQueueData : public mem_pool::AllocBase {
 		enum State {
 			Running,
 			Signaled, // next control function should send CFRunLoopStop
+			Stopping, // context should wait until all handles will become suspended or wakeup timeout expires
 			Stopped, // CFRunLoopStop was sent
 		};
 
@@ -153,25 +162,39 @@ struct SP_PUBLIC PlatformQueueData : public mem_pool::AllocBase {
 		WakeupFlags runWakeupFlags = WakeupFlags::None;
 		uint32_t wakeupCounter = 0;
 		Status wakeupStatus = Status::Suspended;
+		TimeInterval wakeupTimeout;
 
 		RunContext *prev = nullptr;
 		uint32_t nevents = 0;
+
+#if LINUX
+		__kernel_timespec wakeupTimespec;
+#endif
 	};
 
-	using StopContextCallback = void (*) (RunContext *);
+	using StopContextCallback = void (*)(RunContext *);
+	using SuspendCallback = Status (*)(RunContext *);
+	using SuspendedCallback = void (*)(RunContext *);
 
 	QueueRef *_queue = nullptr;
 	Queue::Data *_data = nullptr;
 	QueueFlags _flags = QueueFlags::None;
-	RunContext *_runContext;
+	RunContext *_runContext = nullptr;
 
 	StopContextCallback _stopContext = nullptr;
+	SuspendCallback _suspend = nullptr;
+	SuspendedCallback _suspended = nullptr;
 
-	Status suspendHandles();
+	Status suspendHandles(RunContext *);
 	Status stopContext(RunContext *, WakeupFlags, bool external);
+	Status stopRootContext(WakeupFlags, bool external);
 
 	void pushContext(RunContext *, RunContext::CallMode);
 	void popContext(RunContext *);
+
+	bool hasContext(void *);
+
+	void handleSuspendedAll();
 
 	PlatformQueueData(QueueRef *, Queue::Data *data, QueueFlags);
 };

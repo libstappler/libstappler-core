@@ -47,13 +47,23 @@ bool BusDelegate::init(NotNull<Looper *> looper, SpanView<BusEventCategory> cat,
 
 // should be called when owner is disabled
 void BusDelegate::invalidate() {
+	if (!_looper) {
+		return;
+	}
+
 	if (_looper->isOnThisThread()) {
-		_owner = nullptr;
-		_callback = nullptr;
+		if (_state == Pending) {
+			finalize();
+		} else {
+			_state = Invalidated;
+		}
 	} else {
 		_looper->performOnThread([this] {
-			_owner = nullptr;
-			_callback = nullptr;
+			if (_state == Pending) {
+				finalize();
+			} else {
+				_state = Invalidated;
+			}
 		}, this);
 	}
 }
@@ -66,13 +76,27 @@ void BusDelegate::handleEvent(Bus &bus, const BusEvent &event) {
 	}
 
 	if (_owner && _callback) {
+		auto refId = retain();
+		_state = Active;
 		_callback(bus, event, *this);
+		if (_state == Invalidated) {
+			finalize();
+		} else {
+			_state = Pending;
+		}
+		release(refId);
 	}
 }
 
 void BusDelegate::handleAdded(Bus *bus) { _bus = bus; }
 
 void BusDelegate::handleRemoved(Bus *) { _bus = nullptr; }
+
+void BusDelegate::finalize() {
+	_owner = nullptr;
+	_callback = nullptr;
+	_state = Finalized;
+}
 
 Bus::~Bus() {
 	auto it = _loopers.begin();

@@ -31,10 +31,12 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 enum class QueueFlags {
 	None,
 	Protected = 1 << 0, // try to protect operations from interrupting with signals
-	SubmitImmediate = 1 << 1, // submit all operations as they added, no need to call `submitPending`
+	SubmitImmediate =
+			1 << 1, // submit all operations as they added, no need to call `submitPending`
 
 	// Engine flags
-	ThreadNative = 1 << 15, // use thread-native backend (used by Looper, do not use this on Queue directly)
+	ThreadNative = 1
+			<< 15, // use thread-native backend (used by Looper, do not use this on Queue directly)
 };
 
 SP_DEFINE_ENUM_AS_MASK(QueueFlags)
@@ -69,7 +71,8 @@ struct SP_PUBLIC QueueInfo {
 
 	uint32_t submitQueueSize = DefaultQueueSize;
 	uint32_t completeQueueSize = 0; // or 0 for default size, based on submitQueueSize
-	TimeInterval osIdleInterval; // interval, on which internal OS systems will be put to sleep, if idle
+	TimeInterval
+			osIdleInterval; // interval, on which internal OS systems will be put to sleep, if idle
 
 	uint32_t externalHandles = 0; // limit for externally opened handles (if applicable)
 	uint32_t internalHandles = 0; // limit for internally opened handles (if applicable)
@@ -102,7 +105,8 @@ public:
 
 	Rc<TimerHandle> scheduleTimer(TimerInfo &&, Ref * = nullptr);
 
-	Rc<Handle> schedule(TimeInterval, mem_std::Function<void(Handle *, bool success)> &&, Ref * = nullptr);
+	Rc<Handle> schedule(TimeInterval, mem_std::Function<void(Handle *, bool success)> &&,
+			Ref * = nullptr);
 
 	Rc<ThreadHandle> addThreadHandle();
 
@@ -135,8 +139,9 @@ public:
 	Status run(TimeInterval = TimeInterval(), QueueWakeupInfo && = QueueWakeupInfo());
 
 	// wakeup queue from `run`
+	// If wakeup timeout is set on run() - it will be used, if applicable on queue engine
 	// returns ErrorNotImplemented if requested parameters is not supported
-	Status wakeup(QueueWakeupInfo && = QueueWakeupInfo());
+	Status wakeup(WakeupFlags = WakeupFlags::ContextDefault);
 
 	void cancel();
 
@@ -151,7 +156,8 @@ public:
 	// Can be used only from within event processing, returns Declined otherwise
 	// Returns Ok if task was scheduled to execution successfully
 	Status performNext(Rc<thread::Task> &&);
-	Status performNext(mem_std::Function<void()> &&, Ref * = nullptr, StringView tag = StringView());
+	Status performNext(mem_std::Function<void()> &&, Ref * = nullptr,
+			StringView tag = StringView());
 
 	using PoolObject::PoolObject;
 
@@ -162,6 +168,6 @@ protected:
 
 using QueueRef = SharedRef<Queue>;
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_SPEVENTQUEUE_H_ */

@@ -70,6 +70,17 @@ protected:
 	void handleAdded(Bus *);
 	void handleRemoved(Bus *);
 
+	void finalize();
+
+	enum State {
+		Pending,
+		Active,
+		Invalidated,
+		Finalized
+	};
+
+	State _state = Pending;
+
 	// where event will be processed
 	// когда делегат добавляется к шине, шина должна сообщить об этом луперу
 	// если лупер с живими делегатами завершается - он должен сообщить об этом шине

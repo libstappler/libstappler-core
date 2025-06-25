@@ -58,7 +58,8 @@ Rc<TimerHandle> Queue::scheduleTimer(TimerInfo &&info, Ref *ref) {
 	return h;
 }
 
-Rc<Handle> Queue::schedule(TimeInterval timeout, mem_std::Function<void(Handle *, bool success)> &&fn, Ref *ref) {
+Rc<Handle> Queue::schedule(TimeInterval timeout,
+		mem_std::Function<void(Handle *, bool success)> &&fn, Ref *ref) {
 	struct ScheduleData : Ref {
 		mem_std::Function<void(Handle *, bool success)> fn;
 		Rc<Ref> ref;
@@ -68,22 +69,23 @@ Rc<Handle> Queue::schedule(TimeInterval timeout, mem_std::Function<void(Handle *
 	data->fn = sp::move(fn);
 	data->ref = ref;
 
-	return scheduleTimer(TimerInfo{
-		.completion = TimerInfo::Completion::create<ScheduleData>(data, [] (ScheduleData *data, TimerHandle *handle, uint32_t value, Status status) {
-			if (data->fn) {
-				if (status == Status::Done) {
-					data->fn(handle, true);
-				} else if (!isSuccessful(status)) {
-					data->fn(handle, false);
-				}
+	return scheduleTimer(TimerInfo{.completion = TimerInfo::Completion::create<ScheduleData>(data,
+										   [](ScheduleData *data, TimerHandle *handle,
+												   uint32_t value, Status status) {
+		if (data->fn) {
+			if (status == Status::Done) {
+				data->fn(handle, true);
+			} else if (!isSuccessful(status)) {
+				data->fn(handle, false);
 			}
-			data->fn = nullptr;
-			data->ref = nullptr;
-		}),
-		.timeout = timeout,
-		.interval = TimeInterval(),
-		.count = 1
-	}, data);
+		}
+		data->fn = nullptr;
+		data->ref = nullptr;
+	}),
+							 .timeout = timeout,
+							 .interval = TimeInterval(),
+							 .count = 1},
+			data);
 }
 
 Rc<ThreadHandle> Queue::addThreadHandle() {
@@ -163,9 +165,7 @@ Status Queue::run(TimeInterval ival, QueueWakeupInfo &&info) {
 	}, getPool());
 }
 
-Status Queue::wakeup(QueueWakeupInfo &&info) {
-	return _data->wakeup(move(info));
-}
+Status Queue::wakeup(WakeupFlags flags) { return _data->wakeup(flags); }
 
 void Queue::cancel() {
 	_data->cancel();
@@ -173,20 +173,14 @@ void Queue::cancel() {
 	_data = nullptr;
 }
 
-QueueFlags Queue::getFlags() const {
-	return _data->_flags;
-}
+QueueFlags Queue::getFlags() const { return _data->_flags; }
 
-QueueEngine Queue::getEngine() const {
-	return _data->_engine;
-}
+QueueEngine Queue::getEngine() const { return _data->_engine; }
 
-Status Queue::performNext(Rc<thread::Task> &&task) {
-	return _data->perform(move(task));
-}
+Status Queue::performNext(Rc<thread::Task> &&task) { return _data->perform(move(task)); }
 
 Status Queue::performNext(mem_std::Function<void()> &&fn, Ref *ref, StringView tag) {
 	return _data->perform(sp::move(fn), ref, tag);
 }
 
-}
+} // namespace stappler::event

@@ -42,10 +42,7 @@ enum class EPollFlags {
 
 SP_DEFINE_ENUM_AS_MASK(EPollFlags)
 
-struct SP_PUBLIC EPollData : public mem_pool::AllocBase {
-	QueueRef *_queue = nullptr;
-	Queue::Data *_data = nullptr;
-	QueueFlags _flags = QueueFlags::None;
+struct SP_PUBLIC EPollData : public PlatformQueueData {
 	EPollFlags _eflags = EPollFlags::None;
 
 	Rc<SignalFdHandle> _signalFd;
@@ -58,23 +55,10 @@ struct SP_PUBLIC EPollData : public mem_pool::AllocBase {
 	uint32_t _receivedEvents = 0;
 	uint32_t _processedEvents = 0;
 
-	struct RunContext {
-		std::atomic_flag shouldWakeup;
-		std::atomic<std::underlying_type_t<WakeupFlags>> wakeupFlags = 0;
-		WakeupFlags runWakeupFlags = WakeupFlags::None;
-		std::atomic<uint64_t> wakeupTimeout;
-		uint32_t wakeupCounter = 0;
-		Status wakeupStatus = Status::Suspended;
-		RunContext *prev = nullptr;
-	};
-
-	RunContext *_runContext = nullptr;
-	std::mutex _runMutex;
-
 	Status add(int fd, const epoll_event &ev);
 	Status remove(int fd);
 
-	Status runPoll(TimeInterval, bool infinite = false);
+	Status runPoll(TimeInterval);
 	uint32_t processEvents();
 
 	Status submit();
@@ -82,7 +66,7 @@ struct SP_PUBLIC EPollData : public mem_pool::AllocBase {
 	uint32_t wait(TimeInterval);
 	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
 
-	Status wakeup(WakeupFlags, TimeInterval);
+	Status wakeup(WakeupFlags);
 
 	Status suspendHandles();
 	Status doWakeupInterrupt(WakeupFlags, bool externalCall);
@@ -95,6 +79,6 @@ struct SP_PUBLIC EPollData : public mem_pool::AllocBase {
 	~EPollData();
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_SPEVENT_EPOLL_H_ */

@@ -21,24 +21,25 @@
  **/
 
 #include "SPEventHandleClass.h"
+#include "detail/SPEventQueueData.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 Status HandleClass::create(HandleClass *cl, Handle *, uint8_t[Handle::DataSize]) {
-	++ cl->registredHandles;
-	++ cl->info->registredHandles;
+	++cl->registredHandles;
+	++cl->info->registredHandles;
 	return Status::Ok;
 }
 
-Status HandleClass::destroy(HandleClass *cl, Handle *, uint8_t[Handle::DataSize]) {
-	-- cl->registredHandles;
-	-- cl->info->registredHandles;
+Status HandleClass::destroy(HandleClass *cl, Handle *handle, uint8_t[Handle::DataSize]) {
+	--cl->registredHandles;
+	--cl->info->registredHandles;
 	return Status::Ok;
 }
 
 Status HandleClass::run(HandleClass *cl, Handle *handle, uint8_t[Handle::DataSize]) {
-	++ cl->runningHandles;
-	++ cl->info->runningHandles;
+	++cl->runningHandles;
+	++cl->info->runningHandles;
 	cl->info->queue->retain(reinterpret_cast<uintptr_t>(handle));
 
 	if (handle->isResumable()) {
@@ -50,20 +51,22 @@ Status HandleClass::run(HandleClass *cl, Handle *handle, uint8_t[Handle::DataSiz
 
 Status HandleClass::cancel(HandleClass *cl, Handle *handle, uint8_t[Handle::DataSize], Status st) {
 	mem_pool::perform([&] {
-		if (st == Status::Done) {
+		if (st == Status::Declined) {
+			// remove from suspended counter if it were paused
+			--cl->info->suspendedHandles;
+			--cl->suspendedHandles;
+		}
+
+		if (handle->getStatus() == Status::Done) {
 			auto it = cl->pendingHandles.find(handle);
 			if (it != cl->pendingHandles.end()) {
-				for (auto &iit : it->second) {
-					iit->run();
-				}
+				for (auto &iit : it->second) { iit->run(); }
 				cl->pendingHandles.erase(it);
 			}
 		} else {
 			auto it = cl->pendingHandles.find(handle);
 			if (it != cl->pendingHandles.end()) {
-				for (auto &iit : it->second) {
-					iit->cancel(Status::ErrorCancelled);
-				}
+				for (auto &iit : it->second) { iit->cancel(Status::ErrorCancelled); }
 				cl->pendingHandles.erase(it);
 			}
 		}
@@ -71,16 +74,24 @@ Status HandleClass::cancel(HandleClass *cl, Handle *handle, uint8_t[Handle::Data
 
 	cl->info->data->cancel(handle);
 
-	-- cl->registredHandles;
-	-- cl->info->registredHandles;
+	--cl->runningHandles;
+	--cl->info->runningHandles;
 
 	cl->info->queue->release(reinterpret_cast<uintptr_t>(handle));
 	return Status::Ok;
 }
 
 Status HandleClass::suspend(HandleClass *cl, Handle *handle, uint8_t[Handle::DataSize]) {
-	++ cl->suspendedHandles;
-	++ cl->info->suspendedHandles;
+	++cl->suspendedHandles;
+	++cl->info->suspendedHandles;
+
+	//std::cout << "Suspend: " << cl->info << " " << handle << " " << handle->getStatus() << " "
+	//		  << cl->info->suspendedHandles << " " << cl->info->runningHandles << "\n";
+
+	if (cl->info->suspendedHandles == cl->info->runningHandles) {
+		cl->info->data->notifySuspendedAll();
+	}
+
 	return Status::Ok;
 }
 
@@ -93,8 +104,8 @@ Status HandleClass::resume(HandleClass *cl, Handle *handle, uint8_t[Handle::Data
 		}
 	}
 
-	-- cl->suspendedHandles;
-	-- cl->info->suspendedHandles;
+	--cl->suspendedHandles;
+	--cl->info->suspendedHandles;
 	return Status::Ok;
 }
 
@@ -109,4 +120,4 @@ void HandleClass::addPending(Handle *origin, Handle *pending) {
 	}, info->pool);
 }
 
-}
+} // namespace stappler::event

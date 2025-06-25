@@ -99,7 +99,7 @@ public:
 
 	// wakeup looper from `run`
 	// returns ErrorNotImplemented if requested parameters is not supported
-	Status wakeup(QueueWakeupInfo && = QueueWakeupInfo());
+	Status wakeup(WakeupFlags = WakeupFlags::ContextDefault);
 
 	uint16_t getWorkersCount() const;
 
@@ -121,6 +121,7 @@ protected:
 
 	Looper(LooperInfo &&, Rc<QueueRef> &&);
 
+	std::mutex _mutex;
 	Data *_data = nullptr;
 };
 

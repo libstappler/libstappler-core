@@ -37,7 +37,10 @@ public:
 	virtual Status perform(Rc<thread::Task> &&task) { return Status::ErrorNotImplemented; }
 
 	// Perform function on this event queue
-	virtual Status perform(mem_std::Function<void()> &&func, Ref * = nullptr) { return Status::ErrorNotImplemented; }
+	virtual Status perform(mem_std::Function<void()> &&func, Ref * = nullptr,
+			StringView tag = STAPPLER_LOCATION) {
+		return Status::ErrorNotImplemented;
+	}
 };
 
 enum class ThreadPoolFlags {
@@ -62,7 +65,8 @@ public:
 	bool init(ThreadPoolInfo &&);
 
 	Status perform(Rc<Task> &&task, bool first = false);
-	Status perform(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false, StringView tag = StringView());
+	Status perform(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false,
+			StringView tag = StringView());
 
 	Status performCompleted(Rc<Task> &&task);
 	Status performCompleted(mem_std::Function<void()> &&func, Ref * = nullptr);
@@ -113,6 +117,6 @@ protected:
 	WorkerContext _context;
 };
 
-}
+} // namespace stappler::thread
 
 #endif /* CORE_THREADS_SPTHREADPOOL_H_ */

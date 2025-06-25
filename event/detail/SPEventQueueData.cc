@@ -261,6 +261,8 @@ void QueueData::notify(Handle *handle, const NotifyData &data) {
 	_performEnabled = false;
 }
 
+void QueueData::notifySuspendedAll() { _platformQueue->handleSuspendedAll(); }
+
 Status QueueData::submit() {
 	if (_submit) {
 		return _submit(_platformQueue);
@@ -289,9 +291,9 @@ Status QueueData::run(TimeInterval ival, QueueWakeupInfo &&info) {
 	return Status::ErrorNotImplemented;
 }
 
-Status QueueData::wakeup(QueueWakeupInfo &&info) {
+Status QueueData::wakeup(WakeupFlags flags) {
 	if (_wakeup) {
-		return _wakeup(_platformQueue, move(info));
+		return _wakeup(_platformQueue, flags);
 	}
 	return Status::ErrorNotImplemented;
 }
@@ -332,21 +334,25 @@ QueueData::QueueData(QueueRef *ref, QueueFlags flags)
 	_suspendableHandles.set_memory_persistent(true);
 }
 
-
-Status PlatformQueueData::suspendHandles() {
-	if (!_runContext) {
+Status PlatformQueueData::suspendHandles(RunContext *ctx) {
+	if (!ctx) {
 		return Status::ErrorInvalidArguemnt;
 	}
 
-	_runContext->wakeupStatus = Status::Suspended;
+	ctx->wakeupStatus = Status::Suspended;
 
 	auto nhandles = _data->suspendAll();
-	_runContext->wakeupCounter = nhandles;
+	ctx->wakeupCounter = nhandles;
 
-	return Status::Done;
+	if (_suspend) {
+		return _suspend(ctx);
+	} else {
+		return Status::Done;
+	}
 }
 
-Status PlatformQueueData::stopContext(RunContext *contextToStop, WakeupFlags flags, bool externalCall) {
+Status PlatformQueueData::stopContext(RunContext *contextToStop, WakeupFlags flags,
+		bool externalCall) {
 	if (!_runContext) {
 		return Status::ErrorInvalidArguemnt;
 	}
@@ -355,9 +361,7 @@ Status PlatformQueueData::stopContext(RunContext *contextToStop, WakeupFlags fla
 
 	if (contextToStop && contextToStop != _runContext) {
 		auto ctx = _runContext;
-		while (ctx && ctx != contextToStop) {
-			ctx = ctx->prev;
-		}
+		while (ctx && ctx != contextToStop) { ctx = ctx->prev; }
 
 		if (ctx && ctx == contextToStop) {
 			ctx = _runContext;
@@ -383,14 +387,21 @@ Status PlatformQueueData::stopContext(RunContext *contextToStop, WakeupFlags fla
 			flags = _runContext->runWakeupFlags;
 		}
 
+		RunContext::State nextState = RunContext::Stopped;
+
 		// stop top-level context
 		if (hasFlag(flags, WakeupFlags::Graceful)) {
-			if (suspendHandles() == Status::Done) {
+			auto suspensionStatus = suspendHandles(_runContext);
+			if (suspensionStatus == Status::Done) {
 				_runContext->wakeupStatus = Status::Ok; // graceful wakeup
+			} else if (suspensionStatus == Status::Ok) {
+				// suspend was not completed
+				nextState = RunContext::Stopping;
 			}
 			status = Status::Suspended;
 		} else {
-			_runContext->wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
+			_runContext->wakeupStatus =
+					externalCall ? Status::Suspended : Status::Done; // forced wakeup
 			status = Status::Ok;
 		}
 
@@ -400,10 +411,21 @@ Status PlatformQueueData::stopContext(RunContext *contextToStop, WakeupFlags fla
 		}
 
 		// prevent from multiple stops
-		_runContext->state = RunContext::Stopped;
+		_runContext->state = nextState;
 	}
 
 	return status;
+}
+
+Status PlatformQueueData::stopRootContext(WakeupFlags flags, bool external) {
+	if (_runContext) {
+		// find and wakeup root context
+		auto rootCtx = _runContext;
+		while (rootCtx->prev) { rootCtx = rootCtx->prev; }
+
+		return stopContext(rootCtx, flags, external);
+	}
+	return Status::ErrorInvalidArguemnt;
 }
 
 void PlatformQueueData::pushContext(RunContext *ctx, RunContext::CallMode m) {
@@ -418,6 +440,27 @@ void PlatformQueueData::popContext(RunContext *ctx) {
 
 	if (_runContext && _runContext->state == RunContext::Signaled) {
 		stopContext(_runContext, _runContext->runWakeupFlags, false);
+	}
+}
+
+bool PlatformQueueData::hasContext(void *ptr) {
+	auto ctx = _runContext;
+	while (ctx) {
+		if (ctx == ptr) {
+			return true;
+		}
+		ctx = ctx->prev;
+	}
+	return false;
+}
+
+void PlatformQueueData::handleSuspendedAll() {
+	if (_runContext && _runContext->state == RunContext::Stopping) {
+		if (_suspended) {
+			_suspended(_runContext);
+		} else {
+			_runContext->state = RunContext::Stopped;
+		}
 	}
 }
 

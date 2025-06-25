@@ -23,11 +23,14 @@
 
 #include "SPEventQueue.h"
 #include "SPPlatformUnistd.h"
+#include "SPTime.h"
 #include "SPEvent-epoll.h"
 
 #include <signal.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
+
+static constexpr uint32_t EPOLL_CANCEL_FLAG = 0x8000'0000;
 
 Status EPollData::add(int fd, const epoll_event &ev) {
 	auto ret = ::epoll_ctl(_epollFd, EPOLL_CTL_ADD, fd, const_cast<epoll_event *>(&ev));
@@ -45,7 +48,7 @@ Status EPollData::remove(int fd) {
 	return Status::Ok;
 }
 
-Status EPollData::runPoll(TimeInterval ival, bool infinite) {
+Status EPollData::runPoll(TimeInterval ival) {
 	if (_processedEvents < _receivedEvents) {
 		return Status::Ok;
 	}
@@ -57,7 +60,7 @@ Status EPollData::runPoll(TimeInterval ival, bool infinite) {
 
 	int nevents = 0;
 #if LINUX
-	if (hasFlag(_eflags, EPollFlags::HaveEPollPWait2) && ival && !infinite) {
+	if (hasFlag(_eflags, EPollFlags::HaveEPollPWait2) && ival && ival != TimeInterval::Infinite) {
 		struct timespec timeout;
 
 		setNanoTimespec(timeout, ival);
@@ -65,11 +68,11 @@ Status EPollData::runPoll(TimeInterval ival, bool infinite) {
 		nevents = ::epoll_pwait2(_epollFd, _events.data(), _events.size(), &timeout, sigset);
 	} else {
 		nevents = ::epoll_pwait(_epollFd, _events.data(), _events.size(),
-				infinite ? -1 : ival.toMillis(), sigset);
+				(ival == TimeInterval::Infinite) ? -1 : ival.toMillis(), sigset);
 	}
 #else
 	nevents = ::epoll_pwait(_epollFd, _events.data(), _events.size(),
-			infinite ? -1 : ival.toMillis(), sigset);
+			(ival == TimeInterval::Infinite) ? -1 : ival.toMillis(), sigset);
 #endif
 
 	if (nevents >= 0) {
@@ -110,48 +113,57 @@ uint32_t EPollData::processEvents() {
 Status EPollData::submit() { return Status::Ok; }
 
 uint32_t EPollData::poll() {
+	uint32_t result = 0;
+
+	RunContext ctx;
+	pushContext(&ctx, RunContext::Poll);
+
 	auto status = runPoll(TimeInterval());
 	if (toInt(status) > 0) {
-		return processEvents();
+		result = processEvents();
 	}
-	return 0;
+
+	popContext(&ctx);
+
+	return result;
 }
 
 uint32_t EPollData::wait(TimeInterval ival) {
+	uint32_t result = 0;
+
+	RunContext ctx;
+	pushContext(&ctx, RunContext::Wait);
+
 	auto status = runPoll(ival);
 	if (status == Status::Ok) {
-		return processEvents();
+		result = processEvents();
 	}
-	return 0;
+
+	popContext(&ctx);
+
+	return result;
 }
 
 Status EPollData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval wakeupTimeout) {
 	RunContext ctx;
-
 	ctx.wakeupStatus = Status::Suspended;
-	ctx.wakeupTimeout.store(wakeupTimeout.toMicros());
 	ctx.runWakeupFlags = wakeupFlags;
 
 	Rc<Handle> timerHandle;
-	if (ival) {
+	if (ival && ival != TimeInterval::Infinite) {
 		// set timeout
-		timerHandle =
-				_queue->get()->schedule(ival, [this, wakeupFlags](Handle *handle, bool success) {
+		timerHandle = _queue->get()->schedule(ival,
+				[this, wakeupFlags, ctx = &ctx](Handle *handle, bool success) {
 			if (success) {
-				doWakeupInterrupt(wakeupFlags, false);
+				stopContext(ctx, wakeupFlags, false);
 			}
 		});
 	}
 
-	ctx.shouldWakeup.test_and_set();
+	pushContext(&ctx, RunContext::Run);
 
-	std::unique_lock lock(_runMutex);
-	ctx.prev = _runContext;
-	_runContext = &ctx;
-	lock.unlock();
-
-	while (ctx.shouldWakeup.test_and_set()) {
-		auto status = runPoll(ival, true);
+	while (ctx.state == RunContext::Running) {
+		auto status = runPoll(TimeInterval::Infinite);
 		if (status == Status::Ok) {
 			processEvents();
 		} else if (status != Status::ErrorInterrupted) {
@@ -161,59 +173,19 @@ Status EPollData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval w
 		}
 	}
 
-	if (ival) {
+	if (timerHandle) {
 		// remove timeout if set
 		timerHandle->cancel();
 	}
 
-	lock.lock();
-	_runContext = ctx.prev;
-	lock.unlock();
+	popContext(&ctx);
 
 	return ctx.wakeupStatus;
 }
 
-Status EPollData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
-	std::unique_lock lock(_runMutex);
-	if (auto v = _runContext) {
-		v->wakeupFlags |= toInt(flags);
-		v->wakeupTimeout = gracefulTimeout.toMicros();
-	}
-	_runMutex.unlock();
-	_eventFd->write(1);
+Status EPollData::wakeup(WakeupFlags flags) {
+	_eventFd->write(1, toInt(flags));
 	return Status::Ok;
-}
-
-Status EPollData::suspendHandles() {
-	if (!_runContext) {
-		return Status::ErrorInvalidArguemnt;
-	}
-
-	_runContext->wakeupStatus = Status::Suspended;
-
-	auto nhandles = _data->suspendAll();
-	_runContext->wakeupCounter = nhandles;
-
-	return Status::Done;
-}
-
-Status EPollData::doWakeupInterrupt(WakeupFlags flags, bool externalCall) {
-	if (!_runContext) {
-		return Status::ErrorInvalidArguemnt;
-	}
-
-	if (hasFlag(flags, WakeupFlags::Graceful)) {
-		if (suspendHandles() == Status::Done) {
-			_runContext->shouldWakeup.clear();
-			_runContext->wakeupStatus = Status::Ok; // graceful wakeup
-		}
-		return Status::Suspended; // do not rearm eventfd
-	} else {
-		_runContext->shouldWakeup.clear();
-		_runContext->wakeupStatus =
-				externalCall ? Status::Suspended : Status::Done; // forced wakeup
-		return Status::Ok; // rearm eventfd
-	}
 }
 
 void EPollData::runInternalHandles() {
@@ -227,16 +199,18 @@ void EPollData::runInternalHandles() {
 	_data->runHandle(_eventFd);
 }
 
-void EPollData::cancel() { doWakeupInterrupt(WakeupFlags::None, false); }
+void EPollData::cancel() {
+	_eventFd->write(1, toInt(WakeupFlags::ContextDefault) | EPOLL_CANCEL_FLAG);
+}
 
 EPollData::EPollData(QueueRef *q, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs)
-: _queue(q), _data(data), _flags(info.flags) {
+: PlatformQueueData(q, data, info.flags) {
 
 	_eventFd = Rc<EventFdEPollHandle>::create(&data->_epollEventFdClass,
 			CompletionHandle<EventFdEPollHandle>::create<EPollData>(this,
 					[](EPollData *data, EventFdEPollHandle *h, uint32_t value, Status st) {
 		if (st == Status::Ok && data->_runContext) {
-			data->doWakeupInterrupt(WakeupFlags(data->_runContext->wakeupFlags.exchange(0)), true);
+			data->stopContext(data->_runContext, WakeupFlags(value), true);
 		}
 	}));
 

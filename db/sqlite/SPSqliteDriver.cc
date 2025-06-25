@@ -23,6 +23,7 @@
 
 #include "SPSqliteDriver.h"
 #include "SPFilepath.h"
+#include "SPFilesystem.h"
 #include "SPSqliteHandle.h"
 #include "SPDbFieldExtensions.h"
 #include "sqlite3.h"
@@ -204,8 +205,8 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 				return false;
 			});
 		}
-		stappler::filesystem::mkdir(stappler::filepath::root(FileInfo{dbname}));
 	}
+	stappler::filesystem::mkdir_recursive(stappler::filepath::root(FileInfo{dbname}));
 #if WIN32
 	dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
 #endif

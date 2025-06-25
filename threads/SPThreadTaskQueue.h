@@ -72,12 +72,12 @@ protected:
 		mem_std::Function<void()> wakeup;
 
 		virtual Status perform(Rc<thread::Task> &&task) override;
-		virtual Status perform(mem_std::Function<void()> &&func, Ref *) override;
+		virtual Status perform(mem_std::Function<void()> &&func, Ref *, StringView) override;
 	};
 
 	OutputContext _outContext;
 };
 
-}
+} // namespace stappler::thread
 
 #endif /* STAPPLER_THREADS_SPTHREADTASKQUEUE_H_ */

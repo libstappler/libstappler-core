@@ -120,8 +120,8 @@ struct SP_PUBLIC URingCq {
 struct SP_PUBLIC URingProbe {
 	static constexpr size_t OpcodeCount = 256;
 
-	uint8_t last_op;	/* last opcode supported */
-	uint8_t ops_len;	/* length of ops[] array below */
+	uint8_t last_op; /* last opcode supported */
+	uint8_t ops_len; /* length of ops[] array below */
 	uint16_t resv;
 	uint32_t resv2[3];
 	io_uring_probe_op ops[OpcodeCount];
@@ -136,7 +136,7 @@ struct SP_PUBLIC URingProbe {
 
 struct SP_PUBLIC URingData;
 
-struct alignas(32) URingData : public mem_pool::AllocBase {
+struct alignas(32) URingData : public PlatformQueueData {
 	static constexpr size_t CQESize = sizeof(struct io_uring_cqe);
 	static constexpr uint32_t DefaultIdleInterval = 500;
 
@@ -146,9 +146,6 @@ struct alignas(32) URingData : public mem_pool::AllocBase {
 
 	static bool checkSupport();
 
-	QueueRef *_queue = nullptr;
-	Queue::Data *_data = nullptr;
-	QueueFlags _flags = QueueFlags::None;
 	URingFlags _uflags = URingFlags::None;
 	int _ringFd = -1;
 
@@ -172,21 +169,8 @@ struct alignas(32) URingData : public mem_pool::AllocBase {
 	uint16_t _bufferGroupId = 1;
 	mem_pool::Vector<uint16_t> _unregistredBuffers;
 
-	struct RunContext {
-		std::atomic_flag shouldWakeup;
-		std::atomic<std::underlying_type_t<WakeupFlags>> wakeupFlags = 0;
-		WakeupFlags runWakeupFlags = WakeupFlags::None;
-		std::atomic<uint64_t> wakeupTimeout = 0;
-		uint32_t wakeupCounter = 0;
-		Status wakeupStatus = Status::Suspended;
-		__kernel_timespec wakeupTimespec;
-		RunContext *prev = nullptr;
-	};
-
-	RunContext * _runContext = nullptr;
-	std::mutex _runMutex;
-
-	uint16_t registerBufferGroup(uint32_t count, uint32_t size, uint8_t *data, io_uring_sqe *sqe = nullptr);
+	uint16_t registerBufferGroup(uint32_t count, uint32_t size, uint8_t *data,
+			io_uring_sqe *sqe = nullptr);
 
 	// Reload buffer group if it was filled, `count` must match initial registerBufferGroup
 	uint16_t reloadBufferGroup(uint16_t id, uint32_t count, uint32_t size, uint8_t *data);
@@ -209,7 +193,8 @@ struct alignas(32) URingData : public mem_pool::AllocBase {
 	SqeBlock tryGetNextSqe(uint32_t count = 1);
 	SqeBlock getNextSqe(uint32_t count = 1);
 
-	Status pushSqe(std::initializer_list<uint8_t> ops, const Callback<void(io_uring_sqe *, uint32_t n)> &, URingPushFlags);
+	Status pushSqe(std::initializer_list<uint8_t> ops,
+			const Callback<void(io_uring_sqe *, uint32_t n)> &, URingPushFlags);
 
 	// owner should keep ts buffer available until operation is consumed
 	// In case of SQPOLL - it's undefined, when data will be consumed, so, keep until the end
@@ -229,18 +214,18 @@ struct alignas(32) URingData : public mem_pool::AllocBase {
 	uint32_t pop();
 	void processEvent(int32_t res, uint32_t flags, uint64_t userdata);
 
+	uint32_t doPoll();
+
 	Status submit();
 	uint32_t poll();
 	uint32_t wait(TimeInterval);
 	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
 
-	Status wakeup(WakeupFlags, TimeInterval);
+	Status wakeup(WakeupFlags);
 
 	int enter(unsigned sub, unsigned wait, unsigned flags, __kernel_timespec *);
 
 	Status suspendHandles();
-
-	Status doWakeupInterrupt(WakeupFlags, bool externalCall);
 
 	void runInternalHandles();
 
@@ -250,7 +235,7 @@ struct alignas(32) URingData : public mem_pool::AllocBase {
 	~URingData();
 };
 
-}
+} // namespace stappler::event
 
 #endif
 

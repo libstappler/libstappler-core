@@ -20,31 +20,37 @@
  THE SOFTWARE.
  **/
 
+#include "SPCore.h"
 #include "SPEventQueue.h"
 #include "SPPlatformUnistd.h"
+#include "SPTime.h"
 
 #if LINUX
 
+#include "platform/linux/SPEvent-linux.h"
 #include "SPEvent-uring.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+static constexpr uint32_t URING_CANCEL_FLAG = 0x8000'0000;
+
 static int io_uring_setup(unsigned entries, struct io_uring_params *p) {
-	return (int) syscall(__NR_io_uring_setup, entries, p);
+	return (int)syscall(__NR_io_uring_setup, entries, p);
 }
 
 static int io_uring_enter(int ring_fd, unsigned int to_submit, unsigned int min_complete,
 		unsigned int flags, const sigset_t *sig = nullptr) {
-	return (int) syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete, flags, sig, 0);
+	return (int)syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete, flags, sig, 0);
 }
 
 static int io_uring_enter2(int ring_fd, unsigned int to_submit, unsigned int min_complete,
 		unsigned int flags, void *arg = nullptr, size_t argsize = 0) {
-	return (int) syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete, flags, arg, argsize);
+	return (int)syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete, flags, arg, argsize);
 }
 
-static int io_uring_register(unsigned int fd, unsigned int opcode, const void *arg, unsigned int nr_args) {
-	return (int) syscall(__NR_io_uring_register, fd, opcode, arg, nr_args);
+static int io_uring_register(unsigned int fd, unsigned int opcode, const void *arg,
+		unsigned int nr_args) {
+	return (int)syscall(__NR_io_uring_register, fd, opcode, arg, nr_args);
 }
 
 static unsigned atomicLoadAcquire(unsigned *ptr) {
@@ -79,7 +85,9 @@ bool URingData::checkSupport() {
 	}
 
 	if (strverscmp(buffer.release, "5.15.0") < 0) {
-		log::info("event::URingData", "io_uring backend available since 5.15 kernel release, current release: ", buffer.release);
+		log::info("event::URingData",
+				"io_uring backend available since 5.15 kernel release, current release: ",
+				buffer.release);
 		return false;
 	}
 
@@ -91,7 +99,8 @@ bool URingData::checkSupport() {
 	}
 }
 
-uint16_t URingData::registerBufferGroup(uint32_t count, uint32_t size, uint8_t *data, io_uring_sqe *sqe) {
+uint16_t URingData::registerBufferGroup(uint32_t count, uint32_t size, uint8_t *data,
+		io_uring_sqe *sqe) {
 	uint16_t id = 0;
 	if (_unregistredBuffers.empty()) {
 		if (_bufferGroupId == maxOf<uint16_t>()) {
@@ -99,13 +108,13 @@ uint16_t URingData::registerBufferGroup(uint32_t count, uint32_t size, uint8_t *
 			return 0;
 		}
 
-		id = _bufferGroupId ++;
+		id = _bufferGroupId++;
 	} else {
 		id = _unregistredBuffers.back();
 		_unregistredBuffers.pop_back();
 	}
 
-	auto fillSqe = [&] (io_uring_sqe *target) {
+	auto fillSqe = [&](io_uring_sqe *target) {
 		target->fd = count;
 		target->addr = reinterpret_cast<uintptr_t>(data);
 		target->len = size;
@@ -118,7 +127,7 @@ uint16_t URingData::registerBufferGroup(uint32_t count, uint32_t size, uint8_t *
 		if (sqe) {
 			fillSqe(sqe);
 		} else {
-			pushSqe({IORING_OP_PROVIDE_BUFFERS}, [&] (io_uring_sqe *target, uint32_t) {
+			pushSqe({IORING_OP_PROVIDE_BUFFERS}, [&](io_uring_sqe *target, uint32_t) {
 				fillSqe(target);
 			}, URingPushFlags::Submit);
 		}
@@ -128,21 +137,17 @@ uint16_t URingData::registerBufferGroup(uint32_t count, uint32_t size, uint8_t *
 
 uint16_t URingData::reloadBufferGroup(uint16_t id, uint32_t count, uint32_t size, uint8_t *data) {
 	pushSqe({IORING_OP_REMOVE_BUFFERS, IORING_OP_PROVIDE_BUFFERS},
-			[&] (io_uring_sqe *sqe, uint32_t idx) {
+			[&](io_uring_sqe *sqe, uint32_t idx) {
 		switch (idx) {
-		case 0:
-			unregisterBufferGroup(count, id, sqe);
-			break;
-		case 1:
-			id = registerBufferGroup(count, size, data, sqe);
-			break;
+		case 0: unregisterBufferGroup(count, id, sqe); break;
+		case 1: id = registerBufferGroup(count, size, data, sqe); break;
 		}
 	}, URingPushFlags::Submit);
 	return id;
 }
 
 void URingData::unregisterBufferGroup(uint16_t id, uint32_t count, io_uring_sqe *sqe) {
-	auto fillSqe = [&] (io_uring_sqe *target) {
+	auto fillSqe = [&](io_uring_sqe *target) {
 		target->fd = count;
 		target->buf_group = id;
 		target->user_data = URING_USERDATA_IGNORED;
@@ -151,9 +156,8 @@ void URingData::unregisterBufferGroup(uint16_t id, uint32_t count, io_uring_sqe 
 	if (sqe) {
 		fillSqe(sqe);
 	} else {
-		pushSqe({IORING_OP_REMOVE_BUFFERS}, [&] (io_uring_sqe *target, uint32_t) {
-			fillSqe(target);
-		}, URingPushFlags::Submit);
+		pushSqe({IORING_OP_REMOVE_BUFFERS},
+				[&](io_uring_sqe *target, uint32_t) { fillSqe(target); }, URingPushFlags::Submit);
 	}
 
 	_unregistredBuffers.emplace_back(id);
@@ -228,7 +232,9 @@ URingData::SqeBlock URingData::getNextSqe(uint32_t count) {
 		}
 		sqe = tryGetNextSqe(count);
 		if (!sqe) {
-			log::warn("event::URingData", "getNextSqe(): io_uring_enter on timoeut (possible IORING_SETUP_SQPOLL overload)");
+			log::warn("event::URingData",
+					"getNextSqe(): io_uring_enter on timoeut (possible IORING_SETUP_SQPOLL "
+					"overload)");
 			return SqeBlock{nullptr, 0, 0, Status::ErrorBusy};
 		}
 	}
@@ -245,7 +251,7 @@ Status URingData::pushSqe(std::initializer_list<uint8_t> ops,
 
 	auto size = uint32_t(ops.size());
 
-	Handle * handlesToRetain[size];
+	Handle *handlesToRetain[size];
 	memset(handlesToRetain, 0, sizeof(handlesToRetain));
 
 	auto linked = hasFlag(flags, URingPushFlags::Linked);
@@ -253,7 +259,7 @@ Status URingData::pushSqe(std::initializer_list<uint8_t> ops,
 	if (sqe) {
 		uint32_t n = 0;
 		while (n < sqe.count) {
-			auto index = ((sqe.first ++) & *sq.mask);
+			auto index = ((sqe.first++) & *sq.mask);
 			auto ptr = &sq.sqes[index];
 
 			sq.array[index] = index;
@@ -270,7 +276,7 @@ Status URingData::pushSqe(std::initializer_list<uint8_t> ops,
 				handlesToRetain[n] = (Handle *)(ptr->user_data & URING_USERDATA_PTR_MASK);
 			}
 
-			++ n;
+			++n;
 		}
 
 		// submit now for IORING_SETUP_SQPOLL
@@ -281,18 +287,20 @@ Status URingData::pushSqe(std::initializer_list<uint8_t> ops,
 			sqe.status = Status::Suspended;
 		}
 
-		for (uint32_t i = 0; i < size; ++ i) {
+		for (uint32_t i = 0; i < size; ++i) {
 			if (handlesToRetain[i]) {
-				handlesToRetain[i]->retain(reinterpret_cast<uintptr_t>(this) ^ reinterpret_cast<uintptr_t>(handlesToRetain[i]));
+				handlesToRetain[i]->retain(reinterpret_cast<uintptr_t>(this)
+						^ reinterpret_cast<uintptr_t>(handlesToRetain[i]));
 			}
 		}
 	}
 	return sqe.status;
 }
 
-Status URingData::pushSqe(uint8_t op, const Callback<void(io_uring_sqe *)> &cb, const __kernel_timespec *ts) {
+Status URingData::pushSqe(uint8_t op, const Callback<void(io_uring_sqe *)> &cb,
+		const __kernel_timespec *ts) {
 	if (ts) {
-		return pushSqe({op, uint8_t(IORING_OP_LINK_TIMEOUT)}, [&] (io_uring_sqe *sqe, uint32_t n) {
+		return pushSqe({op, uint8_t(IORING_OP_LINK_TIMEOUT)}, [&](io_uring_sqe *sqe, uint32_t n) {
 			switch (n) {
 			case 0: cb(sqe); break;
 			case 1:
@@ -306,13 +314,12 @@ Status URingData::pushSqe(uint8_t op, const Callback<void(io_uring_sqe *)> &cb, 
 			}
 		}, URingPushFlags::Linked);
 	} else {
-		return pushSqe({op}, [&] (io_uring_sqe *sqe, uint32_t) {
-			cb(sqe);
-		}, URingPushFlags::None);
+		return pushSqe({op}, [&](io_uring_sqe *sqe, uint32_t) { cb(sqe); }, URingPushFlags::None);
 	}
 }
 
-inline void updateIoSqe(io_uring_sqe *sqe, int fd, const void *addr, unsigned len, uint64_t offset, uint64_t udata) {
+inline void updateIoSqe(io_uring_sqe *sqe, int fd, const void *addr, unsigned len, uint64_t offset,
+		uint64_t udata) {
 	sqe->fd = fd;
 	sqe->len = len;
 	sqe->off = offset;
@@ -320,7 +327,8 @@ inline void updateIoSqe(io_uring_sqe *sqe, int fd, const void *addr, unsigned le
 	sqe->user_data = udata;
 }
 
-inline void updateIoSqe(io_uring_sqe *sqe, int fd, uint64_t addr, unsigned len, uint64_t offset, uint64_t udata) {
+inline void updateIoSqe(io_uring_sqe *sqe, int fd, uint64_t addr, unsigned len, uint64_t offset,
+		uint64_t udata) {
 	sqe->fd = fd;
 	sqe->len = len;
 	sqe->off = offset;
@@ -329,11 +337,13 @@ inline void updateIoSqe(io_uring_sqe *sqe, int fd, uint64_t addr, unsigned len, 
 }
 
 static bool isCqePending(unsigned flags) {
-	return (flags & (IORING_SQ_CQ_OVERFLOW
+	return (flags
+				   & (IORING_SQ_CQ_OVERFLOW
 #ifdef IORING_SQ_TASKRUN
-			| IORING_SQ_TASKRUN
+						   | IORING_SQ_TASKRUN
 #endif
-			)) != 0;
+						   ))
+			!= 0;
 }
 
 int URingData::submitSqe(unsigned sub, unsigned wait, bool waitAvailable, bool force) {
@@ -365,18 +375,16 @@ int URingData::submitSqe(unsigned sub, unsigned wait, bool waitAvailable, bool f
 	return sub;
 }
 
-int URingData::submitPending(bool force) {
-	return submitSqe(flushSqe(), 0, false, force);
-}
+int URingData::submitPending(bool force) { return submitSqe(flushSqe(), 0, false, force); }
 
 Status URingData::pushRead(int fd, uint8_t *buf, size_t bsize, uint64_t userdata) {
-	return pushSqe({IORING_OP_READ}, [&] (io_uring_sqe *sqe, uint32_t) {
+	return pushSqe({IORING_OP_READ}, [&](io_uring_sqe *sqe, uint32_t) {
 		updateIoSqe(sqe, fd, buf, unsigned(bsize), -1, userdata);
 	}, URingPushFlags::Submit);
 }
 
 Status URingData::pushWrite(int fd, const uint8_t *buf, size_t bsize, uint64_t userdata) {
-	return pushSqe({IORING_OP_WRITE}, [&] (io_uring_sqe *sqe, uint32_t) {
+	return pushSqe({IORING_OP_WRITE}, [&](io_uring_sqe *sqe, uint32_t) {
 		updateIoSqe(sqe, fd, buf, unsigned(bsize), -1, userdata);
 	}, URingPushFlags::Submit);
 }
@@ -386,12 +394,22 @@ Status URingData::cancelOp(uint64_t userdata, URingCancelFlags cancelFlags) {
 			&& !hasFlag(_uflags, URingFlags::AsyncCancelAnyAllSupported)) {
 		return Status::ErrorNotImplemented;
 	}
-	return pushSqe({IORING_OP_ASYNC_CANCEL}, [&] (io_uring_sqe *sqe, uint32_t) {
-		updateIoSqe(sqe, -1, userdata, 0, 0,
-				hasFlag(cancelFlags, URingCancelFlags::Suspend) ? URING_USERDATA_SUSPENDED : URING_USERDATA_IGNORED);
-		sqe->cancel_flags =
-				(hasFlag(cancelFlags, URingCancelFlags::All) ? IORING_ASYNC_CANCEL_ALL : 0)
-				| (hasFlag(cancelFlags, URingCancelFlags::Any) ? IORING_ASYNC_CANCEL_ANY : 0);
+	return pushSqe({IORING_OP_ASYNC_CANCEL}, [&](io_uring_sqe *sqe, uint32_t) {
+		uint64_t udata = URING_USERDATA_IGNORED;
+		uint32_t cFlags = 0;
+
+		if (hasFlag(cancelFlags, URingCancelFlags::Suspend)) {
+			udata = URING_USERDATA_SUSPENDED;
+		}
+		if (hasFlag(cancelFlags, URingCancelFlags::All)) {
+			cFlags |= IORING_ASYNC_CANCEL_ALL;
+		}
+		if (hasFlag(cancelFlags, URingCancelFlags::Any)) {
+			cFlags |= IORING_ASYNC_CANCEL_ANY;
+		}
+
+		updateIoSqe(sqe, -1, userdata, 0, 0, udata);
+		sqe->cancel_flags = cFlags;
 	}, URingPushFlags::Submit);
 }
 
@@ -403,15 +421,17 @@ Status URingData::cancelFd(int fd, URingCancelFlags cancelFlags) {
 			&& !hasFlag(_uflags, URingFlags::AsyncCancelAnyAllSupported)) {
 		return Status::ErrorNotImplemented;
 	}
-	if (hasFlag(cancelFlags, URingCancelFlags::FixedFile) && !hasFlag(_uflags, URingFlags::AsyncCancelFdFixedSupported)) {
+	if (hasFlag(cancelFlags, URingCancelFlags::FixedFile)
+			&& !hasFlag(_uflags, URingFlags::AsyncCancelFdFixedSupported)) {
 		return Status::ErrorNotImplemented;
 	}
-	return pushSqe({IORING_OP_ASYNC_CANCEL}, [&] (io_uring_sqe *sqe, uint32_t) {
+	return pushSqe({IORING_OP_ASYNC_CANCEL}, [&](io_uring_sqe *sqe, uint32_t) {
 		updateIoSqe(sqe, fd, nullptr, 0, 0, URING_USERDATA_IGNORED);
 		sqe->cancel_flags = IORING_ASYNC_CANCEL_FD
 				| (hasFlag(cancelFlags, URingCancelFlags::All) ? IORING_ASYNC_CANCEL_ALL : 0)
 				| (hasFlag(cancelFlags, URingCancelFlags::Any) ? IORING_ASYNC_CANCEL_ANY : 0)
-				| (hasFlag(cancelFlags, URingCancelFlags::FixedFile) ? IORING_ASYNC_CANCEL_FD_FIXED : 0);
+				| (hasFlag(cancelFlags, URingCancelFlags::FixedFile) ? IORING_ASYNC_CANCEL_FD_FIXED
+																	 : 0);
 	}, URingPushFlags::Submit);
 }
 
@@ -420,9 +440,9 @@ uint32_t URingData::pop() {
 	if (_receivedEvents != _processedEvents) {
 		auto cqes = _out.data();
 		while (_processedEvents < _receivedEvents) {
-			auto &cqe = cqes[_processedEvents ++];
+			auto &cqe = cqes[_processedEvents++];
 			processEvent(cqe.res, cqe.flags, cqe.user_data);
-			++ count;
+			++count;
 		}
 		_receivedEvents = _processedEvents = 0;
 		return count;
@@ -439,8 +459,7 @@ uint32_t URingData::pop() {
 		unsigned i = 0;
 
 		last = head + _receivedEvents;
-		for (;head != last; head++, i++)
-			cqes[i] = cq.cqes[(head & mask)];
+		for (; head != last; head++, i++) { cqes[i] = cq.cqes[(head & mask)]; }
 
 		atomicStoreRelease(cq.head, last);
 
@@ -451,9 +470,9 @@ uint32_t URingData::pop() {
 
 		// processEvent can schedule new submissions
 		while (_processedEvents < _receivedEvents) {
-			auto &cqe = cqes[_processedEvents ++];
+			auto &cqe = cqes[_processedEvents++];
 			processEvent(cqe.res, cqe.flags, cqe.user_data);
-			++ count;
+			++count;
 		}
 
 		if (hasFlag(_uflags, URingFlags::PendingGetEvents)) {
@@ -469,13 +488,13 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 	auto userFlags = userdata & URING_USERDATA_USER_MASK;
 	auto userptr = userdata & URING_USERDATA_PTR_MASK;
 
-	++ _tick;
+	++_tick;
 
 	if (userdata == reinterpret_cast<uintptr_t>(this)) {
 		// general timeout
 		if (res == -ETIME) {
 			if (_runContext) {
-				doWakeupInterrupt(_runContext->runWakeupFlags, false);
+				stopContext(nullptr, _runContext->runWakeupFlags, false);
 			}
 		}
 	} else if (userdata == URING_USERDATA_IGNORED) {
@@ -486,35 +505,41 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 		//std::cout << "URING_USERDATA_TIMEOUT: " << res << " : " << flags << "\n";
 		if (_runContext) {
 			if (_runContext->wakeupCounter != 0 && res == -ETIME) {
-				_runContext->shouldWakeup.clear();
+				_runContext->state = RunContext::Stopped;
 				_runContext->wakeupStatus = Status::ErrorTimerExpired;
 			}
 		}
 	} else if (userdata == URING_USERDATA_SUSPENDED) {
 		// graceful wakeup suspend task completed
-		//std::cout << "URING_USERDATA_SUSPENDED: " << res << " : " << flags << "\n";
+		if (_data->_info.suspendedHandles == _data->_info.runningHandles && _runContext
+				&& _runContext->state == RunContext::Stopping) {
+			_runContext->state = RunContext::Stopped;
 
-		if (_data->_info.suspendedHandles == _data->_info.runningHandles) {
-			if (_runContext) {
-				_runContext->shouldWakeup.clear();
-
-				pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
+			if (_runContext->wakeupTimeout) {
+				pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&](io_uring_sqe *sqe, uint32_t n) {
 					sqe->addr = URING_USERDATA_TIMEOUT;
 					sqe->len = 0;
 					sqe->off = 0;
 					sqe->user_data = URING_USERDATA_IGNORED;
 				}, URingPushFlags::Submit);
-
-				_runContext->wakeupStatus = Status::Ok;
 			}
+
+			_runContext->wakeupStatus = Status::Ok;
 		}
 	} else if (userdata) {
+		if (hasContext(reinterpret_cast<void *>(userptr))) {
+			stopContext(reinterpret_cast<RunContext *>(userptr), _runContext->runWakeupFlags,
+					false);
+			return;
+		}
+
 		auto h = reinterpret_cast<Handle *>(userptr);
 
 		bool retainedByRing = hasFlag(userFlags, URING_USERDATA_RETAIN_BIT);
 
 		if (h->isResumable()) {
-			if ((h->getTimeline() & URING_USERDATA_SERIAL_MASK) != (userFlags & URING_USERDATA_SERIAL_MASK)) {
+			if ((h->getTimeline() & URING_USERDATA_SERIAL_MASK)
+					!= (userFlags & URING_USERDATA_SERIAL_MASK)) {
 				// messages from previous submission
 
 				if (retainedByRing && (flags & IORING_CQE_F_MORE) == 0) {
@@ -529,11 +554,9 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 			refId = h->retain();
 		}
 
-		NotifyData notifyData = {
-			.result = res,
+		NotifyData notifyData = {.result = res,
 			.queueFlags = flags,
-			.userFlags = static_cast<uint32_t>(userFlags)
-		};
+			.userFlags = static_cast<uint32_t>(userFlags)};
 
 		_data->notify(h, notifyData);
 
@@ -559,24 +582,36 @@ Status URingData::submit() {
 	}
 }
 
+uint32_t URingData::doPoll() {
+	uint32_t ret = 0;
+	while (auto v = pop()) { ret += v; }
+	return ret;
+}
+
 uint32_t URingData::poll() {
 	uint32_t ret = 0;
-	while (auto v = pop()) {
-		ret += v;
-	}
+	RunContext ctx;
+	pushContext(&ctx, RunContext::Poll);
+
+	ret = doPoll();
+
+	popContext(&ctx);
 	return ret;
 }
 
 uint32_t URingData::wait(TimeInterval ival) {
-	auto events = poll();
-	if (events == 0) {
+	RunContext ctx;
+	pushContext(&ctx, RunContext::Wait);
+
+	auto events = doPoll();
+	if (events == 0 && ival) {
 		while (true) {
 			__kernel_timespec ts;
 			setNanoTimespec(ts, ival);
 
 			int err = enter(0, 1, IORING_ENTER_GETEVENTS, ival ? &ts : nullptr);
 
-			events += poll();
+			events += doPoll();
 
 			if (err < DEBUG_ERROR_THRESHOLD) {
 				log::error("event::URingData", "io_uring_enter: ", -err);
@@ -586,6 +621,8 @@ uint32_t URingData::wait(TimeInterval ival) {
 			}
 		}
 	}
+
+	popContext(&ctx);
 	return events;
 }
 
@@ -593,32 +630,28 @@ Status URingData::run(TimeInterval ival, WakeupFlags flags, TimeInterval wakeupT
 	RunContext ctx;
 
 	ctx.wakeupStatus = Status::Suspended;
-	ctx.wakeupTimeout.store(wakeupTimeout.toMicros());
+	ctx.wakeupTimeout = wakeupTimeout;
 	ctx.runWakeupFlags = flags;
 
 	__kernel_timespec ts;
 
-	if (ival) {
+	if (ival && ival != TimeInterval::Infinite) {
 		// set timeout
 		setNanoTimespec(ts, ival);
-		pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
+		pushSqe({IORING_OP_TIMEOUT}, [&](io_uring_sqe *sqe, uint32_t n) {
 			sqe->addr = reinterpret_cast<uintptr_t>(&ts);
 			sqe->len = 1;
-			sqe->user_data = reinterpret_cast<uintptr_t>(this);
+			sqe->user_data = reinterpret_cast<uintptr_t>(&ctx);
 		}, URingPushFlags::Submit);
 	}
 
-	poll();
-	ctx.shouldWakeup.test_and_set();
+	pushContext(&ctx, RunContext::Run);
 
-	std::unique_lock lock(_runMutex);
-	ctx.prev = _runContext;
-	_runContext = &ctx;
-	lock.unlock();
+	doPoll();
 
-	while (ctx.shouldWakeup.test_and_set()) {
+	while (ctx.state == RunContext::Running || ctx.state == RunContext::Stopping) {
 		int err = enter(0, 1, IORING_ENTER_GETEVENTS, nullptr);
-		poll();
+		doPoll();
 		if (err < DEBUG_ERROR_THRESHOLD) {
 			log::error("event::URingData", "io_uring_enter: ", -err);
 			ctx.wakeupStatus = getErrnoStatus(err);
@@ -626,29 +659,21 @@ Status URingData::run(TimeInterval ival, WakeupFlags flags, TimeInterval wakeupT
 		}
 	}
 
-	if (ival) {
+	if (ival && ival != TimeInterval::Infinite) {
 		// remove timeout if set
-		pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
-			sqe->addr = reinterpret_cast<uintptr_t>(this);
+		pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&](io_uring_sqe *sqe, uint32_t n) {
+			sqe->addr = reinterpret_cast<uintptr_t>(&ctx);
 			sqe->user_data = URING_USERDATA_IGNORED;
 		}, URingPushFlags::Submit);
 	}
 
-	lock.lock();
-	_runContext = ctx.prev;
-	lock.unlock();
+	popContext(&ctx);
 
 	return ctx.wakeupStatus;
 }
 
-Status URingData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
-	std::unique_lock lock(_runMutex);
-	if (auto v = _runContext) {
-		v->wakeupFlags |= toInt(flags);
-		v->wakeupTimeout = gracefulTimeout.toMicros();
-	}
-	_runMutex.unlock();
-	_eventFd->write(1);
+Status URingData::wakeup(WakeupFlags flags) {
+	_eventFd->write(1, toInt(flags));
 	return Status::Ok;
 }
 
@@ -662,66 +687,14 @@ int URingData::enter(unsigned sub, unsigned wait, unsigned flags, __kernel_times
 	_uflags &= ~URingFlags::PendingGetEvents;
 
 	if ((sigset || ts) && (_params.features & IORING_FEAT_EXT_ARG) != 0) {
-		struct io_uring_getevents_arg arg = {
-			.sigmask = reinterpret_cast<uint64_t>(sigset),
+		struct io_uring_getevents_arg arg = {.sigmask = reinterpret_cast<uint64_t>(sigset),
 			.sigmask_sz = sigset ? uint32_t(_NSIG / 8) : uint32_t(0),
-			.ts = reinterpret_cast<uint64_t>(ts)
-		};
+			.ts = reinterpret_cast<uint64_t>(ts)};
 
-		return io_uring_enter2(_ringFd, sub, wait, flags | IORING_ENTER_EXT_ARG, &arg, sizeof(io_uring_getevents_arg));
+		return io_uring_enter2(_ringFd, sub, wait, flags | IORING_ENTER_EXT_ARG, &arg,
+				sizeof(io_uring_getevents_arg));
 	} else {
 		return io_uring_enter(_ringFd, sub, wait, flags, sigset);
-	}
-}
-
-Status URingData::suspendHandles() {
-	if (!_runContext) {
-		return Status::ErrorInvalidArguemnt;
-	}
-
-	_runContext->wakeupStatus = Status::Suspended;
-
-	auto nhandles = _data->suspendAll();
-	if (nhandles == 0) {
-		submitPending();
-		return Status::Done;
-	}
-
-	_runContext->wakeupCounter = nhandles;
-
-	auto wakeupTimeout = _runContext->wakeupTimeout.load();
-	if (wakeupTimeout > 0) {
-		setNanoTimespec(_runContext->wakeupTimespec, wakeupTimeout);
-		pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
-			sqe->addr = reinterpret_cast<uintptr_t>(&_runContext->wakeupTimespec);
-			sqe->len = 1;
-			sqe->off = 0;
-			sqe->timeout_flags = 0;
-			sqe->user_data = URING_USERDATA_TIMEOUT;
-			sqe->flags = 0;
-		}, URingPushFlags::None);
-	}
-
-	submitPending();
-
-	return Status::Ok;
-}
-
-Status URingData::doWakeupInterrupt(WakeupFlags flags, bool externalCall) {
-	if (!_runContext) {
-		return Status::ErrorInvalidArguemnt;
-	}
-
-	if (hasFlag(flags, WakeupFlags::Graceful)) {
-		if (suspendHandles() == Status::Done) {
-			_runContext->shouldWakeup.clear();
-			_runContext->wakeupStatus = Status::Ok; // graceful wakeup
-		}
-		return Status::Suspended; // do not rearm eventfd
-	} else {
-		_runContext->shouldWakeup.clear();
-		_runContext->wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
-		return Status::Ok; // rearm eventfd
 	}
 }
 
@@ -737,18 +710,44 @@ void URingData::runInternalHandles() {
 }
 
 void URingData::cancel() {
-	wakeup(WakeupFlags::Graceful, TimeInterval::seconds(1));
+	_eventFd->write(1, toInt(WakeupFlags::ContextDefault) | URING_CANCEL_FLAG);
 }
 
 URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs)
-: _queue(q), _data(data), _flags(info.flags) {
+: PlatformQueueData(q, data, info.flags) {
+
+	_suspend = [](RunContext *ctx) {
+		if (ctx->wakeupCounter == 0) {
+			static_cast<URingData *>(ctx->queue)->submitPending();
+			return Status::Done;
+		}
+
+		// we will receive reports from all commands, or it will be forced wakeup on timeout
+		if (ctx->wakeupTimeout) {
+			setNanoTimespec(ctx->wakeupTimespec, ctx->wakeupTimeout);
+			static_cast<URingData *>(ctx->queue)
+					->pushSqe({IORING_OP_TIMEOUT}, [&](io_uring_sqe *sqe, uint32_t n) {
+				sqe->addr = reinterpret_cast<uintptr_t>(&ctx->wakeupTimespec);
+				sqe->len = 1;
+				sqe->off = 0;
+				sqe->timeout_flags = 0;
+				sqe->user_data = URING_USERDATA_TIMEOUT;
+				sqe->flags = 0;
+			}, URingPushFlags::None);
+			static_cast<URingData *>(ctx->queue)->submitPending();
+		}
+
+		return Status::Ok;
+	};
 
 	_eventFd = Rc<EventFdURingHandle>::create(&data->_uringEventFdClass,
 			CompletionHandle<EventFdURingHandle>::create<URingData>(this,
-					[] (URingData *data, EventFdURingHandle *h, uint32_t value, Status st) {
+					[](URingData *data, EventFdURingHandle *h, uint32_t value, Status st) {
 		if (st == Status::Ok) {
-			if (data->_runContext) {
-				data->doWakeupInterrupt(WakeupFlags(data->_runContext->wakeupFlags.exchange(0)), true);
+			if (hasFlag(value, URING_CANCEL_FLAG)) {
+				data->stopRootContext(WakeupFlags(value), true);
+			} else {
+				data->stopContext(data->_runContext, WakeupFlags(value), true);
 			}
 		}
 	}));
@@ -768,7 +767,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 
 	int ringFd = -1;
 
-	auto cleanup = [&] () {
+	auto cleanup = [&]() {
 		if (ringFd >= 0) {
 			::close(ringFd);
 		}
@@ -851,29 +850,59 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	}
 
 	mem_std::StringStream features;
-	if (_params.features & IORING_FEAT_SINGLE_MMAP) { features << " " << "IORING_FEAT_SINGLE_MMAP"; }
-	if (_params.features & IORING_FEAT_NODROP) { features << " " << "IORING_FEAT_NODROP"; }
-	if (_params.features & IORING_FEAT_SUBMIT_STABLE) { features << " " << "IORING_FEAT_SUBMIT_STABLE"; }
-	if (_params.features & IORING_FEAT_RW_CUR_POS) { features << " " << "IORING_FEAT_RW_CUR_POS"; }
-	if (_params.features & IORING_FEAT_CUR_PERSONALITY) { features << " " << "IORING_FEAT_CUR_PERSONALITY"; }
-	if (_params.features & IORING_FEAT_FAST_POLL) { features << " " << "IORING_FEAT_FAST_POLL"; }
-	if (_params.features & IORING_FEAT_POLL_32BITS) { features << " " << "IORING_FEAT_POLL_32BITS"; }
-	if (_params.features & IORING_FEAT_SQPOLL_NONFIXED) { features << " " << "IORING_FEAT_SQPOLL_NONFIXED"; }
-	if (_params.features & IORING_FEAT_EXT_ARG) { features << " " << "IORING_FEAT_EXT_ARG"; }
-	if (_params.features & IORING_FEAT_NATIVE_WORKERS) { features << " " << "IORING_FEAT_NATIVE_WORKERS"; }
-	if (_params.features & IORING_FEAT_RSRC_TAGS) { features << " " << "IORING_FEAT_RSRC_TAGS"; }
+	if (_params.features & IORING_FEAT_SINGLE_MMAP) {
+		features << " " << "IORING_FEAT_SINGLE_MMAP";
+	}
+	if (_params.features & IORING_FEAT_NODROP) {
+		features << " " << "IORING_FEAT_NODROP";
+	}
+	if (_params.features & IORING_FEAT_SUBMIT_STABLE) {
+		features << " " << "IORING_FEAT_SUBMIT_STABLE";
+	}
+	if (_params.features & IORING_FEAT_RW_CUR_POS) {
+		features << " " << "IORING_FEAT_RW_CUR_POS";
+	}
+	if (_params.features & IORING_FEAT_CUR_PERSONALITY) {
+		features << " " << "IORING_FEAT_CUR_PERSONALITY";
+	}
+	if (_params.features & IORING_FEAT_FAST_POLL) {
+		features << " " << "IORING_FEAT_FAST_POLL";
+	}
+	if (_params.features & IORING_FEAT_POLL_32BITS) {
+		features << " " << "IORING_FEAT_POLL_32BITS";
+	}
+	if (_params.features & IORING_FEAT_SQPOLL_NONFIXED) {
+		features << " " << "IORING_FEAT_SQPOLL_NONFIXED";
+	}
+	if (_params.features & IORING_FEAT_EXT_ARG) {
+		features << " " << "IORING_FEAT_EXT_ARG";
+	}
+	if (_params.features & IORING_FEAT_NATIVE_WORKERS) {
+		features << " " << "IORING_FEAT_NATIVE_WORKERS";
+	}
+	if (_params.features & IORING_FEAT_RSRC_TAGS) {
+		features << " " << "IORING_FEAT_RSRC_TAGS";
+	}
 
 #ifdef IORING_FEAT_CQE_SKIP
-	if (_params.features & IORING_FEAT_CQE_SKIP) { features << " " << "IORING_FEAT_CQE_SKIP"; }
+	if (_params.features & IORING_FEAT_CQE_SKIP) {
+		features << " " << "IORING_FEAT_CQE_SKIP";
+	}
 #endif
 #ifdef IORING_FEAT_LINKED_FILE
-	if (_params.features & IORING_FEAT_LINKED_FILE) { features << " " << "IORING_FEAT_LINKED_FILE"; }
+	if (_params.features & IORING_FEAT_LINKED_FILE) {
+		features << " " << "IORING_FEAT_LINKED_FILE";
+	}
 #endif
 #ifdef IORING_FEAT_REG_REG_RING
-	if (_params.features & IORING_FEAT_REG_REG_RING) { features << " " << "IORING_FEAT_REG_REG_RING"; }
+	if (_params.features & IORING_FEAT_REG_REG_RING) {
+		features << " " << "IORING_FEAT_REG_REG_RING";
+	}
 #endif
 #ifdef IORING_FEAT_RECVSEND_BUNDLE
-	if (_params.features & IORING_FEAT_RECVSEND_BUNDLE) { features << " " << "IORING_FEAT_RECVSEND_BUNDLE"; }
+	if (_params.features & IORING_FEAT_RECVSEND_BUNDLE) {
+		features << " " << "IORING_FEAT_RECVSEND_BUNDLE";
+	}
 #endif
 
 	log::info("event::URingData", "io_uring features: ", features.str());
@@ -885,7 +914,8 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 		cq.ringSize = sq.ringSize = std::max(sq.ringSize, cq.ringSize);
 	}
 
-	sq.ring = (uint8_t *)::mmap(0, sq.ringSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, ringFd, IORING_OFF_SQ_RING);
+	sq.ring = (uint8_t *)::mmap(0, sq.ringSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
+			ringFd, IORING_OFF_SQ_RING);
 	if (sq.ring == MAP_FAILED) {
 		log::error("event::URingData", "Fail to mmap SQ");
 		cleanup();
@@ -896,7 +926,8 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 		cq.ring = sq.ring;
 	} else {
 		/* Map in the completion queue ring buffer in older kernels separately */
-		cq.ring = (uint8_t *)::mmap(0, cq.ringSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, ringFd, IORING_OFF_CQ_RING);
+		cq.ring = (uint8_t *)::mmap(0, cq.ringSize, PROT_READ | PROT_WRITE,
+				MAP_SHARED | MAP_POPULATE, ringFd, IORING_OFF_CQ_RING);
 		if (cq.ring == MAP_FAILED) {
 			log::error("event::URingData", "Fail to mmap CQ");
 			cleanup();
@@ -905,8 +936,8 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	}
 
 	/* Map in the submission queue entries array */
-	sq.sqes = (io_uring_sqe *)::mmap(0, _params.sq_entries * sizeof(io_uring_sqe), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
-			ringFd, IORING_OFF_SQES);
+	sq.sqes = (io_uring_sqe *)::mmap(0, _params.sq_entries * sizeof(io_uring_sqe),
+			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, ringFd, IORING_OFF_SQES);
 	if (sq.sqes == MAP_FAILED) {
 		log::error("event::URingData", "Fail to mmap SQE");
 		cleanup();
@@ -942,9 +973,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 
 	_out.resize(_params.cq_entries);
 
-	for (unsigned index = 0; index < *sq.entries; index++) {
-		sq.array[index] = index;
-	}
+	for (unsigned index = 0; index < *sq.entries; index++) { sq.array[index] = index; }
 
 	// allocate internal FD table
 	auto totalHandles = info.externalHandles + info.internalHandles;
@@ -960,7 +989,8 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 		fdTableReg.data = reinterpret_cast<uintptr_t>(_fds.data());
 		fdTableReg.tags = reinterpret_cast<uintptr_t>(_tags.data());
 
-		err = io_uring_register(ringFd, IORING_REGISTER_FILES2, &fdTableReg, sizeof(io_uring_rsrc_register));
+		err = io_uring_register(ringFd, IORING_REGISTER_FILES2, &fdTableReg,
+				sizeof(io_uring_rsrc_register));
 		if (err < 0) {
 			log::error("event::URingData", "Fail to set fd table");
 			cleanup();
@@ -998,6 +1028,6 @@ URingData::~URingData() {
 	}
 }
 
-}
+} // namespace stappler::event
 
 #endif

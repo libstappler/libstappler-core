@@ -49,8 +49,8 @@ struct Looper::Data : public memory::AllocPool {
 	std::thread::id thisThreadId;
 	bool suspendThreadsOnWakeup = false;
 
-	std::mutex mutex;
 	mem_std::Set<Bus *> buses;
+	std::mutex *mutex = nullptr;
 
 	thread::ThreadPool *getThreadPool() {
 		if (!threadPool) {
@@ -59,30 +59,30 @@ struct Looper::Data : public memory::AllocPool {
 		return threadPool;
 	}
 
-	void cleanup(Looper *l) {
-		std::unique_lock lock(mutex);
-		if (!queue) {
+	static void cleanup(Data *d, Looper *l) {
+		std::unique_lock lock(l->_mutex);
+		if (!d->queue) {
 			return;
 		}
 
-		auto tmp = sp::move(buses);
-		buses.clear();
+		auto tmp = sp::move(d->buses);
+		d->buses.clear();
 
 		for (auto &it : tmp) { it->invalidateLooper(l); }
 
-		auto q = queue;
-		if (threadPool) {
-			threadPool->cancel();
-			threadPool = nullptr;
+		auto q = d->queue;
+		if (d->threadPool) {
+			d->threadPool->cancel();
+			d->threadPool = nullptr;
 		}
 
-		threadPoolInfo.ref = nullptr;
+		d->threadPoolInfo.ref = nullptr;
 
-		if (threadHandle) {
-			threadHandle->cancel();
-			threadHandle = nullptr;
+		if (d->threadHandle) {
+			d->threadHandle->cancel();
+			d->threadHandle = nullptr;
 		}
-		queue = nullptr; // this possibly destroys Queue with it's pool and _data
+		d->queue = nullptr; // this possibly destroys Queue with it's pool and _data
 
 		q->cancel();
 #if SP_REF_DEBUG
@@ -99,15 +99,16 @@ struct Looper::Data : public memory::AllocPool {
 		}
 		queue = nullptr;
 #endif
+		lock.unlock();
 	}
 
 	void attachBus(Bus *bus) {
-		std::unique_lock lock(mutex);
+		std::unique_lock lock(*mutex);
 		buses.emplace(bus);
 	}
 
 	void detachBus(Bus *bus) {
-		std::unique_lock lock(mutex);
+		std::unique_lock lock(*mutex);
 		buses.erase(bus);
 	}
 };
@@ -145,7 +146,7 @@ Looper *Looper::getIfExists() { return tl_looper; }
 
 Looper::~Looper() {
 	if (_data) {
-		_data->cleanup(this);
+		Data::cleanup(_data, this);
 		_data = nullptr;
 	}
 }
@@ -216,11 +217,11 @@ Status Looper::run(TimeInterval ival, QueueWakeupInfo &&info) {
 	return ret;
 }
 
-Status Looper::wakeup(QueueWakeupInfo &&info) {
-	if (hasFlag(info.flags, WakeupFlags::SuspendThreads)) {
+Status Looper::wakeup(WakeupFlags flags) {
+	if (hasFlag(flags, WakeupFlags::SuspendThreads)) {
 		_data->suspendThreadsOnWakeup = true;
 	}
-	return _data->queue->wakeup(move(info));
+	return _data->queue->wakeup(flags);
 }
 
 uint16_t Looper::getWorkersCount() const { return _data->threadPool->getInfo().threadCount; }
@@ -229,7 +230,7 @@ memory::pool_t *Looper::getThreadMemPool() const { return _data->threadMemPool; 
 
 const event::Queue *Looper::getQueue() const { return _data->queue; }
 
-thread::ThreadPool *Looper::getThreadPool() const { return _data->threadPool; }
+thread::ThreadPool *Looper::getThreadPool() const { return _data->getThreadPool(); }
 
 bool Looper::isOnThisThread() const { return _data->thisThreadId == std::this_thread::get_id(); }
 
@@ -237,6 +238,7 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 	auto pool = q->getPool();
 	mem_pool::perform([&] {
 		_data = new (pool) Data;
+		_data->mutex = &_mutex;
 		_data->queue = move(q);
 		_data->threadHandle = _data->queue->addThreadHandle();
 		_data->threadPoolInfo = thread::ThreadPoolInfo{.flags = info.workersFlags,
@@ -256,7 +258,7 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 			_data->threadMemPool = _data->threadInfo->threadPool;
 			memory::pool::cleanup_register(_data->threadMemPool, this, [](void *d) -> Status {
 				auto l = (Looper *)d;
-				l->_data->cleanup(l);
+				Data::cleanup(l->_data, l);
 				l->_data = nullptr;
 				tl_looper = nullptr;
 				return Status::Ok;
