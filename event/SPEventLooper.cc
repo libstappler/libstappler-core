@@ -61,9 +61,6 @@ struct Looper::Data : public memory::AllocPool {
 
 	static void cleanup(Data *d, Looper *l) {
 		std::unique_lock lock(l->_mutex);
-		if (!d->queue) {
-			return;
-		}
 
 		auto tmp = sp::move(d->buses);
 		d->buses.clear();
@@ -82,7 +79,14 @@ struct Looper::Data : public memory::AllocPool {
 			d->threadHandle->cancel();
 			d->threadHandle = nullptr;
 		}
-		d->queue = nullptr; // this possibly destroys Queue with it's pool and _data
+
+		if (d->threadPool) {
+			d->threadPool->cancel();
+			d->threadPool = nullptr;
+			log::debug("Looper", "Cleanup: ", thread::ThreadInfo::getThreadInfo()->name);
+		}
+
+		d->queue = nullptr;
 
 		q->cancel();
 #if SP_REF_DEBUG
@@ -125,11 +129,6 @@ Looper *Looper::acquire(LooperInfo &&info) {
 Looper *Looper::acquire(LooperInfo &&info, QueueInfo &&qinfo) {
 	if (tl_looper) {
 		return tl_looper;
-	}
-
-	auto threadInfo = thread::ThreadInfo::getThreadInfo();
-	if (threadInfo) {
-		qinfo.pool = threadInfo->threadPool;
 	}
 
 	auto q = platform::getThreadQueue(move(qinfo));
@@ -261,6 +260,7 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 				Data::cleanup(l->_data, l);
 				l->_data = nullptr;
 				tl_looper = nullptr;
+				delete l;
 				return Status::Ok;
 			});
 		}

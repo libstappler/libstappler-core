@@ -244,10 +244,12 @@ bool ThreadHandle::init(HandleClass *cl) {
 		return false;
 	}
 
-	_pool = Rc<PoolRef>::alloc(memory::app_root_pool);
+	_pool = Rc<PoolRef>::alloc();
 
-	_engine = new (_pool->getPool()) PerformEngine(_pool->getPool());
-	_engine->_performEnabled = true;
+	_pool->perform([&](memory::pool_t *pool) {
+		_engine = new (_pool->getPool()) PerformEngine(_pool->getPool());
+		_engine->_performEnabled = true;
+	});
 
 	_outputQueue.reserve(2);
 	_outputCallbacks.reserve(2);

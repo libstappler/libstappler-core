@@ -1,5 +1,5 @@
 /**
- Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,47 +20,24 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_EVENT_PLATFORM_ANDROID_SPEVENT_ALOOPER_H_
-#define CORE_EVENT_PLATFORM_ANDROID_SPEVENT_ALOOPER_H_
+#include "config.h"
 
-#include "SPEventQueue.h"
-#include "SPPlatformUnistd.h"
-#include "detail/SPEventQueueData.h"
+#include "mmap.c"
+#include "mmapio.c"
+#include "sort.c"
 
-#if ANDROID
+#include "fileline.c"
+#include "backtrace.c"
+#include "state.c"
 
-#include "../fd/SPEventSignalFd.h"
-#include "../fd/SPEventEventFd.h"
-
-#include <android/looper.h>
-
-namespace STAPPLER_VERSIONIZED stappler::event {
-
-struct SP_PUBLIC ALooperData : public PlatformQueueData {
-	ALooper *_looper = nullptr;
-
-	Rc<EventFdHandle> _eventFd;
-
-	Status add(int fd, int events, Handle *);
-	Status remove(int fd);
-
-	Status submit();
-	uint32_t poll();
-	uint32_t wait(TimeInterval);
-	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
-
-	Status wakeup(WakeupFlags);
-
-	void runInternalHandles();
-
-	void cancel();
-
-	ALooperData(QueueRef *, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs);
-	~ALooperData();
-};
-
-} // namespace stappler::event
-
+#if LINUX
+#include "posix.c"
+#include "dwarf.c"
+#include "elf.c"
 #endif
 
-#endif /* CORE_EVENT_PLATFORM_ANDROID_SPEVENT_ALOOPER_H_ */
+#if ANDROID
+#include "posix.c"
+#include "dwarf.c"
+#include "elf.c"
+#endif

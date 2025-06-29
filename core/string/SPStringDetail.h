@@ -1207,6 +1207,7 @@ inline auto StringViewUtf8::operator*() const -> MatchCharType {
 
 template <typename Callback>
 inline void StringViewUtf8::foreach (const Callback &cb) const {
+	static_assert(std::is_invocable_v<Callback, MatchCharType>);
 	auto p = ptr;
 	const auto e = ptr + len;
 	while (p < e) {

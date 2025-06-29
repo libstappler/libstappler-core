@@ -81,8 +81,7 @@ Status EventFdURingHandle::rearm(URingData *uring, EventFdSource *source) {
 		source->target[0] = 0;
 
 		status = uring->pushRead(source->fd, (uint8_t *)source->target, sizeof(uint64_t),
-				reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
-						| (_timeline & URING_USERDATA_SERIAL_MASK));
+				reinterpret_cast<uintptr_t>(this) | (_timeline & URING_USERDATA_SERIAL_MASK));
 	}
 	return status;
 }
@@ -90,7 +89,7 @@ Status EventFdURingHandle::rearm(URingData *uring, EventFdSource *source) {
 Status EventFdURingHandle::disarm(URingData *uring, EventFdSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
-		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
+		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this)
 						| (_timeline & URING_USERDATA_SERIAL_MASK),
 				URingCancelFlags::Suspend);
 		++_timeline;
@@ -194,7 +193,7 @@ void EventFdALooperHandle::notify(ALooperData *alooper, EventFdSource *source,
 			|| (data.queueFlags & ALOOPER_EVENT_INVALID)) {
 		cancel();
 	} else if (notify) {
-		sendCompletion(0, Status::Ok);
+		sendCompletion(__atomic_exchange_n(&source->eventValue, 0, __ATOMIC_SEQ_CST), Status::Ok);
 	}
 }
 #endif

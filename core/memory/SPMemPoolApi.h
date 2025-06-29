@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 #include "SPCore.h"
 #include "SPMemPoolInterface.h"
+#include "SPPlatformInit.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
@@ -50,9 +51,11 @@ public:
 		destroy, // destroy pool after pop
 	};
 
-	explicit context(const pool_type &__m, finalize_flag = discard);
+	explicit context(const pool_type &__m, finalize_flag = discard,
+			const char *source = STAPPLER_LOCATION);
 
-	context(const pool_type &__m, uint32_t tag, void *userdata, finalize_flag = discard);
+	context(const pool_type &__m, uint32_t tag, void *userdata, finalize_flag = discard,
+			const char *source = STAPPLER_LOCATION);
 	~context();
 
 	context(const context &) = delete;
@@ -78,34 +81,40 @@ private:
 	pool_type _pool;
 	bool _owns;
 	finalize_flag _flag;
+	const char *_source = nullptr;
 };
 
-template <typename Callback>
-inline auto perform(const Callback &cb, memory::pool_t *p);
+using finalize_flag = context<pool_t *>::finalize_flag;
 
 template <typename Callback>
-inline auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *userdata = nullptr);
+inline auto perform(const Callback &cb, memory::pool_t *p, const char * = STAPPLER_LOCATION);
 
 template <typename Callback>
-inline auto perform_conditional(const Callback &cb, memory::pool_t *p);
+inline auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *userdata = nullptr,
+		const char * = STAPPLER_LOCATION);
+
+template <typename Callback>
+inline auto perform_conditional(const Callback &cb, memory::pool_t *p,
+		const char * = STAPPLER_LOCATION);
 
 template <typename Callback>
 inline auto perform_conditional(const Callback &cb, memory::pool_t *p, uint32_t tag,
-		void *userdata = nullptr);
+		void *userdata = nullptr, const char * = STAPPLER_LOCATION);
 
 template <typename Callback>
-inline auto perform_clear(const Callback &cb, memory::pool_t *p);
+inline auto perform_clear(const Callback &cb, memory::pool_t *p, const char * = STAPPLER_LOCATION);
 
 template <typename Callback>
 inline auto perform_clear(const Callback &cb, memory::pool_t *p, uint32_t tag,
-		void *userdata = nullptr);
+		void *userdata = nullptr, const char * = STAPPLER_LOCATION);
 
 template <typename Callback>
-inline auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr);
+inline auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr,
+		const char * = STAPPLER_LOCATION);
 
 template <typename Callback>
 inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t tag,
-		void *userdata = nullptr);
+		void *userdata = nullptr, const char * = STAPPLER_LOCATION);
 
 template <typename Callback>
 inline int perform_main(const Callback &cb);
@@ -123,14 +132,15 @@ namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
 
 template <typename _Pool>
-context<_Pool>::context(const pool_type &__m, finalize_flag f)
-: _pool(__m), _owns(false), _flag(f) {
+context<_Pool>::context(const pool_type &__m, finalize_flag f, const char *source)
+: _pool(__m), _owns(false), _flag(f), _source(source) {
 	push();
 }
 
 template <typename _Pool>
-context<_Pool>::context(const pool_type &__m, uint32_t tag, void *userdata, finalize_flag f)
-: _pool(__m), _owns(false), _flag(f) {
+context<_Pool>::context(const pool_type &__m, uint32_t tag, void *userdata, finalize_flag f,
+		const char *source)
+: _pool(__m), _owns(false), _flag(f), _source(source) {
 	push(tag, userdata);
 }
 
@@ -170,7 +180,7 @@ template <typename _Pool>
 void context<_Pool>::push() noexcept {
 	if (_pool && !_owns) {
 		if (_flag != conditional || pool::acquire() != _pool) {
-			pool::push(_pool);
+			pool::push(_pool, _source);
 			_owns = true;
 		}
 	}
@@ -180,7 +190,7 @@ template <typename _Pool>
 void context<_Pool>::push(uint32_t tag, void *userdata) noexcept {
 	if (_pool && !_owns) {
 		if (_flag != conditional || pool::acquire() != _pool) {
-			pool::push(_pool, tag, userdata);
+			pool::push(_pool, tag, userdata, _source);
 			_owns = true;
 		}
 	}
@@ -192,7 +202,7 @@ void context<_Pool>::pop() noexcept {
 		return;
 	}
 
-	pool::pop();
+	pool::pop(_pool, _source);
 
 	switch (_flag) {
 	case discard:
@@ -215,53 +225,105 @@ void context<_Pool>::swap(context &u) noexcept {
 }
 
 template <typename Callback>
-inline auto perform(const Callback &cb, memory::pool_t *p) {
-	context<decltype(p)> holder(p);
-	return cb();
+inline auto perform(const Callback &cb, memory::pool_t *p, const char *source) {
+	context<decltype(p)> holder(p, context<decltype(p)>::discard, source);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *>) {
+		return cb(p);
+	} else {
+		static_assert(std::is_invocable_v<Callback>,
+				"Callback should receive memory::pool_t * or nothing");
+		return cb();
+	}
 }
 
 template <typename Callback>
-inline auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr) {
-	context<decltype(p)> holder(p, tag, ptr);
-	return cb();
+inline auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr,
+		const char *source) {
+	context<decltype(p)> holder(p, tag, ptr, context<decltype(p)>::discard, source);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *>) {
+		return cb(p);
+	} else {
+		static_assert(std::is_invocable_v<Callback>,
+				"Callback should receive memory::pool_t * or nothing");
+		return cb();
+	}
 }
 
 template <typename Callback>
-inline auto perform_conditional(const Callback &cb, memory::pool_t *p) {
-	context<decltype(p)> holder(p, context<decltype(p)>::conditional);
-	return cb();
+inline auto perform_conditional(const Callback &cb, memory::pool_t *p, const char *source) {
+	context<decltype(p)> holder(p, context<decltype(p)>::conditional, source);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *>) {
+		return cb(p);
+	} else {
+		static_assert(std::is_invocable_v<Callback>,
+				"Callback should receive memory::pool_t * or nothing");
+		return cb();
+	}
 }
 
 template <typename Callback>
-inline auto perform_conditional(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr) {
-	context<decltype(p)> holder(p, tag, ptr, context<decltype(p)>::conditional);
-	return cb();
+inline auto perform_conditional(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr,
+		const char *source) {
+	context<decltype(p)> holder(p, tag, ptr, context<decltype(p)>::conditional, source);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *>) {
+		return cb(p);
+	} else {
+		static_assert(std::is_invocable_v<Callback>,
+				"Callback should receive memory::pool_t * or nothing");
+		return cb();
+	}
 }
 
 template <typename Callback>
-inline auto perform_clear(const Callback &cb, memory::pool_t *p) {
-	context<decltype(p)> holder(p, context<decltype(p)>::clear);
-	return cb();
+inline auto perform_clear(const Callback &cb, memory::pool_t *p, const char *source) {
+	context<decltype(p)> holder(p, context<decltype(p)>::clear, source);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *>) {
+		return cb(p);
+	} else {
+		static_assert(std::is_invocable_v<Callback>,
+				"Callback should receive memory::pool_t * or nothing");
+		return cb();
+	}
 }
 
 template <typename Callback>
-inline auto perform_clear(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr) {
-	context<decltype(p)> holder(p, tag, ptr, context<decltype(p)>::clear);
-	return cb();
+inline auto perform_clear(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr,
+		const char *source) {
+	context<decltype(p)> holder(p, tag, ptr, context<decltype(p)>::clear, source);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *>) {
+		return cb(p);
+	} else {
+		static_assert(std::is_invocable_v<Callback>,
+				"Callback should receive memory::pool_t * or nothing");
+		return cb();
+	}
 }
 
 template <typename Callback>
-inline auto perform_temporary(const Callback &cb, memory::pool_t *p) {
+inline auto perform_temporary(const Callback &cb, memory::pool_t *p, const char *source) {
 	auto pool = memory::pool::create(p ? p : memory::pool::acquire());
-	context<decltype(p)> holder(pool, context<decltype(p)>::destroy);
-	return cb();
+	context<decltype(p)> holder(pool, context<decltype(p)>::destroy, source);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *>) {
+		return cb(p);
+	} else {
+		static_assert(std::is_invocable_v<Callback>,
+				"Callback should receive memory::pool_t * or nothing");
+		return cb();
+	}
 }
 
 template <typename Callback>
-inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr) {
+inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t tag, void *ptr,
+		const char *source) {
 	auto pool = memory::pool::create(p ? p : memory::pool::acquire());
-	context<decltype(p)> holder(pool, tag, ptr, context<decltype(p)>::destroy);
-	return cb();
+	context<decltype(p)> holder(pool, tag, ptr, context<decltype(p)>::destroy, source);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *>) {
+		return cb(p);
+	} else {
+		static_assert(std::is_invocable_v<Callback>,
+				"Callback should receive memory::pool_t * or nothing");
+		return cb();
+	}
 }
 
 template <typename Callback>

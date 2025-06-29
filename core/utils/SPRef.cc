@@ -23,24 +23,19 @@ THE SOFTWARE.
 
 #include "SPRef.h"
 #include "SPLog.h"
+#include "SPPlatformInit.h"
 #include "SPSubscription.h"
 #include "SPTime.h"
 #include "SPDso.h"
 
 #ifdef __cpp_lib_stacktrace
+#warning Has stacktrace
 #include <stacktrace>
 #endif
 
 #if WIN32
 #else
 #include <cxxabi.h>
-#endif
-
-#if LINUX
-#include <execinfo.h>
-#elif __APPLE__
-#include <libunwind.h>
-#include <inttypes.h>
 #endif
 
 namespace stappler {
@@ -147,6 +142,25 @@ static StringView filepath_name(StringView path) {
 	}
 }
 
+} // namespace stappler::backtrace
+
+// libbacktrace info
+// see https://github.com/ianlancetaylor/libbacktrace
+namespace stappler::backtrace::detail {
+
+struct backtrace_state;
+
+using backtrace_error_callback = void (*)(void *data, const char *msg, int errnum);
+
+using backtrace_full_callback = int (*)(void *data, uintptr_t pc, const char *filename, int lineno,
+		const char *function);
+
+SP_EXTERN_C backtrace_state *backtrace_create_state(const char *filename, int threaded,
+		backtrace_error_callback error_callback, void *data);
+
+SP_EXTERN_C int backtrace_full(backtrace_state *state, int skip,
+		backtrace_full_callback callback, backtrace_error_callback error_callback, void *data);
+
 SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView filename,
 		int lineno, StringView function) {
 	char *target = buf;
@@ -188,25 +202,6 @@ SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView 
 	return target - buf;
 }
 
-} // namespace stappler::backtrace
-
-// libbacktrace info
-// see https://github.com/ianlancetaylor/libbacktrace
-namespace stappler::backtrace::detail {
-
-struct backtrace_state;
-
-using backtrace_error_callback = void (*)(void *data, const char *msg, int errnum);
-
-using backtrace_full_callback = int (*)(void *data, uintptr_t pc, const char *filename, int lineno,
-		const char *function);
-
-using backtrace_create_state_fn = backtrace_state *(*)(const char *filename, int threaded,
-		backtrace_error_callback error_callback, void *data);
-
-using backtrace_full_fn = int (*)(backtrace_state *state, int skip,
-		backtrace_full_callback callback, backtrace_error_callback error_callback, void *data);
-
 } // namespace stappler::backtrace::detail
 
 namespace STAPPLER_VERSIONIZED stappler {
@@ -220,7 +215,7 @@ static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *f
 	if (pc != uintptr_t(0xffff'ffff'ffff'ffffLLU)) {
 		auto ret = (const Callback<void(StringView)> *)data;
 		char buf[1'024] = {0};
-		auto size = backtrace::print(buf, 1'024, pc, filename, lineno, function);
+		auto size = backtrace::detail::print(buf, 1'024, pc, filename, lineno, function);
 		(*ret)(StringView(buf, size));
 	}
 	return 0;
@@ -240,30 +235,14 @@ struct BacktraceState {
 	}
 
 	BacktraceState() {
-		auto lib = Dso("libbacktrace.so");
-		if (lib) {
-			backtrace_create_state =
-					lib.sym<decltype(backtrace_create_state)>("backtrace_create_state");
-			backtrace_full = lib.sym<decltype(backtrace_full)>("backtrace_full");
-
-			if (backtrace_create_state && backtrace_full) {
-				libbacktrace = move(lib);
-				backtraceState = backtrace_create_state(nullptr, 1, debug_backtrace_error, nullptr);
-			} else {
-				backtrace_create_state = nullptr;
-				backtrace_full = nullptr;
-			}
-		}
+		backtraceState = backtrace::detail::backtrace_create_state(nullptr, 1, debug_backtrace_error, nullptr);
 	}
 
 	void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
-		backtrace_full(backtraceState, int(2 + offset), debug_backtrace_full_callback,
+		backtrace::detail::backtrace_full(backtraceState, int(2 + offset), debug_backtrace_full_callback,
 				debug_backtrace_error, (void *)&cb);
 	}
 
-	Dso libbacktrace;
-	backtrace::detail::backtrace_create_state_fn backtrace_create_state = nullptr;
-	backtrace::detail::backtrace_full_fn backtrace_full = nullptr;
 	backtrace::detail::backtrace_state *backtraceState = nullptr;
 };
 
@@ -275,60 +254,6 @@ void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
 		backtraceLib->getBacktrace(offset, cb);
 		return;
 	}
-
-#if LINUX
-	static constexpr int LinuxBacktraceSize = 128;
-	static constexpr int LinuxBacktraceOffset = 2;
-
-	void *bt[LinuxBacktraceSize + LinuxBacktraceOffset + offset];
-	char **bt_syms;
-	int bt_size;
-
-	bt_size = ::backtrace(bt, LinuxBacktraceSize + LinuxBacktraceOffset + offset);
-	bt_syms = ::backtrace_symbols(bt, bt_size);
-
-	for (int i = LinuxBacktraceOffset + offset; i < bt_size; i++) {
-		StringView str(bt_syms[i]);
-
-		auto first = str.find('(');
-		auto second = str.rfind('+');
-
-		char buf[1'024] = {0};
-		auto size = backtrace::print(buf, 1'024, (uintptr_t)bt[i], StringView(str, first), -1,
-				StringView(str, first + 1, second - first - 1));
-
-		cb(StringView(buf, size));
-	}
-
-	::free(bt_syms);
-#elif __APPLE__
-	unw_cursor_t cursor;
-	unw_context_t context;
-	unw_getcontext(&context);
-	unw_init_local(&cursor, &context);
-
-	char buf[1'024] = {0};
-
-	while (unw_step(&cursor)) {
-		if (offset > 0) {
-			--offset;
-			continue;
-		}
-
-		unw_word_t ip, sp, off;
-
-		unw_get_reg(&cursor, UNW_REG_IP, &ip);
-		unw_get_reg(&cursor, UNW_REG_SP, &sp);
-
-		char symbol[1'024] = {"<unknown>"};
-
-		unw_get_proc_name(&cursor, symbol, sizeof(symbol), &off);
-		auto size =
-				backtrace::print(buf, 1'024, (uintptr_t)off, StringView(), -1, StringView(symbol));
-
-		cb(StringView(buf, size));
-	}
-#endif
 }
 
 } // namespace STAPPLER_VERSIONIZED stappler

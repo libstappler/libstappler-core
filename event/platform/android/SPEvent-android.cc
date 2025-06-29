@@ -21,6 +21,7 @@
  **/
 
 #include "SPEvent-android.h"
+#include "SPEventQueue.h"
 
 #if ANDROID
 
@@ -69,8 +70,8 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
 				return reinterpret_cast<ALooperData *>(ptr)->run(ival, info.flags, info.timeout);
 			};
-			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
-				return reinterpret_cast<ALooperData *>(ptr)->wakeup(info.flags, info.timeout);
+			_wakeup = [](void *ptr, WakeupFlags flags) {
+				return reinterpret_cast<ALooperData *>(ptr)->wakeup(flags);
 			};
 			_cancel = [](void *ptr) { reinterpret_cast<ALooperData *>(ptr)->cancel(); };
 			_destroy = [](void *ptr) { delete reinterpret_cast<ALooperData *>(ptr); };
@@ -115,8 +116,8 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
 				return reinterpret_cast<EPollData *>(ptr)->run(ival, info.flags, info.timeout);
 			};
-			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
-				return reinterpret_cast<EPollData *>(ptr)->wakeup(info.flags, info.timeout);
+			_wakeup = [](void *ptr, WakeupFlags flags) {
+				return reinterpret_cast<EPollData *>(ptr)->wakeup(flags);
 			};
 			_cancel = [](void *ptr) { reinterpret_cast<EPollData *>(ptr)->cancel(); };
 			_destroy = [](void *ptr) { delete reinterpret_cast<EPollData *>(ptr); };

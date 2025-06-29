@@ -176,6 +176,7 @@ Status EPollData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval w
 	if (timerHandle) {
 		// remove timeout if set
 		timerHandle->cancel();
+		timerHandle = nullptr;
 	}
 
 	popContext(&ctx);
@@ -210,7 +211,11 @@ EPollData::EPollData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 			CompletionHandle<EventFdEPollHandle>::create<EPollData>(this,
 					[](EPollData *data, EventFdEPollHandle *h, uint32_t value, Status st) {
 		if (st == Status::Ok && data->_runContext) {
-			data->stopContext(data->_runContext, WakeupFlags(value), true);
+			if (value & EPOLL_CANCEL_FLAG) {
+				data->stopRootContext(WakeupFlags::ContextDefault, true);
+			} else {
+				data->stopContext(data->_runContext, WakeupFlags(value), true);
+			}
 		}
 	}));
 

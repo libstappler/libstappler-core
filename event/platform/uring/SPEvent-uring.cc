@@ -710,7 +710,9 @@ void URingData::runInternalHandles() {
 }
 
 void URingData::cancel() {
-	_eventFd->write(1, toInt(WakeupFlags::ContextDefault) | URING_CANCEL_FLAG);
+	if (_runContext) {
+		_eventFd->write(1, toInt(WakeupFlags::ContextDefault) | URING_CANCEL_FLAG);
+	}
 }
 
 URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs)
@@ -1022,6 +1024,9 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 }
 
 URingData::~URingData() {
+	_signalFd = nullptr;
+	_eventFd = nullptr;
+
 	if (_ringFd >= 0) {
 		::close(_ringFd);
 		_ringFd = -1;

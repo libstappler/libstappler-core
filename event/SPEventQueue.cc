@@ -25,11 +25,7 @@
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 Rc<SharedRef<Queue>> Queue::create(QueueInfo &&info) {
-	if (info.pool) {
-		return Rc<QueueRef>::create(info.pool, move(info));
-	} else {
-		return Rc<QueueRef>::create(SharedRefMode::Allocator, move(info));
-	}
+	return Rc<QueueRef>::create(SharedRefMode::Allocator, move(info));
 }
 
 Queue::~Queue() {

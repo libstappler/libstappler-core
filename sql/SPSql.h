@@ -95,19 +95,13 @@ struct SP_PUBLIC SimpleBinder : public Interface::AllocBaseType {
 	void writeBind(std::ostream &stream, const typename Interface::BytesType &val) {
 		base16::encode(stream, val);
 	}
-	void writeBind(std::ostream &stream, const PatternComparator<data::ValueTemplate<Interface>> &val) {
+	void writeBind(std::ostream &stream,
+			const PatternComparator<data::ValueTemplate<Interface>> &val) {
 		switch (val.cmp) {
-		case Comparation::Prefix:
-			stream << val.value->asString() << "%";
-			break;
-		case Comparation::Suffix:
-			stream << "&" << val.value->asString();
-			break;
-		case Comparation::WordPart:
-			stream << "&" << val.value->asString() << "%";
-			break;
-		default:
-			break;
+		case Comparation::Prefix: stream << val.value->asString() << "%"; break;
+		case Comparation::Suffix: stream << "&" << val.value->asString(); break;
+		case Comparation::WordPart: stream << "&" << val.value->asString() << "%"; break;
+		default: break;
 		}
 	}
 	void writeBindArray(std::ostream &stream, const data::ValueTemplate<Interface> &val) {
@@ -115,7 +109,11 @@ struct SP_PUBLIC SimpleBinder : public Interface::AllocBaseType {
 		bool first = true;
 		if (val.isArray()) {
 			for (auto &it : val.asArray()) {
-				if (first) { first = false; } else { stream << ","; }
+				if (first) {
+					first = false;
+				} else {
+					stream << ",";
+				}
 				stream << it;
 			}
 		}
@@ -186,7 +184,7 @@ public:
 			PlainText
 		};
 		static Field all() { return Field("*"); }
-		static Field all(const StringView & t) { return Field(t, "*"); }
+		static Field all(const StringView &t) { return Field(t, "*"); }
 
 		Field(const StringView &str) : name(str) { }
 		Field(const char *str) : name(str) { }
@@ -197,13 +195,31 @@ public:
 
 		Field(const StringView &t, const StringView &f) : source(t), name(f) { }
 
-		Field & as(const char *str) { alias = StringView(str); return *this; }
-		Field & as(const std::string &str) { alias = StringView(str); return *this; }
-		Field & as(const memory::string &str) { alias = StringView(str); return *this; }
+		Field &as(const char *str) {
+			alias = StringView(str);
+			return *this;
+		}
+		Field &as(const std::string &str) {
+			alias = StringView(str);
+			return *this;
+		}
+		Field &as(const memory::string &str) {
+			alias = StringView(str);
+			return *this;
+		}
 
-		Field & from(const char *str) { source = StringView(str); return *this; }
-		Field & from(const std::string &str) { source = StringView(str); return *this; }
-		Field & from(const memory::string &str) { source = StringView(str); return *this; }
+		Field &from(const char *str) {
+			source = StringView(str);
+			return *this;
+		}
+		Field &from(const std::string &str) {
+			source = StringView(str);
+			return *this;
+		}
+		Field &from(const memory::string &str) {
+			source = StringView(str);
+			return *this;
+		}
 
 		StringView source;
 		StringView name;
@@ -213,26 +229,22 @@ public:
 
 	template <typename Clause>
 	struct Expand {
-		template <typename ... VArgs>
-		static void fields(Clause &c, const Field &f, VArgs && ... args) {
+		template <typename... VArgs>
+		static void fields(Clause &c, const Field &f, VArgs &&...args) {
 			c.field(f);
 			fields(c, forward<VArgs>(args)...);
 		}
-		static void fields(Clause &c, const Field &f) {
-			c.field(f);
-		}
+		static void fields(Clause &c, const Field &f) { c.field(f); }
 
-		template <typename ... VArgs>
-		static void from(Clause &c, const Field &f, VArgs && ... args) {
+		template <typename... VArgs>
+		static void from(Clause &c, const Field &f, VArgs &&...args) {
 			c.from(f);
 			from(c, forward<VArgs>(args)...);
 		}
-		static void from(Clause &c, const Field &f) {
-			c.from(f);
-		}
+		static void from(Clause &c, const Field &f) { c.from(f); }
 
-		template <typename Value, typename ... VArgs>
-		static void values(Clause &c, Value &&v, VArgs && ... args) {
+		template <typename Value, typename... VArgs>
+		static void values(Clause &c, Value &&v, VArgs &&...args) {
 			c.value(forward<Value>(v));
 			values(c, forward<VArgs>(args)...);
 		}
@@ -266,7 +278,8 @@ public:
 		auto where(Operator, const Field &field, Comparation, Value &&, Value &&) -> Clause &;
 
 		template <typename Value>
-		auto where(Operator, const Field &field, const StringView &, Value &&, const StringView &, Value &&) -> Clause &;
+		auto where(Operator, const Field &field, const StringView &, Value &&, const StringView &,
+				Value &&) -> Clause &;
 
 		template <typename Callback>
 		auto parenthesis(Operator, const Callback &) -> Clause &;
@@ -275,8 +288,8 @@ public:
 	};
 
 	struct WhereBegin : QueryHandle {
-		template <typename ... Args>
-		auto where(Args && ... args) -> WhereContinue;
+		template <typename... Args>
+		auto where(Args &&...args) -> WhereContinue;
 		auto where() -> WhereContinue;
 
 		template <typename Callback>
@@ -292,10 +305,10 @@ public:
 	template <typename Clause>
 	struct SetClause : QueryHandle {
 		template <typename Value>
-		auto set(const StringView &f, Value && v) -> Clause &;
+		auto set(const StringView &f, Value &&v) -> Clause &;
 
 		template <typename Value>
-		auto set(const StringView &t, const StringView &f, Value && v) -> Clause &;
+		auto set(const StringView &t, const StringView &f, Value &&v) -> Clause &;
 
 		auto def(const StringView &f) -> Clause &;
 
@@ -304,8 +317,8 @@ public:
 
 	template <typename Clause>
 	struct FieldsClause : QueryHandle {
-		template <typename ...Args>
-		auto fields(const Field &f, Args && ... args) -> Clause &;
+		template <typename... Args>
+		auto fields(const Field &f, Args &&...args) -> Clause &;
 		auto field(const Field &f) -> Clause &;
 		auto aggregate(const StringView &, const Field &f) -> Clause &;
 
@@ -318,11 +331,11 @@ public:
 
 		Select select(Distinct = Distinct::None);
 
-		template <typename ... Args>
-		Select select(const Field &, Args && ... args);
+		template <typename... Args>
+		Select select(const Field &, Args &&...args);
 
-		template <typename ... Args>
-		Select select(Distinct, const Field &, Args && ... args);
+		template <typename... Args>
+		Select select(Distinct, const Field &, Args &&...args);
 
 		Insert insert(const StringView &);
 		Insert insert(const StringView &, const StringView &alias);
@@ -342,16 +355,16 @@ public:
 		auto count(const String &alias) -> Select &;
 		auto from() -> SelectFrom;
 		auto from(const Field &field) -> SelectFrom;
-		template <typename ... Args>
-		auto from(const Field &field, Args && ... args) -> SelectFrom;
+		template <typename... Args>
+		auto from(const Field &field, Args &&...args) -> SelectFrom;
 
 		using FieldsClause<Select>::FieldsClause;
 	};
 
 	struct SelectFrom : QueryHandle {
 		auto from(const Field &field) -> SelectFrom &;
-		template <typename ... Args>
-		auto from(const Field &field, Args && ... args) -> SelectFrom &;
+		template <typename... Args>
+		auto from(const Field &field, Args &&...args) -> SelectFrom &;
 
 		template <typename Callback>
 		auto innerJoinOn(const StringView &s, const Callback &cb) -> SelectFrom &;
@@ -365,8 +378,8 @@ public:
 		template <typename Callback>
 		auto fullJoinOn(const StringView &s, const Callback &cb) -> SelectFrom &;
 
-		template <typename ... Args>
-		auto where(Args && ... args) -> SelectWhere;
+		template <typename... Args>
+		auto where(Args &&...args) -> SelectWhere;
 		auto where() -> SelectWhere;
 		auto group(const Field &) -> SelectGroup;
 		auto order(Ordering, const Field &, Nulls = Nulls::None) -> SelectOrder;
@@ -376,8 +389,8 @@ public:
 	};
 
 	struct SelectGroup : QueryHandle {
-		template <typename ...Args>
-		auto fields(const Field &f, Args && ... args) -> SelectGroup &;
+		template <typename... Args>
+		auto fields(const Field &f, Args &&...args) -> SelectGroup &;
 		auto field(const Field &) -> SelectGroup &;
 		auto order(Ordering, const Field &, Nulls = Nulls::None) -> SelectOrder;
 
@@ -408,8 +421,8 @@ public:
 	};
 
 	struct Insert : FieldsClause<Insert> {
-		template <typename ...Args>
-		auto values(Args && ... args) -> InsertValues;
+		template <typename... Args>
+		auto values(Args &&...args) -> InsertValues;
 
 		using FieldsClause<Insert>::FieldsClause;
 	};
@@ -419,8 +432,8 @@ public:
 		auto value(Value &&) -> InsertValues &;
 		auto def() -> InsertValues &;
 
-		template <typename ...Args>
-		auto values(Args && ... args) -> InsertValues &;
+		template <typename... Args>
+		auto values(Args &&...args) -> InsertValues &;
 
 		auto onConflict(const StringView &) -> InsertConflict;
 		auto onConflictDoNothing() -> InsertPostConflict;
@@ -440,8 +453,8 @@ public:
 	struct InsertUpdateValues : SetClause<InsertUpdateValues> {
 		auto excluded(StringView f) -> InsertUpdateValues &;
 		auto excluded(StringView f, StringView v) -> InsertUpdateValues &;
-		template <typename ... Args>
-		auto where(Args && ... args) -> InsertWhereValues;
+		template <typename... Args>
+		auto where(Args &&...args) -> InsertWhereValues;
 		auto where() -> InsertWhereValues;
 		auto returning() -> Returning;
 		using SetClause<InsertUpdateValues>::SetClause;
@@ -458,8 +471,8 @@ public:
 	};
 
 	struct Update : SetClause<Update> {
-		template <typename ... Args>
-		auto where(Args && ... args) -> UpdateWhere;
+		template <typename... Args>
+		auto where(Args &&...args) -> UpdateWhere;
 		auto where() -> UpdateWhere;
 		auto returning() -> Returning;
 		using SetClause<Update>::SetClause;
@@ -471,8 +484,8 @@ public:
 	};
 
 	struct Delete : QueryHandle {
-		template <typename ... Args>
-		auto where(Args && ... args) -> DeleteWhere;
+		template <typename... Args>
+		auto where(Args &&...args) -> DeleteWhere;
 		auto where() -> DeleteWhere;
 		auto returning() -> Returning;
 		using QueryHandle::QueryHandle;
@@ -499,11 +512,11 @@ public:
 
 	Select select(Distinct = Distinct::None);
 
-	template <typename ... Args>
-	Select select(const Field &, Args && ... args);
+	template <typename... Args>
+	Select select(const Field &, Args &&...args);
 
-	template <typename ... Args>
-	Select select(Distinct, const Field &, Args && ... args);
+	template <typename... Args>
+	Select select(Distinct, const Field &, Args &&...args);
 
 	Insert insert(const StringView &);
 	Insert insert(const StringView &, const StringView &alias);
@@ -558,28 +571,33 @@ struct BinderTraits {
 
 template <typename Binder, typename Interface>
 struct BinderTraits<Binder, Interface, typename Query<Binder, Interface>::Field> {
-	static void writeBind(Query<Binder, Interface> &q, Binder &b, const typename Query<Binder, Interface>::Field &val) {
+	static void writeBind(Query<Binder, Interface> &q, Binder &b,
+			const typename Query<Binder, Interface>::Field &val) {
 		q.writeBind(val);
 	}
 };
 
 template <typename Binder, typename Interface>
 struct BinderTraits<Binder, Interface, typename Query<Binder, Interface>::RawString> {
-	static void writeBind(Query<Binder, Interface> &q, Binder &b, const typename Query<Binder, Interface>::RawString &val) {
+	static void writeBind(Query<Binder, Interface> &q, Binder &b,
+			const typename Query<Binder, Interface>::RawString &val) {
 		q.writeBind(val);
 	}
 };
 
 template <typename Binder, typename Interface>
 struct BinderTraits<Binder, Interface, typename Query<Binder, Interface>::RawStringView> {
-	static void writeBind(Query<Binder, Interface> &q, Binder &b, const typename Query<Binder, Interface>::RawStringView &val) {
+	static void writeBind(Query<Binder, Interface> &q, Binder &b,
+			const typename Query<Binder, Interface>::RawStringView &val) {
 		q.writeBind(val);
 	}
 };
 
 template <typename Binder, typename Interface>
-struct BinderTraits<Binder, Interface, Callback<void(typename Query<Binder, Interface>::Select &)>> {
-	static void writeBind(Query<Binder, Interface> &q, Binder &b, const Callback<void(typename Query<Binder, Interface>::Select &)> &val) {
+struct BinderTraits<Binder, Interface,
+		Callback<void(typename Query<Binder, Interface>::Select &)>> {
+	static void writeBind(Query<Binder, Interface> &q, Binder &b,
+			const Callback<void(typename Query<Binder, Interface>::Select &)> &val) {
 		q.writeBind(val);
 	}
 };
@@ -593,13 +611,15 @@ void Query<Binder, Interface>::QueryHandle::finalize() {
 template <typename Binder, typename Interface>
 template <typename Value>
 void Query<Binder, Interface>::writeBind(Value &&val) {
-	BinderTraits<Binder, Interface, typename std::remove_reference<Value>::type>::writeBind(*this, this->binder, forward<Value>(val));
+	BinderTraits<Binder, Interface, typename std::remove_reference<Value>::type>::writeBind(*this,
+			this->binder, forward<Value>(val));
 }
 
 template <typename Binder, typename Interface>
 template <typename Value>
 void Query<Binder, Interface>::writeBindArray(Value &&val) {
-	BinderTraits<Binder, Interface, typename std::remove_reference<Value>::type>::writeBindArray(*this, this->binder, forward<Value>(val));
+	BinderTraits<Binder, Interface, typename std::remove_reference<Value>::type>::writeBindArray(
+			*this, this->binder, forward<Value>(val));
 }
 
 template <typename Binder, typename Interface>
@@ -695,17 +715,16 @@ auto Query<Binder, Interface>::with(const StringView &alias, const Callback &cb)
 
 template <typename Binder, typename Interface>
 template <typename Callback>
-auto Query<Binder, Interface>::GenericQuery::with(const StringView &alias, const Callback &cb) -> GenericQuery & {
+auto Query<Binder, Interface>::GenericQuery::with(const StringView &alias, const Callback &cb)
+		-> GenericQuery & {
+	static_assert(std::is_invocable_v<Callback, GenericQuery &>, "Invalid callback type");
 	switch (this->state) {
 	case State::None:
 		this->query->stream << "WITH ";
 		this->state = State::Some;
 		break;
-	case State::Some:
-		this->query->stream << ", ";
-		break;
-	default:
-		break;
+	case State::Some: this->query->stream << ", "; break;
+	default: break;
 	}
 	this->query->stream << alias << " AS (";
 
@@ -725,48 +744,52 @@ auto Query<Binder, Interface>::GenericQuery::select(Distinct d) -> Select {
 }
 
 template <typename Binder, typename Interface>
-template <typename ... Args>
-auto Query<Binder, Interface>::GenericQuery::select(const Field &f, Args && ... args) -> Select {
+template <typename... Args>
+auto Query<Binder, Interface>::GenericQuery::select(const Field &f, Args &&...args) -> Select {
 	return this->query->select(f, forward<Args>(args)...);
 }
 
 template <typename Binder, typename Interface>
-template <typename ... Args>
-auto Query<Binder, Interface>::GenericQuery::select(Distinct d, const Field &f, Args && ... args) -> Select {
+template <typename... Args>
+auto Query<Binder, Interface>::GenericQuery::select(Distinct d, const Field &f, Args &&...args)
+		-> Select {
 	return this->query->select(d, f, forward<Args>(args)...);
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::GenericQuery::insert(const StringView & field) -> Insert {
+auto Query<Binder, Interface>::GenericQuery::insert(const StringView &field) -> Insert {
 	return this->query->insert(field);
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::GenericQuery::insert(const StringView &field, const StringView &alias) -> Insert {
+auto Query<Binder, Interface>::GenericQuery::insert(const StringView &field,
+		const StringView &alias) -> Insert {
 	return this->query->insert(field, alias);
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::GenericQuery::update(const StringView & field) -> Update {
+auto Query<Binder, Interface>::GenericQuery::update(const StringView &field) -> Update {
 	return this->query->update(field);
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::GenericQuery::update(const StringView &field, const StringView &alias) -> Update {
+auto Query<Binder, Interface>::GenericQuery::update(const StringView &field,
+		const StringView &alias) -> Update {
 	return this->query->update(field, alias);
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::GenericQuery::remove(const StringView & field) -> Delete {
+auto Query<Binder, Interface>::GenericQuery::remove(const StringView &field) -> Delete {
 	return this->query->remove(field);
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::GenericQuery::remove(const StringView &field, const StringView &alias) -> Delete {
+auto Query<Binder, Interface>::GenericQuery::remove(const StringView &field,
+		const StringView &alias) -> Delete {
 	return this->query->remove(field, alias);
 }
 
-}
+} // namespace stappler::sql
 
 #include "SPSqlInsert.hpp"
 #include "SPSqlUpdate.hpp"

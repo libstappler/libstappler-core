@@ -27,33 +27,55 @@ namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
 static std::atomic<size_t> s_nAllocators = 0;
 
-size_t Allocator::getAllocatorsCount() {
-	return s_nAllocators.load();
+#if DEBUG
+static bool isValidNode(MemNode *node) {
+	std::set<MemNode *> nodes;
+
+	while (node) {
+		auto tmp = node->next;
+		if (nodes.find(node) == nodes.end()) {
+			nodes.emplace(node);
+		} else {
+			return false;
+		}
+		node = tmp;
+	}
+	return true;
 }
+#endif
+
+size_t Allocator::getAllocatorsCount() { return s_nAllocators.load(); }
 
 Allocator::Allocator() {
-	++ s_nAllocators;
+	++s_nAllocators;
 	buf.fill(nullptr);
 	mutex = new AllocMutex;
 }
 
 Allocator::~Allocator() {
-	MemNode *node, **ref;
-
 	if (mutex) {
 		delete mutex;
 	}
 
 	for (uint32_t index = 0; index < MAX_INDEX; index++) {
-		ref = &buf[index];
-		while ((node = *ref) != nullptr) {
-			*ref = node->next;
+		auto node = buf[index];
+
+#if DEBUG
+		if (!isValidNode(node)) {
+			abort();
+		}
+#endif
+
+		while (node) {
+			auto tmp = node->next;
 			allocated -= node->endp - (uint8_t *)node;
 			::free(node);
+			node = tmp;
 		}
+		buf[index] = nullptr;
 	}
 
-	-- s_nAllocators;
+	--s_nAllocators;
 }
 
 void Allocator::set_max(size_t size) {
@@ -113,8 +135,7 @@ MemNode *Allocator::alloc(size_t in_size) {
 				do {
 					ref--;
 					max_index--;
-				}
-				while (*ref == NULL && max_index > 0);
+				} while (*ref == NULL && max_index > 0);
 
 				last = max_index;
 			}
@@ -138,9 +159,7 @@ MemNode *Allocator::alloc(size_t in_size) {
 		 * any nodes on it of the requested size
 		 */
 		ref = &buf[0];
-		while ((node = *ref) != nullptr && index > node->index) {
-			ref = &node->next;
-		}
+		while ((node = *ref) != nullptr && index > node->index) { ref = &node->next; }
 
 		if (node) {
 			*ref = node->next;
@@ -212,6 +231,12 @@ void Allocator::free(MemNode *node) {
 			} else {
 				current_free_index = 0;
 			}
+
+#if DEBUG
+			if (!isValidNode(buf[index])) {
+				abort();
+			}
+#endif
 		} else {
 			/* This node is too large to keep in a specific size bucket,
 			 * just add it to the sink (at index 0).
@@ -229,12 +254,12 @@ void Allocator::free(MemNode *node) {
 #if DEBUG
 	int i = 0;
 	auto n = buf[1];
-	while (n && i < 1024 * 16) {
+	while (n && i < 1'024 * 16) {
 		n = n->next;
-		++ i;
+		++i;
 	}
 
-	if (i >= 1024 * 128) {
+	if (i >= 1'024 * 128) {
 		printf("ERRER: pool double-free detected!\n");
 		abort();
 	}
@@ -267,4 +292,4 @@ void Allocator::unlock() {
 	}
 }
 
-}
+} // namespace stappler::mempool::custom

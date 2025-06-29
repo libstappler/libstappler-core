@@ -63,6 +63,7 @@ struct ContextFn {
 
 template <typename Callback>
 bool ContextFn::extractValue(Var &var, const Callback &cb) {
+	static_assert(std::is_invocable_v<Callback, Value &&>, "Invalid callback type");
 	switch (var.type) {
 	case Var::Temporary:
 		switch (var.temporaryStorage.type) {
@@ -96,6 +97,7 @@ bool ContextFn::extractValue(Var &var, const Callback &cb) {
 
 template <typename Callback>
 bool ContextFn::extractName(Var &var, const Callback &cb) {
+	static_assert(std::is_invocable_v<Callback, StringView>, "Invalid callback type");
 	switch (var.type) {
 	case Var::Temporary:
 	case Var::Variable:
@@ -538,6 +540,7 @@ Var ContextFn::performUnaryOp(Var &v, Expression::Op op) {
 
 template <typename Callback>
 static bool Variable_assign(Var &target, const Var &var, Callback &&cb) {
+	static_assert(std::is_invocable_v<Callback, Value &, const Value &>, "Invalid callback type");
 	if (auto mut = target.getMutable()) {
 		if (cb(*mut, var.readValue())) {
 			return true;

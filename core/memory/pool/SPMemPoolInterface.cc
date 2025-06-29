@@ -47,6 +47,7 @@ public:
 		pool_t *pool;
 		uint32_t tag;
 		const void *ptr;
+		const char *source;
 	};
 
 	AllocStack();
@@ -55,9 +56,9 @@ public:
 	Pair<uint32_t, const void *> info() const;
 	const Info &back() const;
 
-	void push(pool_t *);
-	void push(pool_t *, uint32_t, const void *);
-	void pop();
+	void push(pool_t *, const char *source);
+	void push(pool_t *, uint32_t, const void *, const char *source);
+	void pop(pool_t *, const char *source);
 
 	void foreachInfo(void *, bool (*cb)(void *, pool_t *, uint32_t, const void *));
 
@@ -100,7 +101,7 @@ protected:
 	stack<Info> _stack;
 };
 
-AllocStack::AllocStack() { _stack.push(Info{nullptr, 0, nullptr}); }
+AllocStack::AllocStack() { _stack.push(Info{nullptr, 0, nullptr, STAPPLER_LOCATION}); }
 
 pool_t *AllocStack::top() const { return _stack.get().pool; }
 
@@ -110,22 +111,33 @@ Pair<uint32_t, const void *> AllocStack::info() const {
 
 const AllocStack::Info &AllocStack::back() const { return _stack.get(); }
 
-void AllocStack::push(pool_t *p) {
+void AllocStack::push(pool_t *p, const char *source) {
 	if (p) {
-		_stack.push(Info{p, 0, nullptr});
+		_stack.push(Info{p, 0, nullptr, source});
 	} else {
-		abort();
+		::abort();
 	}
 }
-void AllocStack::push(pool_t *p, uint32_t tag, const void *ptr) {
+void AllocStack::push(pool_t *p, uint32_t tag, const void *ptr, const char *source) {
 	if (p) {
-		_stack.push(Info{p, tag, ptr});
+		_stack.push(Info{p, tag, ptr, source});
 	} else {
-		abort();
+		::abort();
 	}
 }
 
-void AllocStack::pop() { _stack.pop(); }
+void AllocStack::pop(pool_t *p, const char *source) {
+#if DEBUG
+	if (_stack.get().pool == p && (!source || _stack.get().source == source)) {
+		_stack.pop();
+	} else {
+		log::error("memory", "Unbalansed pool::push found");
+		abort();
+	}
+#else
+	_stack.pop();
+#endif
+}
 
 void AllocStack::foreachInfo(void *data, bool (*cb)(void *, pool_t *, uint32_t, const void *)) {
 	for (size_t i = 0; i < _stack.size; ++i) {
@@ -145,12 +157,12 @@ pool_t *acquire() { return get_stack().top(); }
 
 Pair<uint32_t, const void *> info() { return get_stack().info(); }
 
-void push(pool_t *p) { return get_stack().push(p); }
-void push(pool_t *p, uint32_t tag, const void *ptr) {
+void push(pool_t *p, const char *source) { return get_stack().push(p, source); }
+void push(pool_t *p, uint32_t tag, const void *ptr, const char *source) {
 	set_pool_info(p, tag, ptr);
-	return get_stack().push(p, tag, ptr);
+	return get_stack().push(p, tag, ptr, source);
 }
-void pop() { return get_stack().pop(); }
+void pop(pool_t *p, const char *source) { return get_stack().pop(p, source); }
 
 void foreach_info(void *data, bool (*cb)(void *, pool_t *, uint32_t, const void *)) {
 	get_stack().foreachInfo(data, cb);

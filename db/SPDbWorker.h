@@ -118,8 +118,8 @@ public:
 	explicit Worker(const Worker &);
 
 	Worker(Worker &&) = delete;
-	Worker& operator=(Worker &&) = delete;
-	Worker& operator=(const Worker &) = delete;
+	Worker &operator=(Worker &&) = delete;
+	Worker &operator=(const Worker &) = delete;
 
 	~Worker();
 
@@ -134,10 +134,16 @@ public:
 	void includeNone();
 
 	template <typename T>
-	Worker& include(T && t) { _required.include(std::forward<T>(t)); return *this; }
+	Worker &include(T &&t) {
+		_required.include(std::forward<T>(t));
+		return *this;
+	}
 
 	template <typename T>
-	Worker& exclude(T && t) { _required.exclude(std::forward<T>(t)); return *this; }
+	Worker &exclude(T &&t) {
+		_required.exclude(std::forward<T>(t));
+		return *this;
+	}
 
 	void clearRequiredFields();
 
@@ -160,23 +166,33 @@ public:
 	Value get(const StringView &alias, StringView, UpdateFlags = UpdateFlags::None);
 	Value get(const Value &id, StringView, UpdateFlags = UpdateFlags::None);
 
-	Value get(uint64_t oid, std::initializer_list<StringView> &&fields, UpdateFlags = UpdateFlags::None);
-	Value get(const StringView &alias, std::initializer_list<StringView> &&fields, UpdateFlags = UpdateFlags::None);
-	Value get(const Value &id, std::initializer_list<StringView> &&fields, UpdateFlags = UpdateFlags::None);
+	Value get(uint64_t oid, std::initializer_list<StringView> &&fields,
+			UpdateFlags = UpdateFlags::None);
+	Value get(const StringView &alias, std::initializer_list<StringView> &&fields,
+			UpdateFlags = UpdateFlags::None);
+	Value get(const Value &id, std::initializer_list<StringView> &&fields,
+			UpdateFlags = UpdateFlags::None);
 
-	Value get(uint64_t oid, std::initializer_list<const char *> &&fields, UpdateFlags = UpdateFlags::None);
-	Value get(const StringView &alias, std::initializer_list<const char *> &&fields, UpdateFlags = UpdateFlags::None);
-	Value get(const Value &id, std::initializer_list<const char *> &&fields, UpdateFlags = UpdateFlags::None);
+	Value get(uint64_t oid, std::initializer_list<const char *> &&fields,
+			UpdateFlags = UpdateFlags::None);
+	Value get(const StringView &alias, std::initializer_list<const char *> &&fields,
+			UpdateFlags = UpdateFlags::None);
+	Value get(const Value &id, std::initializer_list<const char *> &&fields,
+			UpdateFlags = UpdateFlags::None);
 
-	Value get(uint64_t oid, std::initializer_list<const Field *> &&fields, UpdateFlags = UpdateFlags::None);
-	Value get(const StringView &alias, std::initializer_list<const Field *> &&fields, UpdateFlags = UpdateFlags::None);
-	Value get(const Value &id, std::initializer_list<const Field *> &&fields, UpdateFlags = UpdateFlags::None);
+	Value get(uint64_t oid, std::initializer_list<const Field *> &&fields,
+			UpdateFlags = UpdateFlags::None);
+	Value get(const StringView &alias, std::initializer_list<const Field *> &&fields,
+			UpdateFlags = UpdateFlags::None);
+	Value get(const Value &id, std::initializer_list<const Field *> &&fields,
+			UpdateFlags = UpdateFlags::None);
 
 	Value get(uint64_t oid, SpanView<const Field *> fields, UpdateFlags = UpdateFlags::None);
-	Value get(const StringView &alias, SpanView<const Field *> fields, UpdateFlags = UpdateFlags::None);
+	Value get(const StringView &alias, SpanView<const Field *> fields,
+			UpdateFlags = UpdateFlags::None);
 	Value get(const Value &id, SpanView<const Field *> fields, UpdateFlags = UpdateFlags::None);
 
-	bool foreach(const Query &, const Callback<bool(Value &)> &, UpdateFlags = UpdateFlags::None);
+	bool foreach (const Query &, const Callback<bool(Value &)> &, UpdateFlags = UpdateFlags::None);
 
 	// returns Array with zero or more Dictionaries with object data or Null value
 	Value select(const Query &, UpdateFlags = UpdateFlags::None);
@@ -191,20 +207,20 @@ public:
 	Value create(const Value &data, const Vector<Conflict> &);
 
 	Value update(uint64_t oid, const Value &data, bool isProtected = false);
-	Value update(const Value & obj, const Value &data, bool isProtected = false);
+	Value update(const Value &obj, const Value &data, bool isProtected = false);
 
 	Value update(uint64_t oid, const Value &data, UpdateFlags);
-	Value update(const Value & obj, const Value &data, UpdateFlags);
+	Value update(const Value &obj, const Value &data, UpdateFlags);
 
 	Value update(uint64_t oid, const Value &data, UpdateFlags, const Query::Select &);
-	Value update(const Value & obj, const Value &data, UpdateFlags, const Query::Select &);
+	Value update(const Value &obj, const Value &data, UpdateFlags, const Query::Select &);
 	Value update(uint64_t oid, const Value &data, UpdateFlags, const Vector<Query::Select> &);
-	Value update(const Value & obj, const Value &data, UpdateFlags, const Vector<Query::Select> &);
+	Value update(const Value &obj, const Value &data, UpdateFlags, const Vector<Query::Select> &);
 
 	Value update(uint64_t oid, const Value &data, const Query::Select &);
-	Value update(const Value & obj, const Value &data, const Query::Select &);
+	Value update(const Value &obj, const Value &data, const Query::Select &);
 	Value update(uint64_t oid, const Value &data, const Vector<Query::Select> &);
-	Value update(const Value & obj, const Value &data, const Vector<Query::Select> &);
+	Value update(const Value &obj, const Value &data, const Vector<Query::Select> &);
 
 	bool remove(uint64_t oid);
 	bool remove(const Value &);
@@ -213,13 +229,15 @@ public:
 	size_t count(const Query &);
 
 	void touch(uint64_t id);
-	void touch(const Value & obj);
+	void touch(const Value &obj);
 
 public:
 	Value getField(uint64_t oid, const StringView &, std::initializer_list<StringView> fields);
 	Value getField(const Value &, const StringView &, std::initializer_list<StringView> fields);
-	Value getField(uint64_t oid, const StringView &, const Set<const Field *> & = Set<const Field *>());
-	Value getField(const Value &, const StringView &, const Set<const Field *> & = Set<const Field *>());
+	Value getField(uint64_t oid, const StringView &,
+			const Set<const Field *> & = Set<const Field *>());
+	Value getField(const Value &, const StringView &,
+			const Set<const Field *> & = Set<const Field *>());
 
 	Value setField(uint64_t oid, const StringView &, Value &&);
 	Value setField(const Value &, const StringView &, Value &&);
@@ -303,11 +321,12 @@ struct FieldResolver {
 
 template <typename Callback>
 inline bool Worker::perform(const Callback &cb) const {
-	return _transaction.perform([&, this] () -> bool {
-		return cb(_transaction);
-	});
+	static_assert(std::is_invocable_v<Callback, const Transaction &>, "Invalid callback type");
+	static_assert(std::is_same_v<bool, std::invoke_result_t<Callback, const Transaction &>>,
+			"Invalid callback return type");
+	return _transaction.perform([&, this]() -> bool { return cb(_transaction); });
 }
 
-}
+} // namespace stappler::db
 
 #endif /* STAPPLER_DB_SPDBWORKER_H_ */

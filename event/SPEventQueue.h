@@ -76,8 +76,6 @@ struct SP_PUBLIC QueueInfo {
 
 	uint32_t externalHandles = 0; // limit for externally opened handles (if applicable)
 	uint32_t internalHandles = 0; // limit for internally opened handles (if applicable)
-
-	memory::pool_t *pool = nullptr;
 };
 
 // If Graceful flag is set - wait until all operations are completed, and forbid a new ones from running

@@ -36,7 +36,7 @@ namespace config {
 constexpr bool FontPreloadGroups = false;
 constexpr size_t UnicodePlanes = 16;
 
-}
+} // namespace config
 
 
 struct SP_PUBLIC CharVector final {
@@ -45,9 +45,7 @@ struct SP_PUBLIC CharVector final {
 	void addString(const WideStringView &);
 	void addString(const CharVector &);
 
-	bool empty() const {
-		return !chars.empty();
-	}
+	bool empty() const { return !chars.empty(); }
 
 	mem_std::Vector<char32_t> chars;
 };
@@ -64,16 +62,18 @@ enum CharAnchor : uint32_t {
 struct SP_PUBLIC Metrics final {
 	uint16_t size = 0; // font size in pixels
 	uint16_t height = 0; // default font line height
-	int16_t ascender = 0; // The distance from the baseline to the highest coordinate used to place an outline point
-	int16_t descender = 0; // The distance from the baseline to the lowest grid coordinate used to place an outline point
+	int16_t ascender =
+			0; // The distance from the baseline to the highest coordinate used to place an outline point
+	int16_t descender =
+			0; // The distance from the baseline to the lowest grid coordinate used to place an outline point
 	int16_t underlinePosition = 0;
 	int16_t underlineThickness = 0;
 };
 
 struct SP_PUBLIC CharId final {
-	static constexpr uint32_t CharMask = 0x0000FFFFU;
-	static constexpr uint32_t AnchorMask = 0x00030000U;
-	static constexpr uint32_t SourceMask = 0xFFFC0000U;
+	static constexpr uint32_t CharMask = 0x0000'FFFFU;
+	static constexpr uint32_t AnchorMask = 0x0003'0000U;
+	static constexpr uint32_t SourceMask = 0xFFFC'0000U;
 	static constexpr uint32_t SourceMax = (SourceMask >> 18);
 
 	static uint32_t getCharId(uint16_t sourceId, char16_t, CharAnchor);
@@ -82,16 +82,13 @@ struct SP_PUBLIC CharId final {
 
 	uint32_t layout : 14;
 	uint32_t anchor : 2;
-	uint32_t value : 16;
+	uint32_t value	: 16;
 
-	CharId(uint32_t v) {
-		memcpy(this, &v, sizeof(uint32_t));
-	}
+	CharId(uint32_t v) { memcpy(this, &v, sizeof(uint32_t)); }
 
-	CharId(uint16_t l, char16_t ch, CharAnchor a)
-	: layout(l), anchor(toInt(a)), value(ch) { }
+	CharId(uint16_t l, char16_t ch, CharAnchor a) : layout(l), anchor(toInt(a)), value(ch) { }
 
-	operator uint32_t () const {
+	operator uint32_t() const {
 		uint32_t ret;
 		memcpy(&ret, this, sizeof(uint32_t));
 		return ret;
@@ -131,9 +128,7 @@ template <typename Value>
 struct SP_PUBLIC FontCharStorage {
 	using CellType = std::array<Value, 256>;
 
-	FontCharStorage() {
-		cells.fill(nullptr);
-	}
+	FontCharStorage() { cells.fill(nullptr); }
 
 	~FontCharStorage() {
 		for (auto &it : cells) {
@@ -164,12 +159,11 @@ struct SP_PUBLIC FontCharStorage {
 	}
 
 	template <typename Callback>
-	void foreach(const Callback &cb) {
+	void foreach (const Callback &cb) {
+		static_assert(std::is_invocable_v<Callback, const Value &>, "Invalid callback type");
 		for (auto &it : cells) {
 			if (it) {
-				for (auto &iit : *it) {
-					cb(iit);
-				}
+				for (auto &iit : *it) { cb(iit); }
 			}
 		}
 	}
@@ -177,16 +171,16 @@ struct SP_PUBLIC FontCharStorage {
 	std::array<CellType *, 256> cells;
 };
 
-inline bool operator< (const CharShape &l, const CharShape &c) { return l.charID < c.charID; }
-inline bool operator> (const CharShape &l, const CharShape &c) { return l.charID > c.charID; }
-inline bool operator<= (const CharShape &l, const CharShape &c) { return l.charID <= c.charID; }
-inline bool operator>= (const CharShape &l, const CharShape &c) { return l.charID >= c.charID; }
+inline bool operator<(const CharShape &l, const CharShape &c) { return l.charID < c.charID; }
+inline bool operator>(const CharShape &l, const CharShape &c) { return l.charID > c.charID; }
+inline bool operator<=(const CharShape &l, const CharShape &c) { return l.charID <= c.charID; }
+inline bool operator>=(const CharShape &l, const CharShape &c) { return l.charID >= c.charID; }
 
-inline bool operator< (const CharShape &l, const char16_t &c) { return l.charID < c; }
-inline bool operator> (const CharShape &l, const char16_t &c) { return l.charID > c; }
-inline bool operator<= (const CharShape &l, const char16_t &c) { return l.charID <= c; }
-inline bool operator>= (const CharShape &l, const char16_t &c) { return l.charID >= c; }
+inline bool operator<(const CharShape &l, const char16_t &c) { return l.charID < c; }
+inline bool operator>(const CharShape &l, const char16_t &c) { return l.charID > c; }
+inline bool operator<=(const CharShape &l, const char16_t &c) { return l.charID <= c; }
+inline bool operator>=(const CharShape &l, const char16_t &c) { return l.charID >= c; }
 
-}
+} // namespace stappler::font
 
 #endif /* CORE_FONT_SPFONT_H_ */

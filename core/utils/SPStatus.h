@@ -155,6 +155,7 @@ struct Result {
 
 	template <typename Callback>
 	bool unwrap(const Callback &cb) const {
+		static_assert(std::is_invocable_v<Callback, const T &>, "Invalid callback type");
 		if (isSuccessful(status)) {
 			cb(result);
 			return true;

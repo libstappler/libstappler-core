@@ -75,7 +75,7 @@ bool TaskQueue::init(TaskQueueInfo &&info) {
 	}
 
 	_outContext.wakeup = sp::move(info.wakeup);
-	_outContext.pool = Rc<PoolRef>::alloc(memory::app_root_pool);
+	_outContext.pool = Rc<PoolRef>::alloc();
 	_outContext.queue = this;
 
 	return true;

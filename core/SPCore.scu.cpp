@@ -90,6 +90,7 @@ struct InitializerManager {
 	std::mutex mutex;
 	std::list<Initializer> list;
 	bool initialized = false;
+	memory::pool_t *pool = nullptr;
 };
 
 InitializerManager &InitializerManager::get() {
@@ -105,13 +106,14 @@ bool initialize(int &resultCode) {
 	memory::pool::push(pool);
 
 	if (!platform::initialize(resultCode)) {
-		memory::pool::pop();
+		memory::pool::pop(pool, nullptr);
 		return false;
 	}
 
 	auto &m = InitializerManager::get();
 	std::unique_lock lock(m.mutex);
 	m.initialized = true;
+	m.pool = pool;
 
 	for (auto &it : m.list) { it.init(it.userdata); }
 	return true;
@@ -128,7 +130,7 @@ void terminate() {
 
 	platform::terminate();
 
-	memory::pool::pop();
+	memory::pool::pop(m.pool, nullptr);
 	memory::pool::terminate();
 }
 

@@ -33,29 +33,42 @@ namespace STAPPLER_VERSIONIZED stappler::sql {
 
 template <typename Binder, typename Interface>
 auto Query<Binder, Interface>::Select::all() -> Select & {
-	if (this->state == State::None) { this->state = State::Some; } else { this->query->stream << ","; }
+	if (this->state == State::None) {
+		this->state = State::Some;
+	} else {
+		this->query->stream << ",";
+	}
 	this->query->stream << " *";
 	return *this;
 }
 
 template <typename Binder, typename Interface>
 auto Query<Binder, Interface>::Select::count() -> Select & {
-	if (this->state == State::None) { this->state = State::Some; } else { this->query->stream << ","; }
+	if (this->state == State::None) {
+		this->state = State::Some;
+	} else {
+		this->query->stream << ",";
+	}
 	this->query->stream << " COUNT(*)";
 	return *this;
 }
 
 template <typename Binder, typename Interface>
 auto Query<Binder, Interface>::Select::count(const String &alias) -> Select & {
-	if (this->state == State::None) { this->state = State::Some; } else { this->query->stream << ","; }
+	if (this->state == State::None) {
+		this->state = State::Some;
+	} else {
+		this->query->stream << ",";
+	}
 	this->query->stream << " COUNT(*) AS \"" << alias << "\"";
 	return *this;
 }
 
 template <typename Binder, typename Interface>
 template <typename Clause>
-template <typename ...Args>
-auto Query<Binder, Interface>::FieldsClause<Clause>::fields(const Field &f, Args && ... args) -> Clause & {
+template <typename... Args>
+auto Query<Binder, Interface>::FieldsClause<Clause>::fields(const Field &f, Args &&...args)
+		-> Clause & {
 	Expand<Clause>::fields((Clause &)*this, f, std::forward<Args>(args)...);
 	return (Clause &)*this;
 }
@@ -72,9 +85,7 @@ auto Query<Binder, Interface>::FieldsClause<Clause>::field(const Field &f) -> Cl
 		this->query->stream << "(";
 		this->state = State::Some;
 		break;
-	case State::Some:
-		this->query->stream << ", ";
-		break;
+	case State::Some: this->query->stream << ", "; break;
 	}
 	this->query->writeBind(f);
 	return (Clause &)*this;
@@ -82,7 +93,8 @@ auto Query<Binder, Interface>::FieldsClause<Clause>::field(const Field &f) -> Cl
 
 template <typename Binder, typename Interface>
 template <typename Clause>
-auto Query<Binder, Interface>::FieldsClause<Clause>::aggregate(const StringView &func, const Field &f) -> Clause & {
+auto Query<Binder, Interface>::FieldsClause<Clause>::aggregate(const StringView &func,
+		const Field &f) -> Clause & {
 	switch (this->state) {
 	case State::None:
 		this->query->stream << " ";
@@ -92,9 +104,7 @@ auto Query<Binder, Interface>::FieldsClause<Clause>::aggregate(const StringView 
 		this->query->stream << "(";
 		this->state = State::Some;
 		break;
-	case State::Some:
-		this->query->stream << ", ";
-		break;
+	case State::Some: this->query->stream << ", "; break;
 	}
 	this->query->writeBind(func, f);
 	return (Clause &)*this;
@@ -123,8 +133,8 @@ auto Query<Binder, Interface>::Select::from(const Field &field) -> SelectFrom {
 }
 
 template <typename Binder, typename Interface>
-template <typename ... Args>
-auto Query<Binder, Interface>::Select::from(const Field &field, Args && ... args) -> SelectFrom {
+template <typename... Args>
+auto Query<Binder, Interface>::Select::from(const Field &field, Args &&...args) -> SelectFrom {
 	auto f = from();
 	Expand<SelectFrom>::from(f, field, forward<Args>(args)...);
 	return f;
@@ -132,7 +142,11 @@ auto Query<Binder, Interface>::Select::from(const Field &field, Args && ... args
 
 template <typename Binder, typename Interface>
 auto Query<Binder, Interface>::SelectFrom::from(const Field &field) -> SelectFrom & {
-	if (this->state == State::None) { this->state = State::Some; } else { this->query->stream << ","; }
+	if (this->state == State::None) {
+		this->state = State::Some;
+	} else {
+		this->query->stream << ",";
+	}
 	this->query->stream << " " << field.name;
 	if (this->query->target.empty()) {
 		this->query->target = field.name;
@@ -144,15 +158,18 @@ auto Query<Binder, Interface>::SelectFrom::from(const Field &field) -> SelectFro
 }
 
 template <typename Binder, typename Interface>
-template <typename ... Args>
-auto Query<Binder, Interface>::SelectFrom::from(const Field &field, Args && ... args) -> SelectFrom & {
+template <typename... Args>
+auto Query<Binder, Interface>::SelectFrom::from(const Field &field, Args &&...args)
+		-> SelectFrom & {
 	Expand<SelectFrom>::from(*this, forward<Args>(args)...);
 	return *this;
 }
 
 template <typename Binder, typename Interface>
 template <typename Callback>
-auto Query<Binder, Interface>::SelectFrom::innerJoinOn(const StringView &s, const Callback &cb) -> SelectFrom & {
+auto Query<Binder, Interface>::SelectFrom::innerJoinOn(const StringView &s, const Callback &cb)
+		-> SelectFrom & {
+	static_assert(std::is_invocable_v<Callback, WhereBegin &>, "Invalid callback type");
 	if (this->state == State::Some) {
 		this->query->stream << " INNER JOIN " << s << " ON(";
 		WhereBegin tmp(this->query);
@@ -164,7 +181,9 @@ auto Query<Binder, Interface>::SelectFrom::innerJoinOn(const StringView &s, cons
 
 template <typename Binder, typename Interface>
 template <typename Callback>
-auto Query<Binder, Interface>::SelectFrom::leftJoinOn(const StringView &s, const Callback &cb) -> SelectFrom & {
+auto Query<Binder, Interface>::SelectFrom::leftJoinOn(const StringView &s, const Callback &cb)
+		-> SelectFrom & {
+	static_assert(std::is_invocable_v<Callback, WhereBegin &>, "Invalid callback type");
 	if (this->state == State::Some) {
 		this->query->stream << " LEFT OUTER JOIN " << s << " ON(";
 		WhereBegin tmp(this->query);
@@ -176,7 +195,9 @@ auto Query<Binder, Interface>::SelectFrom::leftJoinOn(const StringView &s, const
 
 template <typename Binder, typename Interface>
 template <typename Callback>
-auto Query<Binder, Interface>::SelectFrom::rightJoinOn(const StringView &s, const Callback &cb) -> SelectFrom & {
+auto Query<Binder, Interface>::SelectFrom::rightJoinOn(const StringView &s, const Callback &cb)
+		-> SelectFrom & {
+	static_assert(std::is_invocable_v<Callback, WhereBegin &>, "Invalid callback type");
 	if (this->state == State::Some) {
 		this->query->stream << " RIGHT OUTER JOIN " << s << " ON(";
 		WhereBegin tmp(this->query);
@@ -188,7 +209,9 @@ auto Query<Binder, Interface>::SelectFrom::rightJoinOn(const StringView &s, cons
 
 template <typename Binder, typename Interface>
 template <typename Callback>
-auto Query<Binder, Interface>::SelectFrom::fullJoinOn(const StringView &s, const Callback &cb) -> SelectFrom & {
+auto Query<Binder, Interface>::SelectFrom::fullJoinOn(const StringView &s, const Callback &cb)
+		-> SelectFrom & {
+	static_assert(std::is_invocable_v<Callback, WhereBegin &>, "Invalid callback type");
 	if (this->state == State::Some) {
 		this->query->stream << " FULL OUTER JOIN " << s << " ON(";
 		WhereBegin tmp(this->query);
@@ -199,8 +222,8 @@ auto Query<Binder, Interface>::SelectFrom::fullJoinOn(const StringView &s, const
 }
 
 template <typename Binder, typename Interface>
-template <typename ... Args>
-auto Query<Binder, Interface>::SelectFrom::where(Args && ... args) -> SelectWhere {
+template <typename... Args>
+auto Query<Binder, Interface>::SelectFrom::where(Args &&...args) -> SelectWhere {
 	this->query->stream << " WHERE";
 	SelectWhere q(this->query);
 	q.where(sql::Operator::And, std::forward<Args>(args)...);
@@ -222,7 +245,9 @@ auto Query<Binder, Interface>::SelectFrom::group(const Field &f) -> SelectGroup 
 }
 
 template <typename Binder, typename Interface>
-inline auto Query_writeOrderSt(typename Interface::StringStreamType &stream, Query<Binder, Interface> &query, Ordering ord, const typename Query<Binder, Interface>::Field &field, Nulls n) {
+inline auto Query_writeOrderSt(typename Interface::StringStreamType &stream,
+		Query<Binder, Interface> &query, Ordering ord,
+		const typename Query<Binder, Interface>::Field &field, Nulls n) {
 	stream << " ORDER BY ";
 	query.writeBind(field, false);
 	switch (ord) {
@@ -238,7 +263,8 @@ inline auto Query_writeOrderSt(typename Interface::StringStreamType &stream, Que
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::SelectFrom::order(Ordering ord, const Field &field, Nulls n) -> SelectOrder {
+auto Query<Binder, Interface>::SelectFrom::order(Ordering ord, const Field &field, Nulls n)
+		-> SelectOrder {
 	Query_writeOrderSt<Binder>(this->query->stream, *this->query, ord, field, n);
 	return SelectOrder(this->query);
 }
@@ -252,8 +278,9 @@ void Query<Binder, Interface>::SelectFrom::forUpdate() {
 }
 
 template <typename Binder, typename Interface>
-template <typename ...Args>
-auto Query<Binder, Interface>::SelectGroup::fields(const Field &f, Args && ... args) -> SelectGroup & {
+template <typename... Args>
+auto Query<Binder, Interface>::SelectGroup::fields(const Field &f, Args &&...args)
+		-> SelectGroup & {
 	Expand<SelectGroup>::fields(*this, f, std::forward<Args>(args)...);
 	return *this;
 }
@@ -265,18 +292,16 @@ auto Query<Binder, Interface>::SelectGroup::field(const Field &f) -> SelectGroup
 		this->query->stream << " ";
 		this->state = State::Some;
 		break;
-	case State::Some:
-		this->query->stream << ", ";
-		break;
-	default:
-		break;
+	case State::Some: this->query->stream << ", "; break;
+	default: break;
 	}
 	this->query->writeBind(f, false);
 	return *this;
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::SelectGroup::order(Ordering ord, const Field &field, Nulls n) -> SelectOrder {
+auto Query<Binder, Interface>::SelectGroup::order(Ordering ord, const Field &field, Nulls n)
+		-> SelectOrder {
 	Query_writeOrderSt<Binder>(this->query->stream, *this->query, ord, field, n);
 	return SelectOrder(this->query);
 }
@@ -290,7 +315,8 @@ auto Query<Binder, Interface>::SelectWhere::group(const Field &f) -> SelectGroup
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::SelectWhere::order(Ordering ord, const Field &field, Nulls n) -> SelectOrder {
+auto Query<Binder, Interface>::SelectWhere::order(Ordering ord, const Field &field, Nulls n)
+		-> SelectOrder {
 	Query_writeOrderSt<Binder>(this->query->stream, *this->query, ord, field, n);
 	return SelectOrder(this->query);
 }
@@ -310,7 +336,7 @@ auto Query<Binder, Interface>::SelectOrder::limit(size_t limit, size_t offset) -
 }
 
 template <typename Binder, typename Interface>
-auto Query<Binder, Interface>::SelectOrder::limit(size_t limit) -> SelectPost  {
+auto Query<Binder, Interface>::SelectOrder::limit(size_t limit) -> SelectPost {
 	this->query->stream << " LIMIT " << limit;
 	return SelectPost(this->query);
 }
@@ -338,16 +364,16 @@ void Query<Binder, Interface>::SelectPost::forUpdate() {
 }
 
 template <typename Binder, typename Interface>
-template <typename ... Args>
-auto Query<Binder, Interface>::select(const Field &f, Args && ... args) -> Select {
+template <typename... Args>
+auto Query<Binder, Interface>::select(const Field &f, Args &&...args) -> Select {
 	auto s = select();
 	s.fields(f, forward<Args>(args)...);
 	return s;
 }
 
 template <typename Binder, typename Interface>
-template <typename ... Args>
-auto Query<Binder, Interface>::select(Distinct d, const Field &f, Args && ... args) -> Select {
+template <typename... Args>
+auto Query<Binder, Interface>::select(Distinct d, const Field &f, Args &&...args) -> Select {
 	auto s = select(d);
 	s.fields(f, forward<Args>(args)...);
 	return s;
@@ -357,15 +383,12 @@ template <typename Binder, typename Interface>
 auto Query<Binder, Interface>::select(Distinct d) -> Select {
 	stream << "SELECT";
 	switch (d) {
-	case Distinct::Distinct:
-		stream << " DISTINCT";
-		break;
-	default:
-		break;
+	case Distinct::Distinct: stream << " DISTINCT"; break;
+	default: break;
 	}
 	return Select(this);
 }
 
-}
+} // namespace stappler::sql
 
 #endif /* STAPPLER_SQL_SPSQLSELECT_HPP_ */

@@ -205,6 +205,7 @@ public:
 
 	void set(const Pointer &value);
 	void swap(RcBase<Base, Pointer> &v);
+	void clear();
 
 	bool operator==(const RcBase<Base, Pointer> &other) const;
 	bool operator==(const Base *&other) const;
@@ -511,7 +512,12 @@ SharedRef<T>::~SharedRef() {
 template <typename T>
 template <typename Callback>
 void SharedRef<T>::perform(Callback &&cb) {
-	memory::pool::perform([&, this] { cb(_shared); }, _pool);
+	if constexpr (std::is_invocable_v<Callback, memory::pool_t *, T *>) {
+		memory::pool::perform([&, this] { cb(_pool, _shared); }, _pool);
+	} else {
+		static_assert(std::is_invocable_v<Callback, T *>, "Invalid callback type");
+		memory::pool::perform([&, this] { cb(_shared); }, _pool);
+	}
 }
 
 template <typename T>
@@ -548,11 +554,7 @@ inline RcBase<_Base, _Pointer>::RcBase(RcBase<Base, Pointer> &&v) noexcept {
 
 template <typename _Base, typename _Pointer>
 inline auto RcBase<_Base, _Pointer>::operator=(const nullptr_t &) noexcept -> RcBase & {
-	doRelease();
-	_ptr = nullptr;
-#if SP_REF_DEBUG
-	_id = 0;
-#endif
+	clear();
 	return *this;
 }
 
@@ -604,6 +606,15 @@ inline void RcBase<_Base, _Pointer>::swap(RcBase<Base, Pointer> &v) {
 	std::swap(_ptr, v._ptr);
 #if SP_REF_DEBUG
 	std::swap(_id, v._id);
+#endif
+}
+
+template <typename _Base, typename _Pointer>
+inline void RcBase<_Base, _Pointer>::clear() {
+	doRelease();
+	_ptr = nullptr;
+#if SP_REF_DEBUG
+	_id = 0;
 #endif
 }
 

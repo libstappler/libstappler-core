@@ -48,5 +48,4 @@ TOOLKIT_MODULE_LIST += \
 	$(STAPPLER_MODULE_DIR)/zip/zip.mk \
 	$(STAPPLER_MODULE_DIR)/wasm/wasm.mk \
 	$(STAPPLER_MODULE_DIR)/makefile/makefile.mk \
-	$(STAPPLER_MODULE_DIR)/pug/pug.mk \
-	$(STAPPLER_MODULE_DIR)/backtrace.mk
+	$(STAPPLER_MODULE_DIR)/pug/pug.mk

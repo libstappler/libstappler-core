@@ -436,6 +436,8 @@ inline std::basic_ostream<char> &operator<<(std::basic_ostream<char> &os, const 
 template <typename Callback>
 inline bool Vec2::getSegmentIntersectPoint(const Vec2 &A, const Vec2 &B, const Vec2 &C,
 		const Vec2 &D, const Callback &cb) {
+	static_assert(std::is_invocable_v<Callback, const Vec2 &, float, float>,
+			"Invalid callback type");
 	float S, T;
 
 	const auto minXAB = std::min(A.x, B.x);

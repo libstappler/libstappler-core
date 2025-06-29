@@ -483,8 +483,14 @@ void initialize() {
 
 void terminate() {
 	if (s_global_init.fetch_sub(1) == 1) {
-		Pool::destroy(s_global_pool);
-		delete s_global_allocator;
+		if (s_global_pool) {
+			Pool::destroy(s_global_pool);
+			s_global_pool = nullptr;
+		}
+		if (s_global_allocator) {
+			delete s_global_allocator;
+			s_global_allocator = nullptr;
+		}
 	}
 }
 

@@ -83,13 +83,50 @@ public:
 	void (*resize_fn)(void *, size_t) = nullptr;
 };
 
+class SP_PUBLIC AllocRef : public Ref {
+public:
+	virtual ~AllocRef() { memory::allocator::destroy(_allocator); }
+
+	AllocRef() { _allocator = memory::allocator::create(); }
+
+	memory::allocator_t *getAllocator() const { return _allocator; }
+
+	void setOwner(memory::pool_t *p) { memory::allocator::owner_set(_allocator, p); }
+	memory::pool_t *getOwner() const { return memory::allocator::owner_get(_allocator); }
+
+protected:
+	memory::allocator_t *_allocator = nullptr;
+};
+
 class SP_PUBLIC PoolRef : public Ref {
 public:
-	virtual ~PoolRef() { memory::pool::destroy(_pool); }
+	virtual ~PoolRef() {
+		if (_ownsAllocator) {
+			_allocator->setOwner(nullptr);
+		}
+		memory::pool::destroy(_pool);
+		_pool = nullptr;
+		_allocator = nullptr;
+		_ownsAllocator = false;
+	}
 
-	PoolRef(memory::pool_t *root = nullptr) { _pool = memory::pool::create(root); }
+	PoolRef(AllocRef *alloc = nullptr) {
+		_allocator = alloc;
+		if (!_allocator) {
+			_allocator = Rc<AllocRef>::alloc();
+			_ownsAllocator = true;
+		}
+		_pool = memory::pool::create(_allocator->getAllocator());
+		if (_ownsAllocator) {
+			_allocator->setOwner(_pool);
+		}
+	}
 
-	PoolRef(PoolRef *p) : PoolRef(p->_pool) { }
+	PoolRef(PoolRef *pool) {
+		_ownsAllocator = false;
+		_allocator = pool->_allocator;
+		_pool = memory::pool::create(_allocator->getAllocator());
+	}
 
 	memory::pool_t *getPool() const { return _pool; }
 
@@ -97,12 +134,13 @@ public:
 
 	template <typename Callable>
 	auto perform(const Callable &cb) {
-		memory::pool::context<memory::pool_t *> ctx(_pool);
-		return cb();
+		return memory::pool::perform(cb, _pool);
 	}
 
 protected:
+	Rc<AllocRef> _allocator;
 	memory::pool_t *_pool = nullptr;
+	bool _ownsAllocator = false;
 };
 
 } // namespace STAPPLER_VERSIONIZED stappler

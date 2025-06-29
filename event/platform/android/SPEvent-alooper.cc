@@ -25,29 +25,33 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
+static constexpr uint32_t ALOOPER_CANCEL_FLAG = 0x8000'0000;
+
 Status ALooperData::add(int fd, int events, Handle *handle) {
-	if (ALooper_addFd(_looper, fd, 0, events, [] (int fd, int events, void *ptr) {
-			NotifyData data;
-			auto h = (Handle *)ptr;
+	if (ALooper_addFd(_looper, fd, 0, events,
+				[](int fd, int events, void *ptr) {
+		NotifyData data;
+		auto h = (Handle *)ptr;
 
-			auto refId = h->retain();
+		auto refId = h->retain();
 
-			data.result = fd;
-			data.queueFlags = events;
-			data.userFlags = 0;
+		data.result = fd;
+		data.queueFlags = events;
+		data.userFlags = 0;
 
-			h->_class->info->data->notify(h, data);
+		h->_class->info->data->notify(h, data);
 
-			auto st = h->getStatus();
+		auto st = h->getStatus();
 
-			h->release(refId);
+		h->release(refId);
 
-			if (st == Status::Ok) {
-				return 1;
-			} else {
-				return 0;
-			}
-		}, handle) == 1) {
+		if (st == Status::Ok) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}, handle)
+			== 1) {
 
 		return Status::Ok;
 	}
@@ -64,53 +68,61 @@ Status ALooperData::remove(int fd) {
 	return Status::ErrorUnknown;
 }
 
-Status ALooperData::submit() {
-	return Status::Ok;
-}
+Status ALooperData::submit() { return Status::Ok; }
 
 uint32_t ALooperData::poll() {
+	uint32_t result = 0;
+
+	RunContext ctx;
+	pushContext(&ctx, RunContext::Poll);
+
 	auto ret = ALooper_pollOnce(0, nullptr, nullptr, nullptr);
-	while (ret == ALOOPER_POLL_CALLBACK) {
-		return 1;
-	}
-	return 0;
+	while (ret == ALOOPER_POLL_CALLBACK) { ++result; }
+
+	popContext(&ctx);
+
+	return result;
 }
 
 uint32_t ALooperData::wait(TimeInterval ival) {
+	uint32_t result = 0;
+
+	RunContext ctx;
+	pushContext(&ctx, RunContext::Wait);
+
 	auto ret = ALooper_pollOnce(ival.toMillis(), nullptr, nullptr, nullptr);
 	if (ret == ALOOPER_POLL_CALLBACK) {
-		return 1;
+		++result;
 	}
-	return 0;
+
+	popContext(&ctx);
+
+	return result;
 }
 
 Status ALooperData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval wakeupTimeout) {
 	RunContext ctx;
 
 	ctx.wakeupStatus = Status::Suspended;
-	ctx.wakeupTimeout.store(wakeupTimeout.toMicros());
+	ctx.wakeupTimeout = wakeupTimeout;
 	ctx.runWakeupFlags = wakeupFlags;
 
 	Rc<Handle> timerHandle;
-	if (ival) {
+	if (ival && ival != TimeInterval::Infinite) {
 		// set timeout
-		timerHandle = _queue->get()->schedule(ival, [this, wakeupFlags] (Handle *handle, bool success) {
+		timerHandle = _queue->get()->schedule(ival,
+				[this, wakeupFlags, ctx = &ctx](Handle *handle, bool success) {
 			if (success) {
-				doWakeupInterrupt(wakeupFlags, false);
+				stopContext(ctx, wakeupFlags, false);
 			}
 		});
 	}
 
-	ctx.shouldWakeup.test_and_set();
-
-	std::unique_lock lock(_runMutex);
-	ctx.prev = _runContext;
-	_runContext = &ctx;
-	lock.unlock();
+	pushContext(&ctx, RunContext::Run);
 
 	int ret = 0;
 
-	while (ctx.shouldWakeup.test_and_set()) {
+	while (ctx.state == RunContext::Running) {
 		ret = ALooper_pollOnce(-1, nullptr, nullptr, nullptr);
 		if (ret == ALOOPER_POLL_ERROR) {
 			log::error("event::ALooperData", "ALooper error: ", ret);
@@ -123,85 +135,52 @@ Status ALooperData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval
 		log::error("event::Queue", "ALooper failed with error");
 	}
 
-	auto wFlags = WakeupFlags(_runContext->wakeupFlags.load());
-	if (hasFlag(wFlags, WakeupFlags::Graceful)) {
-		if (suspendHandles() == Status::Done) {
-			_runContext->wakeupStatus = Status::Ok;
-		}
-	}
-
-	if (ival) {
+	if (timerHandle) {
 		// remove timeout if set
 		timerHandle->cancel();
+		timerHandle = nullptr;
 	}
 
-	lock.lock();
-	_runContext = ctx.prev;
-	lock.unlock();
+	popContext(&ctx);
 
 	return ctx.wakeupStatus;
 }
 
-Status ALooperData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
-	std::unique_lock lock(_runMutex);
-	if (auto v = _runContext) {
-		v->wakeupFlags |= toInt(flags);
-		v->wakeupTimeout = gracefulTimeout.toMicros();
-	}
-	_runMutex.unlock();
-	_eventFd->write(1);
+Status ALooperData::wakeup(WakeupFlags flags) {
+	_eventFd->write(1, toInt(flags));
 	return Status::Ok;
 }
 
-Status ALooperData::suspendHandles() {
-	_runContext->wakeupStatus = Status::Suspended;
-
-	auto nhandles = _data->suspendAll();
-	_runContext->wakeupCounter = nhandles;
-
-	return Status::Done;
-}
-
-Status ALooperData::doWakeupInterrupt(WakeupFlags flags, bool externalCall) {
-	if (!_runContext) {
-		return Status::ErrorInvalidArguemnt;
-	}
-
-	if (hasFlag(flags, WakeupFlags::Graceful)) {
-		if (suspendHandles() == Status::Done) {
-			_runContext->shouldWakeup.clear();
-			_runContext->wakeupStatus = Status::Ok; // graceful wakeup
-		}
-		return Status::Suspended; // do not rearm eventfd
-	} else {
-		_runContext->shouldWakeup.clear();
-		_runContext->wakeupStatus = externalCall ? Status::Suspended : Status::Done; // forced wakeup
-		return Status::Ok; // rearm eventfd
-	}
-}
-
-void ALooperData::runInternalHandles() {
-	_data->runHandle(_eventFd);
-}
+void ALooperData::runInternalHandles() { _data->runHandle(_eventFd); }
 
 void ALooperData::cancel() {
-	ALooper_wake(_looper);
+	_eventFd->write(1, toInt(WakeupFlags::ContextDefault) | ALOOPER_CANCEL_FLAG);
 }
 
 ALooperData::ALooperData(QueueRef *q, Queue::Data *data, const QueueInfo &info, SpanView<int> sigs)
-: _queue(q), _data(data), _flags(info.flags) {
+: PlatformQueueData(q, data, info.flags) {
+
+	_stopContext = [](RunContext *ctx) {
+		auto q = static_cast<ALooperData *>(ctx->queue);
+		ALooper_wake(q->_looper);
+	};
 
 	if (hasFlag(_flags, QueueFlags::Protected)) {
-		log::warn("event::Queue", "QueueFlags::Protected is not supported by ALooper queue, ignored");
+		log::warn("event::Queue",
+				"QueueFlags::Protected is not supported by ALooper queue, ignored");
 	}
 
 	_looper = ALooper_prepare(0);
 
 	_eventFd = Rc<EventFdALooperHandle>::create(&data->_alooperEventFdClass,
 			CompletionHandle<EventFdALooperHandle>::create<ALooperData>(this,
-					[] (ALooperData *data, EventFdALooperHandle *h, uint32_t value, Status st) {
+					[](ALooperData *data, EventFdALooperHandle *h, uint32_t value, Status st) {
 		if (st == Status::Ok && data->_runContext) {
-			data->doWakeupInterrupt(WakeupFlags(data->_runContext->wakeupFlags.exchange(0)), true);
+			if (value & ALOOPER_CANCEL_FLAG) {
+				data->stopRootContext(WakeupFlags::ContextDefault, true);
+			} else {
+				data->stopContext(data->_runContext, WakeupFlags(value), true);
+			}
 		}
 	}));
 }
@@ -213,4 +192,4 @@ ALooperData::~ALooperData() {
 	}
 }
 
-}
+} // namespace stappler::event

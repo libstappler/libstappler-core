@@ -33,8 +33,10 @@ struct RefContainer {
 	template <typename T>
 	using Vector = typename Interface::template VectorType<T>;
 
-	static constexpr size_t ReserveItems = std::max(sizeof(Vector<Item *>) / sizeof(Item *), size_t(4));
-	static constexpr size_t ContainerSize = std::max(sizeof(Vector<Item *>), sizeof(Item *) * ReserveItems);
+	static constexpr size_t ReserveItems =
+			std::max(sizeof(Vector<Item *>) / sizeof(Item *), size_t(4));
+	static constexpr size_t ContainerSize =
+			std::max(sizeof(Vector<Item *>), sizeof(Item *) * ReserveItems);
 
 	std::array<uint8_t, ContainerSize> _container;
 	size_t _nitems = 0;
@@ -44,7 +46,7 @@ struct RefContainer {
 
 	Item *getItemByTag(uint32_t tag) const;
 
-	Item * addItem(Item *);
+	Item *addItem(Item *);
 	void removeItem(Item *);
 
 	bool invalidateItemByTag(uint32_t tag);
@@ -56,7 +58,7 @@ struct RefContainer {
 	bool cleanup();
 
 	template <typename Callback>
-	void foreach(const Callback &) const;
+	void foreach (const Callback &) const;
 
 	void clear();
 
@@ -71,13 +73,11 @@ RefContainer<Item, Interface>::~RefContainer() {
 		auto end = (Item **)(_container.data()) + _nitems;
 		while (target != end) {
 			(*target)->release(0);
-			++ target;
+			++target;
 		}
 	} else {
 		auto target = (Vector<Item *> *)_container.data();
-		for (auto &it : *target) {
-			it->release(0);
-		}
+		for (auto &it : *target) { it->release(0); }
 		target->clear();
 		target->~vector();
 	}
@@ -89,7 +89,7 @@ RefContainer<Item, Interface>::RefContainer() { }
 template <typename Item, typename Interface>
 auto RefContainer<Item, Interface>::getItemByTag(uint32_t tag) const -> Item * {
 	Item *ret = nullptr;
-	foreach([&] (Item *item) {
+	foreach ([&](Item *item) {
 		if (item->getTag() == tag) {
 			ret = item;
 			return false;
@@ -105,15 +105,16 @@ auto RefContainer<Item, Interface>::addItem(Item *item) -> Item * {
 		auto target = _container.data() + sizeof(Item *) * _nitems;
 		item->retain();
 		memcpy(target, &item, sizeof(Item *));
-		++ _nitems;
+		++_nitems;
 	} else if (_nitems > ReserveItems) {
 		auto target = (Vector<Item *> *)_container.data();
 		item->retain();
 		target->emplace_back(item);
 	} else {
 		// update to Vector storage
-		Vector<Item *> acts; acts.reserve(_nitems + 1);
-		foreach([&] (Item *a) {
+		Vector<Item *> acts;
+		acts.reserve(_nitems + 1);
+		foreach ([&](Item *a) {
 			acts.emplace_back(a);
 			return true;
 		});
@@ -121,7 +122,7 @@ auto RefContainer<Item, Interface>::addItem(Item *item) -> Item * {
 		acts.emplace_back(item);
 
 		new (_container.data()) Vector<Item *>(sp::move(acts));
-		++ _nitems;
+		++_nitems;
 	}
 	return item;
 }
@@ -134,7 +135,7 @@ void RefContainer<Item, Interface>::removeItem(Item *item) {
 		auto it = std::remove(target, end, item);
 		if (std::distance(it, end) > 0) {
 			item->release(0);
-			-- _nitems;
+			--_nitems;
 		}
 	} else {
 		auto target = (Vector<Item *> *)_container.data();
@@ -145,7 +146,7 @@ void RefContainer<Item, Interface>::removeItem(Item *item) {
 				it = target->erase(it);
 				break;
 			} else {
-				++ it;
+				++it;
 			}
 		}
 	}
@@ -154,7 +155,7 @@ void RefContainer<Item, Interface>::removeItem(Item *item) {
 template <typename Item, typename Interface>
 bool RefContainer<Item, Interface>::invalidateItemByTag(uint32_t tag) {
 	bool ret = false;
-	foreach([&] (Item *item) {
+	foreach ([&](Item *item) {
 		if (item->getTag() == tag) {
 			item->invalidate();
 			ret = true;
@@ -167,7 +168,7 @@ bool RefContainer<Item, Interface>::invalidateItemByTag(uint32_t tag) {
 
 template <typename Item, typename Interface>
 void RefContainer<Item, Interface>::invalidateAllItemsByTag(uint32_t tag) {
-	foreach([&] (Item *item) {
+	foreach ([&](Item *item) {
 		if (item->getTag() == tag) {
 			item->invalidate();
 		}
@@ -187,10 +188,10 @@ bool RefContainer<Item, Interface>::removeItemByTag(uint32_t tag) {
 				if (target + 1 != end) {
 					memmove(target, target + 1, (end - (target + 1)) * sizeof(Item *));
 				}
-				-- _nitems;
+				--_nitems;
 				return true;
 			} else {
-				++ target;
+				++target;
 			}
 		}
 	} else {
@@ -203,7 +204,7 @@ bool RefContainer<Item, Interface>::removeItemByTag(uint32_t tag) {
 				it = target->erase(it);
 				return true;
 			} else {
-				++ it;
+				++it;
 			}
 		}
 	}
@@ -221,11 +222,11 @@ void RefContainer<Item, Interface>::removeAllItemsByTag(uint32_t tag) {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
-		static_cast<void>(std::remove_if(target, end, [&, this] (Item *a) {
+		static_cast<void>(std::remove_if(target, end, [&, this](Item *a) {
 			if (a->getTag() == tag) {
 				a->invalidate();
 				a->release(0);
-				-- _nitems;
+				--_nitems;
 				return true;
 			}
 			return false;
@@ -239,7 +240,7 @@ void RefContainer<Item, Interface>::removeAllItemsByTag(uint32_t tag) {
 				(*it)->release(0);
 				it = target->erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 		}
 	}
@@ -250,10 +251,10 @@ bool RefContainer<Item, Interface>::cleanup() {
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
-		static_cast<void>(std::remove_if(target, end, [&, this] (Item *a) {
+		static_cast<void>(std::remove_if(target, end, [&, this](Item *a) {
 			if (a->isDone()) {
 				a->release(0);
-				-- _nitems;
+				--_nitems;
 				return true;
 			}
 			return false;
@@ -267,7 +268,7 @@ bool RefContainer<Item, Interface>::cleanup() {
 				(*it)->release(0);
 				it = target->erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 		}
 		return target->empty();
@@ -280,7 +281,8 @@ bool RefContainer<Item, Interface>::cleanup() {
 
 template <typename Item, typename Interface>
 template <typename Callback>
-void RefContainer<Item, Interface>::foreach(const Callback &cb) const {
+void RefContainer<Item, Interface>::foreach (const Callback &cb) const {
+	static_assert(std::is_invocable_v<Callback, Item *>, "Invalid callback type");
 	if (_nitems <= ReserveItems) {
 		auto target = (Item **)_container.data();
 		auto end = (Item **)(_container.data()) + _nitems;
@@ -288,7 +290,7 @@ void RefContainer<Item, Interface>::foreach(const Callback &cb) const {
 			if (!cb(*target)) {
 				return;
 			}
-			++ target;
+			++target;
 		}
 	} else {
 		auto target = (Vector<Item *> *)_container.data();
@@ -308,13 +310,11 @@ void RefContainer<Item, Interface>::clear() {
 		auto end = (Item **)(_container.data()) + _nitems;
 		while (target != end) {
 			(*target)->release(0);
-			++ target;
+			++target;
 		}
 	} else {
 		auto target = (Vector<Item *> *)_container.data();
-		for (auto &it : *target) {
-			it->release(0);
-		}
+		for (auto &it : *target) { it->release(0); }
 		target->clear();
 		target->~vector();
 	}
@@ -341,6 +341,6 @@ size_t RefContainer<Item, Interface>::size() const {
 	}
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* STAPPLER_CORE_UTILS_SPREFCONTAINER_H_ */
