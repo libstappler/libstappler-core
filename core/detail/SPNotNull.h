@@ -30,34 +30,34 @@
 
 // preferred option: C++ standard attribute
 #ifdef __has_cpp_attribute
-  #if __has_cpp_attribute(assume) >= 202207L
-    #define SPASSUME(...) [[assume(__VA_ARGS__)]]
-  #endif
+#if __has_cpp_attribute(assume) >= 202'207L
+#define SPASSUME(...) [[assume(__VA_ARGS__)]]
+#endif
 #endif
 // first fallback: compiler intrinsics/attributes for assumptions
 #ifndef SPASSUME
-  #if defined(__clang__)
-    #define SPASSUME(...) do { __builtin_assume(__VA_ARGS__); } while(0)
-  #elif defined(_MSC_VER)
-    #define SPASSUME(...) do { __assume(__VA_ARGS__); } while(0)
-  #elif defined(__GNUC__)
-    #if __GNUC__ >= 13
-      #define SPASSUME(...) __attribute__((__assume__(__VA_ARGS__)))
-    #endif
-  #endif
+#if defined(__clang__)
+#define SPASSUME(...) do { __builtin_assume(__VA_ARGS__); } while(0)
+#elif defined(_MSC_VER)
+#define SPASSUME(...) do { __assume(__VA_ARGS__); } while(0)
+#elif defined(__GNUC__)
+#if __GNUC__ >= 13
+#define SPASSUME(...) __attribute__((__assume__(__VA_ARGS__)))
+#endif
+#endif
 #endif
 // second fallback: possibly evaluating uses of unreachable()
 #if !defined(SPASSUME)
-  #if defined(__GNUC__)
-    #define SPASSUME(...) do { if (!bool(__VA_ARGS__)) __builtin_unreachable(); } while(0)
-  #elif __cpp_lib_unreachable >= 202202L
-    #include <utility>
-    #define SPASSUME(...) do { if (!bool(__VA_ARGS__)) ::std::unreachable(); ) while(0)
-  #endif
+#if defined(__GNUC__)
+#define SPASSUME(...) do { if (!bool(__VA_ARGS__)) __builtin_unreachable(); } while(0)
+#elif __cpp_lib_unreachable >= 202'202L
+#include <utility>
+#define SPASSUME(...) do { if (!bool(__VA_ARGS__)) ::std::unreachable(); ) while(0)
+#endif
 #endif
 // last fallback: define macro as doing nothing
 #ifndef SPASSUME
-  #define SPASSUME(...)
+#define SPASSUME(...)
 #endif
 
 
@@ -75,27 +75,25 @@ namespace STAPPLER_VERSIONIZED stappler {
 
 // based on https://github.com/microsoft/GSL/blob/main/include/gsl/pointers
 
-template <class T>
+template <typename T>
 class NotNull {
 public:
-    static_assert(std::is_pointer<T>::value, "T is not a pointer.");
+	using element_type = T *;
 
-    using element_type = T;
-
-	constexpr NotNull(T u) noexcept SPNONNULL : _ptr(u) {
+	constexpr NotNull(T *u) noexcept SPNONNULL : _ptr(u) {
 		SPASSERT(_ptr != nullptr, "Pointer should not be null");
 		SPASSUME(_ptr != nullptr);
 	}
 
-	template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
-	constexpr NotNull(const NotNull<U> &other) noexcept : NotNull(other.get()) {}
+	template <typename U, typename = std::enable_if_t<std::is_convertible<U *, T *>::value>>
+	constexpr NotNull(const NotNull<U> &other) noexcept : NotNull(other.get()) { }
 
 	NotNull(const NotNull &other) = default;
 	NotNull &operator=(const NotNull &other) = default;
 
 	constexpr auto get() const { return _ptr; }
 
-	constexpr operator T() const { return get(); }
+	constexpr operator T *() const { return get(); }
 	constexpr decltype(auto) operator->() const { return get(); }
 	constexpr decltype(auto) operator*() const { return *get(); }
 
@@ -115,9 +113,9 @@ public:
 	void swap(NotNull<T> &other) { std::swap(_ptr, other._ptr); }
 
 private:
-	T _ptr;
+	T *_ptr;
 };
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* CORE_CORE_DETAIL_SPNOTNULL_H_ */

@@ -24,6 +24,7 @@
 #define CORE_EVENT_PLATFORM_FD_SPEVENTPOLLFD_H_
 
 #include "SPEventFd.h"
+#include "SPEventPollHandle.h"
 #include "detail/SPEventHandleClass.h"
 
 #if SP_POSIX_FD
@@ -31,21 +32,6 @@
 #include <poll.h>
 
 namespace STAPPLER_VERSIONIZED stappler::event {
-
-enum class PollFlags : uint16_t {
-	None = 0,
-	In = POLLIN,
-	Pri = POLLPRI,
-	Out = POLLOUT,
-	Err = POLLERR,
-	HungUp = POLLHUP,
-	Invalid = POLLNVAL,
-
-	PollMask = 0x3FFF,
-	CloseFd = 0x4000,
-};
-
-SP_DEFINE_ENUM_AS_MASK(PollFlags)
 
 struct PollFdSource {
 	int fd;
@@ -56,17 +42,15 @@ struct PollFdSource {
 	void cancel();
 };
 
-class SP_PUBLIC PollFdHandle : public Handle {
+class SP_PUBLIC PollFdHandle : public PollHandle {
 public:
-	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags,
-			CompletionHandle<PollFdHandle> &&);
-
-	static Rc<PollFdHandle> create(const Queue *, int fd, PollFlags,
-			mem_std::Function<Status(int fd, PollFlags)> &&, Ref *ref);
-
 	virtual ~PollFdHandle() = default;
 
 	bool init(HandleClass *, int, PollFlags, CompletionHandle<PollFdHandle> &&);
+
+	virtual bool reset(PollFlags) override;
+
+	virtual NativeHandle getNativeHandle() const override;
 };
 
 #ifdef SP_EVENT_URING
@@ -103,7 +87,7 @@ public:
 };
 #endif
 
-}
+} // namespace stappler::event
 
 #endif
 

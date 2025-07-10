@@ -907,7 +907,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	}
 #endif
 
-	log::info("event::URingData", "io_uring features: ", features.str());
+	// log::info("event::URingData", "io_uring features: ", features.str());
 
 	sq.ringSize = _params.sq_off.array + _params.sq_entries * sizeof(unsigned);
 	cq.ringSize = _params.cq_off.cqes + _params.cq_entries * CQESize;

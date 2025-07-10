@@ -153,7 +153,7 @@ Status EPollData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval w
 	if (ival && ival != TimeInterval::Infinite) {
 		// set timeout
 		timerHandle = _queue->get()->schedule(ival,
-				[this, wakeupFlags, ctx = &ctx](Handle *handle, bool success) {
+				[this, wakeupFlags, ctx = &ctx](Handle *, bool success) {
 			if (success) {
 				stopContext(ctx, wakeupFlags, false);
 			}

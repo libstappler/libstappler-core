@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,73 +29,6 @@
 #include "SPMemory.h"
 
 namespace STAPPLER_VERSIONIZED stappler {
-
-namespace detail {
-
-struct SP_PUBLIC CommandLineParamData final : public mem_pool::AllocBase {
-	mem_pool::Vector<StringView> patterns;
-	StringView description;
-	bool (*callback) (void *, StringView pattern, SpanView<StringView> args);
-};
-
-struct SP_PUBLIC CommandLinePatternData final {
-	StringView pattern;
-	StringView args;
-	CommandLineParamData *target;
-
-	bool operator<(const StringView &other) const {
-		return pattern < other;
-	}
-
-	bool operator<(const CommandLinePatternData &other) const {
-		return pattern < other.pattern;
-	}
-
-	bool operator==(const CommandLinePatternData &other) const = default;
-	bool operator!=(const CommandLinePatternData &other) const = default;
-};
-
-struct SP_PUBLIC CommandLinePatternParsingData {
-	const CommandLinePatternData *pattern;
-	SpanView<StringView> argv;
-
-	VectorAdapter<StringView> result;
-	size_t offset;
-
-	StringView args;
-	StringView target;
-	StringView type = StringView("--");
-
-	bool parse();
-	bool parsePatternString();
-	bool parseWhitespace();
-};
-
-class SP_PUBLIC CommandLineParserBase : public InterfaceObject<memory::PoolInterface> {
-public:
-	~CommandLineParserBase();
-	CommandLineParserBase();
-
-	bool parse(void *output, int argc, const char * argv[], const Callback<void(void *, StringView)> &argCallback) const;
-
-	void describe(const Callback<void(StringView)> &) const;
-
-protected:
-	size_t parseStringPattern(void *output, const CommandLinePatternData &pattern, StringView str, bool &success) const;
-	size_t parseStringPattern(void *output, const CommandLinePatternData &pattern, SpanView<StringView> argv, bool &success) const;
-	size_t parseCharPattern(void *output, const CommandLinePatternData &pattern, StringView &input, SpanView<StringView> argv, bool &success) const;
-
-	memory::pool_t *_pool = nullptr;
-	memory::allocator_t *_alloc = nullptr;
-
-	Vector<CommandLinePatternData> *_stringPatterns = nullptr;
-	Vector<CommandLinePatternData> *_charPatterns = nullptr;
-	Vector<CommandLineParamData *> *_options = nullptr;
-
-	bool (*invoke) (const CommandLineParamData *, void *, StringView pattern, SpanView<StringView> args) = nullptr;
-};
-
-}
 
 /* Declarative-style command line option parser
  *
@@ -144,9 +78,77 @@ CommandLineOption<Value> {
  * <#.#> is a special argument type, that match only floats
  */
 
+namespace detail {
+
+struct SP_PUBLIC CommandLineParamData final : public mem_pool::AllocBase {
+	mem_pool::Vector<StringView> patterns;
+	StringView description;
+	bool (*callback)(void *, StringView pattern, SpanView<StringView> args);
+};
+
+struct SP_PUBLIC CommandLinePatternData final {
+	StringView pattern;
+	StringView args;
+	CommandLineParamData *target;
+
+	bool operator<(const StringView &other) const { return pattern < other; }
+
+	bool operator<(const CommandLinePatternData &other) const { return pattern < other.pattern; }
+
+	bool operator==(const CommandLinePatternData &other) const = default;
+	bool operator!=(const CommandLinePatternData &other) const = default;
+};
+
+struct SP_PUBLIC CommandLinePatternParsingData {
+	const CommandLinePatternData *pattern;
+	SpanView<StringView> argv;
+
+	VectorAdapter<StringView> result;
+	size_t offset;
+
+	StringView args;
+	StringView target;
+	StringView type = StringView("--");
+
+	bool parse();
+	bool parsePatternString();
+	bool parseWhitespace();
+};
+
+class SP_PUBLIC CommandLineParserBase : public InterfaceObject<memory::PoolInterface> {
+public:
+	~CommandLineParserBase();
+	CommandLineParserBase();
+
+	bool parse(void *output, int argc, const char *argv[],
+			const Callback<void(void *, StringView)> &argCallback) const;
+
+	void describe(const Callback<void(StringView)> &) const;
+
+protected:
+	size_t parseStringPattern(void *output, const CommandLinePatternData &pattern, StringView str,
+			bool &success) const;
+	size_t parseStringPattern(void *output, const CommandLinePatternData &pattern,
+			SpanView<StringView> argv, bool &success) const;
+	size_t parseCharPattern(void *output, const CommandLinePatternData &pattern, StringView &input,
+			SpanView<StringView> argv, bool &success) const;
+
+	memory::pool_t *_pool = nullptr;
+	memory::allocator_t *_alloc = nullptr;
+
+	Vector<CommandLinePatternData> *_stringPatterns = nullptr;
+	Vector<CommandLinePatternData> *_charPatterns = nullptr;
+	Vector<CommandLineParamData *> *_options = nullptr;
+
+	bool (*invoke)(const CommandLineParamData *, void *, StringView pattern,
+			SpanView<StringView> args) = nullptr;
+};
+
+} // namespace detail
+
 template <typename Output>
 struct SP_PUBLIC CommandLineOption {
-	using CallbackFn = bool (*) (Output &target, StringView pattern, SpanView<StringView> args);
+	using CallbackFn = bool (*)(Output &target, StringView pattern, SpanView<StringView> args);
 
 	// List of command line patterns
 	InitializerList<const char *> &&patterns;
@@ -165,14 +167,28 @@ public:
 
 	CommandLineParser(InitializerList<CommandLineOption<Output>> params);
 
-	bool parse(Output &output, int argc, const char * argv[], const Callback<void(Output &, StringView)> &argCallback = nullptr) const;
+	void add(InitializerList<CommandLineOption<Output>> params);
+
+	bool parse(Output &output, int argc, const char *argv[],
+			const Callback<void(Output &, StringView)> &argCallback = nullptr) const;
 
 	using CommandLineParserBase::describe;
 };
 
 template <typename Output>
-inline CommandLineParser<Output>::CommandLineParser(InitializerList<CommandLineOption<Output>> params)
+inline CommandLineParser<Output>::CommandLineParser(
+		InitializerList<CommandLineOption<Output>> params)
 : CommandLineParserBase() {
+	add(params);
+
+	invoke = [](const detail::CommandLineParamData *data, void *ptr, StringView pattern,
+					 SpanView<StringView> args) -> bool {
+		return CallbackFn(data->callback)(*(Output *)ptr, pattern, args);
+	};
+}
+
+template <typename Output>
+inline void CommandLineParser<Output>::add(InitializerList<CommandLineOption<Output>> params) {
 	mem_pool::perform([&] {
 		for (auto &it : params) {
 			auto data = new (_pool) detail::CommandLineParamData;
@@ -183,21 +199,29 @@ inline CommandLineParser<Output>::CommandLineParser(InitializerList<CommandLineO
 				auto pattern = StringView(p).pdup();
 				if (StringView(pattern).starts_with("--")) {
 					auto args = StringView(pattern).sub(2);
-					auto patternInit = args.readUntil<StringView::WhiteSpace, StringView::Chars<'<'>>();
+					auto patternInit =
+							args.readUntil<StringView::WhiteSpace, StringView::Chars<'<'>>();
 					args.backwardSkipChars<StringView::WhiteSpace>();
-					if (!mem_pool::emplace_ordered(*_stringPatterns, detail::CommandLinePatternData{patternInit, args, data})) {
-						log::error("CommandLineParser", "Duplicate string pattern: '", patternInit, "'");
+					if (!mem_pool::emplace_ordered(*_stringPatterns,
+								detail::CommandLinePatternData{patternInit, args, data})) {
+						log::error("CommandLineParser", "Duplicate string pattern: '", patternInit,
+								"'");
 					}
 				} else if (StringView(pattern).starts_with("-")) {
 					auto args = StringView(pattern).sub(1);
-					auto patternInit = args.readUntil<StringView::WhiteSpace, StringView::Chars<'<'>>();
+					auto patternInit =
+							args.readUntil<StringView::WhiteSpace, StringView::Chars<'<'>>();
 					args.backwardSkipChars<StringView::WhiteSpace>();
 
-					auto prev = std::lower_bound(_charPatterns->begin(), _charPatterns->end(), patternInit.sub(0, 1));
-					if (prev != _charPatterns->end() && prev->pattern.starts_with(patternInit.sub(0, 1))) {
-						log::error("CommandLineParser", "Duplicate char pattern: '", patternInit, "'; previosely defined as '", prev->pattern, "'");
+					auto prev = std::lower_bound(_charPatterns->begin(), _charPatterns->end(),
+							patternInit.sub(0, 1));
+					if (prev != _charPatterns->end()
+							&& prev->pattern.starts_with(patternInit.sub(0, 1))) {
+						log::error("CommandLineParser", "Duplicate char pattern: '", patternInit,
+								"'; previosely defined as '", prev->pattern, "'");
 					} else {
-						mem_pool::emplace_ordered(*_charPatterns, detail::CommandLinePatternData{patternInit, args, data});
+						mem_pool::emplace_ordered(*_charPatterns,
+								detail::CommandLinePatternData{patternInit, args, data});
 					}
 				}
 				data->patterns.emplace_back(pattern);
@@ -206,25 +230,21 @@ inline CommandLineParser<Output>::CommandLineParser(InitializerList<CommandLineO
 			_options->emplace_back(data);
 		}
 	}, _pool);
-
-	invoke = [] (const detail::CommandLineParamData *data, void *ptr, StringView pattern, SpanView<StringView> args) -> bool {
-		return CallbackFn(data->callback)(*(Output *)ptr, pattern, args);
-	};
 }
 
 template <typename Output>
-inline bool CommandLineParser<Output>::parse(Output &output, int argc, const char * argv[], const Callback<void(Output &, StringView)> &argCallback) const {
+inline bool CommandLineParser<Output>::parse(Output &output, int argc, const char *argv[],
+		const Callback<void(Output &, StringView)> &argCallback) const {
 	void *outputPtr = (void *)&output;
 
 	if (argCallback) {
-		return CommandLineParserBase::parse(outputPtr, argc, argv, [&] (void *ptr, StringView str) {
-			argCallback(*(Output *)ptr, str);
-		});
+		return CommandLineParserBase::parse(outputPtr, argc, argv,
+				[&](void *ptr, StringView str) { argCallback(*(Output *)ptr, str); });
 	} else {
 		return CommandLineParserBase::parse(outputPtr, argc, argv, nullptr);
 	}
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* CORE_CORE_UTILS_SPCOMMANDLINEPARSER_H_ */

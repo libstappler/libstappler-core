@@ -34,26 +34,44 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 class Looper;
 class Queue;
 class Handle;
-/*class InputOutputHandle;
-class FileOpHandle;
-class DirHandle;
-class StatHandle;
-class FileHandle;*/
+
 class TimerHandle;
 class ThreadHandle;
+class PollHandle;
 
 struct BufferChain;
+
+#if WIN32
+using NativeHandle = void *;
+#else
+using NativeHandle = int;
+#endif
 
 using OpenFlags = filesystem::OpenFlags;
 using ProtFlags = filesystem::ProtFlags;
 using Stat = filesystem::Stat;
 
+enum class PollFlags : uint16_t {
+	None = 0,
+	In = 0x001, /* There is data to read.  */
+	Pri = 0x002, /* There is urgent data to read.  */
+	Out = 0x004, /* Writing now will not block.  */
+	Err = 0X008, /* ERROR CONDITION.  */
+	HungUp = 0X010, /* HUNG UP.  */
+	Invalid = 0X020, /* INVALID POLLING REQUEST.  */
+
+	PollMask = 0x3FFF,
+	CloseFd = 0x4000,
+};
+
+SP_DEFINE_ENUM_AS_MASK(PollFlags)
+
 template <typename Result = Handle>
 struct SP_PUBLIC CompletionHandle {
-	using Fn = void (*) (void *, Result *, uint32_t value, Status);
+	using Fn = void (*)(void *, Result *, uint32_t value, Status);
 
 	template <typename T>
-	static CompletionHandle create(T *ptr, void (*cb) (T *, Result *, uint32_t value, Status)) {
+	static CompletionHandle create(T *ptr, void (*cb)(T *, Result *, uint32_t value, Status)) {
 		CompletionHandle ret;
 		ret.userdata = reinterpret_cast<void *>(ptr);
 		ret.fn = reinterpret_cast<Fn>(cb);
@@ -68,15 +86,17 @@ struct SP_PUBLIC CompletionHandle {
 	}
 
 	template <typename Other>
-	operator CompletionHandle<Other> () const {
+	operator CompletionHandle<Other>() const {
 		CompletionHandle<Other> ret;
 		ret.fn = reinterpret_cast<typename CompletionHandle<Other>::Fn>(fn);
 		ret.userdata = userdata;
 		return ret;
 	}
 
-	Fn fn;
-	void *userdata;
+	operator bool() const { return fn; }
+
+	Fn fn = nullptr;
+	void *userdata = nullptr;
 };
 
 struct SP_PUBLIC TimerInfo {
@@ -88,7 +108,20 @@ struct SP_PUBLIC TimerInfo {
 	TimeInterval timeout;
 	TimeInterval interval;
 	uint32_t count = 0;
+
+	// ClockType for a timer only partially usable on non-Linux systems
+	// Just leave it Default
 	ClockType type = ClockType::Default;
+
+	// Set this = true if you want to use `TimerHandle::reset`.
+	//
+	// Without this flag, you can still call `TimerHandle::reset`, but it can be
+	// only partially available, some variants of TimerInfo can be rejected
+	// (`TimerHandle::reset` returns `false`)
+	//
+	// Note: that resetable timer CAN be less performant then regular as a timer,
+	// but 'reset' for this timer can save some syscalls and kernel resources
+	bool resetable = false;
 };
 
 /*struct SP_PUBLIC FileOpInfo {
@@ -120,6 +153,6 @@ struct SP_PUBLIC OpenFileInfo {
 	ProtFlags prot = ProtFlags::None;
 };*/
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_SPEVENT_H_ */

@@ -134,7 +134,7 @@ void terminate() {
 	memory::pool::terminate();
 }
 
-bool addInitializer(void *ptr, NotNull<void (*)(void *)> init, NotNull<void (*)(void *)> term) {
+bool addInitializer(void *ptr, NotNull<void(void *)> init, NotNull<void(void *)> term) {
 	auto &m = InitializerManager::get();
 	std::unique_lock lock(m.mutex);
 	if (m.initialized) {

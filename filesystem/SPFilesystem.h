@@ -470,7 +470,6 @@ SP_PUBLIC void _close(void *);
 SP_PUBLIC Status _ftw(FileCategory, StringView path, const Callback<bool(StringView, FileType)> &,
 		int depth, bool dirFirst);
 
-SP_PUBLIC uint32_t _getMemoryPageSize();
 SP_PUBLIC uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot,
 		size_t offset, size_t len);
 SP_PUBLIC bool _unmapFile(uint8_t *region, uint8_t storage[16]);

@@ -77,6 +77,8 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 
 	using TimerCallback = Rc<TimerHandle> (*)(QueueData *, void *, TimerInfo &&info);
 	using ThreadCallback = Rc<ThreadHandle> (*)(QueueData *, void *);
+	using ListenHandleCallback = Rc<PollHandle> (*)(QueueData *, void *, NativeHandle, PollFlags,
+			CompletionHandle<PollHandle> &&);
 
 	QueueHandleClassInfo _info;
 	QueueFlags _flags = QueueFlags::None;
@@ -98,6 +100,7 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	DestroyCallback _destroy = nullptr;
 	TimerCallback _timer = nullptr;
 	ThreadCallback _thread = nullptr;
+	ListenHandleCallback _listenHandle = nullptr;
 
 	bool isValid() const { return _platformQueue != nullptr; }
 
@@ -131,6 +134,7 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	void cancel();
 
 	Rc<TimerHandle> scheduleTimer(TimerInfo &&);
+	Rc<PollHandle> listenHandle(NativeHandle, PollFlags, CompletionHandle<PollHandle> &&);
 	Rc<ThreadHandle> addThreadHandle();
 
 	~QueueData();

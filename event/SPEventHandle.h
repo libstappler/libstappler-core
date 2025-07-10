@@ -51,7 +51,7 @@ public:
 	void setUserdata(Ref *ref) { _userdata = ref; }
 	Ref *getUserdata() const { return _userdata; }
 
-	// Initially, handle in Declined state
+	// Initially, handle in Pending state
 	// When handle run within queue - it's on Ok state
 	// When handle completes it's execution, it's on Done state
 	// When handle's execution were suspended (like on graceful wakeup) - it's on Suspended state
@@ -73,6 +73,12 @@ public:
 	Status resume();
 
 	// Cancel handle operation (performed asynchronically)
+	// Returns:
+	// Status::ErrorInvalidArguemnt - on error
+	// Status::ErrorAlreadyPerformed - handle is not running
+	// Status::ErrorNotPermitted - handle is not suspendable, only Queue can stop it
+	// Status::ErrorCancelled - handle was reset to continue running by CompletionHandle
+	// Status::Ok - cancel request was scheduled on queue
 	Status cancel(Status = Status::ErrorCancelled, uint32_t value = 0);
 
 protected:
@@ -91,18 +97,20 @@ protected:
 	Status prepareDisarm();
 
 	void sendCompletion(uint32_t value, Status);
-	void finalize(uint32_t value, Status);
+	bool finalize(uint32_t value, Status);
+
+	bool reset();
 
 	// platform data block
 	alignas(void *) uint8_t _data[DataSize];
 
 	HandleClass *_class = nullptr;
 	CompletionHandle<void> _completion;
-	Status _status = Status::Declined;
+	Status _status = Status::Pending;
 	uint32_t _timeline = 0;
 	Rc<Ref> _userdata;
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_SPEVENTHANDLE_H_ */

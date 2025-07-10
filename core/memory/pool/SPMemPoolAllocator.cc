@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +23,12 @@ THE SOFTWARE.
 **/
 
 #include "SPMemPoolStruct.h"
+#include "SPPlatformUnistd.h"
+#include "SPPlatform.h"
+
+#include <limits.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 
@@ -46,17 +53,59 @@ static bool isValidNode(MemNode *node) {
 
 size_t Allocator::getAllocatorsCount() { return s_nAllocators.load(); }
 
+static uint8_t *Allocator_mmap(size_t size) {
+#if SP_POSIX_MAPPED_FILES
+#if MAP_ANON
+	auto addr = ::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	if (addr != MAP_FAILED) {
+		return reinterpret_cast<uint8_t *>(addr);
+	}
+#endif
+#endif
+	return nullptr;
+}
+
+static void Allocator_unmmap(uint8_t *ptr, size_t size) {
+#if SP_POSIX_MAPPED_FILES
+#if MAP_ANON
+	::munmap(ptr, size);
+#endif
+#endif
+}
+
+static MemNode *Allocator_malloc(size_t size, uint32_t index) {
+	static bool isPageAligned = BOUNDARY_SIZE % platform::getMemoryPageSize() == 0;
+
+	uint32_t mapped = 0;
+	uint8_t *ptr = nullptr;
+	if (isPageAligned) {
+		ptr = Allocator_mmap(size);
+	}
+
+	if (ptr) {
+		mapped = 1;
+	} else {
+		ptr = reinterpret_cast<uint8_t *>(::malloc(size));
+	}
+
+	return new (ptr) MemNode{nullptr, nullptr, mapped, index, 0, ptr + SIZEOF_MEMNODE, ptr + size};
+}
+
+static void Allocator_free(MemNode *ptr) {
+	if (ptr->mapped) {
+		Allocator_unmmap(reinterpret_cast<uint8_t *>(ptr),
+				ptr->endp - reinterpret_cast<uint8_t *>(ptr));
+	} else {
+		::free(ptr);
+	}
+}
+
 Allocator::Allocator() {
 	++s_nAllocators;
 	buf.fill(nullptr);
-	mutex = new AllocMutex;
 }
 
 Allocator::~Allocator() {
-	if (mutex) {
-		delete mutex;
-	}
-
 	for (uint32_t index = 0; index < MAX_INDEX; index++) {
 		auto node = buf[index];
 
@@ -69,7 +118,7 @@ Allocator::~Allocator() {
 		while (node) {
 			auto tmp = node->next;
 			allocated -= node->endp - (uint8_t *)node;
-			::free(node);
+			Allocator_free(node);
 			node = tmp;
 		}
 		buf[index] = nullptr;
@@ -185,16 +234,11 @@ MemNode *Allocator::alloc(size_t in_size) {
 		lock.unlock();
 	}
 
-	if ((node = (MemNode *)malloc(size)) == nullptr) {
+	if ((node = Allocator_malloc(size, index)) == nullptr) {
 		return nullptr;
 	}
 
 	allocated += size;
-
-	node->next = nullptr;
-	node->index = (uint32_t)index;
-	node->first_avail = (uint8_t *)node + SIZEOF_MEMNODE;
-	node->endp = (uint8_t *)node + size;
 
 	return node;
 }
@@ -276,20 +320,12 @@ void Allocator::free(MemNode *node) {
 		node = freelist;
 		freelist = node->next;
 		allocated -= node->endp - (uint8_t *)node;
-		::free(node);
+		Allocator_free(node);
 	}
 }
 
-void Allocator::lock() {
-	if (mutex) {
-		mutex->lock();
-	}
-}
+void Allocator::lock() { mutex.lock(); }
 
-void Allocator::unlock() {
-	if (mutex) {
-		mutex->unlock();
-	}
-}
+void Allocator::unlock() { mutex.unlock(); }
 
 } // namespace stappler::mempool::custom

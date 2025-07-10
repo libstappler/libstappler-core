@@ -36,7 +36,7 @@ Rc<QueueRef> getThreadQueue(QueueInfo &&);
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-static thread_local Looper *tl_looper;
+static thread_local Rc<Looper> tl_looper;
 
 struct Looper::Data : public memory::AllocPool {
 	thread::ThreadPoolInfo threadPoolInfo;
@@ -60,6 +60,10 @@ struct Looper::Data : public memory::AllocPool {
 	}
 
 	static void cleanup(Data *d, Looper *l) {
+		if (!d) {
+			return;
+		}
+
 		std::unique_lock lock(l->_mutex);
 
 		auto tmp = sp::move(d->buses);
@@ -136,7 +140,7 @@ Looper *Looper::acquire(LooperInfo &&info, QueueInfo &&qinfo) {
 		return nullptr;
 	}
 
-	tl_looper = new Looper(move(info), move(q));
+	tl_looper = Rc<Looper>::alloc(move(info), move(q));
 
 	return tl_looper;
 }
@@ -154,9 +158,19 @@ Rc<TimerHandle> Looper::scheduleTimer(TimerInfo &&info, Ref *ref) {
 	return _data->queue->scheduleTimer(move(info), ref);
 }
 
-Rc<Handle> Looper::schedule(TimeInterval timeout,
-		mem_std::Function<void(Handle *, bool success)> &&fn, Ref *ref) {
+Rc<Handle> Looper::schedule(TimeInterval timeout, mem_std::Function<void(Handle *, bool)> &&fn,
+		Ref *ref) {
 	return _data->queue->schedule(timeout, sp::move(fn), ref);
+}
+
+Rc<PollHandle> Looper::listenPollableHandle(NativeHandle fd, PollFlags flags,
+		CompletionHandle<PollHandle> &&cb, Ref *ref) {
+	return _data->queue->listenPollableHandle(fd, flags, move(cb), ref);
+}
+
+Rc<PollHandle> Looper::listenPollableHandle(NativeHandle fd, PollFlags flags,
+		mem_std::Function<Status(NativeHandle, PollFlags)> &&cb, Ref *ref) {
+	return _data->queue->listenPollableHandle(fd, flags, sp::move(cb), ref);
 }
 
 Status Looper::performOnThread(Rc<thread::Task> &&task, bool immediate) {
@@ -257,15 +271,16 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 			_data->threadMemPool = _data->threadInfo->threadPool;
 			memory::pool::cleanup_register(_data->threadMemPool, this, [](void *d) -> Status {
 				auto l = (Looper *)d;
+				l->_active = false;
 				Data::cleanup(l->_data, l);
 				l->_data = nullptr;
 				tl_looper = nullptr;
-				delete l;
 				return Status::Ok;
 			});
 		}
 
 		_data->thisThreadId = std::this_thread::get_id();
+		_active = true;
 	}, pool);
 }
 

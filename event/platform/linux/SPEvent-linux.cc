@@ -77,9 +77,10 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_timer = [](QueueData *d, void *ptr, TimerInfo &&info) -> Rc<TimerHandle> {
 				auto uring = reinterpret_cast<URingData *>(ptr);
 				auto data = reinterpret_cast<Queue::Data *>(d);
-				if ((hasFlag(uring->_uflags, URingFlags::TimerMultishotSupported)
-							&& info.count == TimerInfo::Infinite)
-						|| info.count == 1) {
+				if (!info.resetable
+						&& ((hasFlag(uring->_uflags, URingFlags::TimerMultishotSupported)
+									&& info.count == TimerInfo::Infinite)
+								|| info.count == 1)) {
 					return Rc<TimerURingHandle>::create(&data->_uringTimerClass, move(info));
 				} else {
 					return Rc<TimerFdURingHandle>::create(&data->_uringTimerFdClass, move(info));
@@ -98,6 +99,13 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 				} else {
 					return Rc<ThreadEventFdHandle>::create(&data->_uringThreadEventFdClass);
 				}
+			};
+
+			_listenHandle = [](QueueData *d, void *ptr, NativeHandle handle, PollFlags flags,
+									CompletionHandle<PollHandle> &&cb) -> Rc<PollHandle> {
+				auto data = reinterpret_cast<Queue::Data *>(d);
+				return Rc<PollFdURingHandle>::create(&data->_uringPollFdClass, handle, flags,
+						sp::move(cb));
 			};
 
 			_platformQueue = uring;
@@ -143,6 +151,12 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_thread = [](QueueData *d, void *ptr) -> Rc<ThreadHandle> {
 				auto data = reinterpret_cast<Queue::Data *>(d);
 				return Rc<ThreadEPollHandle>::create(&data->_epollThreadClass);
+			};
+			_listenHandle = [](QueueData *d, void *ptr, NativeHandle handle, PollFlags flags,
+									CompletionHandle<PollHandle> &&cb) -> Rc<PollHandle> {
+				auto data = reinterpret_cast<Queue::Data *>(d);
+				return Rc<PollFdEPollHandle>::create(&data->_epollPollFdClass, handle, flags,
+						sp::move(cb));
 			};
 
 			_platformQueue = epoll;

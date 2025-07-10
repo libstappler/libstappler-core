@@ -232,8 +232,7 @@ SP_PUBLIC void terminate();
 
 // `init` will be called in FIFO order, `term` - in reverse (LIFO) order
 // if `initialize` was already called, `init` will be called in place
-SP_PUBLIC bool addInitializer(void *ptr, NotNull<void (*)(void *)> init,
-		NotNull<void (*)(void *)> term);
+SP_PUBLIC bool addInitializer(void *ptr, NotNull<void(void *)> init, NotNull<void(void *)> term);
 
 /*
  * SDK Version API

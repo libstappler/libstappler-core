@@ -32,8 +32,17 @@ public:
 	static constexpr uint32_t Infinite = TimerInfo::Infinite;
 
 	virtual ~TimerHandle() = default;
+
+	// Some timers can not be reset with some other params
+	// like, URing-native timer can only be oneshot or infinite timer
+	// If 'completion' is not specified - it stays the same
+	// If 'completion' is specified - userdata will be cleared
+	//
+	// Be careful, when resetting timers with Function callback
+	//  - this callback will become invalid then new 'completion' set
+	virtual bool reset(TimerInfo &&) = 0;
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_SPEVENTTIMERHANDLE_H_ */

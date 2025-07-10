@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +28,7 @@ THE SOFTWARE.
 #include "SPMemInterface.h"
 #include "SPPlatformUnistd.h"
 #include "SPStatus.h"
+#include "SPPlatform.h"
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
@@ -292,7 +294,7 @@ void File::set_tmp_path(const char *buf) { memcpy(_buf, buf, 256); }
 
 MemoryMappedRegion MemoryMappedRegion::mapFile(const FileInfo &info, MappingType type,
 		ProtFlags prot, size_t offset, size_t len) {
-	if (math::align(offset, size_t(platform::_getMemoryPageSize())) != offset) {
+	if (math::align(offset, size_t(sp::platform::getMemoryPageSize())) != offset) {
 		log::error("filesystem",
 				"offset for MemoryMappedRegion::mapFile should be aligned as "
 				"platform::_getMemoryPageSize");

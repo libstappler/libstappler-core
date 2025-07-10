@@ -92,7 +92,7 @@ void ThreadInfo::setThreadInfo(StringView n, uint32_t w, bool m) {
 	tl_threadInfo.managed = m;
 }
 
-bool ThreadInfo::setThreadPool(const NotNull<memory::pool_t *> &pool) {
+bool ThreadInfo::setThreadPool(const NotNull<memory::pool_t> &pool) {
 	if (tl_threadInfo.threadPool) {
 		return false;
 	}

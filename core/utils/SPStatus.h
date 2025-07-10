@@ -52,19 +52,20 @@ constexpr inline int WINAPI_ERROR_NUMBER(int __errno) { return -STATUS_WINAPI_OF
 enum class Status : int32_t {
 	// general return values
 	Ok = 0,
-	Declined = -1,
+	Declined = -1, // For resusal without an error
 	Done = -2,
 	Suspended = -3,
+	Pending = -4,
 
 	// Vulkan support codes
-	EventSet = -4, // VK_EVENT_SET
-	EventReset = -5, // VK_EVENT_RESET
-	Incomplete = -6, // VK_INCOMPLETE
-	Suboptimal = -7, // VK_SUBOPTIMAL_KHR
-	ThreadIdle = -8, // VK_THREAD_IDLE_KHR
-	ThreadDone = -9, // VK_THREAD_DONE_KHR
-	OperationDeferred = -10, // VK_OPERATION_DEFERRED_KHR
-	OperationNotDeferred = -11, // VK_OPERATION_NOT_DEFERRED_KHR
+	EventSet = -5, // VK_EVENT_SET
+	EventReset = -6, // VK_EVENT_RESET
+	Incomplete = -7, // VK_INCOMPLETE
+	Suboptimal = -8, // VK_SUBOPTIMAL_KHR
+	ThreadIdle = -9, // VK_THREAD_IDLE_KHR
+	ThreadDone = -10, // VK_THREAD_DONE_KHR
+	OperationDeferred = -11, // VK_OPERATION_DEFERRED_KHR
+	OperationNotDeferred = -12, // VK_OPERATION_NOT_DEFERRED_KHR
 
 	// general errors
 	// This errors matched their errno codes, but can occurs in any subsystem

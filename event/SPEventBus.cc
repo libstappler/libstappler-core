@@ -36,7 +36,7 @@ BusDelegate::~BusDelegate() {
 	}
 }
 
-bool BusDelegate::init(NotNull<Looper *> looper, SpanView<BusEventCategory> cat, NotNull<Ref *> ref,
+bool BusDelegate::init(NotNull<Looper> looper, SpanView<BusEventCategory> cat, NotNull<Ref> ref,
 		BusEventCallback &&cb) {
 	_looper = looper;
 	_owner = ref;
@@ -121,17 +121,17 @@ StringView Bus::getCategoryName(BusEventCategory id) const {
 	return _categories.at(id.get() - 1);
 }
 
-void Bus::addListener(NotNull<BusDelegate *> delegate) {
+void Bus::addListener(NotNull<BusDelegate> delegate) {
 	std::unique_lock lock(_mutex);
 	doAddListener(delegate, lock);
 }
 
-void Bus::removeListener(NotNull<BusDelegate *> delegate) {
+void Bus::removeListener(NotNull<BusDelegate> delegate) {
 	std::unique_lock lock(_mutex);
 	doRemoveListener(delegate, lock);
 }
 
-void Bus::dispatchEvent(NotNull<BusEvent *> ev) {
+void Bus::dispatchEvent(NotNull<BusEvent> ev) {
 	mem_std::Map<Looper *, mem_std::Vector<Rc<BusDelegate>>> loopers;
 
 	_mutex.lock();

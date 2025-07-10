@@ -51,7 +51,7 @@ public:
 
 	virtual ~BusDelegate();
 
-	bool init(NotNull<Looper *>, SpanView<BusEventCategory>, NotNull<Ref *>, BusEventCallback &&);
+	bool init(NotNull<Looper>, SpanView<BusEventCategory>, NotNull<Ref>, BusEventCallback &&);
 
 	// should be called when owner is disabled
 	void invalidate();
@@ -102,10 +102,10 @@ public:
 
 	StringView getCategoryName(BusEventCategory) const;
 
-	void addListener(NotNull<BusDelegate *>);
-	void removeListener(NotNull<BusDelegate *>);
+	void addListener(NotNull<BusDelegate>);
+	void removeListener(NotNull<BusDelegate>);
 
-	void dispatchEvent(NotNull<BusEvent *>);
+	void dispatchEvent(NotNull<BusEvent>);
 
 	void invalidateLooper(Looper *);
 

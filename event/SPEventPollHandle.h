@@ -1,5 +1,4 @@
 /**
- Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
  Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,42 +20,22 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_CORE_SPPLATFORM_H_
-#define CORE_CORE_SPPLATFORM_H_
+#ifndef CORE_EVENT_SPEVENTPOLLHANDLE_H_
+#define CORE_EVENT_SPEVENTPOLLHANDLE_H_
 
-#include "SPCore.h"
+#include "SPEventHandle.h"
 
-namespace STAPPLER_VERSIONIZED stappler {
+namespace STAPPLER_VERSIONIZED stappler::event {
 
-enum class ClockType {
-	Default,
-	Monotonic,
-	Realtime,
-	Process,
-	Thread,
+class SP_PUBLIC PollHandle : public Handle {
+public:
+	virtual ~PollHandle() = default;
 
-	// hardware clock tick counter with unknown monotonic resolution
-	// see `rdtsc`
-	Hardware
+	virtual NativeHandle getNativeHandle() const = 0;
+
+	virtual bool reset(PollFlags) = 0;
 };
 
-} // namespace STAPPLER_VERSIONIZED stappler
+} // namespace stappler::event
 
-namespace STAPPLER_VERSIONIZED stappler::platform {
-
-SP_PUBLIC size_t makeRandomBytes(uint8_t *buf, size_t count);
-
-// current time in microseconds
-SP_PUBLIC uint64_t clock(ClockType = ClockType::Default);
-
-// current time in nanoseconds
-SP_PUBLIC uint64_t nanoclock(ClockType = ClockType::Default);
-
-// sleep for the microseconds
-SP_PUBLIC void sleep(uint64_t microseconds);
-
-SP_PUBLIC uint32_t getMemoryPageSize();
-
-} // namespace stappler::platform
-
-#endif /* CORE_CORE_SPPLATFORM_H_ */
+#endif /* CORE_EVENT_SPEVENTPOLLHANDLE_H_ */

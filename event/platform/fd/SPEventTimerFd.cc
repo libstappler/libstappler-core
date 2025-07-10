@@ -33,14 +33,11 @@ bool TimerFdSource::init(const TimerInfo &info) {
 
 	switch (info.type) {
 	case ClockType::Default:
-	case ClockType::Monotonic:
-		clockid = CLOCK_MONOTONIC;
-		break;
-	case ClockType::Realtime:
-		clockid = CLOCK_REALTIME;
-		break;
+	case ClockType::Monotonic: clockid = CLOCK_MONOTONIC; break;
+	case ClockType::Realtime: clockid = CLOCK_REALTIME; break;
 	case ClockType::Process:
-		log::error("event::Queue", "ClockType::Process is not supported for a timer on this system");
+		log::error("event::Queue",
+				"ClockType::Process is not supported for a timer on this system");
 		return false;
 		break;
 	case ClockType::Thread:
@@ -48,12 +45,16 @@ bool TimerFdSource::init(const TimerInfo &info) {
 		return false;
 		break;
 	case ClockType::Hardware:
-		log::error("event::Queue", "ClockType::Hardware is not supported for a timer on this system");
+		log::error("event::Queue",
+				"ClockType::Hardware is not supported for a timer on this system");
 		return false;
 		break;
 	}
 
-	fd = ::timerfd_create(clockid, TFD_NONBLOCK | TFD_CLOEXEC);
+	if (fd < 0) {
+		fd = ::timerfd_create(clockid, TFD_NONBLOCK | TFD_CLOEXEC);
+	}
+
 	if (fd < 0) {
 		log::error("event::Queue", "fail to timerfd_create");
 		return false;
@@ -66,10 +67,15 @@ bool TimerFdSource::init(const TimerInfo &info) {
 		setNanoTimespec(spec.it_value, info.interval);
 	}
 
-	setNanoTimespec(spec.it_interval, info.interval);
+	if (info.count > 1 && !info.interval) {
+		setNanoTimespec(spec.it_interval, info.timeout);
+	} else {
+		setNanoTimespec(spec.it_interval, info.interval);
+	}
 
 	::timerfd_settime(fd, 0, &spec, nullptr);
 
+	value = 0;
 	count = info.count;
 
 	return true;
@@ -91,8 +97,18 @@ bool TimerFdHandle::init(HandleClass *cl, TimerInfo &&info) {
 		info.interval = info.timeout;
 	}
 
-	auto source = reinterpret_cast<TimerFdSource *>(_data);
+	auto source = new (_data) TimerFdSource;
 	return source->init(info);
+}
+
+bool TimerFdHandle::reset(TimerInfo &&info) {
+	if (info.completion) {
+		_completion = move(info.completion);
+		_userdata = nullptr;
+	}
+
+	auto source = reinterpret_cast<TimerFdSource *>(_data);
+	return source->init(info) && Handle::reset();
 }
 
 Status TimerFdHandle::read(uint64_t *target) {
@@ -112,7 +128,7 @@ Status TimerFdURingHandle::rearm(URingData *uring, TimerFdSource *source) {
 	if (status == Status::Ok) {
 		source->target = 0;
 
-		status = uring->pushSqe({IORING_OP_READ}, [&] (io_uring_sqe *sqe, uint32_t) {
+		status = uring->pushSqe({IORING_OP_READ}, [&](io_uring_sqe *sqe, uint32_t) {
 			sqe->fd = source->fd;
 			sqe->addr = reinterpret_cast<uintptr_t>(&source->target);
 			sqe->len = sizeof(uint64_t);
@@ -128,8 +144,9 @@ Status TimerFdURingHandle::disarm(URingData *uring, TimerFdSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
-				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
-		++ _timeline;
+						| (_timeline & URING_USERDATA_SERIAL_MASK),
+				URingCancelFlags::Suspend);
+		++_timeline;
 	}
 	return status;
 }
@@ -165,7 +182,6 @@ void TimerFdURingHandle::notify(URingData *uring, TimerFdSource *source, const N
 	}
 
 	sendCompletion(source->value, _status == Status::Suspended ? Status::Ok : _status);
-
 }
 #endif
 
@@ -184,7 +200,7 @@ Status TimerFdEPollHandle::disarm(EPollData *epoll, TimerFdSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = epoll->remove(source->fd);
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
@@ -236,14 +252,15 @@ Status TimerFdALooperHandle::disarm(ALooperData *alooper, TimerFdSource *source)
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = alooper->remove(source->fd);
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
 	return status;
 }
 
-void TimerFdALooperHandle::notify(ALooperData *alooper, TimerFdSource *source, const NotifyData &data) {
+void TimerFdALooperHandle::notify(ALooperData *alooper, TimerFdSource *source,
+		const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
@@ -270,12 +287,11 @@ void TimerFdALooperHandle::notify(ALooperData *alooper, TimerFdSource *source, c
 		}
 	}
 
-	if ((data.queueFlags & ALOOPER_EVENT_ERROR)
-			|| (data.queueFlags & ALOOPER_EVENT_HANGUP)
+	if ((data.queueFlags & ALOOPER_EVENT_ERROR) || (data.queueFlags & ALOOPER_EVENT_HANGUP)
 			|| (data.queueFlags & ALOOPER_EVENT_INVALID)) {
 		cancel();
 	}
 }
 #endif
 
-}
+} // namespace stappler::event

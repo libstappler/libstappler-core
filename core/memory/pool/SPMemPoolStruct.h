@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -70,7 +71,8 @@ struct HashTable;
 struct SP_LOCAL MemNode {
 	MemNode *next; // next memnode
 	MemNode **ref; // reference to self
-	uint32_t index; // size
+	uint32_t mapped : 1;
+	uint32_t index	: 31; // size
 	uint32_t free_index; // how much free
 	uint8_t *first_avail; // pointer to first free memory
 	uint8_t *endp; // pointer to end of free memory
@@ -94,15 +96,14 @@ struct SP_LOCAL Cleanup {
 struct SP_LOCAL Allocator {
 	using AllocMutex = std::recursive_mutex;
 
-	uintptr_t magic = static_cast<uintptr_t>(
-			POOL_MAGIC); // used to detect stappler allocators vs. APR allocators
+	// used to detect stappler allocators vs. APR allocators
+	uintptr_t magic = static_cast<uintptr_t>(POOL_MAGIC);
 	uint32_t last = 0; // largest used index into free
-	uint32_t max =
-			ALLOCATOR_MAX_FREE_UNLIMITED; // Total size (in BOUNDARY_SIZE multiples) of unused memory before blocks are given back
+	uint32_t max = ALLOCATOR_MAX_FREE_UNLIMITED; // Total size (in BOUNDARY_SIZE multiples)
 	uint32_t current = 0; // current allocated size in BOUNDARY_SIZE
 	Pool *owner = nullptr;
 
-	AllocMutex *mutex = nullptr;
+	AllocMutex mutex;
 	std::array<MemNode *, MAX_INDEX> buf;
 	std::atomic<size_t> allocated;
 

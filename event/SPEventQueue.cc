@@ -21,6 +21,8 @@
  **/
 
 #include "SPEventQueue.h"
+#include "SPEventTimerHandle.h"
+#include "SPEventPollHandle.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -49,15 +51,15 @@ Rc<TimerHandle> Queue::scheduleTimer(TimerInfo &&info, Ref *ref) {
 	}
 
 	auto h = _data->scheduleTimer(move(info));
-	_data->runHandle(h);
 	h->setUserdata(ref);
+	_data->runHandle(h);
 	return h;
 }
 
-Rc<Handle> Queue::schedule(TimeInterval timeout,
-		mem_std::Function<void(Handle *, bool success)> &&fn, Ref *ref) {
+Rc<Handle> Queue::schedule(TimeInterval timeout, mem_std::Function<void(Handle *, bool)> &&fn,
+		Ref *ref) {
 	struct ScheduleData : Ref {
-		mem_std::Function<void(Handle *, bool success)> fn;
+		mem_std::Function<void(Handle *, bool)> fn;
 		Rc<Ref> ref;
 	};
 
@@ -65,9 +67,10 @@ Rc<Handle> Queue::schedule(TimeInterval timeout,
 	data->fn = sp::move(fn);
 	data->ref = ref;
 
-	return scheduleTimer(TimerInfo{.completion = TimerInfo::Completion::create<ScheduleData>(data,
-										   [](ScheduleData *data, TimerHandle *handle,
-												   uint32_t value, Status status) {
+	return scheduleTimer(
+			TimerInfo{
+				.completion = TimerInfo::Completion::create<ScheduleData>(data,
+						[](ScheduleData *data, TimerHandle *handle, uint32_t value, Status status) {
 		if (data->fn) {
 			if (status == Status::Done) {
 				data->fn(handle, true);
@@ -75,13 +78,51 @@ Rc<Handle> Queue::schedule(TimeInterval timeout,
 				data->fn(handle, false);
 			}
 		}
-		data->fn = nullptr;
-		data->ref = nullptr;
 	}),
-							 .timeout = timeout,
-							 .interval = TimeInterval(),
-							 .count = 1},
+				.timeout = timeout,
+				.interval = TimeInterval(),
+				.count = 1,
+			},
 			data);
+}
+
+Rc<PollHandle> Queue::listenPollableHandle(NativeHandle handle, PollFlags flags,
+		CompletionHandle<PollHandle> &&cb, Ref *ref) {
+	Rc<PollHandle> h = _data->listenHandle(handle, flags, move(cb));
+	if (h) {
+		h->setUserdata(ref);
+	}
+	_data->runHandle(h);
+	return h;
+}
+
+// Uses Handle userdata slot for a private data
+Rc<PollHandle> Queue::listenPollableHandle(NativeHandle handle, PollFlags flags,
+		mem_std::Function<Status(NativeHandle fd, PollFlags)> &&cb, Ref *ref) {
+	struct PollData : public Ref {
+		NativeHandle handle;
+		mem_std::Function<Status(int fd, PollFlags)> cb;
+		Rc<Ref> ref;
+	};
+
+	auto data = Rc<PollData>::alloc();
+	data->handle = handle;
+	data->cb = sp::move(cb);
+	data->ref = ref;
+
+	auto h = listenPollableHandle(handle, flags,
+			CompletionHandle<Handle>::create<PollData>(data,
+					[](PollData *data, Handle *handle, uint32_t value, Status st) {
+		if (st == Status::Ok) {
+			if (data->cb(data->handle, PollFlags(value)) != Status::Ok) {
+				handle->cancel();
+			}
+		}
+	}));
+	if (h) {
+		h->setUserdata(data);
+	}
+	return h;
 }
 
 Rc<ThreadHandle> Queue::addThreadHandle() {

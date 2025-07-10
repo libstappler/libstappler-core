@@ -312,6 +312,14 @@ Rc<TimerHandle> QueueData::scheduleTimer(TimerInfo &&info) {
 	return nullptr;
 }
 
+Rc<PollHandle> QueueData::listenHandle(NativeHandle handle, PollFlags flags,
+		CompletionHandle<PollHandle> &&cb) {
+	if (_listenHandle) {
+		return _listenHandle(this, _platformQueue, handle, flags, move(cb));
+	}
+	return nullptr;
+}
+
 Rc<ThreadHandle> QueueData::addThreadHandle() {
 	if (_thread) {
 		return _thread(this, _platformQueue);

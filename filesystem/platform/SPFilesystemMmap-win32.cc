@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -32,18 +33,13 @@ struct MmapStorage {
 	HANDLE mapping;
 };
 
-uint32_t _getMemoryPageSize() {
-	SYSTEM_INFO si;
-	GetSystemInfo(&si);
-	return si.dwPageSize;
-}
-
 #define SP_TERMINATED_DATA(view) (view.terminated()?view.data():view.str<memory::StandartInterface>().data())
 
-# define DWORD_HI(x) (x >> 32)
-# define DWORD_LO(x) ((x) & 0xffffffff)
+#define DWORD_HI(x) (x >> 32)
+#define DWORD_LO(x) ((x) & 0xffff'ffff)
 
-uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot, size_t offset, size_t len) {
+uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot,
+		size_t offset, size_t len) {
 	DWORD flProtect;
 	if ((prot & ProtFlags::MapWrite) != ProtFlags::None) {
 		if ((prot & ProtFlags::MapExecute) != ProtFlags::None) {
@@ -84,7 +80,8 @@ uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFl
 		dwDesiredAccessMap |= FILE_MAP_COPY;
 	}
 
-	HANDLE fd = CreateFileA(SP_TERMINATED_DATA(path), dwDesiredAccess, dwShareMode, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	HANDLE fd = CreateFileA(SP_TERMINATED_DATA(path), dwDesiredAccess, dwShareMode, 0,
+			OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if (fd == NULL) {
 		return nullptr;
 	}
@@ -137,6 +134,6 @@ bool _syncMappedRegion(uint8_t *region, uint8_t storage[16]) {
 	return false;
 }
 
-}
+} // namespace stappler::filesystem::platform
 
 #endif

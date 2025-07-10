@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -34,9 +35,9 @@ static inline uint64_t rdtsc() { return __rdtsc(); }
 #elif __aarch64__
 #define SP_HAS_RDTSC 1
 static inline uint64_t rdtsc() {
-    uint64_t cntvct;
-    asm volatile ("mrs %0, cntvct_el0; " : "=r"(cntvct) :: "memory");
-    return cntvct;
+	uint64_t cntvct;
+	asm volatile("mrs %0, cntvct_el0; " : "=r"(cntvct)::"memory");
+	return cntvct;
 }
 #else
 #define SP_HAS_RDTSC 0
@@ -44,14 +45,13 @@ static inline uint64_t rdtsc() {
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
-static uint64_t getStaticMinFrameTime() {
-	return 1000'000 / 60;
-}
+static uint64_t getStaticMinFrameTime() { return 1'000'000 / 60; }
 
 static clockid_t getClockSource() {
 	struct timespec ts;
 
-	auto minFrameNano = (getStaticMinFrameTime() * 1000) / 5; // clock should have at least 1/5 frame resolution
+	auto minFrameNano = (getStaticMinFrameTime() * 1'000)
+			/ 5; // clock should have at least 1/5 frame resolution
 #ifdef CLOCK_MONOTONIC_COARSE
 	if (::clock_getres(CLOCK_MONOTONIC_COARSE, &ts) == 0) {
 		if (ts.tv_sec == 0 && uint64_t(ts.tv_nsec) < minFrameNano) {
@@ -99,19 +99,21 @@ uint64_t clock(ClockType type) {
 
 	struct timespec ts;
 	_clock(&ts, type);
-	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1000'000) + static_cast<uint64_t>(ts.tv_nsec / 1000);
+	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1'000'000)
+			+ static_cast<uint64_t>(ts.tv_nsec / 1'000);
 }
 
 uint64_t nanoclock(ClockType type) {
 	struct timespec ts;
 	_clock(&ts, type);
-	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1000'000'000) + static_cast<uint64_t>(ts.tv_nsec);
+	return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1'000'000'000)
+			+ static_cast<uint64_t>(ts.tv_nsec);
 }
 
-void sleep(uint64_t microseconds) {
-	::usleep(useconds_t(microseconds));
-}
+void sleep(uint64_t microseconds) { ::usleep(useconds_t(microseconds)); }
 
-}
+uint32_t getMemoryPageSize() { return static_cast<uint32_t>(::sysconf(_SC_PAGESIZE)); }
+
+} // namespace stappler::platform
 
 #endif

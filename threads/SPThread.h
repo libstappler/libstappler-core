@@ -44,7 +44,7 @@ struct SP_PUBLIC ThreadInfo {
 	//
 	// Some thread-bound utils, like event::Looper, uses thread memory pool as a lifetime definition,
 	// and destroyed when thread's pool is destroyed
-	static bool setThreadPool(const NotNull<memory::pool_t *> &);
+	static bool setThreadPool(const NotNull<memory::pool_t> &);
 
 	uint32_t workerId = 0;
 	StringView name;
@@ -127,6 +127,6 @@ auto Thread::findSpecificThread() -> const T * {
 	return nullptr;
 }
 
-}
+} // namespace stappler::thread
 
 #endif /* STAPPLER_THREADS_SPTHREAD_H_ */

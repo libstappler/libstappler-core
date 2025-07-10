@@ -120,9 +120,21 @@ Status Handle::cancel(Status st, uint32_t value) {
 		auto prevStatus = _status;
 		_status = st;
 
-		finalize(value, _status);
-
-		return _class->cancelFn(_class, this, _data, prevStatus);
+		if (finalize(value, _status)) {
+			return _class->cancelFn(_class, this, _data, prevStatus);
+		} else {
+			_status = prevStatus;
+			if (resume() == Status::Ok) {
+				return Status::ErrorCancelled;
+			} else {
+				log::
+						warn("event::Handle",
+								"Handle::cancel was interrupted by manual reset, but handle can "
+								"not be " "resumed");
+				_status = st;
+				return Status::ErrorInvalidArguemnt;
+			}
+		}
 	} else {
 		return Status::ErrorAlreadyPerformed;
 	}
@@ -141,17 +153,23 @@ Status Handle::cancel(Status st, uint32_t value) {
 
 Status Handle::run() {
 	if (_class->runFn) {
-		auto status = _class->runFn(_class, this, _data);
-		if (status != Status::Ok && status != Status::Done) {
-			log::error("event::Handle", "Fail to run handle: ", _status);
-		} else {
-			_status = Status::Ok;
-			if (status == Status::Done) {
-				// Handle was executed in-place, cancel it
-				cancel(status);
+		if (_status == Status::Declined) {
+			// handle is paused - resume
+			return resume();
+		} else if (_status == Status::Pending) {
+			// initial run
+			auto status = _class->runFn(_class, this, _data);
+			if (status != Status::Ok && status != Status::Done) {
+				log::error("event::Handle", "Fail to run handle: ", _status);
+			} else {
+				_status = Status::Ok;
+				if (status == Status::Done) {
+					// Handle was executed in-place, cancel it
+					cancel(status);
+				}
 			}
+			return _status;
 		}
-		return _status;
 	}
 	return Status::ErrorNotSupported;
 }
@@ -172,10 +190,12 @@ Status Handle::suspend() {
 
 Status Handle::prepareRearm() {
 	if (_status == Status::Ok) {
+		log::error("event::Handle", "Fail to prepareRearm handle: ErrorAlreadyPerformed");
 		return Status::ErrorAlreadyPerformed;
 	}
 
-	if (_status != Status::Declined && _status != Status::Suspended) {
+	if (_status != Status::Declined && _status != Status::Pending && _status != Status::Suspended) {
+		log::error("event::Handle", "Fail to prepareRearm handle: : ErrorNotPermitted");
 		return Status::ErrorNotPermitted;
 	}
 
@@ -202,10 +222,38 @@ void Handle::sendCompletion(uint32_t value, Status status) {
 	}
 }
 
-void Handle::finalize(uint32_t value, Status status) {
+bool Handle::finalize(uint32_t value, Status status) {
+	auto tmp = _status;
 	sendCompletion(value, status);
-	_completion.fn = nullptr;
-	_completion.userdata = nullptr;
+
+	// handle can be reset on sendCompletion, check that status remains the same
+
+	if (tmp == _status) {
+		_completion.fn = nullptr;
+		_completion.userdata = nullptr;
+		return true;
+	}
+	return false;
+}
+
+bool Handle::reset() {
+	if (_status == Status::Done) {
+		// we are not done, we just suspended
+		_status = Status::Declined;
+		return true;
+	} else if (_status == Status::Ok) {
+		// we are active, suspend and resume to update queue's data on handle
+		if (suspend() == Status::Ok) {
+			return resume() == Status::Ok;
+		}
+	} else if (_status == Status::Declined) {
+		// we are suspended, do nothing, queue will be updated on resume call
+		return true;
+	} else if (_status == Status::Pending) {
+		// we are in initial state - do nothing
+		return true;
+	}
+	return false;
 }
 
 

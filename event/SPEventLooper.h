@@ -44,7 +44,7 @@ struct SP_PUBLIC LooperInfo {
  *
  * Only one Looper per thread is allowed
  */
-class SP_PUBLIC Looper final {
+class SP_PUBLIC Looper final : public Ref {
 public:
 	// acquire looper for a current thread
 	// LooperInfo will be assigned to Looper only on first call
@@ -54,12 +54,23 @@ public:
 
 	static Looper *getIfExists();
 
-	~Looper();
+	virtual ~Looper();
 
 	Rc<TimerHandle> scheduleTimer(TimerInfo &&, Ref * = nullptr);
 
+	// Schedule function on timeout
+	// Please, do not try to reset this timer, just schedule another one
 	Rc<Handle> schedule(TimeInterval, mem_std::Function<void(Handle *, bool success)> &&,
 			Ref * = nullptr);
+
+	// Value in completion is PollFlags
+	// Uses Handle userdata slot for the Ref
+	Rc<PollHandle> listenPollableHandle(NativeHandle, PollFlags, CompletionHandle<PollHandle> &&,
+			Ref * = nullptr);
+
+	// Uses Handle userdata slot for a private data
+	Rc<PollHandle> listenPollableHandle(NativeHandle, PollFlags,
+			mem_std::Function<Status(NativeHandle, PollFlags)> &&, Ref * = nullptr);
 
 	// Perform task on this thread (only Complete callback will be executed)
 	// If current thread is looper thread - performs in place
@@ -122,6 +133,7 @@ protected:
 	Looper(LooperInfo &&, Rc<QueueRef> &&);
 
 	std::mutex _mutex;
+	std::atomic<bool> _active;
 	Data *_data = nullptr;
 };
 

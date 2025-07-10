@@ -29,7 +29,6 @@ THE SOFTWARE.
 #include "SPLog.h"
 #include "SPTime.h"
 #include "SPDataTraits.h"
-#include <new>
 
 namespace STAPPLER_VERSIONIZED stappler::data {
 

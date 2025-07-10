@@ -27,52 +27,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-Rc<PollFdHandle> PollFdHandle::create(const Queue *q, int fd, PollFlags flags,
-		CompletionHandle<PollFdHandle> &&c) {
-	auto d = q->getData();
-#ifdef SP_EVENT_URING
-	if (d->_engine == QueueEngine::URing) {
-		return Rc<PollFdURingHandle>::create(&d->_uringPollFdClass, fd, flags, move(c));
-	}
-#endif
-	if (d->_engine == QueueEngine::EPoll) {
-		return Rc<PollFdEPollHandle>::create(&d->_epollPollFdClass, fd, flags, move(c));
-	}
-#ifdef ANDROID
-	if (d->_engine == QueueEngine::ALooper) {
-		return Rc<PollFdALooperHandle>::create(&d->_alooperPollFdClass, fd, flags, move(c));
-	}
-#endif
-	return nullptr;
-}
-
-Rc<PollFdHandle> PollFdHandle::create(const Queue *q, int fd, PollFlags flags,
-		mem_std::Function<Status(int fd, PollFlags)> &&cb, Ref *ref) {
-	struct PollData : public Ref {
-		int fd;
-		mem_std::Function<Status(int fd, PollFlags)> cb;
-		Rc<Ref> ref;
-	};
-
-	auto data = Rc<PollData>::alloc();
-	data->fd = fd;
-	data->cb = sp::move(cb);
-	data->ref = ref;
-
-	auto h = create(q, fd, flags,
-			CompletionHandle<PollFdHandle>::create<PollData>(data,
-					[](PollData *data, PollFdHandle *handle, uint32_t value, Status st) {
-		if (st == Status::Ok) {
-			if (data->cb(data->fd, PollFlags(value)) != Status::Ok) {
-				handle->cancel();
-			}
-		}
-	}));
-	h->setUserdata(data);
-	return h;
-}
-
-
 bool PollFdSource::init(int f, PollFlags fl) {
 	fd = f;
 	flags = fl;
@@ -94,6 +48,15 @@ bool PollFdHandle::init(HandleClass *cl, int fd, PollFlags flags,
 
 	auto source = new (_data) PollFdSource;
 	return source->init(fd, flags);
+}
+
+bool PollFdHandle::reset(PollFlags flags) {
+	reinterpret_cast<PollFdSource *>(_data)->flags = flags;
+	return Handle::reset();
+}
+
+NativeHandle PollFdHandle::getNativeHandle() const {
+	return reinterpret_cast<const PollFdSource *>(_data)->fd;
 }
 
 #ifdef SP_EVENT_URING

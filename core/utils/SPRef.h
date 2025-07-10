@@ -294,7 +294,7 @@ public:
 
 	operator _Base *() const noexcept;
 
-	operator NotNull<_Base *>() const noexcept;
+	operator NotNull<_Base>() const noexcept;
 
 	_Base *operator->() const noexcept;
 
@@ -834,12 +834,24 @@ template <typename _Base>
 template <class... Args>
 inline auto Rc<_Base>::create(Args &&...args) -> Self {
 	static_assert(std::is_base_of<Ref, _Base>::value, "Rc base class should be derived from Ref");
-	auto pRet = new (std::nothrow) Type();
-	if (pRet->init(std::forward<Args>(args)...)) {
+
+	if constexpr (requires(Type *pRet, Args &&...args) {
+					  pRet->init(std::forward<Args>(args)...);
+				  }) {
+		auto pRet = new (std::nothrow) Type();
+		if (pRet->init(std::forward<Args>(args)...)) {
+			return Self(pRet, true); // unsafe assignment
+		} else {
+			delete pRet;
+			return Self(nullptr);
+		}
+	} else if constexpr (requires(Args &&...args) {
+							 new (std::nothrow) Type(std::forward<Args>(args)...);
+						 }) {
+		auto pRet = new (std::nothrow) Type(std::forward<Args>(args)...);
 		return Self(pRet, true); // unsafe assignment
 	} else {
-		delete pRet;
-		return Self(nullptr);
+		static_assert(false, "Fail to detect Type::init(...) or Type(...) with arguments provided");
 	}
 }
 
@@ -896,7 +908,7 @@ inline Rc<_Base>::operator _Base *() const noexcept {
 }
 
 template <typename _Base>
-inline Rc<_Base>::operator NotNull<_Base *>() const noexcept {
+inline Rc<_Base>::operator NotNull<_Base>() const noexcept {
 	auto ptr = get();
 	SPASSERT(ptr, "");
 	return ptr;

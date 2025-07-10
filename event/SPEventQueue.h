@@ -30,13 +30,15 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 
 enum class QueueFlags {
 	None,
-	Protected = 1 << 0, // try to protect operations from interrupting with signals
-	SubmitImmediate =
-			1 << 1, // submit all operations as they added, no need to call `submitPending`
+	// try to protect operations from interrupting with signals
+	Protected = 1 << 0,
+
+	// submit all operations as they added, no need to call `submitPending`
+	SubmitImmediate = 1 << 1,
 
 	// Engine flags
-	ThreadNative = 1
-			<< 15, // use thread-native backend (used by Looper, do not use this on Queue directly)
+	// use thread-native backend (used by Looper, do not use this on Queue directly)
+	ThreadNative = 1 << 15,
 };
 
 SP_DEFINE_ENUM_AS_MASK(QueueFlags)
@@ -101,10 +103,21 @@ public:
 
 	bool init(const QueueInfo & = QueueInfo());
 
+	// Uses Handle userdata slot for the Ref
 	Rc<TimerHandle> scheduleTimer(TimerInfo &&, Ref * = nullptr);
 
-	Rc<Handle> schedule(TimeInterval, mem_std::Function<void(Handle *, bool success)> &&,
+	// Uses Handle userdata slot for a private data
+	// Please, do not try to reset this timer
+	Rc<Handle> schedule(TimeInterval, mem_std::Function<void(Handle *, bool)> &&, Ref * = nullptr);
+
+	// Value in completion is PollFlags
+	// Uses Handle userdata slot for the Ref
+	Rc<PollHandle> listenPollableHandle(NativeHandle, PollFlags, CompletionHandle<PollHandle> &&,
 			Ref * = nullptr);
+
+	// Uses Handle userdata slot for a private data
+	Rc<PollHandle> listenPollableHandle(NativeHandle, PollFlags,
+			mem_std::Function<Status(NativeHandle, PollFlags)> &&, Ref * = nullptr);
 
 	Rc<ThreadHandle> addThreadHandle();
 

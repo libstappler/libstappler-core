@@ -51,12 +51,14 @@ public:
 
 	bool init(HandleClass *, TimerInfo &&);
 
+	virtual bool reset(TimerInfo &&) override;
+
 	Status rearm(URingData *, TimerUringSource *);
 	Status disarm(URingData *, TimerUringSource *);
 
 	void notify(URingData *, TimerUringSource *, const NotifyData &);
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_URING_SPEVENTTIMER_URING_H_ */

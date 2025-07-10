@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -36,13 +37,10 @@ struct MmapStorage {
 	uint64_t offset;
 };
 
-uint32_t _getMemoryPageSize() {
-	return static_cast<uint32_t>(::sysconf(_SC_PAGESIZE));
-}
-
 #define SP_TERMINATED_DATA(view) (view.terminated()?view.data():view.str<memory::StandartInterface>().data())
 
-uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot, size_t offset, size_t len) {
+uint8_t *_mapFile(uint8_t storage[16], StringView path, MappingType type, ProtFlags prot,
+		size_t offset, size_t len) {
 	int oFlags = 0;
 	if (hasFlag(prot, ProtFlags::MapRead)) {
 		if (hasFlag(prot, ProtFlags::MapWrite)) {
@@ -108,6 +106,6 @@ bool _syncMappedRegion(uint8_t *region, uint8_t storage[16]) {
 	return false;
 }
 
-}
+} // namespace stappler::filesystem::platform
 
 #endif

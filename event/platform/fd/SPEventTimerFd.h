@@ -44,6 +44,8 @@ public:
 
 	bool init(HandleClass *, TimerInfo &&);
 
+	virtual bool reset(TimerInfo &&) override;
+
 	Status read(uint64_t *);
 };
 
@@ -81,6 +83,6 @@ public:
 };
 #endif
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_FD_SPEVENTTIMER_FD_H_ */
