@@ -62,6 +62,7 @@ enum class PollFlags : uint16_t {
 
 	PollMask = 0x3FFF,
 	CloseFd = 0x4000,
+	AllowMulti = 0x8000, // Allow edge-triggered multishot setups
 };
 
 SP_DEFINE_ENUM_AS_MASK(PollFlags)

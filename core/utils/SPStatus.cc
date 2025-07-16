@@ -35,6 +35,7 @@ StringView getStatusName(Status status) {
 	case Status::Done: return "Status::Done"; break;
 	case Status::Suspended: return "Status::Suspended"; break;
 	case Status::Pending: return "Status::Pending"; break;
+	case Status::Timeout: return "Status::Timeout"; break;
 	case Status::EventSet: return "Status::EventSet"; break;
 	case Status::EventReset: return "Status::EventReset"; break;
 	case Status::Incomplete: return "Status::Incomplete"; break;

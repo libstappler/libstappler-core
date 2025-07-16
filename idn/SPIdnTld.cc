@@ -1529,7 +1529,7 @@ static SharedSymbol s_idnSharedSymbols[] = {
 	SharedSymbol{"isKnownTld", static_cast<bool (*)(StringView)>(isKnownTld)},
 };
 
-static SharedModule s_idnSharedModule(buildconfig::MODULE_STAPPLER_IDN_NAME, s_idnSharedSymbols,
-		sizeof(s_idnSharedSymbols) / sizeof(SharedSymbol));
+SP_USED static SharedModule s_idnSharedModule(buildconfig::MODULE_STAPPLER_IDN_NAME,
+		s_idnSharedSymbols, sizeof(s_idnSharedSymbols) / sizeof(SharedSymbol));
 
 } // namespace stappler::idn

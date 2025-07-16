@@ -47,10 +47,11 @@ namespace STAPPLER_VERSIONIZED stappler::data {
 // return value - number of parsed strings (usually 1)
 
 template <typename Interface, typename Output = ValueTemplate<Interface>>
-bool parseCommandLineOptions(Output &output, int argc, const char * argv[],
+bool parseCommandLineOptions(Output &output, int argc, const char *argv[],
 		const Callback<void(Output &, StringView)> &argCallback,
-		const Callback<int (Output &, char c, const char *str)> &switchCallback,
-		const Callback<int (Output &, const StringView &str, int argc, const char * argv[])> &stringCallback) {
+		const Callback<int(Output &, char c, const char *str)> &switchCallback,
+		const Callback<int(Output &, const StringView &str, int argc, const char *argv[])>
+				&stringCallback) {
 	if (argc == 0) {
 		return false;
 	}
@@ -61,7 +62,7 @@ bool parseCommandLineOptions(Output &output, int argc, const char * argv[],
 		char quoted = 0;
 		if (value[0] == '\'' || value[0] == '"') {
 			quoted = value[0];
-			value ++;
+			value++;
 		}
 		if (value[0] == '-') {
 			if (value[1] == '-') {
@@ -73,16 +74,14 @@ bool parseCommandLineOptions(Output &output, int argc, const char * argv[],
 			} else {
 				if (switchCallback) {
 					const char *str = &value[1];
-					while (str[0] != 0) {
-						str += switchCallback(output, str[0], &str[1]);
-					}
+					while (str[0] != 0) { str += switchCallback(output, str[0], &str[1]); }
 				}
 			}
 		} else {
 			if (quoted > 0) {
 				size_t len = strlen(value);
 				if (len > 0 && value[len - 1] == quoted) {
-					-- len;
+					--len;
 				}
 				argCallback(output, StringView(value, len));
 			} else {
@@ -98,54 +97,61 @@ bool parseCommandLineOptions(Output &output, int argc, const char * argv[],
 				}
 			}
 		}
-		i --;
+		i--;
 	}
 
 	return true;
 }
 
 template <typename Interface, typename Output = ValueTemplate<Interface>>
-bool parseCommandLineOptions(Output &output, int argc, const char16_t * wargv[],
+bool parseCommandLineOptions(Output &output, int argc, const char16_t *wargv[],
 		const Callback<void(Output &, StringView)> &argCallback,
-		const Callback<int (Output &, char c, const char *str)> &switchCallback,
-		const Callback<int (Output &, const StringView &str, int argc, const char * argv[])> &stringCallback) {
-	typename Interface::template VectorType<typename Interface::StringType> vec; vec.reserve(argc);
-	typename Interface::template VectorType<const char *> argv; argv.reserve(argc);
-	for (int i = 0; i < argc; ++ i) {
+		const Callback<int(Output &, char c, const char *str)> &switchCallback,
+		const Callback<int(Output &, const StringView &str, int argc, const char *argv[])>
+				&stringCallback) {
+	typename Interface::template VectorType<typename Interface::StringType> vec;
+	vec.reserve(argc);
+	typename Interface::template VectorType<const char *> argv;
+	argv.reserve(argc);
+	for (int i = 0; i < argc; ++i) {
 		vec.push_back(string::toUtf8<Interface>(wargv[i]));
 		argv.push_back(vec.back().c_str());
 	}
 
-	return parseCommandLineOptions<Interface, Output>(output, argc, argv.data(), argCallback, switchCallback, stringCallback);
+	return parseCommandLineOptions<Interface, Output>(output, argc, argv.data(), argCallback,
+			switchCallback, stringCallback);
 }
 
 template <typename Interface, typename Output = ValueTemplate<Interface>>
-auto parseCommandLineOptions(int argc, const char * argv[],
-		const Callback<int (Output &ret, char c, const char *str)> &switchCallback,
-		const Callback<int (Output &ret, const StringView &str, int argc, const char * argv[])> &stringCallback)
--> Pair<Output, typename Interface::template VectorType<typename Interface::StringType>> {
+auto parseCommandLineOptions(int argc, const char *argv[],
+		const Callback<int(Output &ret, char c, const char *str)> &switchCallback,
+		const Callback<int(Output &ret, const StringView &str, int argc, const char *argv[])>
+				&stringCallback)
+		-> Pair<Output, typename Interface::template VectorType<typename Interface::StringType>> {
 	Pair<Output, typename Interface::template VectorType<typename Interface::StringType>> ret;
 	parseCommandLineOptions<Interface, Output>(ret.first, argc, argv,
-		[&] (Output &, StringView str) {
-			ret.second.emplace_back(str.str<Interface>());
-		},
-		switchCallback, stringCallback);
+			[&](Output &, StringView str) { ret.second.emplace_back(str.str<Interface>()); },
+			switchCallback, stringCallback);
 	return ret;
 }
 
 template <typename Interface, typename Output = ValueTemplate<Interface>>
-auto parseCommandLineOptions(int argc, const char16_t * wargv[],
-		const Callback<int (Output &ret, char c, const char *str)> &switchCallback,
-		const Callback<int (Output &ret, const StringView &str, int argc, const char * argv[])> &stringCallback)
--> Pair<Output, typename Interface::template VectorType<typename Interface::StringType>> {
-	typename Interface::template VectorType<typename Interface::StringType> vec; vec.reserve(argc);
-	typename Interface::template VectorType<const char *> argv; argv.reserve(argc);
-	for (int i = 0; i < argc; ++ i) {
+auto parseCommandLineOptions(int argc, const char16_t *wargv[],
+		const Callback<int(Output &ret, char c, const char *str)> &switchCallback,
+		const Callback<int(Output &ret, const StringView &str, int argc, const char *argv[])>
+				&stringCallback)
+		-> Pair<Output, typename Interface::template VectorType<typename Interface::StringType>> {
+	typename Interface::template VectorType<typename Interface::StringType> vec;
+	vec.reserve(argc);
+	typename Interface::template VectorType<const char *> argv;
+	argv.reserve(argc);
+	for (int i = 0; i < argc; ++i) {
 		vec.push_back(string::toUtf8<Interface>(wargv[i]));
 		argv.push_back(vec.back().c_str());
 	}
 
-	return parseCommandLineOptions<Interface, Output>(argc, argv.data(), switchCallback, stringCallback);
+	return parseCommandLineOptions<Interface, Output>(argc, argv.data(), switchCallback,
+			stringCallback);
 }
 
 constexpr StringView MIME_URLENCODED("application/x-www-form-urlencoded");
@@ -155,8 +161,9 @@ constexpr StringView MIME_CBOR("application/cbor");
 
 // decode x-www-urlencoded into data
 template <typename Interface>
-auto SP_PUBLIC readUrlencoded(StringView, size_t maxVarSize = maxOf<size_t>()) -> data::ValueTemplate<Interface>;
+SP_PUBLIC auto readUrlencoded(StringView, size_t maxVarSize = maxOf<size_t>())
+		-> data::ValueTemplate<Interface>;
 
-}
+} // namespace stappler::data
 
 #endif // STAPPLER_DATA_SPDATA_H_

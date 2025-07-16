@@ -31,8 +31,6 @@ This file was modified for stappler project
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
-class SP_PUBLIC Mat4;
-
 /**
  * Defines a 4 x 4 floating point matrix representing a 3D transformation.
  *
@@ -64,13 +62,14 @@ class SP_PUBLIC Mat4;
  *
  * @see Transform
  */
-class alignas(16) Mat4 {
+class SP_PUBLIC alignas(16) Mat4 {
 public:
-	static void createLookAt(const Vec3 &eyePosition, const Vec3 &targetPosition, const Vec3 &up, Mat4 *dst);
+	static void createLookAt(const Vec3 &eyePosition, const Vec3 &targetPosition, const Vec3 &up,
+			Mat4 *dst);
 
 	static void createLookAt(float eyePositionX, float eyePositionY, float eyePositionZ,
-			float targetCenterX, float targetCenterY, float targetCenterZ,
-			float upX, float upY, float upZ, Mat4 *dst);
+			float targetCenterX, float targetCenterY, float targetCenterZ, float upX, float upY,
+			float upZ, Mat4 *dst);
 
 	/** Builds a perspective projection matrix based on a field of view and returns by value.
 	 *
@@ -78,10 +77,12 @@ public:
 	 * After the projection transformation, visible content has x- and y-coordinates ranging from -1 to 1,
 	 * and a z-coordinate ranging from 0 to 1. To obtain the viewable area (in world space) of a scene,
 	 * create a BoundingFrustum and pass the combined view and projection matrix to the constructor. */
-	static void createPerspective(float fieldOfView, float aspectRatio, float zNearPlane, float zFarPlane, Mat4 *dst);
+	static void createPerspective(float fieldOfView, float aspectRatio, float zNearPlane,
+			float zFarPlane, Mat4 *dst);
 
 	/** Creates an orthographic projection matrix. */
-	static void createOrthographic(float width, float height, float zNearPlane, float zFarPlane, Mat4 *dst);
+	static void createOrthographic(float width, float height, float zNearPlane, float zFarPlane,
+			Mat4 *dst);
 
 	/** Creates an orthographic projection matrix.
 	 *
@@ -104,7 +105,7 @@ public:
 	static void createOrthographicOffCenter(float left, float right, float bottom, float top,
 			float zNearPlane, float zFarPlane, Mat4 *dst);
 
-    /** Creates a spherical billboard that rotates around a specified object position.
+	/** Creates a spherical billboard that rotates around a specified object position.
 	 *
 	 * This method computes the facing direction of the billboard from the object position
 	 * and camera position. When the object and camera positions are too close, the matrix
@@ -133,7 +134,8 @@ public:
 	static void createRotationY(float angle, Mat4 *dst);
 	static void createRotationZ(float angle, Mat4 *dst);
 	static void createTranslation(const Vec3 &translation, Mat4 *dst);
-	static void createTranslation(float xTranslation, float yTranslation, float zTranslation, Mat4 *dst);
+	static void createTranslation(float xTranslation, float yTranslation, float zTranslation,
+			Mat4 *dst);
 
 	static void add(const Mat4 &m1, const Mat4 &m2, Mat4 *dst) {
 		simd::addMat4(m1.m, m2.m, dst->m);
@@ -147,22 +149,23 @@ public:
 		simd::multiplyMat4(m1.m, m2.m, dst->m);
 	}
 
-    static void subtract(const Mat4& m1, const Mat4& m2, Mat4* dst) {
+	static void subtract(const Mat4 &m1, const Mat4 &m2, Mat4 *dst) {
 		simd::subtractMat4(m1.m, m2.m, dst->m);
-    }
+	}
 
 	float m[16];
 
 	constexpr Mat4() { *this = IDENTITY; }
 
-	constexpr Mat4(float m11, float m12, float m13, float m14, float m21, float m22, float m23, float m24,
-			float m31, float m32, float m33, float m34, float m41, float m42, float m43, float m44)
-	: m { m11, m21, m31, m41, m12, m22, m32, m42, m13, m23, m33, m43, m14, m24, m34, m44 } { }
+	constexpr Mat4(float m11, float m12, float m13, float m14, float m21, float m22, float m23,
+			float m24, float m31, float m32, float m33, float m34, float m41, float m42, float m43,
+			float m44)
+	: m{m11, m21, m31, m41, m12, m22, m32, m42, m13, m23, m33, m43, m14, m24, m34, m44} { }
 
 	constexpr Mat4(float a, float b, float c, float d, float e, float f)
-	: m { a, b, 0, 0, c, d, 0, 0, 0, 0, 1, 0, e, f, 0, 1 } { }
+	: m{a, b, 0, 0, c, d, 0, 0, 0, 0, 1, 0, e, f, 0, 1} { }
 
-	constexpr Mat4(const Mat4& copy) = default;
+	constexpr Mat4(const Mat4 &copy) = default;
 
 	void add(float scalar) { add(scalar, this); }
 	void add(float scalar, Mat4 *dst) { simd::addMat4Scalar(m, scalar, dst->m); }
@@ -192,9 +195,21 @@ public:
 	void negate() { simd::negateMat4(m, m); }
 	void transpose() { simd::transposeMat4(m, m); }
 
-	Mat4 getInversed() const { Mat4 mat(*this); mat.inverse(); return mat; }
-	Mat4 getNegated() const { Mat4 mat(*this); mat.negate(); return mat; }
-	Mat4 getTransposed() const { Mat4 mat(*this); mat.transpose(); return mat; }
+	Mat4 getInversed() const {
+		Mat4 mat(*this);
+		mat.inverse();
+		return mat;
+	}
+	Mat4 getNegated() const {
+		Mat4 mat(*this);
+		mat.negate();
+		return mat;
+	}
+	Mat4 getTransposed() const {
+		Mat4 mat(*this);
+		mat.transpose();
+		return mat;
+	}
 
 	bool isIdentity() const { return *this == IDENTITY; }
 
@@ -231,9 +246,7 @@ public:
 		transformVector(point->x, point->y, 1.0f, 1.0f, &ret);
 		*point = Vec2(ret.x, ret.y);
 	}
-	void transformVector(Vec4 *vector) const {
-		simd::transformVec4(m, &vector->x, &vector->x);
-	}
+	void transformVector(Vec4 *vector) const { simd::transformVec4(m, &vector->x, &vector->x); }
 	void transformVector(float x, float y, float z, float w, Vec4 *dst) const {
 		simd::transformVec4Components(m, x, y, z, w, &dst->x);
 	}
@@ -259,7 +272,7 @@ public:
 		return result;
 	}
 
-	Mat4& operator+=(const Mat4 &mat) {
+	Mat4 &operator+=(const Mat4 &mat) {
 		add(mat);
 		return *this;
 	}
@@ -270,7 +283,7 @@ public:
 		return result;
 	}
 
-	Mat4& operator-=(const Mat4 &mat) {
+	Mat4 &operator-=(const Mat4 &mat) {
 		subtract(mat);
 		return *this;
 	}
@@ -287,13 +300,13 @@ public:
 		return result;
 	}
 
-	Mat4& operator*=(const Mat4 &mat) {
+	Mat4 &operator*=(const Mat4 &mat) {
 		multiply(mat);
 		return *this;
 	}
 
-	inline bool operator==(const Mat4&) const = default;
-	inline bool operator!=(const Mat4&) const = default;
+	inline bool operator==(const Mat4 &) const = default;
+	inline bool operator!=(const Mat4 &) const = default;
 
 	static const Mat4 ZERO;
 	static const Mat4 IDENTITY;
@@ -306,56 +319,40 @@ public:
 
 #ifndef __LCC__
 
-constexpr const Mat4 Mat4::IDENTITY = Mat4(
-	1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 1.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f);
+constexpr const Mat4 Mat4::IDENTITY = Mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
-constexpr const Mat4 Mat4::ZERO = Mat4(
-	0.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 0.0f );
+constexpr const Mat4 Mat4::ZERO = Mat4(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-constexpr const Mat4 Mat4::INVALID = Mat4(
-	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
-	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
-	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
-	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan() );
+constexpr const Mat4 Mat4::INVALID = Mat4(stappler::nan(), stappler::nan(), stappler::nan(),
+		stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
+		stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
+		stappler::nan(), stappler::nan(), stappler::nan());
 
-constexpr const Mat4 Mat4::ROTATION_Z_90 = Mat4(
-	0.0f, -1.0f, 0.0f, 0.0f,
-	1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f );
+constexpr const Mat4 Mat4::ROTATION_Z_90 = Mat4(0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
-constexpr const Mat4 Mat4::ROTATION_Z_180 = Mat4(
-	-1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, -1.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f );
+constexpr const Mat4 Mat4::ROTATION_Z_180 = Mat4(-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
-constexpr const Mat4 Mat4::ROTATION_Z_270 = Mat4(
-	0.0f, 1.0f, 0.0f, 0.0f,
-	-1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f );
+constexpr const Mat4 Mat4::ROTATION_Z_270 = Mat4(0.0f, 1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 #endif
 
-inline Vec4& operator*=(Vec4& v, const Mat4& m) {
+inline Vec4 &operator*=(Vec4 &v, const Mat4 &m) {
 	m.transformVector(&v);
 	return v;
 }
 
-inline const Vec4 operator*(const Mat4& m, const Vec4& v) {
+inline const Vec4 operator*(const Mat4 &m, const Vec4 &v) {
 	Vec4 x;
 	m.transformVector(v, &x);
 	return x;
 }
 
-inline const Vec3 operator*(const Mat4& m, const Vec3& v) {
+inline const Vec3 operator*(const Mat4 &m, const Vec3 &v) {
 	struct alignas(16) {
 		Vec3 vec;
 		float w;
@@ -364,7 +361,7 @@ inline const Vec3 operator*(const Mat4& m, const Vec3& v) {
 	return s.vec;
 }
 
-inline const Vec2 operator*(const Mat4& m, const Vec2& v) {
+inline const Vec2 operator*(const Mat4 &m, const Vec2 &v) {
 	struct alignas(16) {
 		Vec2 vec;
 		float z;
@@ -374,16 +371,15 @@ inline const Vec2 operator*(const Mat4& m, const Vec2& v) {
 	return s.vec;
 }
 
-inline std::basic_ostream<char> &
-operator << (std::basic_ostream<char> & os, const Mat4 & m) {
+inline std::basic_ostream<char> &operator<<(std::basic_ostream<char> &os, const Mat4 &m) {
 	os << "{\n\t( " << m.m[0] << ", " << m.m[4] << ", " << m.m[8] << ", " << m.m[12] << ")\n"
-		  << "\t( " << m.m[1] << ", " << m.m[5] << ", " << m.m[9] << ", " << m.m[13] << ")\n"
-		  << "\t( " << m.m[2] << ", " << m.m[6] << ", " << m.m[10] << ", " << m.m[14] << ")\n"
-		  << "\t( " << m.m[3] << ", " << m.m[7] << ", " << m.m[11] << ", " << m.m[15] << ")\n"
-		<< "}";
+	   << "\t( " << m.m[1] << ", " << m.m[5] << ", " << m.m[9] << ", " << m.m[13] << ")\n"
+	   << "\t( " << m.m[2] << ", " << m.m[6] << ", " << m.m[10] << ", " << m.m[14] << ")\n"
+	   << "\t( " << m.m[3] << ", " << m.m[7] << ", " << m.m[11] << ", " << m.m[15] << ")\n"
+	   << "}";
 	return os;
 }
 
-}
+} // namespace stappler::geom
 
 #endif /* CORE_GEOM_SPMAT4_H_ */

@@ -56,16 +56,17 @@ enum class Status : int32_t {
 	Done = -2,
 	Suspended = -3,
 	Pending = -4,
+	Timeout = -5,
 
 	// Vulkan support codes
-	EventSet = -5, // VK_EVENT_SET
-	EventReset = -6, // VK_EVENT_RESET
-	Incomplete = -7, // VK_INCOMPLETE
-	Suboptimal = -8, // VK_SUBOPTIMAL_KHR
-	ThreadIdle = -9, // VK_THREAD_IDLE_KHR
-	ThreadDone = -10, // VK_THREAD_DONE_KHR
-	OperationDeferred = -11, // VK_OPERATION_DEFERRED_KHR
-	OperationNotDeferred = -12, // VK_OPERATION_NOT_DEFERRED_KHR
+	EventSet = -6, // VK_EVENT_SET
+	EventReset = -7, // VK_EVENT_RESET
+	Incomplete = -8, // VK_INCOMPLETE
+	Suboptimal = -9, // VK_SUBOPTIMAL_KHR
+	ThreadIdle = -10, // VK_THREAD_IDLE_KHR
+	ThreadDone = -11, // VK_THREAD_DONE_KHR
+	OperationDeferred = -12, // VK_OPERATION_DEFERRED_KHR
+	OperationNotDeferred = -13, // VK_OPERATION_NOT_DEFERRED_KHR
 
 	// general errors
 	// This errors matched their errno codes, but can occurs in any subsystem

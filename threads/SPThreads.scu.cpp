@@ -44,7 +44,7 @@ static SharedSymbol s_threadSharedSymbols[] = {
 	SharedSymbol{"ThreadInfo::setThreadPool", &ThreadInfo::setThreadPool},
 };
 
-static SharedModule s_threadSharedModule(buildconfig::MODULE_STAPPLER_THREADS_NAME,
+SP_USED static SharedModule s_threadSharedModule(buildconfig::MODULE_STAPPLER_THREADS_NAME,
 		s_threadSharedSymbols, sizeof(s_threadSharedSymbols) / sizeof(SharedSymbol));
 
 struct ThreadInitializer {

@@ -55,7 +55,7 @@ bool Metric::readStyleValue(StringView r, bool resolutionMetric, bool allowEmpty
 
 	if (!resolutionMetric) {
 		if (str.is('%')) {
-			++ str;
+			++str;
 			this->value = fvalue / 100.0f;
 			this->metric = Metric::Units::Percent;
 			return true;
@@ -147,26 +147,24 @@ bool Metric::readStyleValue(StringView r, bool resolutionMetric, bool allowEmpty
 	return false;
 }
 
-bool Rect::containsPoint(const Vec2& point, float padding) const {
+bool Rect::containsPoint(const Vec2 &point, float padding) const {
 	bool bRet = false;
 
-	if (point.x >= getMinX() - padding && point.x <= getMaxX() + padding && point.y >= getMinY() - padding && point.y <= getMaxY() + padding) {
+	if (point.x >= getMinX() - padding && point.x <= getMaxX() + padding
+			&& point.y >= getMinY() - padding && point.y <= getMaxY() + padding) {
 		bRet = true;
 	}
 
 	return bRet;
 }
 
-bool Rect::intersectsRect(const Rect& rect) const {
-	return !( getMaxX() < rect.getMinX() ||
-			rect.getMaxX() < getMinX() ||
-			getMaxY() < rect.getMinY() ||
-			rect.getMaxY() < getMinY());
+bool Rect::intersectsRect(const Rect &rect) const {
+	return !(getMaxX() < rect.getMinX() || rect.getMaxX() < getMinX() || getMaxY() < rect.getMinY()
+			|| rect.getMaxY() < getMinY());
 }
 
 bool Rect::intersectsCircle(const Vec2 &center, float radius) const {
-	Vec2 rectangleCenter((origin.x + size.width / 2),
-			(origin.y + size.height / 2));
+	Vec2 rectangleCenter((origin.x + size.width / 2), (origin.y + size.height / 2));
 
 	float w = size.width / 2;
 	float h = size.height / 2;
@@ -178,8 +176,7 @@ bool Rect::intersectsCircle(const Vec2 &center, float radius) const {
 		return false;
 	}
 
-	Vec2 circleDistance(fabs(center.x - origin.x - w),
-			fabs(center.y - origin.y - h));
+	Vec2 circleDistance(fabs(center.x - origin.x - w), fabs(center.y - origin.y - h));
 
 	if (circleDistance.x <= (w)) {
 		return true;
@@ -194,7 +191,7 @@ bool Rect::intersectsCircle(const Vec2 &center, float radius) const {
 	return (cornerDistanceSq <= (powf(radius, 2)));
 }
 
-void Rect::merge(const Rect& rect) {
+void Rect::merge(const Rect &rect) {
 	float top1 = getMaxY();
 	float left1 = getMinX();
 	float right1 = getMaxX();
@@ -210,18 +207,18 @@ void Rect::merge(const Rect& rect) {
 	size.height = std::max(top1, top2) - origin.y;
 }
 
-Rect Rect::unionWithRect(const Rect & rect) const {
+Rect Rect::unionWithRect(const Rect &rect) const {
 	float thisLeftX = origin.x;
 	float thisRightX = origin.x + size.width;
 	float thisTopY = origin.y + size.height;
 	float thisBottomY = origin.y;
 
 	if (thisRightX < thisLeftX) {
-		std::swap(thisRightX, thisLeftX);   // This rect has negative width
+		std::swap(thisRightX, thisLeftX); // This rect has negative width
 	}
 
 	if (thisTopY < thisBottomY) {
-		std::swap(thisTopY, thisBottomY);   // This rect has negative height
+		std::swap(thisTopY, thisBottomY); // This rect has negative height
 	}
 
 	float otherLeftX = rect.origin.x;
@@ -230,11 +227,11 @@ Rect Rect::unionWithRect(const Rect & rect) const {
 	float otherBottomY = rect.origin.y;
 
 	if (otherRightX < otherLeftX) {
-		std::swap(otherRightX, otherLeftX);   // Other rect has negative width
+		std::swap(otherRightX, otherLeftX); // Other rect has negative width
 	}
 
 	if (otherTopY < otherBottomY) {
-		std::swap(otherTopY, otherBottomY);   // Other rect has negative height
+		std::swap(otherTopY, otherBottomY); // Other rect has negative height
 	}
 
 	float combinedLeftX = std::min(thisLeftX, otherLeftX);
@@ -242,13 +239,15 @@ Rect Rect::unionWithRect(const Rect & rect) const {
 	float combinedTopY = std::max(thisTopY, otherTopY);
 	float combinedBottomY = std::min(thisBottomY, otherBottomY);
 
-	return Rect(combinedLeftX, combinedBottomY, combinedRightX - combinedLeftX, combinedTopY - combinedBottomY);
+	return Rect(combinedLeftX, combinedBottomY, combinedRightX - combinedLeftX,
+			combinedTopY - combinedBottomY);
 }
 
 bool URect::containsPoint(const UVec2 &point) const {
 	bool bRet = false;
 
-	if (point.x >= getMinX() && point.x <= getMaxX() && point.y >= getMinY() && point.y <= getMaxY()) {
+	if (point.x >= getMinX() && point.x <= getMaxX() && point.y >= getMinY()
+			&& point.y <= getMaxY()) {
 		bRet = true;
 	}
 
@@ -256,13 +255,27 @@ bool URect::containsPoint(const UVec2 &point) const {
 }
 
 bool URect::intersectsRect(const URect &rect) const {
-	return !( getMaxX() < rect.getMinX() ||
-			rect.getMaxX() < getMinX() ||
-			getMaxY() < rect.getMinY() ||
-			rect.getMaxY() < getMinY());
+	return !(getMaxX() < rect.getMinX() || rect.getMaxX() < getMinX() || getMaxY() < rect.getMinY()
+			|| rect.getMaxY() < getMinY());
 }
 
-Rect TransformRect(const Rect& rect, const Mat4& transform) {
+bool IRect::containsPoint(const IVec2 &point) const {
+	bool bRet = false;
+
+	if (point.x >= getMinX() && point.x <= getMaxX() && point.y >= getMinY()
+			&& point.y <= getMaxY()) {
+		bRet = true;
+	}
+
+	return bRet;
+}
+
+bool IRect::intersectsRect(const IRect &rect) const {
+	return !(getMaxX() < rect.getMinX() || rect.getMaxX() < getMinX() || getMaxY() < rect.getMinY()
+			|| rect.getMaxY() < getMinY());
+}
+
+Rect TransformRect(const Rect &rect, const Mat4 &transform) {
 	const float top = rect.getMinY();
 	const float left = rect.getMinX();
 	const float right = rect.getMaxX();
@@ -296,4 +309,4 @@ constexpr Rect Rect::ZERO = Rect(0.0f, 0.0f, 0.0f, 0.0f);
 
 #endif
 
-}
+} // namespace stappler::geom

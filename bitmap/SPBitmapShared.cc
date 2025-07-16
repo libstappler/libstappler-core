@@ -40,7 +40,7 @@ static SharedSymbol s_bitmapSharedSymbols[] = {
 		static_cast<bool (*)(const FileInfo &, uint32_t &, uint32_t &)>(getImageSize)},
 };
 
-static SharedModule s_bitmapSharedModule(buildconfig::MODULE_STAPPLER_BITMAP_NAME,
+SP_USED static SharedModule s_bitmapSharedModule(buildconfig::MODULE_STAPPLER_BITMAP_NAME,
 		s_bitmapSharedSymbols, sizeof(s_bitmapSharedSymbols) / sizeof(SharedSymbol));
 
 } // namespace stappler::bitmap

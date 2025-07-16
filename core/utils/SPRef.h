@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 // enable Ref debug mode to track retain/release sources
 #ifndef SP_REF_DEBUG
-#define SP_REF_DEBUG 0
+#define SP_REF_DEBUG 1
 #endif
 
 // WinCRT instantiates Rc's in place of definition, not actual usage
@@ -198,6 +198,7 @@ public:
 	RcBase &operator=(const nullptr_t &) noexcept;
 
 	RcBase &operator=(const Pointer &value) noexcept;
+	RcBase &operator=(const NotNull<std::remove_pointer_t<Pointer>> &value) noexcept;
 	RcBase &operator=(const RcBase<Base, Pointer> &v) noexcept;
 	RcBase &operator=(RcBase<Base, Pointer> &&v) noexcept;
 
@@ -284,6 +285,10 @@ public:
 			typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type * = nullptr>
 	inline Rc &operator=(Rc<B> &&value) noexcept;
 
+	template <typename B,
+			typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type * = nullptr>
+	Rc &operator=(NotNull<B>) noexcept;
+
 	// upcast
 	template <typename B,
 			typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type * = nullptr>
@@ -295,6 +300,10 @@ public:
 	operator _Base *() const noexcept;
 
 	operator NotNull<_Base>() const noexcept;
+
+	template <typename B,
+			typename std::enable_if<std::is_convertible<_Base *, B *>{}>::type * = nullptr>
+	operator NotNull<B>() const noexcept;
 
 	_Base *operator->() const noexcept;
 
@@ -537,14 +546,12 @@ inline RcBase<_Base, _Pointer>::RcBase(const Pointer &value) noexcept : _ptr(val
 }
 
 template <typename _Base, typename _Pointer>
-inline RcBase<_Base, _Pointer>::RcBase(const RcBase<Base, Pointer> &v) noexcept {
-	_ptr = v._ptr;
+inline RcBase<_Base, _Pointer>::RcBase(const RcBase<Base, Pointer> &v) noexcept : _ptr(v._ptr) {
 	doRetain();
 }
 
 template <typename _Base, typename _Pointer>
-inline RcBase<_Base, _Pointer>::RcBase(RcBase<Base, Pointer> &&v) noexcept {
-	_ptr = v._ptr;
+inline RcBase<_Base, _Pointer>::RcBase(RcBase<Base, Pointer> &&v) noexcept : _ptr(v._ptr) {
 	v._ptr = nullptr;
 #if SP_REF_DEBUG
 	_id = v._id;
@@ -560,6 +567,13 @@ inline auto RcBase<_Base, _Pointer>::operator=(const nullptr_t &) noexcept -> Rc
 
 template <typename _Base, typename _Pointer>
 inline auto RcBase<_Base, _Pointer>::operator=(const Pointer &value) noexcept -> RcBase & {
+	set(value);
+	return *this;
+}
+
+template <typename _Base, typename _Pointer>
+inline auto RcBase<_Base, _Pointer>::operator=(
+		const NotNull<std::remove_pointer_t<Pointer>> &value) noexcept -> RcBase & {
 	set(value);
 	return *this;
 }
@@ -887,6 +901,13 @@ inline auto Rc<_Base>::operator=(Rc<B> &&value) noexcept -> Rc & {
 	return *this;
 }
 
+template <typename _Base>
+template <typename B, typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type *>
+inline auto Rc<_Base>::operator=(NotNull<B> value) noexcept -> Rc & {
+	this->set(value.get());
+	return *this;
+}
+
 // upcast
 template <typename _Base>
 template <typename B, typename std::enable_if<std::is_convertible<B *, _Base *>{}>::type *>
@@ -909,6 +930,14 @@ inline Rc<_Base>::operator _Base *() const noexcept {
 
 template <typename _Base>
 inline Rc<_Base>::operator NotNull<_Base>() const noexcept {
+	auto ptr = get();
+	SPASSERT(ptr, "");
+	return ptr;
+}
+
+template <typename _Base>
+template <typename B, typename std::enable_if<std::is_convertible<_Base *, B *>{}>::type *>
+inline Rc<_Base>::operator NotNull<B>() const noexcept {
 	auto ptr = get();
 	SPASSERT(ptr, "");
 	return ptr;

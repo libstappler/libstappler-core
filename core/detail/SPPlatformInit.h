@@ -46,13 +46,13 @@
 #define SP_PUBLIC
 #elif SP_BUILD_SHARED_LIBRARY
 #ifdef __GNUC__
-#define SP_PUBLIC __attribute__ ((dllexport))
+#define SP_PUBLIC [[gnu::dllexport]]
 #else
 #define SP_PUBLIC __declspec(dllexport)
 #endif
 #else
 #ifdef __GNUC__
-#define SP_PUBLIC __attribute__ ((dllimport))
+#define SP_PUBLIC [[gnu::dllimport]]
 #else
 #define SP_PUBLIC __declspec(dllimport)
 #endif
@@ -60,13 +60,29 @@
 #define SP_LOCAL
 #else
 #if __GNUC__ >= 4
-#define SP_PUBLIC __attribute__ ((visibility ("default")))
-#define SP_LOCAL  __attribute__ ((visibility ("hidden")))
+#define SP_PUBLIC [[gnu::visibility("default")]]
+#define SP_LOCAL  [[gnu::visibility("hidden")]]
 #else
 #define SP_PUBLIC
 #define SP_LOCAL
 #endif
 #endif
+
+
+// SP_USED - prevent symbols from being removed on linkage
+#if defined __has_attribute
+#if __has_attribute (used) && __has_attribute (retain)
+#    define ATTR_NONNULL __attribute__ ((nonnull))
+#define SP_USED [[gnu::used, gnu::retain]]
+#elif __has_attribute (used)
+#define SP_USED [[gnu::used]]
+#else
+#define SP_USED
+#endif
+#else
+#define SP_USED
+#endif
+
 
 // Add debug flag if none is specified
 #ifndef DEBUG

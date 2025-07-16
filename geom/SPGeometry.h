@@ -408,6 +408,15 @@ struct SP_PUBLIC UVec2 {
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec2)
 };
 
+struct SP_PUBLIC IVec2 {
+	static constexpr size_t DIMENSIONS = 2;
+
+	int32_t x;
+	int32_t y;
+
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(IVec2)
+};
+
 struct SP_PUBLIC UVec3 {
 	static constexpr size_t DIMENSIONS = 3;
 
@@ -416,6 +425,16 @@ struct SP_PUBLIC UVec3 {
 	uint32_t z;
 
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec3)
+};
+
+struct SP_PUBLIC IVec3 {
+	static constexpr size_t DIMENSIONS = 2;
+
+	int32_t x;
+	int32_t y;
+	int32_t z;
+
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(IVec3)
 };
 
 struct SP_PUBLIC UVec4 {
@@ -427,6 +446,17 @@ struct SP_PUBLIC UVec4 {
 	uint32_t w;
 
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(UVec4)
+};
+
+struct SP_PUBLIC IVec4 {
+	static constexpr size_t DIMENSIONS = 4;
+
+	int32_t x;
+	int32_t y;
+	int32_t z;
+	int32_t w;
+
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(IVec4)
 };
 
 struct SP_PUBLIC URect {
@@ -459,6 +489,38 @@ struct SP_PUBLIC URect {
 	bool intersectsRect(const URect &rect) const;
 
 	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(URect)
+};
+
+struct SP_PUBLIC IRect {
+	int32_t x = 0;
+	int32_t y = 0;
+	uint32_t width = 0;
+	uint32_t height = 0;
+
+	IRect() = default;
+	IRect(const IVec2 &origin, const Extent2 &size)
+	: x(origin.x), y(origin.y), width(size.width), height(size.height) { }
+	IRect(int32_t x, int32_t y, uint32_t w, uint32_t h) : x(x), y(y), width(w), height(h) { }
+
+	explicit IRect(const Rect &rect)
+	: x(std::ceil(rect.origin.x))
+	, y(std::ceil(rect.origin.y))
+	, width(std::floor(rect.size.width))
+	, height(std::floor(rect.size.height)) { }
+
+	constexpr IVec2 origin() const { return IVec2{x, y}; }
+
+	constexpr float getMaxX() const { return x + width; }
+	constexpr float getMidX() const { return x + width / 2.0f; }
+	constexpr float getMinX() const { return x; }
+	constexpr float getMaxY() const { return y + height; }
+	constexpr float getMidY() const { return y + height / 2.0f; }
+	constexpr float getMinY() const { return y; }
+
+	bool containsPoint(const IVec2 &point) const;
+	bool intersectsRect(const IRect &rect) const;
+
+	SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(IRect)
 };
 
 #ifndef __LCC__

@@ -79,12 +79,42 @@ SharedModuleManager *SharedModuleManager::getInstance() {
 
 void SharedModuleManager::addModule(SharedModule *module) {
 	std::unique_lock lock(_mutex);
+	auto it = _modules.find(module->name);
+	if (it != _modules.end()) {
+		if (hasFlag(it->second->flags, SharedModuleFlags::Extensible)) {
+			module->next = it->second;
+			it->second = module;
+			return;
+		} else {
+			log::error("SharedModule", "Module '", module->name, "' redefined");
+			abort();
+			return;
+		}
+	}
 	_modules.emplace(module->name, module);
 }
 
 void SharedModuleManager::removeModule(SharedModule *module) {
 	std::unique_lock lock(_mutex);
-	_modules.erase(module->name);
+	auto it = _modules.find(module->name);
+	if (!hasFlag(it->second->flags, SharedModuleFlags::Extensible)) {
+		_modules.erase(it);
+	} else {
+		auto target = &it->second;
+		auto mod = it->second;
+		while (mod && mod != module) {
+			target = &mod->next;
+			mod = mod->next;
+		}
+
+		if (mod == module) {
+			*target = mod->next;
+		}
+
+		if (!it->second) {
+			_modules.erase(it);
+		}
+	}
 }
 
 const void *SharedModuleManager::acquireSymbol(const char *module, const char *symbol) const {
@@ -92,14 +122,22 @@ const void *SharedModuleManager::acquireSymbol(const char *module, const char *s
 	auto it = _modules.find(StringView(module));
 	if (it != _modules.end()) {
 		StringView symbolView(symbol);
-		auto s = it->second->symbols;
-		auto c = it->second->symbolsCount;
-		while (c) {
-			if (s->name == symbolView) {
-				return s->ptr;
+
+		SharedSymbol *s = nullptr;
+		size_t c = 0;
+
+		auto mod = it->second;
+		while (mod) {
+			s = mod->symbols;
+			c = mod->symbolsCount;
+			while (c) {
+				if (s->name == symbolView) {
+					return s->ptr;
+				}
+				++s;
+				--c;
 			}
-			++s;
-			--c;
+			mod = mod->next;
 		}
 	} else {
 		log::error("SharedModule", "Module \"", module, "\" is not defined");
@@ -114,34 +152,47 @@ const void *SharedModuleManager::acquireSymbol(const char *module, const char *s
 	if (it != _modules.end()) {
 		StringView symbolView(symbol);
 		bool found = false;
-		auto s = it->second->symbols;
-		auto c = it->second->symbolsCount;
-		while (c) {
-			if (s->name == symbolView) {
-				if (*s->type == *t) {
-					return s->ptr;
+
+		SharedSymbol *s = nullptr;
+		size_t c = 0;
+
+		auto mod = it->second;
+		while (mod) {
+			s = mod->symbols;
+			c = mod->symbolsCount;
+			while (c) {
+				if (s->name == symbolView) {
+					if (*s->type == *t) {
+						return s->ptr;
+					}
+					found = true;
 				}
-				found = true;
+				++s;
+				--c;
 			}
-			++s;
-			--c;
+			mod = mod->next;
 		}
+
 		if (found) {
 			memory::StandartInterface::StringStreamType err;
 			err << "Module \"" << module << "\": Symbol \"" << symbol << "\" not found for: '";
 			printDemangled(err, t);
 			err << "'\n";
 
-			s = it->second->symbols;
-			c = it->second->symbolsCount;
-			while (c) {
-				if (s->name == symbolView) {
-					err << "\tFound: '";
-					printDemangled(err, s->type);
-					err << "'\n";
+			mod = it->second;
+			while (mod) {
+				s = mod->symbols;
+				c = mod->symbolsCount;
+				while (c) {
+					if (s->name == symbolView) {
+						err << "\tFound: '";
+						printDemangled(err, s->type);
+						err << "'\n";
+					}
+					++s;
+					--c;
 				}
-				++s;
-				--c;
+				mod = mod->next;
 			}
 			log::error("SharedModule", err.str());
 		}
@@ -170,12 +221,19 @@ bool SharedModuleManager::enumerateSymbols(const char *module, void *userdata,
 		return false;
 	}
 
-	auto s = it->second->symbols;
-	auto c = it->second->symbolsCount;
-	while (c) {
-		cb(userdata, s->name, s->ptr);
-		++s;
-		--c;
+	SharedSymbol *s = nullptr;
+	size_t c = 0;
+
+	auto mod = it->second;
+	while (mod) {
+		s = mod->symbols;
+		c = mod->symbolsCount;
+		while (c) {
+			cb(userdata, s->name, s->ptr);
+			++s;
+			--c;
+		}
+		mod = mod->next;
 	}
 
 	return true;
@@ -201,8 +259,8 @@ bool SharedModule::enumerateSymbols(const char *module, void *userdata,
 	return manager->enumerateSymbols(module, userdata, cb);
 }
 
-SharedModule::SharedModule(const char *n, SharedSymbol *s, size_t count)
-: name(n), symbols(s), symbolsCount(count) {
+SharedModule::SharedModule(const char *n, SharedSymbol *s, size_t count, SharedModuleFlags f)
+: name(n), symbols(s), symbolsCount(count), flags(f) {
 	SharedModuleManager::getInstance()->addModule(this);
 }
 

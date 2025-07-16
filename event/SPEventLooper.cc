@@ -97,6 +97,7 @@ struct Looper::Data : public memory::AllocPool {
 		if (q->getRef()->getReferenceCount() > 1) {
 			auto tmp = q->getRef();
 			q = nullptr;
+			d->queue = nullptr;
 
 			tmp->foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
 				mem_std::StringStream stream;
@@ -105,7 +106,7 @@ struct Looper::Data : public memory::AllocPool {
 				log::debug("event::Queue", stream.str());
 			});
 		}
-		queue = nullptr;
+		d->queue = nullptr;
 #endif
 		lock.unlock();
 	}

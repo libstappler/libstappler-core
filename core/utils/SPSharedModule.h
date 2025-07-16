@@ -29,6 +29,18 @@
 
 namespace STAPPLER_VERSIONIZED stappler {
 
+enum class SharedModuleFlags {
+	None = 0,
+
+	// This flag allows to define multiple SharedModules with the same name
+	// All symbols from modules will be available, but lookup will be slower,
+	// then from non-extensible module
+	// All SharedModules, that shares same name, should define this flag
+	Extensible = 1 << 0,
+};
+
+SP_DEFINE_ENUM_AS_MASK(SharedModuleFlags)
+
 struct SharedSymbol {
 	const char *name = nullptr;
 	const void *ptr = nullptr;
@@ -58,7 +70,8 @@ public:
 	static bool enumerateSymbols(const char *module, void *userdata,
 			void (*)(void *userdata, const char *name, const void *symbol));
 
-	SharedModule(const char *, SharedSymbol *, size_t count);
+	SharedModule(const char *, SharedSymbol *, size_t count,
+			SharedModuleFlags = SharedModuleFlags::None);
 	~SharedModule();
 
 private:
@@ -67,6 +80,20 @@ private:
 	const char *name = nullptr;
 	SharedSymbol *symbols = nullptr;
 	size_t symbolsCount = 0;
+	SharedModuleFlags flags = SharedModuleFlags::None;
+	SharedModule *next = nullptr;
+};
+
+// shortcut for single-symbol extension
+class SP_PUBLIC SharedExtension final {
+public:
+	template <typename T>
+	SharedExtension(const char *moduleName, const char *symbolName, T *s)
+	: symbol(symbolName, s), module(moduleName, &symbol, 1, SharedModuleFlags::Extensible) { }
+
+protected:
+	SharedSymbol symbol;
+	SharedModule module;
 };
 
 } // namespace STAPPLER_VERSIONIZED stappler

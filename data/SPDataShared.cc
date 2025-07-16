@@ -34,7 +34,7 @@ static SharedSymbol s_dataSharedSymbols[] = {
 				readUrlencoded<memory::StandartInterface>)},
 };
 
-static SharedModule s_dataSharedModule(buildconfig::MODULE_STAPPLER_DATA_NAME, s_dataSharedSymbols,
-		sizeof(s_dataSharedSymbols) / sizeof(SharedSymbol));
+SP_USED static SharedModule s_dataSharedModule(buildconfig::MODULE_STAPPLER_DATA_NAME,
+		s_dataSharedSymbols, sizeof(s_dataSharedSymbols) / sizeof(SharedSymbol));
 
 } // namespace stappler::data

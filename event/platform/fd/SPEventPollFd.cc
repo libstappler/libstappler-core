@@ -65,6 +65,9 @@ Status PollFdURingHandle::rearm(URingData *uring, PollFdSource *source) {
 	if (status == Status::Ok) {
 		uring->pushSqe({IORING_OP_POLL_ADD}, [&](io_uring_sqe *sqe, uint32_t n) {
 			sqe->fd = source->fd;
+			if (hasFlag(source->flags, PollFlags::AllowMulti)) {
+				sqe->len = IORING_POLL_ADD_MULTI;
+			}
 			sqe->poll_events = toInt(source->flags & PollFlags::PollMask);
 			sqe->user_data = reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT
 					| (_timeline & URING_USERDATA_SERIAL_MASK);
@@ -90,7 +93,9 @@ void PollFdURingHandle::notify(URingData *uring, PollFdSource *source, const Not
 		return; // just exit
 	}
 
-	_status = Status::Suspended;
+	if ((data.queueFlags & IORING_CQE_F_MORE) == 0) {
+		_status = Status::Suspended;
+	}
 
 	if (data.result < 0 && data.result != -EAGAIN) {
 		cancel(URingData::getErrnoStatus(data.result));

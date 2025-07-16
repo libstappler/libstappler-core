@@ -32,9 +32,7 @@ class Queue;
 struct QueueData;
 struct HandleClass;
 
-class SP_PUBLIC Handle;
-
-class alignas(32) Handle : public Ref {
+class SP_PUBLIC alignas(32) Handle : public Ref {
 public:
 	static constexpr size_t DataSize = 40;
 

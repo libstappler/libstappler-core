@@ -35,9 +35,18 @@ THE SOFTWARE.
 
 namespace stappler::buildconfig {
 
+// appconfig stores values from project configuration, default values is:
+// - bundle id
+// - default application name
+// - application version
 constexpr auto MODULE_APPCONFIG_NAME = "appconfig";
 
-}
+// libstappler can use this module name to interact with running application itself
+// this module should define application-specific symbols for runtime intialization
+// (like, default scene intialization for Xenolith or default ServerComponent)
+constexpr auto MODULE_APPCOMMON_NAME = "appcommon";
+
+} // namespace stappler::buildconfig
 
 #include "detail/SPPlatformInit.h"
 
