@@ -76,32 +76,32 @@ namespace STAPPLER_VERSIONIZED stappler {
 // based on https://github.com/microsoft/GSL/blob/main/include/gsl/pointers
 
 template <typename T>
-class NotNull {
+class NotNull final {
 public:
 	using element_type = T *;
 
-	constexpr NotNull(T *u) noexcept SPNONNULL : _ptr(u) {
+	constexpr NotNull(element_type u) noexcept SPNONNULL : _ptr(u) {
 		SPASSERT(_ptr != nullptr, "Pointer should not be null");
 		SPASSUME(_ptr != nullptr);
 	}
 
-	template <typename U, typename = std::enable_if_t<std::is_convertible<U *, T *>::value>>
+	template <typename U,
+			typename = std::enable_if_t<std::is_convertible<U *, element_type>::value>>
 	constexpr NotNull(const NotNull<U> &other) noexcept : NotNull(other.get()) { }
 
-	NotNull(const NotNull &other) = default;
-	NotNull &operator=(const NotNull &other) = default;
+	NotNull(const NotNull &other) noexcept = default;
+	NotNull &operator=(const NotNull &other) noexcept = default;
 
-	constexpr auto get() const { return _ptr; }
+	constexpr auto get() const noexcept { return _ptr; }
 
-	constexpr operator T *() const { return get(); }
-	constexpr decltype(auto) operator->() const { return get(); }
-	constexpr decltype(auto) operator*() const { return *get(); }
+	constexpr operator element_type() const noexcept { return get(); }
+	constexpr decltype(auto) operator->() const noexcept { return get(); }
+	constexpr decltype(auto) operator*() const noexcept { return *get(); }
 
 	// prevents compilation when someone attempts to assign a null pointer constant
-	NotNull(std::nullptr_t) = delete;
-	NotNull &operator=(std::nullptr_t) = delete;
+	NotNull(std::nullptr_t) noexcept = delete;
+	NotNull &operator=(std::nullptr_t) noexcept = delete;
 
-	// unwanted operators...pointers only point to single objects!
 	NotNull &operator++() = delete;
 	NotNull &operator--() = delete;
 	NotNull operator++(int) = delete;
@@ -110,10 +110,10 @@ public:
 	NotNull &operator-=(std::ptrdiff_t) = delete;
 	void operator[](std::ptrdiff_t) const = delete;
 
-	void swap(NotNull<T> &other) { std::swap(_ptr, other._ptr); }
+	void swap(NotNull<T> &other) noexcept { std::swap(_ptr, other._ptr); }
 
 private:
-	T *_ptr;
+	element_type _ptr;
 };
 
 } // namespace STAPPLER_VERSIONIZED stappler

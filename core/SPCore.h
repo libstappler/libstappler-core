@@ -114,6 +114,7 @@ constexpr auto MODULE_APPCOMMON_NAME = "appcommon";
 #include "detail/SPValueWrapper.h"
 #include "detail/SPEnum.h"
 #include "detail/SPNotNull.h"
+#include "detail/SPPtr.h"
 
 #include "detail/SPPlatformCleanup.h"
 
