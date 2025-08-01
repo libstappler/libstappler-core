@@ -32,6 +32,7 @@
 #include "SPMakefile.h"
 #include "SPPlatformUnistd.h"
 #include "XCodeProject.h"
+#include "LocaleInfo.h"
 
 #include "stappler-appconfig.h"
 
@@ -47,6 +48,9 @@ Actions:
 	list - search for an available STAPPLER_BUILD_ROOT in the system and list them
 	make [--with make-bin-path] <args> - make current work dir (forward arguments to 'make' utility)
 	get-root - print STAPPLER_BUILD_ROOT to use in makefile scripts
+	xcodegen <path> - generate XCode project files for project with <path>
+	localeinfo [<filename>]
+		- build LocaleInfo data, if filename is not specified - try to load from simplelocalize.io
 	help - show this message
 )";
 
@@ -130,8 +134,8 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 		}
 	}
 
-	filesystem::enumeratePaths(USER_PROFILE_D_FILE, FileCategory::CommonConfig, filesystem::Access::Read,
-			[&] (StringView path, FileFlags flags) {
+	filesystem::enumeratePaths(USER_PROFILE_D_FILE, FileCategory::CommonConfig,
+			filesystem::Access::Read, [&](StringView path, FileFlags flags) {
 		auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{path});
 		auto strData = BytesView(fileData).readString();
 
@@ -144,8 +148,8 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 		return true;
 	});
 
-	filesystem::enumeratePaths(USER_ENVIRONMENT_D_FILE, FileCategory::CommonConfig, filesystem::Access::Read,
-			[&] (StringView path, FileFlags flags) {
+	filesystem::enumeratePaths(USER_ENVIRONMENT_D_FILE, FileCategory::CommonConfig,
+			filesystem::Access::Read, [&](StringView path, FileFlags flags) {
 		auto fileData = filesystem::readIntoMemory<Interface>(FileInfo{path});
 		auto strData = BytesView(fileData).readString();
 
@@ -158,8 +162,8 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 		return true;
 	});
 
-	filesystem::enumeratePaths(USER_SDK_PROFILE, FileCategory::CommonConfig, filesystem::Access::Read,
-			[&] (StringView path, FileFlags flags) {
+	filesystem::enumeratePaths(USER_SDK_PROFILE, FileCategory::CommonConfig,
+			filesystem::Access::Read, [&](StringView path, FileFlags flags) {
 		auto data = data::readFile<Interface>(path);
 		if (data && data.isArray("paths")) {
 			for (auto &it : data.getArray("paths")) {
@@ -257,7 +261,7 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 		return -1;
 	}
 
-	size_t nextArg = 1;
+	int nextArg = 1;
 
 	auto action = StringView(argv[nextArg++]);
 
@@ -268,7 +272,33 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 	}
 
 	return perform_main([&]() -> int {
-		if (action == "list") {
+		if (action == "localeinfo") {
+			if (nextArg < argc) {
+				auto filePath = StringView(argv[nextArg++]).str<memory::StandartInterface>();
+
+				if (!filepath::isAbsolute(filePath)) {
+					// note that filesystem::currentDir argument can not point above current dir's root
+					filePath = filepath::reconstructPath<Interface>(
+							filepath::merge<memory::StandartInterface>(
+									filesystem::currentDir<memory::StandartInterface>(), filePath));
+				}
+
+				if (filesystem::exists(FileInfo{filePath})) {
+					if (!buildLocaleInfo(FileInfo{filePath})) {
+						return -1;
+					}
+					return 0;
+				} else {
+					log::error("main", "File not found: ", argv[nextArg++]);
+					return -1;
+				}
+			} else {
+				if (!buildLocaleInfoFromNetwork()) {
+					return -1;
+				}
+				return 0;
+			}
+		} else if (action == "list") {
 			Vector<String> candidates;
 			findStapplerBuildRoot([&](StringView str) {
 				auto it = std::find(candidates.begin(), candidates.end(), str);
@@ -302,15 +332,14 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 				return -1;
 			}
 
-			auto path = filesystem::findPath<Interface>(USER_SDK_PROFILE, FileCategory::CommonConfig, FileFlags::MakeWritableDir);
+			auto path = filesystem::findPath<Interface>(USER_SDK_PROFILE,
+					FileCategory::CommonConfig, FileFlags::MakeWritableDir);
 			if (!path.empty()) {
 				if (filesystem::exists(FileInfo{path})) {
 					auto data = data::readFile<Interface>(FileInfo{path});
 					Set<String> paths;
 					auto &arr = data.getArray("paths");
-					for (auto &it : arr) {
-						paths.emplace(it.getString());
-					}
+					for (auto &it : arr) { paths.emplace(it.getString()); }
 
 					if (!paths.emplace(buildPath).second) {
 						std::cout << "Already exists: " << buildPath << "\n";
@@ -354,13 +383,13 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 
 			StringView makeTool("make");
 
-			if (size_t(argc) > nextArg) {
+			if (argc > nextArg) {
 				auto extraArg = StringView(argv[nextArg]);
 				if (extraArg.starts_with("--with=")) {
 					extraArg += "--with="_len;
 					makeTool = extraArg;
 					++nextArg;
-				} else if (extraArg == "--with" && size_t(argc) > nextArg + 1) {
+				} else if (extraArg == "--with" && argc > nextArg + 1) {
 					makeTool = StringView(argv[nextArg + 1]);
 					nextArg += 2;
 				}
@@ -440,8 +469,9 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 
 			if (!filepath::isAbsolute(projPath)) {
 				// note that filesystem::currentDir argument can not point above current dir's root
-				projPath = filepath::reconstructPath<Interface>(filepath::merge<memory::StandartInterface>(
-					filesystem::currentDir<memory::StandartInterface>(), projPath));
+				projPath = filepath::reconstructPath<Interface>(
+						filepath::merge<memory::StandartInterface>(
+								filesystem::currentDir<memory::StandartInterface>(), projPath));
 			}
 
 			if (stat.type == FileType::File) {
@@ -449,7 +479,8 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 					return -3;
 				}
 			} else if (stat.type == FileType::Dir) {
-				if (!makeXCodeProject(root, FileInfo(filepath::merge<Interface>(projPath, "Makefile")))) {
+				if (!makeXCodeProject(root,
+							FileInfo(filepath::merge<Interface>(projPath, "Makefile")))) {
 					return -3;
 				}
 			}

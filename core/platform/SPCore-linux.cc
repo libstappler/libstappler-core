@@ -22,6 +22,7 @@
 
 #include "SPString.h"
 #include "SPDso.h"
+#include <clocale>
 
 #if LINUX
 
@@ -564,6 +565,14 @@ size_t makeRandomBytes(uint8_t *buf, size_t count) {
 		generated += ret;
 	}
 	return generated;
+}
+
+StringView getOsLocale() {
+	auto locale = ::getenv("LC_ALL");
+	if (!locale) {
+		locale = ::getenv("LANG");
+	}
+	return StringView(locale);
 }
 
 bool initialize(int &resultCode) { return true; }

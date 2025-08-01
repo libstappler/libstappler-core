@@ -60,6 +60,7 @@ THE SOFTWARE.
 #include "SPValid.cc"
 #include "SPCommandLineParser.cc"
 #include "SPStatus.cc"
+#include "SPLocaleInfo.cc"
 
 #include "SPMetastring.h"
 

@@ -42,7 +42,7 @@ namespace STAPPLER_VERSIONIZED stappler {
 //   reader.readChars<Chars<'-', '+', '.', 'e'>, Range<'0', '9'>>();
 //
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
@@ -73,6 +73,8 @@ SP_PUBLIC int compare_u(WideStringView l, WideStringView r);
 
 SP_PUBLIC int caseCompare_u(StringView l, StringView r);
 SP_PUBLIC int caseCompare_u(WideStringView l, WideStringView r);
+
+SP_PUBLIC StringView getOsLocale();
 
 } // namespace stappler::platform
 

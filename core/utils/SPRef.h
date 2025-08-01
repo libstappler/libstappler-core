@@ -866,6 +866,7 @@ inline auto Rc<_Base>::create(Args &&...args) -> Self {
 		return Self(pRet, true); // unsafe assignment
 	} else {
 		static_assert(false, "Fail to detect Type::init(...) or Type(...) with arguments provided");
+		return nullptr;
 	}
 }
 

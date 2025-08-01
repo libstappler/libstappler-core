@@ -359,27 +359,27 @@ bool VariableEngine::call(Output out, StringView name, SpanView<StmtValue *> arg
 	ctx.expandedArgs = expandedArgs;
 	ctx.pool = memory::pool::create(_pool);
 
-	mem_pool::perform([&] { ctx.contextVars = new (ctx.pool) Map<StringView, StringView>(); },
-			ctx.pool);
-	memory::pool::push(ctx.pool);
+	auto ret = mem_pool::perform([&] {
+		ctx.contextVars = new (ctx.pool) Map<StringView, StringView>();
 
-	if (args.size() < ctx.fn->minArgs || args.size() > ctx.fn->maxArgs) {
-		err.reportError(toString("Function '", name, "' uses from ", ctx.fn->minArgs, " to ",
-				ctx.fn->maxArgs, " arguments, but ", args.size(), " provided"));
-		return false;
-	}
+		if (args.size() < ctx.fn->minArgs || args.size() > ctx.fn->maxArgs) {
+			err.reportError(toString("Function '", name, "' uses from ", ctx.fn->minArgs, " to ",
+					ctx.fn->maxArgs, " arguments, but ", args.size(), " provided"));
+			return false;
+		}
 
-	_callContext = &ctx;
+		_callContext = &ctx;
 
-	auto success = ctx.fn->fn(out, ctx.fn->userdata, *this, args);
+		auto success = ctx.fn->fn(out, ctx.fn->userdata, *this, args);
 
-	_callContext = ctx.prev;
+		_callContext = ctx.prev;
+		return success;
+	}, ctx.pool);
 
-	memory::pool::pop();
 	memory::pool::destroy(ctx.pool);
 	ctx.pool = nullptr;
 
-	return success;
+	return ret;
 }
 
 static bool VariableEngine_MAKEFILE_LIST(const Callback<void(StringView)> &out, Block *block) {
@@ -490,10 +490,10 @@ StringView VariableEngine::getAbsolutePath(StringView str) const {
 	} else {
 		if (!_rootPath.empty()) {
 			return StringView(filepath::reconstructPath<Interface>(
-					filepath::merge<Interface>(_rootPath, str))).pdup(_pool);
+									  filepath::merge<Interface>(_rootPath, str)))
+					.pdup(_pool);
 		} else {
-			auto path =
-			filesystem::findPath<Interface>(FileInfo{str}, filesystem::Access::Exists);
+			auto path = filesystem::findPath<Interface>(FileInfo{str}, filesystem::Access::Exists);
 			if (!path.empty()) {
 				return StringView(path).pdup(_pool);
 			}

@@ -29,7 +29,8 @@ LOCAL_MODULES_PATHS = \
 LOCAL_MODULES := \
 	stappler_filesystem \
 	stappler_data \
-	stappler_makefile
+	stappler_makefile \
+	stappler_network
 
 LOCAL_SRCS_DIRS := src
 LOCAL_INCLUDES_DIRS := src
