@@ -124,6 +124,7 @@ const Thread *Thread::getCurrentThread() { return tl_owner; }
 
 Thread::~Thread() {
 	if (std::this_thread::get_id() == _thisThreadId) {
+		_thisThread.detach();
 		return;
 	}
 

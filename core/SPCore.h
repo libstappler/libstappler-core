@@ -209,6 +209,10 @@ bool hasFlag(T mask, T flag) {
 	return (mask & flag) != T(0);
 }
 
+template <typename T>
+bool hasFlagAll(T mask, T flag) {
+	return (mask & flag) == T(flag);
+}
 
 /*
  * 		Invoker/CallTest macro
