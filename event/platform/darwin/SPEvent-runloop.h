@@ -35,6 +35,8 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 
 static constexpr bool RUNLOOP_THREAD_NONBLOCK = false;
 
+struct RunLoopData;
+
 struct SP_PUBLIC RunLoopTimerSource {
 	CFRunLoopTimerRef timer = nullptr;
 	TimeInterval timeout;
@@ -58,10 +60,13 @@ public:
 	Status disarm(RunLoopData *, RunLoopTimerSource *);
 
 	void notify(RunLoopData *, RunLoopTimerSource *source, const NotifyData &);
+
+	virtual bool reset(TimerInfo &&) override;
 };
 
 struct SP_PUBLIC RunLoopData : public PlatformQueueData {
 	CFRunLoopRef _runLoop = nullptr;
+	CFStringRef _runMode = nullptr;
 
 	void addTimer(RunLoopTimerHandle *handle, RunLoopTimerSource *);
 	void removeTimer(RunLoopTimerHandle *handle, RunLoopTimerSource *);
@@ -75,7 +80,7 @@ struct SP_PUBLIC RunLoopData : public PlatformQueueData {
 	uint32_t wait(TimeInterval);
 	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
 
-	Status wakeup(WakeupFlags, TimeInterval);
+	Status wakeup(WakeupFlags);
 
 	void cancel();
 
@@ -106,6 +111,6 @@ protected:
 	std::mutex _mutex;
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_DARWIN_SPEVENT_RUNLOOP_H_ */

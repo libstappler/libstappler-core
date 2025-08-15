@@ -338,6 +338,20 @@ inline void streamWrite(const FunctionalStream &stream, uint64_t i) {
 					buf.data() + buf.size() - ret, ret));
 }
 
+#if SP_HAVE_DEDICATED_SIZE_T
+template <typename FunctionalStream>
+inline void streamWrite(const FunctionalStream &stream, size_t i) {
+	std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType,
+			std::numeric_limits<int64_t>::digits10 + 2>
+			buf = {0};
+	auto ret = string::detail::itoa(uint64_t(i), buf.data(), buf.size());
+	streamWrite(stream,
+			typename FunctionalStreamTraits<FunctionalStream>::ArgType(
+					buf.data() + buf.size() - ret, ret));
+}
+
+#endif
+
 template <typename FunctionalStream>
 inline void streamWrite(const FunctionalStream &stream, int32_t i) {
 	streamWrite(stream, int64_t(i));

@@ -54,17 +54,19 @@ struct URingData;
 // Extra data can be passed to uring with Handle pointer
 // Handle is 32-byte alignment, so, we have 5 bits empty
 
-static constexpr uint64_t URING_USERDATA_USER_MASK =	0b1'1111;
-static constexpr uint64_t URING_USERDATA_SERIAL_MASK =	0b0'0111;
-static constexpr uint64_t URING_USERDATA_RETAIN_BIT =	0b0'1000;
-static constexpr uint64_t URING_USERDATA_ALT_BIT =		0b1'0000;
+static constexpr uint64_t URING_USERDATA_USER_MASK = 0b1'1111;
+static constexpr uint64_t URING_USERDATA_SERIAL_MASK = 0b0'0111;
+static constexpr uint64_t URING_USERDATA_RETAIN_BIT = 0b0'1000;
+static constexpr uint64_t URING_USERDATA_ALT_BIT = 0b1'0000;
 static constexpr uint64_t URING_USERDATA_PTR_MASK = ~URING_USERDATA_USER_MASK;
 
 // Special userdata values
 // DO NOT set RETAIN bit for special values
 static constexpr uint64_t URING_USERDATA_IGNORED = maxOf<uint64_t>() & URING_USERDATA_PTR_MASK;
-static constexpr uint64_t URING_USERDATA_SUSPENDED = maxOf<uint64_t>() & (URING_USERDATA_PTR_MASK | 1);
-static constexpr uint64_t URING_USERDATA_TIMEOUT = maxOf<uint64_t>() & (URING_USERDATA_PTR_MASK | 2);
+static constexpr uint64_t URING_USERDATA_SUSPENDED =
+		maxOf<uint64_t>() & (URING_USERDATA_PTR_MASK | 1);
+static constexpr uint64_t URING_USERDATA_TIMEOUT =
+		maxOf<uint64_t>() & (URING_USERDATA_PTR_MASK | 2);
 
 #endif
 
@@ -134,10 +136,10 @@ protected:
 template <typename TimeSpec>
 inline void setNanoTimespec(TimeSpec &ts, TimeInterval ival) {
 	ts.tv_sec = ival.toSeconds();
-	ts.tv_nsec = (ival.toMicros() - ts.tv_sec * 1'000'000ULL) * 1000;
+	ts.tv_nsec = (ival.toMicros() - ts.tv_sec * 1'000'000ULL) * 1'000;
 }
 
-}
+} // namespace stappler::event
 
 #endif // SP_POSIX_FD
 

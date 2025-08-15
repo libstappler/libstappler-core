@@ -21,6 +21,7 @@
  **/
 
 #include "SPStringView.h"
+#include "SPString.h"
 
 #if MACOS
 
@@ -382,6 +383,16 @@ size_t makeRandomBytes(uint8_t *buf, size_t count) {
 bool initialize(int &resultCode) { return true; }
 
 void terminate() { }
+
+thread_local char tl_localeBuf[64] = {0};
+
+StringView getOsLocale() {
+	CFLocaleRef cflocale = CFLocaleCopyCurrent();
+	auto value = (CFStringRef)CFLocaleGetIdentifier(cflocale);
+	CFStringGetCString(value, tl_localeBuf, 64, kCFStringEncodingUTF8);
+	CFRelease(cflocale);
+	return StringView(tl_localeBuf);
+}
 
 } // namespace stappler::platform
 

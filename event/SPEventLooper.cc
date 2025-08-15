@@ -64,14 +64,18 @@ struct Looper::Data : public memory::AllocPool {
 			return;
 		}
 
+		// Looper cleanup can cause app finalization, so, prevent in with
+		// initialize + terminate
+		memory::pool::initialize();
 		std::unique_lock lock(l->_mutex);
+
+		d->queue->poll();
 
 		auto tmp = sp::move(d->buses);
 		d->buses.clear();
 
 		for (auto &it : tmp) { it->invalidateLooper(l); }
 
-		auto q = d->queue;
 		if (d->threadPool) {
 			d->threadPool->cancel();
 			d->threadPool = nullptr;
@@ -90,25 +94,32 @@ struct Looper::Data : public memory::AllocPool {
 			log::debug("Looper", "Cleanup: ", thread::ThreadInfo::getThreadInfo()->name);
 		}
 
-		d->queue = nullptr;
-
-		q->cancel();
+		if (d->queue) {
+			auto q = d->queue.get();
+			q->cancel();
 #if SP_REF_DEBUG
-		if (q->getRef()->getReferenceCount() > 1) {
-			auto tmp = q->getRef();
-			q = nullptr;
-			d->queue = nullptr;
+			if (q->getRef()->getReferenceCount() > 1) {
+				auto tmp = q->getRef();
+				q = nullptr;
+				d->queue = nullptr;
 
-			tmp->foreachBacktrace([](uint64_t id, Time time, const std::vector<std::string> &vec) {
-				mem_std::StringStream stream;
-				stream << "[" << id << ":" << time.toHttp<memory::StandartInterface>() << "]:\n";
-				for (auto &it : vec) { stream << "\t" << it << "\n"; }
-				log::debug("event::Queue", stream.str());
-			});
-		}
-		d->queue = nullptr;
+				tmp->foreachBacktrace(
+						[](uint64_t id, Time time, const std::vector<std::string> &vec) {
+					mem_std::StringStream stream;
+					stream << "[" << id << ":" << time.toHttp<memory::StandartInterface>()
+						   << "]:\n";
+					for (auto &it : vec) { stream << "\t" << it << "\n"; }
+					log::debug("event::Queue", stream.str());
+				});
+			} else {
+				d->queue = nullptr;
+			}
+#else
+			d->queue = nullptr;
 #endif
+		}
 		lock.unlock();
+		memory::pool::terminate();
 	}
 
 	void attachBus(Bus *bus) {

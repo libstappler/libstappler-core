@@ -56,7 +56,7 @@ struct SP_PUBLIC KQueueData : public PlatformQueueData {
 	uint32_t wait(TimeInterval);
 	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
 
-	Status wakeup(WakeupFlags, TimeInterval);
+	Status wakeup(WakeupFlags);
 
 	void cancel();
 
@@ -87,6 +87,8 @@ public:
 	Status disarm(KQueueData *, KQueueTimerSource *);
 
 	void notify(KQueueData *, KQueueTimerSource *source, const NotifyData &);
+
+	virtual bool reset(TimerInfo &&) override;
 };
 
 struct SP_PUBLIC KQueueThreadSource {
@@ -112,6 +114,6 @@ protected:
 	std::mutex _mutex;
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_DARWIN_SPEVENT_KQUEUE_H_ */

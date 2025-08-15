@@ -32,7 +32,8 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 	if (hasFlag(info.engineMask, QueueEngine::KQueue)) {
 		// init kqueue classes
 
-		auto queue = new (memory::pool::acquire()) KQueueData(_info.queue, this, info, SignalsToIntercept);
+		auto queue = new (memory::pool::acquire())
+				KQueueData(_info.queue, this, info, SignalsToIntercept);
 		if (queue->_kqueueFd >= 0) {
 			_submit = [](void *ptr) { return reinterpret_cast<KQueueData *>(ptr)->submit(); };
 			_poll = [](void *ptr) { return reinterpret_cast<KQueueData *>(ptr)->poll(); };
@@ -42,8 +43,8 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
 				return reinterpret_cast<KQueueData *>(ptr)->run(ival, info.flags, info.timeout);
 			};
-			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
-				return reinterpret_cast<KQueueData *>( ptr)->wakeup(info.flags, info.timeout);
+			_wakeup = [](void *ptr, WakeupFlags flags) {
+				return reinterpret_cast<KQueueData *>(ptr)->wakeup(flags);
 			};
 			_cancel = [](void *ptr) { reinterpret_cast<KQueueData *>(ptr)->cancel(); };
 			_destroy = [](void *ptr) { delete reinterpret_cast<KQueueData *>(ptr); };
@@ -58,8 +59,10 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 				return Rc<KQueueThreadHandle>::create(&data->_kqueueThreadClass);
 			};
 
-			setupKQueueHandleClass<KQueueTimerHandle, KQueueTimerSource>(&_info, &_kqueueTimerClass, true);
-			setupKQueueHandleClass<KQueueThreadHandle, KQueueThreadSource>(&_info, &_kqueueThreadClass, true);
+			setupKQueueHandleClass<KQueueTimerHandle, KQueueTimerSource>(&_info, &_kqueueTimerClass,
+					true);
+			setupKQueueHandleClass<KQueueThreadHandle, KQueueThreadSource>(&_info,
+					&_kqueueThreadClass, true);
 
 			_platformQueue = queue;
 			_engine = QueueEngine::KQueue;
@@ -82,8 +85,8 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
 				return reinterpret_cast<RunLoopData *>(ptr)->run(ival, info.flags, info.timeout);
 			};
-			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
-				return reinterpret_cast<RunLoopData *>( ptr)->wakeup(info.flags, info.timeout);
+			_wakeup = [](void *ptr, WakeupFlags flags) {
+				return reinterpret_cast<RunLoopData *>(ptr)->wakeup(flags);
 			};
 			_cancel = [](void *ptr) { reinterpret_cast<RunLoopData *>(ptr)->cancel(); };
 			_destroy = [](void *ptr) { delete reinterpret_cast<RunLoopData *>(ptr); };
@@ -98,8 +101,10 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 				return Rc<RunLoopThreadHandle>::create(&data->_runloopThreadClass);
 			};
 
-			setupRunLoopHandleClass<RunLoopTimerHandle, RunLoopTimerSource>(&_info, &_runloopTimerClass, true);
-			setupRunLoopHandleClass<RunLoopThreadHandle, RunLoopThreadSource>(&_info, &_runloopThreadClass, true);
+			setupRunLoopHandleClass<RunLoopTimerHandle, RunLoopTimerSource>(&_info,
+					&_runloopTimerClass, true);
+			setupRunLoopHandleClass<RunLoopThreadHandle, RunLoopThreadSource>(&_info,
+					&_runloopThreadClass, true);
 
 			_platformQueue = runloop;
 			_engine = QueueEngine::RunLoop;
@@ -110,7 +115,7 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 	}
 }
 
-}
+} // namespace stappler::event
 
 namespace STAPPLER_VERSIONIZED stappler::event::platform {
 
@@ -121,5 +126,4 @@ Rc<QueueRef> getThreadQueue(QueueInfo &&info) {
 	return Queue::create(move(info));
 }
 
-}
-
+} // namespace stappler::event::platform

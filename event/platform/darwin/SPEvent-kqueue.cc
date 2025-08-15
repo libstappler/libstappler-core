@@ -20,10 +20,10 @@
  THE SOFTWARE.
  **/
 
-
 #include "SPEventQueue.h"
 #include "SPPlatformUnistd.h"
 #include "SPEvent-kqueue.h"
+#include "SPEvent-darwin.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -194,7 +194,7 @@ Status KQueueData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval 
 	return ctx.wakeupStatus;
 }
 
-Status KQueueData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
+Status KQueueData::wakeup(WakeupFlags flags) {
 	struct kevent signal;
 	EV_SET(&signal, reinterpret_cast<uintptr_t>(this), EVFILT_USER, 0,
 			NOTE_TRIGGER | (NOTE_FFLAGSMASK & toInt(flags)), 0, this);
@@ -342,6 +342,15 @@ void KQueueTimerHandle::notify(KQueueData *queue, KQueueTimerSource *source,
 	sendCompletion(current, _status == Status::Suspended ? Status::Ok : _status);
 }
 
+bool KQueueTimerHandle::reset(TimerInfo &&info) {
+	if (info.completion) {
+		_completion = move(info.completion);
+		_userdata = nullptr;
+	}
+
+	auto source = reinterpret_cast<KQueueTimerSource *>(_data);
+	return source->init(info) && Handle::reset();
+}
 
 bool KQueueThreadSource::init() { return true; }
 

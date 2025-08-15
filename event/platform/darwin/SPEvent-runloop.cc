@@ -21,6 +21,7 @@
  **/
 
 #include "SPEvent-runloop.h"
+#include "SPEvent-darwin.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -58,21 +59,23 @@ void RunLoopData::addTimer(RunLoopTimerHandle *handle, RunLoopTimerSource *sourc
 	auto interval = source->interval.toDoubleSeconds();
 
 	// set timer then run
-	CFRunLoopTimerContext context{.copyDescription = nullptr,
+	CFRunLoopTimerContext context{
+		.version = 0,
 		.info = handle,
-		.release = &RunLoopData_releaseTimer,
 		.retain = &RunLoopData_retainTimer,
-		.version = 0};
+		.release = &RunLoopData_releaseTimer,
+		.copyDescription = nullptr,
+	};
 
 	source->timer = CFRunLoopTimerCreate(kCFAllocatorDefault, init, interval, 0, 0,
 			&RunLoopData_performTimer, &context);
 
-	CFRunLoopAddTimer(_runLoop, source->timer, kCFRunLoopDefaultMode);
+	CFRunLoopAddTimer(_runLoop, source->timer, kCFRunLoopCommonModes);
 }
 
 void RunLoopData::removeTimer(RunLoopTimerHandle *handle, RunLoopTimerSource *source) {
 	if (source->timer) {
-		CFRunLoopRemoveTimer(_runLoop, source->timer, kCFRunLoopDefaultMode);
+		CFRunLoopRemoveTimer(_runLoop, source->timer, kCFRunLoopCommonModes);
 		CFRelease(source->timer);
 		source->timer = nullptr;
 	}
@@ -81,7 +84,7 @@ void RunLoopData::removeTimer(RunLoopTimerHandle *handle, RunLoopTimerSource *so
 void RunLoopData::trigger(Handle *handle, NotifyData notifyData) {
 	auto hRefId = handle->retain(); // protect handle from removal
 	auto qRefId = _queue->retain(); // protect self from removal
-	CFRunLoopPerformBlock(_runLoop, kCFRunLoopDefaultMode, ^{
+	CFRunLoopPerformBlock(_runLoop, kCFRunLoopCommonModes, ^{
 	  if (_runContext) {
 		  ++_runContext->nevents;
 	  }
@@ -89,6 +92,7 @@ void RunLoopData::trigger(Handle *handle, NotifyData notifyData) {
 	  handle->release(hRefId);
 	  _queue->release(qRefId);
 	});
+	CFRunLoopWakeUp(_runLoop);
 }
 
 uint32_t RunLoopData::enter(RunContext *ctx, TimeInterval ival) {
@@ -122,24 +126,26 @@ uint32_t RunLoopData::wait(TimeInterval ival) {
 	ctx.mode = RunContext::Wait;
 
 	// set timer then run
-	CFRunLoopTimerContext context{.copyDescription = nullptr,
+	CFRunLoopTimerContext context{
+		.version = 0,
 		.info = &ctx,
-		.release = nullptr,
 		.retain = nullptr,
-		.version = 0};
+		.release = nullptr,
+		.copyDescription = nullptr,
+	};
 
 	CFRunLoopTimerRef timer = nullptr;
 	if (ival && ival != TimeInterval::Infinite) {
 		timer = CFRunLoopTimerCreate(kCFAllocatorDefault,
 				CFAbsoluteTimeGetCurrent() + ival.toDoubleSeconds(), 0, 0, 0,
 				&RunLoopData_terminate, &context);
-		CFRunLoopAddTimer(_runLoop, timer, kCFRunLoopDefaultMode);
+		CFRunLoopAddTimer(_runLoop, timer, kCFRunLoopCommonModes);
 	}
 
 	auto ret = enter(&ctx, ival);
 
 	if (timer) {
-		CFRunLoopRemoveTimer(_runLoop, timer, kCFRunLoopDefaultMode);
+		CFRunLoopRemoveTimer(_runLoop, timer, kCFRunLoopCommonModes);
 		CFRelease(timer);
 	}
 
@@ -152,33 +158,35 @@ Status RunLoopData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval
 	ctx.runWakeupFlags = wakeupFlags;
 
 	// set timer then run
-	CFRunLoopTimerContext context{.copyDescription = nullptr,
+	CFRunLoopTimerContext context{
+		.version = 0,
 		.info = &ctx,
-		.release = nullptr,
 		.retain = nullptr,
-		.version = 0};
+		.release = nullptr,
+		.copyDescription = nullptr,
+	};
 
 	CFRunLoopTimerRef timer = nullptr;
 	if (ival && ival != TimeInterval::Infinite) {
 		timer = CFRunLoopTimerCreate(kCFAllocatorDefault,
 				CFAbsoluteTimeGetCurrent() + ival.toDoubleSeconds(), 0, 0, 0,
 				&RunLoopData_terminate, &context);
-		CFRunLoopAddTimer(_runLoop, timer, kCFRunLoopDefaultMode);
+		CFRunLoopAddTimer(_runLoop, timer, kCFRunLoopCommonModes);
 	}
 
 	while (ctx.state == RunContext::Running) { enter(&ctx, ival); }
 
 	if (timer) {
-		CFRunLoopRemoveTimer(_runLoop, timer, kCFRunLoopDefaultMode);
+		CFRunLoopRemoveTimer(_runLoop, timer, kCFRunLoopCommonModes);
 		CFRelease(timer);
 	}
 
 	return ctx.wakeupStatus;
 }
 
-Status RunLoopData::wakeup(WakeupFlags flags, TimeInterval timeout) {
+Status RunLoopData::wakeup(WakeupFlags flags) {
 	auto refId = _queue->retain();
-	CFRunLoopPerformBlock(_runLoop, kCFRunLoopDefaultMode, ^{
+	CFRunLoopPerformBlock(_runLoop, kCFRunLoopCommonModes, ^{
 	  stopContext(nullptr, flags, true);
 	  _queue->release(refId);
 	});
@@ -186,11 +194,14 @@ Status RunLoopData::wakeup(WakeupFlags flags, TimeInterval timeout) {
 }
 
 void RunLoopData::cancel() {
-	auto refId = _queue->retain();
-	CFRunLoopPerformBlock(_runLoop, kCFRunLoopDefaultMode, ^{
-	  stopRootContext(WakeupFlags::ContextDefault, true);
-	  _queue->release(refId);
-	});
+	// we do not need to explicitly stop RunContext, if we on main thread, and we don't have one
+	if (_data->_threadId != std::this_thread::get_id() || _runContext) {
+		auto refId = _queue->retain();
+		CFRunLoopPerformBlock(_runLoop, kCFRunLoopCommonModes, ^{
+		  stopRootContext(WakeupFlags::ContextDefault, true);
+		  _queue->release(refId);
+		});
+	}
 }
 
 RunLoopData::RunLoopData(QueueRef *q, Queue::Data *data, const QueueInfo &info)
@@ -201,9 +212,16 @@ RunLoopData::RunLoopData(QueueRef *q, Queue::Data *data, const QueueInfo &info)
 	};
 
 	_runLoop = CFRunLoopGetCurrent();
+	_runMode = CFStringCreateWithCString(nullptr, "org.stappler.event.DefaultRunMode",
+			kCFStringEncodingUTF8);
+
+	CFRunLoopAddCommonMode(_runLoop, _runMode);
 }
 
-RunLoopData::~RunLoopData() { _runLoop = nullptr; }
+RunLoopData::~RunLoopData() {
+	CFRelease(_runMode);
+	_runLoop = nullptr;
+}
 
 bool RunLoopTimerSource::init(const TimerInfo &info) {
 	timeout = info.timeout;
@@ -277,6 +295,16 @@ void RunLoopTimerHandle::notify(RunLoopData *queue, RunLoopTimerSource *source,
 	}
 
 	sendCompletion(current, _status == Status::Suspended ? Status::Ok : _status);
+}
+
+bool RunLoopTimerHandle::reset(TimerInfo &&info) {
+	if (info.completion) {
+		_completion = move(info.completion);
+		_userdata = nullptr;
+	}
+
+	auto source = reinterpret_cast<RunLoopTimerSource *>(_data);
+	return source->init(info) && Handle::reset();
 }
 
 bool RunLoopThreadSource::init() { return true; }

@@ -29,15 +29,19 @@
 #include "fileline.c"
 #include "backtrace.c"
 #include "state.c"
+#include "dwarf.c"
 
 #if LINUX
 #include "posix.c"
-#include "dwarf.c"
 #include "elf.c"
 #endif
 
 #if ANDROID
 #include "posix.c"
-#include "dwarf.c"
 #include "elf.c"
+#endif
+
+#if MACOS
+#include "posix.c"
+#include "macho.c"
 #endif

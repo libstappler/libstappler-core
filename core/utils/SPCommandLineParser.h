@@ -125,6 +125,8 @@ public:
 
 	void describe(const Callback<void(StringView)> &) const;
 
+	void swap(CommandLineParserBase &);
+
 protected:
 	size_t parseStringPattern(void *output, const CommandLinePatternData &pattern, StringView str,
 			bool &success) const;
@@ -173,6 +175,15 @@ public:
 			const Callback<void(Output &, StringView)> &argCallback = nullptr) const;
 
 	using CommandLineParserBase::describe;
+
+	CommandLineParser(const CommandLineParser &other) = delete;
+	CommandLineParser &operator=(const CommandLineParser &other) = delete;
+
+	CommandLineParser(CommandLineParser &&other) { swap(other); }
+	CommandLineParser &operator=(CommandLineParser &&other) {
+		swap(other);
+		return *this;
+	}
 };
 
 template <typename Output>

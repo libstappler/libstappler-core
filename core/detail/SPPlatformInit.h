@@ -326,4 +326,16 @@ using iter_reference_t = typename T::reference;
 
 #endif
 
+#if DEBUG
+#if defined(__clang__)
+#define SP_BREAKPOINT() __builtin_debugtrap()
+#elif defined(__GNUC__)
+#define SP_BREAKPOINT() raise(SIGTRAP)
+#else
+#define SP_BREAKPOINT()
+#endif
+#else
+#define SP_BREAKPOINT()
+#endif
+
 #endif /* CORE_CORE_DETAIL_SPPLATFORMDETECTION_H_ */

@@ -158,8 +158,12 @@ bool CommandLinePatternParsingData::parseWhitespace() {
 }
 
 CommandLineParserBase::~CommandLineParserBase() {
-	memory::pool::destroy(_pool);
-	memory::allocator::destroy(_alloc);
+	if (_pool) {
+		memory::pool::destroy(_pool);
+	}
+	if (_alloc) {
+		memory::allocator::destroy(_alloc);
+	}
 	memory::pool::terminate();
 }
 
@@ -267,6 +271,14 @@ void CommandLineParserBase::describe(const Callback<void(StringView)> &out) cons
 
 		out << "\n     - " << it->description << "\n";
 	}
+}
+
+void CommandLineParserBase::swap(CommandLineParserBase &other) {
+	std::swap(_alloc, other._alloc);
+	std::swap(_pool, other._pool);
+	std::swap(_stringPatterns, other._stringPatterns);
+	std::swap(_charPatterns, other._charPatterns);
+	std::swap(_options, other._options);
 }
 
 template <char C>

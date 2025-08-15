@@ -102,6 +102,8 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	ThreadCallback _thread = nullptr;
 	ListenHandleCallback _listenHandle = nullptr;
 
+	std::thread::id _threadId;
+
 	bool isValid() const { return _platformQueue != nullptr; }
 
 	bool isRunning() const { return _running; }
