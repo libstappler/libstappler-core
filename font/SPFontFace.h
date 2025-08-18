@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +27,8 @@
 #include "SPFontTextLayout.h"
 #include "SPRef.h"
 
-typedef struct FT_LibraryRec_ * FT_Library;
-typedef struct FT_FaceRec_ * FT_Face;
+typedef struct FT_LibraryRec_ *FT_Library;
+typedef struct FT_FaceRec_ *FT_Face;
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
@@ -65,7 +66,8 @@ class SP_PUBLIC FontFaceObject : public Ref, public InterfaceObject<memory::Stan
 public:
 	virtual ~FontFaceObject();
 
-	bool init(StringView, const Rc<FontFaceData> &, FT_Library, FT_Face, const FontSpecializationVector &, uint16_t);
+	bool init(StringView, const Rc<FontFaceData> &, FT_Library, FT_Face,
+			const FontSpecializationVector &, uint16_t);
 
 	StringView getName() const { return _name; }
 	uint16_t getId() const { return _id; }
@@ -83,6 +85,7 @@ public:
 	bool addRequiredChar(char32_t);
 
 	Interface::VectorType<char32_t> getRequiredChars() const;
+	size_t getRequiredCharsCount() const;
 
 	CharShape getChar(char16_t c) const;
 	int16_t getKerningAmount(char16_t first, char16_t second) const;
@@ -113,8 +116,10 @@ public:
 	virtual ~FontFaceSet() { }
 	FontFaceSet() { }
 
-	bool init(String &&, StringView family, FontSpecializationVector &&, Rc<FontFaceData> &&data, FontLibrary *);
-	bool init(String &&, StringView family, FontSpecializationVector &&, Vector<Rc<FontFaceData>> &&data, FontLibrary *);
+	bool init(String &&, StringView family, FontSpecializationVector &&, Rc<FontFaceData> &&data,
+			FontLibrary *);
+	bool init(String &&, StringView family, FontSpecializationVector &&,
+			Vector<Rc<FontFaceData>> &&data, FontLibrary *);
 
 	void touch(uint64_t clock, bool persistent);
 
@@ -139,7 +144,7 @@ public:
 	Metrics getMetrics() const;
 	CharShape getChar(char16_t, uint16_t &face) const;
 
-	size_t getTexturesCount() const { return _texturesCount; }
+	size_t getRequiredCharsCount() const;
 
 	bool addTextureChars(SpanView<CharLayoutData>) const;
 
@@ -161,6 +166,6 @@ protected:
 	mutable std::shared_mutex _mutex;
 };
 
-}
+} // namespace stappler::font
 
 #endif /* CORE_FONT_XLFONTFACE_H_ */

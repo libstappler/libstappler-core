@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +38,8 @@ SPUNUSED static std::unique_lock<std::mutex> lockFormatList();
 SPUNUSED static void addCustomFormat(BitmapFormat &&fmt);
 SPUNUSED static const std::vector<BitmapFormat *> &getCustomFormats();
 
-static Pair<FileFormat, StringView> _loadData(BitmapWriter &w, const uint8_t * data, size_t dataLen) {
+static Pair<FileFormat, StringView> _loadData(BitmapWriter &w, const uint8_t *data,
+		size_t dataLen) {
 	for (int i = 0; i < toInt(FileFormat::Custom); ++i) {
 		auto &fmt = getDefaultFormat(i);
 		if (fmt.is(data, dataLen) && fmt.isReadable()) {
@@ -79,7 +81,8 @@ struct BitmapStdTarget {
 	const StrideFn *strideFn;
 };
 
-static void _makeBitmapWriter(BitmapWriter &w, BitmapPoolTarget *target, BitmapTemplate<memory::PoolInterface> &bmp) {
+static void _makeBitmapWriter(BitmapWriter &w, BitmapPoolTarget *target,
+		const BitmapTemplate<memory::PoolInterface> &bmp) {
 	w.target = target;
 	w.color = bmp.format();
 	w.alpha = bmp.alpha();
@@ -88,36 +91,33 @@ static void _makeBitmapWriter(BitmapWriter &w, BitmapPoolTarget *target, BitmapT
 	w.stride = bmp.stride();
 
 	if (target && target->strideFn) {
-		w.getStride = [] (void *ptr, PixelFormat f, uint32_t w) {
+		w.getStride = [](void *ptr, PixelFormat f, uint32_t w) {
 			return (*((BitmapPoolTarget *)ptr)->strideFn)(f, w);
 		};
 	} else {
 		w.getStride = nullptr;
 	}
 
-	w.push = [] (void *ptr, const uint8_t *data, uint32_t size) {
+	w.push = [](void *ptr, const uint8_t *data, uint32_t size) {
 		auto bytes = ((BitmapPoolTarget *)ptr)->bytes;
 		auto origSize = bytes->size();
 		bytes->resize(origSize + size);
 		memcpy(bytes->data() + origSize, data, size);
 	};
-	w.resize = [] (void *ptr, uint32_t size) {
-		((BitmapPoolTarget *)ptr)->bytes->resize(size);
-	};
-	w.getData = [] (void *ptr, uint32_t location) {
+	w.resize = [](void *ptr, uint32_t size) { ((BitmapPoolTarget *)ptr)->bytes->resize(size); };
+	w.getData = [](void *ptr, uint32_t location) {
 		return ((BitmapPoolTarget *)ptr)->bytes->data() + location;
 	};
-	w.assign = [] (void *ptr, const uint8_t *data, uint32_t size) {
+	w.assign = [](void *ptr, const uint8_t *data, uint32_t size) {
 		auto bytes = ((BitmapPoolTarget *)ptr)->bytes;
 		bytes->resize(size);
 		memcpy(bytes->data(), data, size);
 	};
-	w.clear = [] (void *ptr) {
-		((BitmapPoolTarget *)ptr)->bytes->clear();
-	};
+	w.clear = [](void *ptr) { ((BitmapPoolTarget *)ptr)->bytes->clear(); };
 }
 
-static void _makeBitmapWriter(BitmapWriter &w, BitmapStdTarget *target, BitmapTemplate<memory::StandartInterface> &bmp) {
+static void _makeBitmapWriter(BitmapWriter &w, BitmapStdTarget *target,
+		const BitmapTemplate<memory::StandartInterface> &bmp) {
 	w.target = target;
 	w.color = bmp.format();
 	w.alpha = bmp.alpha();
@@ -126,38 +126,35 @@ static void _makeBitmapWriter(BitmapWriter &w, BitmapStdTarget *target, BitmapTe
 	w.stride = bmp.stride();
 
 	if (target && target->strideFn) {
-		w.getStride = [] (void *ptr, PixelFormat f, uint32_t w) {
+		w.getStride = [](void *ptr, PixelFormat f, uint32_t w) {
 			return (*((BitmapPoolTarget *)ptr)->strideFn)(f, w);
 		};
 	} else {
 		w.getStride = nullptr;
 	}
 
-	w.push = [] (void *ptr, const uint8_t *data, uint32_t size) {
+	w.push = [](void *ptr, const uint8_t *data, uint32_t size) {
 		auto bytes = ((BitmapStdTarget *)ptr)->bytes;
 		auto origSize = bytes->size();
 		bytes->resize(origSize + size);
 		memcpy(bytes->data() + origSize, data, size);
 	};
-	w.resize = [] (void *ptr, uint32_t size) {
-		((BitmapStdTarget *)ptr)->bytes->resize(size);
-	};
-	w.getData = [] (void *ptr, uint32_t location) {
+	w.resize = [](void *ptr, uint32_t size) { ((BitmapStdTarget *)ptr)->bytes->resize(size); };
+	w.getData = [](void *ptr, uint32_t location) {
 		return ((BitmapStdTarget *)ptr)->bytes->data() + location;
 	};
-	w.assign = [] (void *ptr, const uint8_t *data, uint32_t size) {
+	w.assign = [](void *ptr, const uint8_t *data, uint32_t size) {
 		auto bytes = ((BitmapStdTarget *)ptr)->bytes;
 		bytes->resize(size);
 		memcpy(bytes->data(), data, size);
 	};
-	w.clear = [] (void *ptr) {
-		((BitmapStdTarget *)ptr)->bytes->clear();
-	};
+	w.clear = [](void *ptr) { ((BitmapStdTarget *)ptr)->bytes->clear(); };
 }
 
 template <>
-bool BitmapTemplate<memory::PoolInterface>::loadData(const uint8_t * data, size_t dataLen, const StrideFn &strideFn) {
-	BitmapPoolTarget target { &_data, strideFn ? &strideFn : nullptr };
+bool BitmapTemplate<memory::PoolInterface>::loadData(const uint8_t *data, size_t dataLen,
+		const StrideFn &strideFn) {
+	BitmapPoolTarget target{&_data, strideFn ? &strideFn : nullptr};
 	BitmapWriter w;
 	_makeBitmapWriter(w, &target, *this);
 	auto ret = _loadData(w, data, dataLen);
@@ -175,8 +172,9 @@ bool BitmapTemplate<memory::PoolInterface>::loadData(const uint8_t * data, size_
 }
 
 template <>
-bool BitmapTemplate<memory::StandartInterface>::loadData(const uint8_t * data, size_t dataLen, const StrideFn &strideFn) {
-	BitmapStdTarget target { &_data, strideFn ? &strideFn : nullptr };
+bool BitmapTemplate<memory::StandartInterface>::loadData(const uint8_t *data, size_t dataLen,
+		const StrideFn &strideFn) {
+	BitmapStdTarget target{&_data, strideFn ? &strideFn : nullptr};
 	BitmapWriter w;
 	_makeBitmapWriter(w, &target, *this);
 	auto ret = _loadData(w, data, dataLen);
@@ -194,7 +192,8 @@ bool BitmapTemplate<memory::StandartInterface>::loadData(const uint8_t * data, s
 }
 
 template <>
-bool BitmapTemplate<memory::StandartInterface>::save(FileFormat fmt, const FileInfo &path, bool invert) {
+bool BitmapTemplate<memory::StandartInterface>::save(FileFormat fmt, const FileInfo &path,
+		bool invert) {
 	BitmapWriter w;
 	_makeBitmapWriter(w, nullptr, *this);
 	auto &support = getDefaultFormat(toInt(fmt));
@@ -202,14 +201,14 @@ bool BitmapTemplate<memory::StandartInterface>::save(FileFormat fmt, const FileI
 		return support.save(path, _data.data(), w, invert);
 	} else {
 		// fallback to png
-		return getDefaultFormat(toInt(FileFormat::Png))
-			.save(path, _data.data(), w, invert);
+		return getDefaultFormat(toInt(FileFormat::Png)).save(path, _data.data(), w, invert);
 	}
 	return false;
 }
 
 template <>
-bool BitmapTemplate<memory::PoolInterface>::save(FileFormat fmt, const FileInfo &path, bool invert) {
+bool BitmapTemplate<memory::PoolInterface>::save(FileFormat fmt, const FileInfo &path,
+		bool invert) {
 	BitmapWriter w;
 	_makeBitmapWriter(w, nullptr, *this);
 	auto &support = getDefaultFormat(toInt(fmt));
@@ -217,14 +216,14 @@ bool BitmapTemplate<memory::PoolInterface>::save(FileFormat fmt, const FileInfo 
 		return support.save(path, _data.data(), w, invert);
 	} else {
 		// fallback to png
-		return getDefaultFormat(toInt(FileFormat::Png))
-			.save(path, _data.data(), w, invert);
+		return getDefaultFormat(toInt(FileFormat::Png)).save(path, _data.data(), w, invert);
 	}
 	return false;
 }
 
 template <>
-bool BitmapTemplate<memory::StandartInterface>::save(StringView name, const FileInfo &path, bool invert) {
+bool BitmapTemplate<memory::StandartInterface>::save(StringView name, const FileInfo &path,
+		bool invert) {
 	BitmapFormat::save_fn fn = nullptr;
 
 	auto lock = lockFormatList();
@@ -246,7 +245,8 @@ bool BitmapTemplate<memory::StandartInterface>::save(StringView name, const File
 }
 
 template <>
-bool BitmapTemplate<memory::PoolInterface>::save(StringView name, const FileInfo &path, bool invert) {
+bool BitmapTemplate<memory::PoolInterface>::save(StringView name, const FileInfo &path,
+		bool invert) {
 	BitmapFormat::save_fn fn = nullptr;
 
 	auto lock = lockFormatList();
@@ -268,9 +268,10 @@ bool BitmapTemplate<memory::PoolInterface>::save(StringView name, const FileInfo
 }
 
 template <>
-auto BitmapTemplate<memory::StandartInterface>::write(FileFormat fmt, bool invert) -> memory::StandartInterface::BytesType {
+auto BitmapTemplate<memory::StandartInterface>::write(FileFormat fmt, bool invert) const
+		-> memory::StandartInterface::BytesType {
 	memory::StandartInterface::BytesType ret;
-	BitmapStdTarget target { &ret, nullptr };
+	BitmapStdTarget target{&ret, nullptr};
 	BitmapWriter w;
 	_makeBitmapWriter(w, &target, *this);
 
@@ -284,9 +285,10 @@ auto BitmapTemplate<memory::StandartInterface>::write(FileFormat fmt, bool inver
 }
 
 template <>
-auto BitmapTemplate<memory::PoolInterface>::write(FileFormat fmt, bool invert) -> memory::PoolInterface::BytesType {
+auto BitmapTemplate<memory::PoolInterface>::write(FileFormat fmt, bool invert) const
+		-> memory::PoolInterface::BytesType {
 	memory::PoolInterface::BytesType ret;
-	BitmapPoolTarget target { &ret, nullptr };
+	BitmapPoolTarget target{&ret, nullptr};
 	BitmapWriter w;
 	_makeBitmapWriter(w, &target, *this);
 
@@ -300,7 +302,8 @@ auto BitmapTemplate<memory::PoolInterface>::write(FileFormat fmt, bool invert) -
 }
 
 template <>
-auto BitmapTemplate<memory::StandartInterface>::write(StringView name, bool invert) -> memory::StandartInterface::BytesType {
+auto BitmapTemplate<memory::StandartInterface>::write(StringView name, bool invert) const
+		-> memory::StandartInterface::BytesType {
 	BitmapFormat::write_fn fn = nullptr;
 
 	auto lock = lockFormatList();
@@ -315,7 +318,7 @@ auto BitmapTemplate<memory::StandartInterface>::write(StringView name, bool inve
 
 	if (fn) {
 		memory::StandartInterface::BytesType ret;
-		BitmapStdTarget target { &ret, nullptr };
+		BitmapStdTarget target{&ret, nullptr};
 		BitmapWriter w;
 		_makeBitmapWriter(w, &target, *this);
 		if (fn(_data.data(), w, invert)) {
@@ -326,7 +329,8 @@ auto BitmapTemplate<memory::StandartInterface>::write(StringView name, bool inve
 }
 
 template <>
-auto BitmapTemplate<memory::PoolInterface>::write(StringView name, bool invert) -> memory::PoolInterface::BytesType {
+auto BitmapTemplate<memory::PoolInterface>::write(StringView name, bool invert) const
+		-> memory::PoolInterface::BytesType {
 	BitmapFormat::write_fn fn = nullptr;
 
 	auto lock = lockFormatList();
@@ -341,7 +345,7 @@ auto BitmapTemplate<memory::PoolInterface>::write(StringView name, bool invert) 
 
 	if (fn) {
 		memory::PoolInterface::BytesType ret;
-		BitmapPoolTarget target { &ret, nullptr };
+		BitmapPoolTarget target{&ret, nullptr};
 		BitmapWriter w;
 		_makeBitmapWriter(w, &target, *this);
 		if (fn(_data.data(), w, invert)) {
@@ -351,4 +355,4 @@ auto BitmapTemplate<memory::PoolInterface>::write(StringView name, bool invert) 
 	return memory::PoolInterface::BytesType();
 }
 
-}
+} // namespace stappler::bitmap

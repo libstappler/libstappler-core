@@ -1,5 +1,6 @@
 /**
 Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1154,6 +1155,36 @@ template <typename M>
 inline bool StringViewUtf8::is() const {
 	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
 			&& M::match(unicode::utf8Decode32(ptr));
+}
+
+inline char32_t StringViewUtf8::getChar() const {
+	if (!empty()) {
+		uint8_t off = 0;
+		auto ret = unicode::utf8Decode32(this->ptr, off);
+		if (off > len) {
+			// invalid codepoint in view
+			return 0;
+		}
+		return ret;
+	} else {
+		return 0;
+	}
+}
+
+inline char32_t StringViewUtf8::readChar() {
+	if (!empty()) {
+		uint8_t off = 0;
+		auto ret = unicode::utf8Decode32(this->ptr, off);
+		if (off > len) {
+			// invalid codepoint in view
+			offset(len);
+			return 0;
+		}
+		offset(off);
+		return ret;
+	} else {
+		return 0;
+	}
 }
 
 inline auto StringViewUtf8::letter() const -> Self {

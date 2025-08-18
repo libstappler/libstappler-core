@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -35,12 +36,11 @@
 namespace STAPPLER_VERSIONIZED stappler::font {
 
 static constexpr uint32_t getAxisTag(char c1, char c2, char c3, char c4) {
-	return uint32_t(c1 & 0xFF) << 24 | uint32_t(c2 & 0xFF) << 16 | uint32_t(c3 & 0xFF) << 8 | uint32_t(c4 & 0xFF);
+	return uint32_t(c1 & 0xFF) << 24 | uint32_t(c2 & 0xFF) << 16 | uint32_t(c3 & 0xFF) << 8
+			| uint32_t(c4 & 0xFF);
 }
 
-static constexpr uint32_t getAxisTag(const char c[4]) {
-	return getAxisTag(c[0], c[1], c[2], c[3]);
-}
+static constexpr uint32_t getAxisTag(const char c[4]) { return getAxisTag(c[0], c[1], c[2], c[3]); }
 
 static CharGroupId getCharGroupForChar(char16_t c) {
 	using namespace chars;
@@ -187,7 +187,7 @@ void FontFaceData::inspectVariableFont(FontLayoutParameters params, FT_Library l
 	_variations.grade = params.fontGrade;
 
 	if (masters) {
-		for (FT_UInt i = 0; i < masters->num_axis; ++ i) {
+		for (FT_UInt i = 0; i < masters->num_axis; ++i) {
 			auto tag = masters->axis[i].tag;
 			if (tag == getAxisTag("wght")) {
 				_variations.axisMask |= FontVariableAxis::Weight;
@@ -225,17 +225,17 @@ void FontFaceData::inspectVariableFont(FontLayoutParameters params, FT_Library l
 	_params = params;
 }
 
-BytesView FontFaceData::getView() const {
-	return _view;
-}
+BytesView FontFaceData::getView() const { return _view; }
 
-FontSpecializationVector FontFaceData::getSpecialization(const FontSpecializationVector &vec) const {
+FontSpecializationVector FontFaceData::getSpecialization(
+		const FontSpecializationVector &vec) const {
 	return _variations.getSpecialization(vec);
 }
 
 FontFaceObject::~FontFaceObject() { }
 
-bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Library lib, FT_Face face, const FontSpecializationVector &spec, uint16_t id) {
+bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Library lib,
+		FT_Face face, const FontSpecializationVector &spec, uint16_t id) {
 	auto err = FT_Select_Charmap(face, FT_ENCODING_UNICODE);
 	if (err != FT_Err_Ok) {
 		return false;
@@ -249,7 +249,7 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Libr
 		FT_Get_MM_Var(face, &masters);
 
 		if (masters) {
-			for (FT_UInt i = 0; i < masters->num_axis; ++ i) {
+			for (FT_UInt i = 0; i < masters->num_axis; ++i) {
 				auto tag = masters->axis[i].tag;
 				if (tag == getAxisTag("wght")) {
 					vector.emplace_back(var.weight.clamp(spec.fontWeight).get() << 16);
@@ -316,13 +316,15 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Libr
 	return true;
 }
 
-bool FontFaceObject::acquireTexture(char32_t theChar, const Callback<void(const CharTexture &)> &cb) {
+bool FontFaceObject::acquireTexture(char32_t theChar,
+		const Callback<void(const CharTexture &)> &cb) {
 	std::unique_lock lock(_faceMutex);
 
 	return acquireTextureUnsafe(theChar, cb);
 }
 
-bool FontFaceObject::acquireTextureUnsafe(char32_t theChar, const Callback<void(const CharTexture &)> &cb) {
+bool FontFaceObject::acquireTextureUnsafe(char32_t theChar,
+		const Callback<void(const CharTexture &)> &cb) {
 	int glyph_index = FT_Get_Char_Index(_face, theChar);
 	if (!glyph_index) {
 		return false;
@@ -337,28 +339,28 @@ bool FontFaceObject::acquireTextureUnsafe(char32_t theChar, const Callback<void(
 
 	if (_face->glyph->bitmap.buffer != nullptr) {
 		if (_face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_GRAY) {
-			cb(CharTexture{theChar,
-				static_cast<int16_t>(_face->glyph->metrics.horiBearingX >> 6),
-				static_cast<int16_t>(- (_face->glyph->metrics.horiBearingY >> 6)),
+			cb(CharTexture{theChar, static_cast<int16_t>(_face->glyph->metrics.horiBearingX >> 6),
+				static_cast<int16_t>(-(_face->glyph->metrics.horiBearingY >> 6)),
 				static_cast<uint16_t>(_face->glyph->metrics.width >> 6),
 				static_cast<uint16_t>(_face->glyph->metrics.height >> 6),
 				static_cast<uint16_t>(_face->glyph->bitmap.width),
 				static_cast<uint16_t>(_face->glyph->bitmap.rows),
-				_face->glyph->bitmap.pitch ? int16_t(_face->glyph->bitmap.pitch) : int16_t(_face->glyph->bitmap.width),
-				_id,
-				_face->glyph->bitmap.buffer
-			});
+				_face->glyph->bitmap.pitch ? int16_t(_face->glyph->bitmap.pitch)
+										   : int16_t(_face->glyph->bitmap.width),
+				_id, _face->glyph->bitmap.buffer});
 			return true;
 		}
 	} else {
 		if (!chars::isspace(theChar) && theChar != char16_t(0x0A)) {
-			log::format(log::Warn, "Font", "error: no bitmap for (%d) '%s'", theChar, string::toUtf8<Interface>(theChar).data());
+			log::format(log::Warn, "Font", "error: no bitmap for (%d) '%s'", theChar,
+					string::toUtf8<Interface>(theChar).data());
 		}
 	}
 	return false;
 }
 
-bool FontFaceObject::addChars(const Vector<char32_t> &chars, bool expand, Vector<char32_t> *failed) {
+bool FontFaceObject::addChars(const Vector<char32_t> &chars, bool expand,
+		Vector<char32_t> *failed) {
 	bool updated = false;
 	uint32_t mask = 0;
 
@@ -391,20 +393,22 @@ bool FontFaceObject::addChars(const Vector<char32_t> &chars, bool expand, Vector
 bool FontFaceObject::addCharGroup(CharGroupId g, Vector<char32_t> *failed) {
 	bool updated = false;
 	using namespace chars;
-	auto f = [&, this] (char32_t c) {
+	auto f = [&, this](char32_t c) {
 		if (!addChar(c, updated) && failed) {
 			mem_std::emplace_ordered(*failed, c);
 		}
 	};
 
 	switch (g) {
-	case CharGroupId::Numbers: CharGroup<char32_t, CharGroupId::Numbers>::foreach(f); break;
-	case CharGroupId::Latin: CharGroup<char32_t, CharGroupId::Latin>::foreach(f); break;
-	case CharGroupId::Cyrillic: CharGroup<char32_t, CharGroupId::Cyrillic>::foreach(f); break;
-	case CharGroupId::Currency: CharGroup<char32_t, CharGroupId::Currency>::foreach(f); break;
-	case CharGroupId::GreekBasic: CharGroup<char32_t, CharGroupId::GreekBasic>::foreach(f); break;
-	case CharGroupId::Math: CharGroup<char32_t, CharGroupId::Math>::foreach(f); break;
-	case CharGroupId::TextPunctuation: CharGroup<char32_t, CharGroupId::TextPunctuation>::foreach(f); break;
+	case CharGroupId::Numbers: CharGroup<char32_t, CharGroupId::Numbers>::foreach (f); break;
+	case CharGroupId::Latin: CharGroup<char32_t, CharGroupId::Latin>::foreach (f); break;
+	case CharGroupId::Cyrillic: CharGroup<char32_t, CharGroupId::Cyrillic>::foreach (f); break;
+	case CharGroupId::Currency: CharGroup<char32_t, CharGroupId::Currency>::foreach (f); break;
+	case CharGroupId::GreekBasic: CharGroup<char32_t, CharGroupId::GreekBasic>::foreach (f); break;
+	case CharGroupId::Math: CharGroup<char32_t, CharGroupId::Math>::foreach (f); break;
+	case CharGroupId::TextPunctuation:
+		CharGroup<char32_t, CharGroupId::TextPunctuation>::foreach (f);
+		break;
 	default: break;
 	}
 	return updated;
@@ -418,6 +422,11 @@ bool FontFaceObject::addRequiredChar(char32_t ch) {
 auto FontFaceObject::getRequiredChars() const -> Vector<char32_t> {
 	std::unique_lock lock(_requiredMutex);
 	return _required;
+}
+
+size_t FontFaceObject::getRequiredCharsCount() const {
+	std::unique_lock lock(_requiredMutex);
+	return _required.size();
 }
 
 CharShape FontFaceObject::getChar(char16_t c) const {
@@ -484,20 +493,22 @@ bool FontFaceObject::addChar(char16_t theChar, bool &updated) {
 	}*/
 
 	// store result in the passed rectangle
-	_chars.emplace(theChar, CharShape{theChar,
-		//static_cast<int16_t>(_face->glyph->metrics.horiBearingX >> 6),
-		//static_cast<int16_t>(- (_face->glyph->metrics.horiBearingY >> 6)),
-		static_cast<uint16_t>(advance >> 16),
-		//static_cast<uint16_t>(_face->glyph->metrics.width >> 6),
-		//static_cast<uint16_t>(_face->glyph->metrics.height >> 6)
-		});
+	_chars.emplace(theChar,
+			CharShape{
+				theChar,
+				//static_cast<int16_t>(_face->glyph->metrics.horiBearingX >> 6),
+				//static_cast<int16_t>(- (_face->glyph->metrics.horiBearingY >> 6)),
+				static_cast<uint16_t>(advance >> 16),
+				//static_cast<uint16_t>(_face->glyph->metrics.width >> 6),
+				//static_cast<uint16_t>(_face->glyph->metrics.height >> 6)
+			});
 
 	if (!chars::isspace(theChar)) {
 		updated = true;
 	}
 
 	if (FT_HAS_KERNING(_face)) {
-		_chars.foreach([&, this] (const CharShape & it) {
+		_chars.foreach ([&, this](const CharShape &it) {
 			if (it.charID == 0 || it.charID == char16_t(0xFFFF)) {
 				return;
 			}
@@ -537,10 +548,12 @@ bool FontFaceObject::addChar(char16_t theChar, bool &updated) {
 }
 
 auto FontFaceSet::constructName(StringView family, const FontSpecializationVector &vec) -> String {
-	return FontParameters::getFontConfigName<Interface>(family, vec.fontSize, vec.fontStyle, vec.fontWeight, vec.fontStretch, vec.fontGrade, FontVariant::Normal, false);
+	return FontParameters::getFontConfigName<Interface>(family, vec.fontSize, vec.fontStyle,
+			vec.fontWeight, vec.fontStretch, vec.fontGrade, FontVariant::Normal, false);
 }
 
-bool FontFaceSet::init(String &&name, StringView family, FontSpecializationVector &&spec, Rc<FontFaceData> &&data, FontLibrary *c) {
+bool FontFaceSet::init(String &&name, StringView family, FontSpecializationVector &&spec,
+		Rc<FontFaceData> &&data, FontLibrary *c) {
 	_name = sp::move(name);
 	_family = family.str<Interface>();
 	_spec = sp::move(spec);
@@ -554,7 +567,8 @@ bool FontFaceSet::init(String &&name, StringView family, FontSpecializationVecto
 	return true;
 }
 
-bool FontFaceSet::init(String &&name, StringView family, FontSpecializationVector &&spec, Vector<Rc<FontFaceData>> &&data, FontLibrary *c) {
+bool FontFaceSet::init(String &&name, StringView family, FontSpecializationVector &&spec,
+		Vector<Rc<FontFaceData>> &&data, FontLibrary *c) {
 	_name = sp::move(name);
 	_family = family.str<Interface>();
 	_spec = sp::move(spec);
@@ -591,6 +605,7 @@ bool FontFaceSet::addString(const CharVector &str, Vector<char32_t> &failed) {
 				updated = true;
 			}
 		} else {
+			// font was not loaded - try to load then add chars
 			if (it == nullptr) {
 				shouldOpenFonts = true;
 				break;
@@ -608,14 +623,14 @@ bool FontFaceSet::addString(const CharVector &str, Vector<char32_t> &failed) {
 			break;
 		}
 
-		++ i;
+		++i;
 	}
 
 	if (shouldOpenFonts) {
 		sharedLock.unlock();
 		std::unique_lock lock(_mutex);
 
-		for (; i < _faces.size(); ++ i) {
+		for (; i < _faces.size(); ++i) {
 			if (_faces[i] == nullptr) {
 				_faces[i] = _library->openFontFace(_sources[i], _spec);
 			}
@@ -636,9 +651,7 @@ bool FontFaceSet::addString(const CharVector &str, Vector<char32_t> &failed) {
 	return updated;
 }
 
-uint16_t FontFaceSet::getFontHeight() const {
-	return _metrics.height;
-}
+uint16_t FontFaceSet::getFontHeight() const { return _metrics.height; }
 
 int16_t FontFaceSet::getKerningAmount(char16_t first, char16_t second, uint16_t face) const {
 	std::shared_lock lock(_mutex);
@@ -654,9 +667,7 @@ int16_t FontFaceSet::getKerningAmount(char16_t first, char16_t second, uint16_t 
 	return 0;
 }
 
-Metrics FontFaceSet::getMetrics() const {
-	return _metrics;
-}
+Metrics FontFaceSet::getMetrics() const { return _metrics; }
 
 CharShape FontFaceSet::getChar(char16_t ch, uint16_t &face) const {
 	std::shared_lock lock(_mutex);
@@ -670,19 +681,30 @@ CharShape FontFaceSet::getChar(char16_t ch, uint16_t &face) const {
 	return CharShape();
 }
 
+size_t FontFaceSet::getRequiredCharsCount() const {
+	size_t count = 0;
+	for (auto &face : _faces) {
+		if (face) {
+			count += face->getRequiredCharsCount();
+		}
+	}
+	return count;
+}
+
 bool FontFaceSet::addTextureChars(SpanView<CharLayoutData> chars) const {
 	std::shared_lock lock(_mutex);
 
 	bool ret = false;
 	for (auto &it : chars) {
-		if (chars::isspace(it.charID) || it.charID == char16_t(0x0A) || it.charID == char16_t(0x00AD)) {
+		if (chars::isspace(it.charID) || it.charID == char16_t(0x0A)
+				|| it.charID == char16_t(0x00AD)) {
 			continue;
 		}
 
 		for (auto &f : _faces) {
 			if (f && f->getId() == it.face) {
 				if (f->addRequiredChar(it.charID)) {
-					++ _texturesCount;
+					++_texturesCount;
 					ret = true;
 					break;
 				}
@@ -692,13 +714,9 @@ bool FontFaceSet::addTextureChars(SpanView<CharLayoutData> chars) const {
 	return ret;
 }
 
-auto FontFaceSet::getFaces() const -> const Vector<Rc<FontFaceObject>> & {
-	return _faces;
-}
+auto FontFaceSet::getFaces() const -> const Vector<Rc<FontFaceObject>> & { return _faces; }
 
-size_t FontFaceSet::getFaceCount() const {
-	return _sources.size();
-}
+size_t FontFaceSet::getFaceCount() const { return _sources.size(); }
 
 Rc<FontFaceData> FontFaceSet::getSource(size_t idx) const {
 	if (idx < _sources.size()) {
@@ -707,4 +725,4 @@ Rc<FontFaceData> FontFaceSet::getSource(size_t idx) const {
 	return nullptr;
 }
 
-}
+} // namespace stappler::font

@@ -135,8 +135,9 @@ public:
 	bool save(FileFormat, const FileInfo &, bool invert = false);
 	bool save(StringView name, const FileInfo &, bool invert = false);
 
-	auto write(FileFormat = FileFormat::Png, bool invert = false) -> typename Interface::BytesType;
-	auto write(StringView name, bool invert = false) -> typename Interface::BytesType;
+	auto write(FileFormat = FileFormat::Png, bool invert = false) const ->
+			typename Interface::BytesType;
+	auto write(StringView name, bool invert = false) const -> typename Interface::BytesType;
 
 	// resample with default filter (usually Lanczos4)
 	BitmapTemplate resample(uint32_t width, uint32_t height, uint32_t stride = 0) const;
