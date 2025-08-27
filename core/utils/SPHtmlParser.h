@@ -26,12 +26,11 @@ THE SOFTWARE.
 #define STAPPLER_CORE_UTILS_SPHTMLPARSER_H_
 
 #include "SPEnum.h"
-#include "SPString.h"
-#include "SPStringView.h"
+#include "SPString.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::html {
 
-enum class ParserFlags {
+enum class ParserFlags : uint32_t {
 	None = 0,
 
 	// Parse only root tag content, stop when it's closed

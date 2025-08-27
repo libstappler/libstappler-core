@@ -28,7 +28,6 @@ THE SOFTWARE.
 #include "SPHalfFloat.h"
 #include "SPUnicode.h"
 #include "SPBytesReader.h"
-#include <typeinfo>
 
 namespace STAPPLER_VERSIONIZED stappler {
 

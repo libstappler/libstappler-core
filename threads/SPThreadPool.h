@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +44,7 @@ public:
 	}
 };
 
-enum class ThreadPoolFlags {
+enum class ThreadPoolFlags : uint32_t {
 	None,
 	LazyInit = 1 << 0, // do not spawn threads unless some task is performed
 };

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,7 @@
 #define CORE_EVENT_PLATFORM_SPEVENT_EPOLL_H_
 
 #include "SPEventQueue.h"
-#include "SPPlatformUnistd.h"
+#include "SPPlatformUnistd.h" // IWYU pragma: keep
 #include "detail/SPEventQueueData.h"
 
 #include "../fd/SPEventSignalFd.h"
@@ -35,7 +36,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-enum class EPollFlags {
+enum class EPollFlags : uint32_t {
 	None,
 	HaveEPollPWait2 = 1 << 0,
 };

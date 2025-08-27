@@ -1,6 +1,7 @@
 /**
  Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
  Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,13 +25,13 @@
 #ifndef CORE_FONT_SPFONTSTYLE_H_
 #define CORE_FONT_SPFONTSTYLE_H_
 
-#include "SPFont.h"
+#include "SPFont.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
 using EnumSize = uint8_t;
 
-enum class FontVariableAxis {
+enum class FontVariableAxis : uint32_t {
 	None,
 	Weight = 1 << 0, // wght
 	Width = 1 << 1, // wdth
@@ -101,9 +102,7 @@ struct SP_PUBLIC FontStyle : ValueWrapper<int16_t, class FontStyleFlag> {
 	static const FontStyle Italic;
 	static const FontStyle Oblique;
 
-	static constexpr FontStyle FromDegrees(float d) {
-		return FontStyle(std::floor(d * 64.0f));
-	}
+	static constexpr FontStyle FromDegrees(float d) { return FontStyle(std::floor(d * 64.0f)); }
 
 	using ValueWrapper::ValueWrapper;
 };
@@ -200,7 +199,10 @@ struct SP_PUBLIC FontSize {
 	constexpr uint16_t get() const { return value >> 4; }
 	constexpr float val() const { return static_cast<float>(value) / 16.0f; }
 
-	constexpr FontSize &operator-=(FontSize v) { value -= v.value; return *this; }
+	constexpr FontSize &operator-=(FontSize v) {
+		value -= v.value;
+		return *this;
+	}
 
 	constexpr bool operator==(const FontSize &) const = default;
 	constexpr bool operator!=(const FontSize &) const = default;
@@ -217,8 +219,8 @@ struct SP_PUBLIC TextParameters {
 	geom::Color3B color = geom::Color3B::BLACK;
 	uint8_t opacity = 222;
 
-	inline bool operator == (const TextParameters &other) const = default;
-	inline bool operator != (const TextParameters &other) const = default;
+	inline bool operator==(const TextParameters &other) const = default;
+	inline bool operator!=(const TextParameters &other) const = default;
 };
 
 struct SP_PUBLIC FontLayoutParameters {
@@ -227,8 +229,8 @@ struct SP_PUBLIC FontLayoutParameters {
 	FontStretch fontStretch = FontStretch::Normal;
 	FontGrade fontGrade = FontGrade::Normal;
 
-	inline bool operator == (const FontLayoutParameters &other) const = default;
-	inline bool operator != (const FontLayoutParameters &other) const = default;
+	inline bool operator==(const FontLayoutParameters &other) const = default;
+	inline bool operator!=(const FontLayoutParameters &other) const = default;
 };
 
 struct SP_PUBLIC FontSpecializationVector : FontLayoutParameters {
@@ -238,16 +240,17 @@ struct SP_PUBLIC FontSpecializationVector : FontLayoutParameters {
 	template <typename Interface>
 	auto getSpecializationArgs() const -> typename Interface::StringType;
 
-	inline bool operator == (const FontSpecializationVector &other) const = default;
-	inline bool operator != (const FontSpecializationVector &other) const = default;
+	inline bool operator==(const FontSpecializationVector &other) const = default;
+	inline bool operator!=(const FontSpecializationVector &other) const = default;
 };
 
 struct SP_PUBLIC FontParameters : FontSpecializationVector {
 	static FontParameters create(StringView, memory::pool_t * = nullptr);
 
 	template <typename Interface>
-	static auto getFontConfigName(StringView fontFamily, FontSize fontSize, FontStyle fontStyle, FontWeight fontWeight,
-			FontStretch fontStretch, FontGrade fontGrade, FontVariant fontVariant, bool caps) -> typename Interface::StringType;
+	static auto getFontConfigName(StringView fontFamily, FontSize fontSize, FontStyle fontStyle,
+			FontWeight fontWeight, FontStretch fontStretch, FontGrade fontGrade,
+			FontVariant fontVariant, bool caps) -> typename Interface::StringType;
 
 	FontVariant fontVariant = FontVariant::Normal;
 	ListStyleType listStyleType = ListStyleType::None;
@@ -256,13 +259,14 @@ struct SP_PUBLIC FontParameters : FontSpecializationVector {
 
 	template <typename Interface>
 	auto getConfigName(bool caps = false) const -> typename Interface::StringType {
-		return getFontConfigName<Interface>(fontFamily, fontSize, fontStyle, fontWeight, fontStretch, fontGrade, fontVariant, caps);
+		return getFontConfigName<Interface>(fontFamily, fontSize, fontStyle, fontWeight,
+				fontStretch, fontGrade, fontVariant, caps);
 	}
 
 	FontParameters getSmallCaps() const;
 
-	inline bool operator == (const FontParameters &other) const = default;
-	inline bool operator != (const FontParameters &other) const = default;
+	inline bool operator==(const FontParameters &other) const = default;
+	inline bool operator!=(const FontParameters &other) const = default;
 };
 
 struct SP_PUBLIC FontVariations {
@@ -277,14 +281,13 @@ struct SP_PUBLIC FontVariations {
 			return *this;
 		}
 
-		T clamp(T val) const {
-			return math::clamp(val, min, max);
-		}
+		T clamp(T val) const { return math::clamp(val, min, max); }
 	};
 
 	FontVariableAxis axisMask = FontVariableAxis::None;
 	Variations<FontWeight> weight = Variations<FontWeight>{FontWeight::Normal, FontWeight::Normal};
-	Variations<FontStretch> stretch = Variations<FontStretch>{FontStretch::Normal, FontStretch::Normal};
+	Variations<FontStretch> stretch =
+			Variations<FontStretch>{FontStretch::Normal, FontStretch::Normal};
 	Variations<FontStyle> slant = Variations<FontStyle>{FontStyle::Normal, FontStyle::Normal};
 	Variations<uint32_t> opticalSize = Variations<uint32_t>{0, 0};
 	Variations<uint32_t> italic = Variations<uint32_t>{0, 0};
@@ -315,7 +318,7 @@ constexpr FontWeight FontWeight::SemiBold = FontWeight(600);
 constexpr FontWeight FontWeight::Bold = FontWeight(700);
 constexpr FontWeight FontWeight::ExtraBold = FontWeight(800);
 constexpr FontWeight FontWeight::Heavy = FontWeight(900);
-constexpr FontWeight FontWeight::Black = FontWeight(1000);
+constexpr FontWeight FontWeight::Black = FontWeight(1'000);
 
 constexpr FontSize FontSize::XXSmall = FontSize(uint16_t(8));
 constexpr FontSize FontSize::XSmall = FontSize(uint16_t(10));
@@ -335,7 +338,7 @@ constexpr FontGrade FontGrade::Normal = FontGrade(0);
 constexpr FontGrade FontGrade::Heavy = FontGrade(150);
 
 #endif
-}
+} // namespace stappler::font
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -343,7 +346,7 @@ inline font::FontSize progress(font::FontSize source, font::FontSize target, flo
 	return font::FontSize::progress(source, target, p);
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace std {
 
@@ -351,11 +354,11 @@ template <>
 struct hash<STAPPLER_VERSIONIZED_NAMESPACE::font::FontSize> {
 	hash() { }
 
-	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::font::FontSize &value) const noexcept {
+	size_t operator()(const STAPPLER_VERSIONIZED_NAMESPACE::font::FontSize &value) const noexcept {
 		return hash<uint16_t>{}(value.get());
 	}
 };
 
-}
+} // namespace std
 
 #endif /* CORE_GEOM_SPFONTSTYLE_H_ */

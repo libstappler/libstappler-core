@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,13 +24,11 @@
 #ifndef CORE_CORE_UTILS_SPSHAREDMODULE_H_
 #define CORE_CORE_UTILS_SPSHAREDMODULE_H_
 
-#include "SPCore.h"
-#include <type_traits>
-#include <typeinfo>
+#include "SPCore.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-enum class SharedModuleFlags {
+enum class SharedModuleFlags : uint32_t {
 	None = 0,
 
 	// This flag allows to define multiple SharedModules with the same name

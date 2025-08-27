@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-enum class QueueFlags {
+enum class QueueFlags : uint32_t {
 	None,
 	// try to protect operations from interrupting with signals
 	Protected = 1 << 0,
@@ -43,7 +44,7 @@ enum class QueueFlags {
 
 SP_DEFINE_ENUM_AS_MASK(QueueFlags)
 
-enum class QueueEngine {
+enum class QueueEngine : uint32_t {
 	None,
 	URing = 1 << 0, // Linux io_uring backend
 	EPoll = 1 << 1, // Linux/Android epoll backend
@@ -56,7 +57,7 @@ enum class QueueEngine {
 
 SP_DEFINE_ENUM_AS_MASK(QueueEngine)
 
-enum class WakeupFlags {
+enum class WakeupFlags : uint32_t {
 	None,
 	Graceful = 1 << 0,
 	SuspendThreads = 1 << 1, // Looper should suspend worker threads

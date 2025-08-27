@@ -1,25 +1,26 @@
 /**
-Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
+ Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-**/
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+ **/
 
 #ifndef STAPPLER_CORE_SPCORE_H_
 #define STAPPLER_CORE_SPCORE_H_
@@ -31,7 +32,7 @@ THE SOFTWARE.
  * To enable precompiled headers, use SPCommon.h as a first include in translation unit instead
  */
 
-#include "stappler-buildconfig.h"
+#include "stappler-buildconfig.h" // IWYU pragma: keep
 
 namespace stappler::buildconfig {
 
@@ -51,51 +52,51 @@ constexpr auto MODULE_APPCOMMON_NAME = "appcommon";
 #include "detail/SPPlatformInit.h"
 
 // From C++ standard library:
-#include <type_traits>
-#include <typeindex>
-#include <iterator>
-#include <limits>
-#include <utility>
-#include <iterator>
-#include <algorithm>
-#include <tuple>
-#include <cmath>
-#include <locale>
+#include <type_traits> // IWYU pragma: keep
+#include <typeindex> // IWYU pragma: keep
+#include <iterator> // IWYU pragma: keep
+#include <limits> // IWYU pragma: keep
+#include <utility> // IWYU pragma: keep
+#include <iterator> // IWYU pragma: keep
+#include <algorithm> // IWYU pragma: keep
+#include <tuple> // IWYU pragma: keep
+#include <cmath> // IWYU pragma: keep
+#include <locale> // IWYU pragma: keep
 
-#include <tuple>
-#include <string>
-#include <vector>
-#include <functional>
-#include <sstream>
-#include <fstream>
-#include <map>
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
-#include <bitset>
-#include <forward_list>
-#include <array>
-#include <deque>
-#include <bit>
-#include <bitset>
+#include <tuple> // IWYU pragma: keep
+#include <string> // IWYU pragma: keep
+#include <vector> // IWYU pragma: keep
+#include <functional> // IWYU pragma: keep
+#include <sstream> // IWYU pragma: keep
+#include <fstream> // IWYU pragma: keep
+#include <map> // IWYU pragma: keep
+#include <set> // IWYU pragma: keep
+#include <unordered_map> // IWYU pragma: keep
+#include <unordered_set> // IWYU pragma: keep
+#include <bitset> // IWYU pragma: keep
+#include <forward_list> // IWYU pragma: keep
+#include <array> // IWYU pragma: keep
+#include <deque> // IWYU pragma: keep
+#include <bit> // IWYU pragma: keep
+#include <bitset> // IWYU pragma: keep
 
-#include <istream>
-#include <ostream>
-#include <iostream>
-#include <iomanip>
-#include <mutex>
-#include <shared_mutex>
-#include <atomic>
-#include <future>
-#include <thread>
-#include <condition_variable>
-#include <initializer_list>
-#include <optional>
-#include <variant>
-#include <chrono>
+#include <istream> // IWYU pragma: keep
+#include <ostream> // IWYU pragma: keep
+#include <iostream> // IWYU pragma: keep
+#include <iomanip> // IWYU pragma: keep
+#include <mutex> // IWYU pragma: keep
+#include <shared_mutex> // IWYU pragma: keep
+#include <atomic> // IWYU pragma: keep
+#include <future> // IWYU pragma: keep
+#include <thread> // IWYU pragma: keep
+#include <condition_variable> // IWYU pragma: keep
+#include <initializer_list> // IWYU pragma: keep
+#include <optional> // IWYU pragma: keep
+#include <variant> // IWYU pragma: keep
+#include <chrono> // IWYU pragma: keep
 
 #if __cplusplus >= 202'002L
-#include <source_location>
+#include <source_location> // IWYU pragma: keep
 #endif
 
 // From C standard library:
@@ -106,17 +107,19 @@ constexpr auto MODULE_APPCOMMON_NAME = "appcommon";
 #include <assert.h> // assert macro
 
 #if SP_HAVE_THREE_WAY_COMPARISON
-#include <compare>
+#include <compare> // IWYU pragma: keep
 #endif
 
-#include "detail/SPHash.h"
-#include "detail/SPMath.h"
-#include "detail/SPValueWrapper.h"
-#include "detail/SPEnum.h"
-#include "detail/SPNotNull.h"
-#include "detail/SPPtr.h"
+#include "detail/SPHash.h" // IWYU pragma: keep
+#include "detail/SPMath.h" // IWYU pragma: keep
+#include "detail/SPValueWrapper.h" // IWYU pragma: keep
+#include "detail/SPEnum.h" // IWYU pragma: keep
+#include "detail/SPNotNull.h" // IWYU pragma: keep
+#include "detail/SPPtr.h" // IWYU pragma: keep
 
-#include "detail/SPPlatformCleanup.h"
+#include "detail/SPPlatformCleanup.h" // IWYU pragma: keep
+
+namespace STAPPLER_VERSIONIZED sp = STAPPLER_VERSIONIZED_NAMESPACE;
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -193,8 +196,8 @@ constexpr char16_t operator""_c16(unsigned long long int val) { return (char16_t
 constexpr char operator""_c8(unsigned long long int val) { return (char)val; }
 
 template <typename... Args>
-inline constexpr auto pair(Args &&...args) -> decltype(std::make_pair(forward<Args>(args)...)) {
-	return std::make_pair(forward<Args>(args)...);
+inline constexpr auto pair(Args &&...args) -> decltype(std::make_pair(sp::forward<Args>(args)...)) {
+	return std::make_pair(sp::forward<Args>(args)...);
 }
 
 template <typename T, typename V>
@@ -292,7 +295,5 @@ SP_PUBLIC uint32_t getAppconfigVersionRev();
 SP_PUBLIC uint32_t getAppconfigVersionBuild();
 
 } // namespace STAPPLER_VERSIONIZED stappler
-
-namespace STAPPLER_VERSIONIZED sp = STAPPLER_VERSIONIZED_NAMESPACE;
 
 #endif /* STAPPLER_CORE_SPCORE_H_ */

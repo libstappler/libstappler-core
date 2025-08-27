@@ -113,11 +113,6 @@ constexpr inline T progress(const T &a, const T &b, float p) {
 	return (a * (1.0f - p) + b * p);
 }
 
-template <typename E>
-constexpr typename std::underlying_type<E>::type toInt(const E &e) {
-	return static_cast<typename std::underlying_type<E>::type>(e);
-}
-
 template <typename T>
 auto StringToNumber(const char *ptr, char **tail, int base) -> T;
 

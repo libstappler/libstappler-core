@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +52,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-enum class URingFlags {
+enum class URingFlags : uint32_t {
 	None,
 	PendingGetEvents = 1 << 0,
 	SubmitAllSupported = 1 << 1,
@@ -69,7 +70,7 @@ enum class URingFlags {
 
 SP_DEFINE_ENUM_AS_MASK(URingFlags)
 
-enum class URingCancelFlags {
+enum class URingCancelFlags : uint32_t {
 	None,
 	All = 1 << 0,
 	Any = 1 << 1,
@@ -79,10 +80,10 @@ enum class URingCancelFlags {
 
 SP_DEFINE_ENUM_AS_MASK(URingCancelFlags)
 
-enum class URingPushFlags {
+enum class URingPushFlags : uint32_t {
 	None,
-	Linked,
-	Submit
+	Linked = 1 << 0,
+	Submit = 1 << 1,
 };
 
 SP_DEFINE_ENUM_AS_MASK(URingPushFlags)

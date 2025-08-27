@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -72,7 +73,6 @@
 // SP_USED - prevent symbols from being removed on linkage
 #if defined __has_attribute
 #if __has_attribute (used) && __has_attribute (retain)
-#    define ATTR_NONNULL __attribute__ ((nonnull))
 #define SP_USED [[gnu::used, gnu::retain]]
 #elif __has_attribute (used)
 #define SP_USED [[gnu::used]]
@@ -83,6 +83,7 @@
 #define SP_USED
 #endif
 
+#define SP_UNUSED [[maybe_unused]]
 
 // Add debug flag if none is specified
 #ifndef DEBUG

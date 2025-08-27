@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +26,8 @@
 #ifndef CORE_CORE_STRING_SPSTRINGSTREAM_H_
 #define CORE_CORE_STRING_SPSTRINGSTREAM_H_
 
-#include "SPStringView.h"
-#include "SPBytesView.h"
+#include "SPStringView.h" // IWYU pragma: keep
+#include "SPBytesView.h" // IWYU pragma: keep
 #include "SPStringDetail.h"
 #include <type_traits>
 

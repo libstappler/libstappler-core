@@ -95,13 +95,13 @@ struct Looper::Data : public memory::AllocPool {
 		}
 
 		if (d->queue) {
-			auto q = d->queue.get();
+			auto q = d->queue;
+			d->queue = nullptr;
 			q->cancel();
 #if SP_REF_DEBUG
 			if (q->getRef()->getReferenceCount() > 1) {
 				auto tmp = q->getRef();
 				q = nullptr;
-				d->queue = nullptr;
 
 				tmp->foreachBacktrace(
 						[](uint64_t id, Time time, const std::vector<std::string> &vec) {
@@ -112,10 +112,10 @@ struct Looper::Data : public memory::AllocPool {
 					log::debug("event::Queue", stream.str());
 				});
 			} else {
-				d->queue = nullptr;
+				q = nullptr;
 			}
 #else
-			d->queue = nullptr;
+			q = nullptr;
 #endif
 		}
 		lock.unlock();

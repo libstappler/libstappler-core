@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -23,10 +24,12 @@
 #ifndef CORE_CORE_UTILS_SPENUM_H_
 #define CORE_CORE_UTILS_SPENUM_H_
 
-#include "SPPlatformInit.h"
+#include "SPPlatformInit.h" // IWYU pragma: keep
 
 #include <iterator>
 #include <string.h>
+#include <stdint.h>
+#include <bit>
 
 // A part of SPCore.h, DO NOT include this directly
 
@@ -38,6 +41,24 @@ namespace stappler {
 //
 // EnumClass should contains value with name Max
 //
+
+template <typename T>
+struct ToIntWrapperType {
+	static_assert(std::is_integral_v<T> or std::is_enum_v<T>);
+
+	using type = decltype([]() {
+		if constexpr (std::is_enum_v<T>) {
+			return std::underlying_type_t<T>{};
+		} else {
+			return T{};
+		}
+	}());
+};
+
+template <typename E>
+constexpr typename ToIntWrapperType<E>::type toInt(const E &e) {
+	return static_cast<typename ToIntWrapperType<E>::type>(e);
+}
 
 namespace detail {
 
@@ -55,13 +76,16 @@ struct enum_iterator {
 
 	using iterator = enum_iterator<E, Last>;
 
-	constexpr enum_iterator() noexcept : value(E(0)) {}
-	constexpr enum_iterator(const enum_iterator & other) noexcept = default;
+	constexpr enum_iterator() noexcept : value(E(0)) { }
+	constexpr enum_iterator(const enum_iterator &other) noexcept = default;
 
 	explicit constexpr enum_iterator(E e) : value(toInt(e)) { }
 	explicit constexpr enum_iterator(typename std::underlying_type<E>::type e) : value(e) { }
 
-	constexpr iterator& operator=(const iterator &other) noexcept { value = other.value; return *this; }
+	constexpr iterator &operator=(const iterator &other) noexcept {
+		value = other.value;
+		return *this;
+	}
 	constexpr bool operator==(const iterator &other) const { return value == other.value; }
 	constexpr bool operator!=(const iterator &other) const { return value != other.value; }
 	constexpr bool operator<(const iterator &other) const { return value < other.value; }
@@ -69,15 +93,39 @@ struct enum_iterator {
 	constexpr bool operator<=(const iterator &other) const { return value <= other.value; }
 	constexpr bool operator>=(const iterator &other) const { return value >= other.value; }
 
-	constexpr bool operator==(const enum_iterator_end<E> &other) const { return value > toInt(Last); }
-	constexpr bool operator!=(const enum_iterator_end<E> &other) const { return value <= toInt(Last); }
+	constexpr bool operator==(const enum_iterator_end<E> &other) const {
+		return value > toInt(Last);
+	}
+	constexpr bool operator!=(const enum_iterator_end<E> &other) const {
+		return value <= toInt(Last);
+	}
 
-	constexpr iterator& operator++() { ++ value; return *this; }
-	constexpr iterator operator++(int) { auto tmp = *this; ++ value; return tmp; }
-	constexpr iterator& operator--() { --value; return *this; }
-	constexpr iterator operator--(int) { auto tmp = *this; --value; return tmp; }
-	constexpr iterator& operator+= (size_type n) { value += n; return *this; }
-	constexpr iterator& operator-=(size_type n) { value -= n; return *this; }
+	constexpr iterator &operator++() {
+		++value;
+		return *this;
+	}
+	constexpr iterator operator++(int) {
+		auto tmp = *this;
+		++value;
+		return tmp;
+	}
+	constexpr iterator &operator--() {
+		--value;
+		return *this;
+	}
+	constexpr iterator operator--(int) {
+		auto tmp = *this;
+		--value;
+		return tmp;
+	}
+	constexpr iterator &operator+=(size_type n) {
+		value += n;
+		return *this;
+	}
+	constexpr iterator &operator-=(size_type n) {
+		value -= n;
+		return *this;
+	}
 	constexpr difference_type operator-(const iterator &other) const { return value - other.value; }
 
 	constexpr reference operator*() const { return E(value); }
@@ -98,7 +146,118 @@ struct enum_iterator {
 		return iterator(it.value - n);
 	}
 
-	typename std::underlying_type<E>::type value;
+	typename ToIntWrapperType<E>::type value;
+};
+
+template <typename E>
+struct flags_iterator_end { };
+
+template <typename E>
+struct flags_iterator {
+	using iterator_category = std::forward_iterator_tag;
+	using size_type = size_t;
+	using pointer = E *;
+	using reference = E;
+	using difference_type = std::ptrdiff_t;
+	using value_type = E;
+	using int_type = typename ToIntWrapperType<E>::type;
+
+	using iterator = flags_iterator<E>;
+
+	constexpr flags_iterator() noexcept : value(1) { }
+	constexpr flags_iterator(int v, typename ToIntWrapperType<E>::type f) noexcept
+	: value(v), flags(f) { }
+	constexpr flags_iterator(const flags_iterator &other) noexcept = default;
+
+	constexpr iterator &operator=(const iterator &other) noexcept {
+		value = other.value;
+		return *this;
+	}
+	constexpr bool operator==(const iterator &other) const { return value == other.value; }
+	constexpr bool operator!=(const iterator &other) const { return value != other.value; }
+	constexpr bool operator<(const iterator &other) const { return value < other.value; }
+	constexpr bool operator>(const iterator &other) const { return value > other.value; }
+	constexpr bool operator<=(const iterator &other) const { return value <= other.value; }
+	constexpr bool operator>=(const iterator &other) const { return value >= other.value; }
+
+	constexpr bool operator==(const flags_iterator_end<E> &other) const {
+		int maxBits = sizeof(E) * 8 - std::countl_zero(flags);
+		return value >= maxBits;
+	}
+
+	constexpr bool operator!=(const flags_iterator_end<E> &other) const {
+		int maxBits = sizeof(E) * 8 - std::countl_zero(flags);
+		return value < maxBits;
+	}
+
+	constexpr iterator &operator++() {
+		int maxBits = sizeof(E) * 8 - std::countl_zero(flags);
+		do { ++value; } while ((flags & (int_type(1) << value)) == 0 && value < maxBits);
+		return *this;
+	}
+	constexpr iterator operator++(int) {
+		int maxBits = sizeof(E) * 8 - std::countl_zero(flags);
+		auto tmp = *this;
+		do { ++value; } while ((flags & (int_type(1) << value)) == 0 && value < maxBits);
+		return tmp;
+	}
+
+	constexpr difference_type operator-(const iterator &other) const { return value - other.value; }
+
+	constexpr reference operator*() const { return E(int_type(1) << value); }
+
+	int value;
+	typename ToIntWrapperType<E>::type flags;
+};
+
+template <typename E, E Value>
+struct flags_iterator_static {
+	using iterator_category = std::forward_iterator_tag;
+	using size_type = size_t;
+	using pointer = E *;
+	using reference = E;
+	using difference_type = std::ptrdiff_t;
+	using value_type = E;
+	using int_type = typename ToIntWrapperType<E>::type;
+
+	using iterator = flags_iterator_static<E, Value>;
+
+	static constexpr int MaxBits = sizeof(E) * 8 - std::countl_zero(Value);
+
+	constexpr flags_iterator_static() noexcept : value(1) { }
+	constexpr flags_iterator_static(int v) noexcept : value(v) { }
+	constexpr flags_iterator_static(const flags_iterator_static &other) noexcept = default;
+
+	constexpr iterator &operator=(const iterator &other) noexcept {
+		value = other.value;
+		return *this;
+	}
+	constexpr bool operator==(const iterator &other) const { return value == other.value; }
+	constexpr bool operator!=(const iterator &other) const { return value != other.value; }
+	constexpr bool operator<(const iterator &other) const { return value < other.value; }
+	constexpr bool operator>(const iterator &other) const { return value > other.value; }
+	constexpr bool operator<=(const iterator &other) const { return value <= other.value; }
+	constexpr bool operator>=(const iterator &other) const { return value >= other.value; }
+
+	constexpr bool operator==(const flags_iterator_end<E> &other) const { return value >= MaxBits; }
+
+	constexpr bool operator!=(const flags_iterator_end<E> &other) const { return value < MaxBits; }
+
+	constexpr iterator &operator++() {
+		do { ++value; } while ((Value & (int_type(1) << value)) == 0 && value < MaxBits);
+		return *this;
+	}
+	constexpr iterator operator++(int) {
+		auto tmp = *this;
+		do { ++value; } while ((Value & (int_type(1) << value)) == 0 && value < MaxBits);
+		return tmp;
+	}
+
+	constexpr difference_type operator-(const iterator &other) const { return value - other.value; }
+
+	constexpr reference operator*() const { return E(int_type(1) << value); }
+
+	int value;
 };
 
 template <typename E, E First, E Last>
@@ -107,25 +266,60 @@ struct enum_wrapper {
 	constexpr enum_iterator_end<E> end() const { return enum_iterator_end<E>(); }
 };
 
-}
+template <typename E>
+struct flags_wrapper {
+	constexpr flags_iterator<E> begin() const {
+		return flags_iterator<E>(std::countr_zero(value), value);
+	}
+	constexpr flags_iterator_end<E> end() const { return flags_iterator_end<E>(); }
+
+	flags_wrapper(E e) : value(toInt(e)) { }
+
+	typename ToIntWrapperType<E>::type value;
+};
+
+template <typename E, E Value>
+struct flags_wrapper_static {
+	constexpr flags_iterator_static<E, Value> begin() const {
+		return flags_iterator_static<E, Value>(std::countr_zero(Value));
+	}
+	constexpr flags_iterator_end<E> end() const { return flags_iterator_end<E>(); }
+};
+
+} // namespace detail
 
 template <typename E, E First, E Last>
-auto each() -> detail::enum_wrapper<E, First, Last> {
+constexpr auto each() -> detail::enum_wrapper<E, First, Last> {
 	return detail::enum_wrapper<E, First, Last>();
 }
 
 template <typename E>
-auto each() -> detail::enum_wrapper<E, E(0), E(toInt(E::Max) - 1)> {
+constexpr auto each() -> detail::enum_wrapper<E, E(0), E(toInt(E::Max) - 1)> {
 	return detail::enum_wrapper<E, E(0), E(toInt(E::Max) - 1)>();
 }
 
+template <typename E>
+auto flags(E flags) -> detail::flags_wrapper<E> {
+	static_assert(std::is_unsigned_v<typename ToIntWrapperType<E>::type>,
+			"Flags should be unsigned");
+	return detail::flags_wrapper<E>(flags);
 }
+
+template <uint64_t Value>
+auto flags() {
+	return detail::flags_wrapper_static<uint64_t, Value>();
+}
+
+} // namespace stappler
 
 /** SP_DEFINE_ENUM_AS_MASK is utility to make a bitwise-mask from typed enum
  * It defines a set of overloaded operators, that allow some bitwise operations
  * on this enum class
+ *
+ * Type should be unsigned, and SDK code style suggests to make it sized (uint32_t, uint64_t)
  */
 #define SP_DEFINE_ENUM_AS_MASK(Type) \
+	static_assert(std::is_unsigned_v<std::underlying_type_t<Type>>, #Type " should be unsigned");\
 	SP_COVERAGE_TRIVIAL constexpr inline Type operator | (const Type &l, const Type &r) { return Type(::sp::toInt(l) | ::sp::toInt(r)); } \
 	SP_COVERAGE_TRIVIAL constexpr inline Type operator & (const Type &l, const Type &r) { return Type(::sp::toInt(l) & ::sp::toInt(r)); } \
 	SP_COVERAGE_TRIVIAL constexpr inline Type operator ^ (const Type &l, const Type &r) { return Type(::sp::toInt(l) ^ ::sp::toInt(r)); } \
