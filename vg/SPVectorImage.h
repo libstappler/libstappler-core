@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -41,40 +42,40 @@ public:
 
 	size_t count() const;
 
-	VectorPathRef & setPath(BytesView);
-	VectorPathRef & setPath(StringView);
+	VectorPathRef &setPath(BytesView);
+	VectorPathRef &setPath(StringView);
 
-	VectorPathRef & openForWriting(const Callback<void(PathWriter &)> &);
+	VectorPathRef &openForWriting(const Callback<void(PathWriter &)> &);
 
-	VectorPathRef & setFillColor(const Color4B &color);
+	VectorPathRef &setFillColor(const Color4B &color);
 	const Color4B &getFillColor() const;
 
-	VectorPathRef & setStrokeColor(const Color4B &color);
+	VectorPathRef &setStrokeColor(const Color4B &color);
 	const Color4B &getStrokeColor() const;
 
-	VectorPathRef & setFillOpacity(uint8_t value);
+	VectorPathRef &setFillOpacity(uint8_t value);
 	uint8_t getFillOpacity() const;
 
-	VectorPathRef & setStrokeOpacity(uint8_t value);
+	VectorPathRef &setStrokeOpacity(uint8_t value);
 	uint8_t getStrokeOpacity() const;
 
-	VectorPathRef & setStrokeWidth(float width);
+	VectorPathRef &setStrokeWidth(float width);
 	float getStrokeWidth() const;
 
 	VectorPathRef &setWindingRule(vg::Winding);
 	vg::Winding getWindingRule() const;
 
-	VectorPathRef & setStyle(vg::DrawFlags s);
+	VectorPathRef &setStyle(vg::DrawFlags s);
 	vg::DrawFlags getStyle() const;
 
-	VectorPathRef & setTransform(const Mat4 &);
-	VectorPathRef & applyTransform(const Mat4 &);
+	VectorPathRef &setTransform(const Mat4 &);
+	VectorPathRef &applyTransform(const Mat4 &);
 	const Mat4 &getTransform() const;
 
-	VectorPathRef & setAntialiased(bool value);
+	VectorPathRef &setAntialiased(bool value);
 	bool isAntialiased() const;
 
-	VectorPathRef & clear();
+	VectorPathRef &clear();
 
 	StringView getId() const;
 
@@ -121,7 +122,8 @@ public:
 
 	uint16_t getNextId();
 
-	Rc<VectorPath> addPath(StringView id, StringView cacheId, VectorPath &&, Mat4 mat = Mat4::IDENTITY);
+	Rc<VectorPath> addPath(StringView id, StringView cacheId, VectorPath &&,
+			Mat4 mat = Mat4::IDENTITY);
 	void removePath(StringView);
 
 	void clear();
@@ -136,7 +138,8 @@ public:
 	void setBatchDrawing(bool value) { _allowBatchDrawing = value; }
 	bool isBatchDrawing() const { return _allowBatchDrawing; }
 
-	void draw(const Callback<void(VectorPath &, StringView id, StringView cache, const Mat4 &, const Color4F &)> &cb) const;
+	void draw(const Callback<void(VectorPath &, StringView id, StringView cache, const Mat4 &,
+					const Color4F &)> &cb) const;
 
 protected:
 	bool _allowBatchDrawing = true;
@@ -179,9 +182,12 @@ public:
 
 	Rect getViewBox() const;
 
-	Rc<VectorPathRef> addPath(const VectorPath &, StringView id = StringView(), StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
-	Rc<VectorPathRef> addPath(VectorPath &&, StringView id = StringView(), StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
-	Rc<VectorPathRef> addPath(StringView id = StringView(), StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
+	Rc<VectorPathRef> addPath(const VectorPath &, StringView id = StringView(),
+			StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
+	Rc<VectorPathRef> addPath(VectorPath &&, StringView id = StringView(),
+			StringView cache = StringView(), Mat4 = Mat4::IDENTITY);
+	Rc<VectorPathRef> addPath(StringView id = StringView(), StringView cache = StringView(),
+			Mat4 = Mat4::IDENTITY);
 
 	Rc<VectorPathRef> getPath(StringView) const;
 	const Interface::MapType<String, Rc<VectorPathRef>> &getPaths() const { return _paths; }
@@ -223,6 +229,6 @@ protected:
 	Interface::MapType<String, Rc<VectorPathRef>> _paths;
 };
 
-}
+} // namespace stappler::vg
 
 #endif /* STAPPLER_VG_SPVECTORIMAGE_H_ */

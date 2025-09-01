@@ -52,6 +52,7 @@ public:
 	virtual ~BusDelegate();
 
 	bool init(NotNull<Looper>, SpanView<BusEventCategory>, NotNull<Ref>, BusEventCallback &&);
+	bool init(NotNull<Looper>, BusEventCategory, NotNull<Ref>, BusEventCallback &&);
 
 	// should be called when owner is disabled
 	void invalidate();

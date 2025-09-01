@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +29,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
-enum class Resolve {
+enum class Resolve : uint32_t {
 	None = 0,
 	Files = 2,
 	Sets = 4,
@@ -54,11 +55,16 @@ public:
 		Field &operator=(Field &&);
 		Field &operator=(const Field &);
 
-		template <typename Str> Field(Str &&);
-		template <typename Str> Field(Str &&, Vector<String> &&);
-		template <typename Str> Field(Str &&, std::initializer_list<String> &&);
-		template <typename Str> Field(Str &&, Vector<Field> &&);
-		template <typename Str> Field(Str &&, std::initializer_list<Field> &&);
+		template <typename Str>
+		Field(Str &&);
+		template <typename Str>
+		Field(Str &&, Vector<String> &&);
+		template <typename Str>
+		Field(Str &&, std::initializer_list<String> &&);
+		template <typename Str>
+		Field(Str &&, Vector<Field> &&);
+		template <typename Str>
+		Field(Str &&, std::initializer_list<Field> &&);
 
 		void setName(const char *);
 		void setName(const StringView &);
@@ -78,11 +84,11 @@ public:
 		FullTextQuery textQuery;
 
 		Select() { }
-		Select(const StringView & f, Comparation c, Value && v1, Value && v2);
-		Select(const StringView & f, Comparation c, int64_t v1, int64_t v2);
-		Select(const StringView & f, Comparation c, const String & v);
-		Select(const StringView & f, Comparation c, const StringView & v);
-		Select(const StringView & f, Comparation c, FullTextQuery && v);
+		Select(const StringView &f, Comparation c, Value &&v1, Value &&v2);
+		Select(const StringView &f, Comparation c, int64_t v1, int64_t v2);
+		Select(const StringView &f, Comparation c, const String &v);
+		Select(const StringView &f, Comparation c, const StringView &v);
+		Select(const StringView &f, Comparation c, FullTextQuery &&v);
 	};
 
 	struct SoftLimit {
@@ -98,52 +104,53 @@ public:
 	static Resolve decodeResolve(const StringView &str);
 	static String encodeResolve(Resolve);
 
-	Query & select(const StringView &alias);
-	Query & select(int64_t id);
-	Query & select(const Value &);
-	Query & select(Vector<int64_t> &&id);
-	Query & select(SpanView<int64_t> id);
-	Query & select(std::initializer_list<int64_t> &&id);
+	Query &select(const StringView &alias);
+	Query &select(int64_t id);
+	Query &select(const Value &);
+	Query &select(Vector<int64_t> &&id);
+	Query &select(SpanView<int64_t> id);
+	Query &select(std::initializer_list<int64_t> &&id);
 
-	Query & select(const StringView &f, Comparation c, const Value & v1, const Value &v2 = Value());
-	Query & select(const StringView &f, const Value & v1); // special case for equality
+	Query &select(const StringView &f, Comparation c, const Value &v1, const Value &v2 = Value());
+	Query &select(const StringView &f, const Value &v1); // special case for equality
 
-	Query & select(const StringView &f, Comparation c, int64_t v1);
-	Query & select(const StringView &f, Comparation c, int64_t v1, int64_t v2);
-	Query & select(const StringView &f, const String & v);
-	Query & select(const StringView &f, String && v);
+	Query &select(const StringView &f, Comparation c, int64_t v1);
+	Query &select(const StringView &f, Comparation c, int64_t v1, int64_t v2);
+	Query &select(const StringView &f, const String &v);
+	Query &select(const StringView &f, String &&v);
 
-	Query & select(const StringView &f, const Bytes & v);
-	Query & select(const StringView &f, Bytes && v);
+	Query &select(const StringView &f, const Bytes &v);
+	Query &select(const StringView &f, Bytes &&v);
 
-	Query & select(const StringView &f, FullTextQuery && v);
+	Query &select(const StringView &f, FullTextQuery &&v);
 
-	Query & select(Select &&q);
+	Query &select(Select &&q);
 
-	Query & order(const StringView &f, Ordering o = Ordering::Ascending, size_t limit = stappler::maxOf<size_t>(), size_t offset = 0);
-	Query & softLimit(const StringView &, Ordering, size_t limit, Value &&);
+	Query &order(const StringView &f, Ordering o = Ordering::Ascending,
+			size_t limit = stappler::maxOf<size_t>(), size_t offset = 0);
+	Query &softLimit(const StringView &, Ordering, size_t limit, Value &&);
 
-	Query & first(const StringView &f, size_t limit = 1, size_t offset = 0);
-	Query & last(const StringView &f, size_t limit = 1, size_t offset = 0);
+	Query &first(const StringView &f, size_t limit = 1, size_t offset = 0);
+	Query &last(const StringView &f, size_t limit = 1, size_t offset = 0);
 
-	Query & limit(size_t l, size_t off);
-	Query & limit(size_t l);
-	Query & offset(size_t l);
+	Query &limit(size_t l, size_t off);
+	Query &limit(size_t l);
+	Query &offset(size_t l);
 
-	Query & delta(uint64_t);
-	Query & delta(const StringView &);
+	Query &delta(uint64_t);
+	Query &delta(const StringView &);
 
-	template <typename ... Args>
-	Query & include(Field &&, Args && ...);
+	template <typename... Args>
+	Query &include(Field &&, Args &&...);
 
-	Query & include(Field &&);
-	Query & exclude(Field &&);
+	Query &include(Field &&);
+	Query &exclude(Field &&);
 
-	Query & depth(uint16_t);
+	Query &depth(uint16_t);
 
-	Query & forUpdate();
+	Query &forUpdate();
 
-	Query & clearFields();
+	Query &clearFields();
 
 	bool empty() const;
 
@@ -151,11 +158,11 @@ public:
 	int64_t getQueryId() const;
 
 	int64_t getSingleSelectId() const;
-	const Vector<int64_t> & getSelectIds() const;
+	const Vector<int64_t> &getSelectIds() const;
 	StringView getSelectAlias() const;
 	const Vector<Select> &getSelectList() const;
 
-	const String & getOrderField() const;
+	const String &getOrderField() const;
 	Ordering getOrdering() const;
 
 	size_t getLimitValue() const;
@@ -218,17 +225,13 @@ inline Query::Field::Field(Str &&str) {
 template <typename Str>
 inline Query::Field::Field(Str &&str, Vector<String> &&l) {
 	setName(std::forward<Str>(str));
-	for (auto &it : l) {
-		fields.emplace_back(sp::move(it));
-	}
+	for (auto &it : l) { fields.emplace_back(sp::move(it)); }
 }
 
 template <typename Str>
 inline Query::Field::Field(Str &&str, std::initializer_list<String> &&l) {
 	setName(std::forward<Str>(str));
-	for (auto &it : l) {
-		fields.emplace_back(String(sp::move(it)));
-	}
+	for (auto &it : l) { fields.emplace_back(String(sp::move(it))); }
 }
 
 template <typename Str>
@@ -239,18 +242,16 @@ inline Query::Field::Field(Str &&str, Vector<Field> &&l) : fields(sp::move(l)) {
 template <typename Str>
 inline Query::Field::Field(Str &&str, std::initializer_list<Field> &&l) {
 	setName(std::forward<Str>(str));
-	for (auto &it : l) {
-		fields.emplace_back(sp::move(it));
-	}
+	for (auto &it : l) { fields.emplace_back(sp::move(it)); }
 }
 
-template <typename ... Args>
-Query & Query::include(Field &&f, Args && ... args) {
+template <typename... Args>
+Query &Query::include(Field &&f, Args &&...args) {
 	include(sp::move(f));
 	include(std::forward<Args>(args)...);
 	return *this;
 }
 
-}
+} // namespace stappler::db
 
 #endif /* STAPPLER_DB_SPDBQUERY_H_ */

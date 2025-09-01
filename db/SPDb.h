@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2019-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -80,7 +81,7 @@ struct RequestData {
 };
 
 struct SP_PUBLIC InputConfig {
-	enum class Require {
+	enum class Require : uint32_t {
 		None = 0,
 		Data = 1,
 		Files = 2,

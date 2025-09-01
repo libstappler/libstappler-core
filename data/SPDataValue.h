@@ -204,6 +204,11 @@ public:
 		intVal = int64_t(v);
 		return *this;
 	}
+	Self &operator=(int64_t v) {
+		reset(Type::INTEGER);
+		intVal = int64_t(v);
+		return *this;
+	}
 #if SP_HAVE_DEDICATED_SIZE_T
 	Self &operator=(size_t v) {
 		reset(Type::INTEGER);

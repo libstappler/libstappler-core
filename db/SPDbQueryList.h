@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2016-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +48,7 @@ enum class TransactionStatus {
 
 class SP_PUBLIC QueryFieldResolver : public AllocBase {
 public:
-	enum class Meta {
+	enum class Meta : uint32_t {
 		None = 0,
 		Time = 1,
 		Action = 2,
@@ -55,7 +56,8 @@ public:
 	};
 
 	QueryFieldResolver();
-	QueryFieldResolver(const ApplicationInterface *app, const Scheme &, const Query &, const Vector<StringView> &extraFields = Vector<StringView>());
+	QueryFieldResolver(const ApplicationInterface *app, const Scheme &, const Query &,
+			const Vector<StringView> &extraFields = Vector<StringView>());
 
 	const Field *getField(const String &) const;
 	const Scheme *getScheme() const;
@@ -70,7 +72,7 @@ public:
 
 	QueryFieldResolver next(const StringView &) const;
 
-	explicit operator bool () const;
+	explicit operator bool() const;
 
 protected:
 	struct Data {
@@ -85,7 +87,8 @@ protected:
 	};
 
 	QueryFieldResolver(Data *);
-	void doResolve(const ApplicationInterface *app, Data *, const Vector<StringView> &extraFields, uint16_t depth, uint16_t max);
+	void doResolve(const ApplicationInterface *app, Data *, const Vector<StringView> &extraFields,
+			uint16_t depth, uint16_t max);
 	void doResolveData(Data *, uint16_t depth, uint16_t max);
 
 	Data *root = nullptr;
@@ -195,6 +198,6 @@ protected:
 
 SP_DEFINE_ENUM_AS_MASK(QueryList::Flags);
 
-}
+} // namespace stappler::db
 
 #endif /* STAPPLER_DB_SPDBQUERYLIST_H_ */

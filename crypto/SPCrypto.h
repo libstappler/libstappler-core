@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2021-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2024 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -52,7 +53,7 @@ enum class Backend : uint32_t {
 	Embedded = maxOf<uint32_t>() - 1
 };
 
-enum class BackendFlags {
+enum class BackendFlags : uint32_t {
 	None = 0,
 	SecureLibrary = 1 << 0,
 	SupportsPKCS1 = 1 << 1,
@@ -118,7 +119,7 @@ struct KeyContext {
 struct SP_PUBLIC BlockKey256 {
 	uint16_t version = 0; // keygen version
 	BlockCipher cipher = BlockCipher::AES_CBC;
-	std::array<uint8_t, BlockKeySize256> data = { 0 };
+	std::array<uint8_t, BlockKeySize256> data = {0};
 
 	bool operator==(const BlockKey256 &) const = default;
 	bool operator!=(const BlockKey256 &) const = default;
@@ -140,20 +141,20 @@ struct BlockInfo {
 class SP_PUBLIC PrivateKey {
 public:
 	PrivateKey(Backend = Backend::Default);
-	PrivateKey(Backend, BytesView, const CoderSource & passwd = CoderSource());
-	PrivateKey(BytesView, const CoderSource & passwd = CoderSource());
+	PrivateKey(Backend, BytesView, const CoderSource &passwd = CoderSource());
+	PrivateKey(BytesView, const CoderSource &passwd = CoderSource());
 	~PrivateKey();
 
 	PrivateKey(const PrivateKey &) = delete;
-	PrivateKey& operator=(const PrivateKey &) = delete;
+	PrivateKey &operator=(const PrivateKey &) = delete;
 
 	PrivateKey(PrivateKey &&);
-	PrivateKey& operator=(PrivateKey &&);
+	PrivateKey &operator=(PrivateKey &&);
 
 	bool generate(KeyType type = KeyType::RSA);
 	bool generate(KeyBits = KeyBits::_2048, KeyType type = KeyType::RSA);
 
-	bool import(BytesView, const CoderSource & passwd = CoderSource());
+	bool import(BytesView, const CoderSource &passwd = CoderSource());
 
 	PublicKey exportPublic() const;
 
@@ -161,15 +162,18 @@ public:
 	KeyContext getKey() const { return _key; }
 	KeyType getType() const { return _key.type; }
 
-	explicit operator bool () const { return _valid && _loaded; }
+	explicit operator bool() const { return _valid && _loaded; }
 
-	bool exportPem(const Callback<void(BytesView)> &, KeyFormat = KeyFormat::PKCS8, const CoderSource &passPhrase = StringView()) const;
+	bool exportPem(const Callback<void(BytesView)> &, KeyFormat = KeyFormat::PKCS8,
+			const CoderSource &passPhrase = StringView()) const;
 	bool exportPem(const Callback<void(BytesView)> &, const CoderSource &passPhrase) const;
 
-	bool exportDer(const Callback<void(BytesView)> &, KeyFormat = KeyFormat::PKCS8, const CoderSource &passPhrase = StringView()) const;
+	bool exportDer(const Callback<void(BytesView)> &, KeyFormat = KeyFormat::PKCS8,
+			const CoderSource &passPhrase = StringView()) const;
 	bool exportDer(const Callback<void(BytesView)> &, const CoderSource &passPhrase) const;
 
-	bool sign(const Callback<void(BytesView)> &, const CoderSource &, SignAlgorithm = SignAlgorithm::RSA_SHA512) const;
+	bool sign(const Callback<void(BytesView)> &, const CoderSource &,
+			SignAlgorithm = SignAlgorithm::RSA_SHA512) const;
 	bool verify(const CoderSource &data, BytesView signature, SignAlgorithm) const;
 
 	bool fingerprint(const Callback<void(BytesView)> &, const CoderSource &) const;
@@ -195,10 +199,10 @@ public:
 	~PublicKey();
 
 	PublicKey(const PublicKey &) = delete;
-	PublicKey& operator=(const PublicKey &) = delete;
+	PublicKey &operator=(const PublicKey &) = delete;
 
 	PublicKey(PublicKey &&);
-	PublicKey& operator=(PublicKey &&);
+	PublicKey &operator=(PublicKey &&);
 
 	bool import(BytesView);
 	bool importOpenSSH(StringView);
@@ -207,7 +211,7 @@ public:
 	KeyContext getKey() const { return _key; }
 	KeyType getType() const { return _key.type; }
 
-	explicit operator bool () const { return _valid && _loaded; }
+	explicit operator bool() const { return _valid && _loaded; }
 
 	bool exportPem(const Callback<void(BytesView)> &) const; // only pkcs8
 	bool exportDer(const Callback<void(BytesView)> &) const; // only pkcs8
@@ -225,12 +229,8 @@ protected:
 inline constexpr size_t getBlockSize(BlockCipher c) {
 	switch (c) {
 	case BlockCipher::AES_CBC:
-	case BlockCipher::AES_CFB8:
-		return 16;
-		break;
-	case BlockCipher::Gost3412_2015_CTR_ACPKM:
-		return 16;
-		break;
+	case BlockCipher::AES_CFB8: return 16; break;
+	case BlockCipher::Gost3412_2015_CTR_ACPKM: return 16; break;
 	}
 	return 16;
 }
@@ -240,31 +240,42 @@ SP_PUBLIC void listBackends(const Callback<void(Backend, StringView, BackendFlag
 SP_PUBLIC bool isPemKey(BytesView data);
 
 SP_PUBLIC bool encryptBlock(const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
-SP_PUBLIC bool encryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
+SP_PUBLIC bool encryptBlock(Backend b, const BlockKey256 &, BytesView,
+		const Callback<void(BytesView)> &);
 
 SP_PUBLIC bool decryptBlock(const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
-SP_PUBLIC bool decryptBlock(Backend b, const BlockKey256 &, BytesView, const Callback<void(BytesView)> &);
+SP_PUBLIC bool decryptBlock(Backend b, const BlockKey256 &, BytesView,
+		const Callback<void(BytesView)> &);
 
-SP_PUBLIC BlockKey256 makeBlockKey(Backend, BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
-SP_PUBLIC BlockKey256 makeBlockKey(BytesView pkey, BytesView hash, BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
+SP_PUBLIC BlockKey256 makeBlockKey(Backend, BytesView pkey, BytesView hash,
+		BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
+SP_PUBLIC BlockKey256 makeBlockKey(BytesView pkey, BytesView hash,
+		BlockCipher = BlockCipher::AES_CBC, uint32_t version = 2);
 SP_PUBLIC BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, uint32_t version = 2);
-SP_PUBLIC BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher, uint32_t version = 2);
+SP_PUBLIC BlockKey256 makeBlockKey(const PrivateKey &pkey, BytesView hash, BlockCipher,
+		uint32_t version = 2);
 
 // get keygen version from encrypted block
 SP_PUBLIC BlockInfo getBlockInfo(BytesView);
 
 using HashCoderCallback = const Callback<bool(const CoderSource &)>;
 
-SP_PUBLIC Sha256::Buf hash256(Backend, const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
-SP_PUBLIC Sha256::Buf hash256(const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
-SP_PUBLIC Sha256::Buf hash256(Backend, const CoderSource &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha256::Buf hash256(Backend, const Callback<void(const HashCoderCallback &upd)> &,
+		HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha256::Buf hash256(const Callback<void(const HashCoderCallback &upd)> &,
+		HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha256::Buf hash256(Backend, const CoderSource &,
+		HashFunction func = HashFunction::SHA_2);
 SP_PUBLIC Sha256::Buf hash256(const CoderSource &, HashFunction func = HashFunction::SHA_2);
 
-SP_PUBLIC Sha512::Buf hash512(Backend, const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
-SP_PUBLIC Sha512::Buf hash512(const Callback<void( const HashCoderCallback &upd )> &, HashFunction func = HashFunction::SHA_2);
-SP_PUBLIC Sha512::Buf hash512(Backend, const CoderSource &, HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha512::Buf hash512(Backend, const Callback<void(const HashCoderCallback &upd)> &,
+		HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha512::Buf hash512(const Callback<void(const HashCoderCallback &upd)> &,
+		HashFunction func = HashFunction::SHA_2);
+SP_PUBLIC Sha512::Buf hash512(Backend, const CoderSource &,
+		HashFunction func = HashFunction::SHA_2);
 SP_PUBLIC Sha512::Buf hash512(const CoderSource &, HashFunction func = HashFunction::SHA_2);
 
-}
+} // namespace stappler::crypto
 
 #endif /* STAPPLER_CRYPTO_SPCRYPTO_H_ */
