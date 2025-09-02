@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2019-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -249,8 +250,8 @@ using Set = std::set<T, Compare>;
 template <typename T, typename V>
 using HashMap = std::unordered_map<T, V, std::hash<T>, std::equal_to<T>>;
 
-template <typename T>
-using HashSet = std::unordered_set<T, std::hash<T>, std::equal_to<T>, std::allocator<T>>;
+template <typename T, typename Hash = std::hash<T>, typename Equal = std::equal_to<void>>
+using HashSet = std::unordered_set<T, Hash, Equal, std::allocator<T>>;
 
 template <typename T>
 using Function = std::function<T>;
