@@ -80,19 +80,19 @@ bool URingData::checkSupport() {
 	struct utsname buffer;
 
 	if (uname(&buffer) != 0) {
-		log::info("event::URingData", "Fail to detect kernel version");
+		log::source().info("event::URingData", "Fail to detect kernel version");
 		return false;
 	}
 
 	if (strverscmp(buffer.release, "5.15.0") < 0) {
-		log::info("event::URingData",
+		log::source().info("event::URingData",
 				"io_uring backend available since 5.15 kernel release, current release: ",
 				buffer.release);
 		return false;
 	}
 
 	if (syscall(__NR_io_uring_register, 0, IORING_UNREGISTER_BUFFERS, NULL, 0) && errno == ENOSYS) {
-		log::info("event::URingData", "io_uring disabled in OS");
+		log::source().info("event::URingData", "io_uring disabled in OS");
 		return false;
 	} else {
 		return true;
@@ -104,7 +104,7 @@ uint16_t URingData::registerBufferGroup(uint32_t count, uint32_t size, uint8_t *
 	uint16_t id = 0;
 	if (_unregistredBuffers.empty()) {
 		if (_bufferGroupId == maxOf<uint16_t>()) {
-			log::error("URingData", "Buffer group overflow");
+			log::source().error("URingData", "Buffer group overflow");
 			return 0;
 		}
 
@@ -227,14 +227,16 @@ URingData::SqeBlock URingData::getNextSqe(uint32_t count) {
 	if (!sqe) {
 		int ret = submitSqe(flushSqe(), 0, true);
 		if (ret < 0) {
-			log::error("event::URingData", "getNextSqe(): io_uring_enter failed: ", ret);
+			log::source().error("event::URingData", "getNextSqe(): io_uring_enter failed: ", ret);
 			return SqeBlock{nullptr, 0, 0, Status(getErrnoStatus(ret))};
 		}
 		sqe = tryGetNextSqe(count);
 		if (!sqe) {
-			log::warn("event::URingData",
-					"getNextSqe(): io_uring_enter on timoeut (possible IORING_SETUP_SQPOLL "
-					"overload)");
+			log::
+					source()
+							.warn("event::URingData",
+									"getNextSqe(): io_uring_enter on timoeut (possible "
+									"IORING_SETUP_SQPOLL " "overload)");
 			return SqeBlock{nullptr, 0, 0, Status::ErrorBusy};
 		}
 	}
@@ -569,7 +571,7 @@ void URingData::processEvent(int32_t res, uint32_t flags, uint64_t userdata) {
 			h->release(reinterpret_cast<uintptr_t>(this) ^ reinterpret_cast<uintptr_t>(h));
 		}
 	} else {
-		log::info("URingData", "no userdata: ", res, " ", flags);
+		log::source().info("URingData", "no userdata: ", res, " ", flags);
 	}
 }
 
@@ -614,7 +616,7 @@ uint32_t URingData::wait(TimeInterval ival) {
 			events += doPoll();
 
 			if (err < DEBUG_ERROR_THRESHOLD) {
-				log::error("event::URingData", "io_uring_enter: ", -err);
+				log::source().error("event::URingData", "io_uring_enter: ", -err);
 				break;
 			} else if (err >= 0) {
 				break;
@@ -653,7 +655,7 @@ Status URingData::run(TimeInterval ival, WakeupFlags flags, TimeInterval wakeupT
 		int err = enter(0, 1, IORING_ENTER_GETEVENTS, nullptr);
 		doPoll();
 		if (err < DEBUG_ERROR_THRESHOLD) {
-			log::error("event::URingData", "io_uring_enter: ", -err);
+			log::source().error("event::URingData", "io_uring_enter: ", -err);
 			ctx.wakeupStatus = getErrnoStatus(err);
 			break;
 		}
@@ -755,14 +757,14 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	}));
 
 	if (!_eventFd) {
-		log::error("event::Queue", "Fail to initialize eventfd");
+		log::source().error("event::Queue", "Fail to initialize eventfd");
 		return;
 	}
 
 	if (hasFlag(_flags, QueueFlags::Protected)) {
 		_signalFd = Rc<SignalFdURingHandle>::create(&data->_uringSignalFdClass, sigs);
 		if (!_signalFd) {
-			log::error("event::Queue", "Fail to initialize signalfd");
+			log::source().error("event::Queue", "Fail to initialize signalfd");
 			return;
 		}
 	}
@@ -780,7 +782,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	// check available features
 	struct utsname buffer;
 	if (uname(&buffer) != 0) {
-		log::info("event::URingData", "Fail to detect kernel version");
+		log::source().info("event::URingData", "Fail to detect kernel version");
 		return;
 	}
 
@@ -847,7 +849,8 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 
 	ringFd = io_uring_setup(math::npot(info.submitQueueSize), &_params);
 	if (ringFd < 0) {
-		log::error("event::URingData", "io_uring_setup: Fail to setup io_uring instance: ", errno);
+		log::source().error("event::URingData",
+				"io_uring_setup: Fail to setup io_uring instance: ", errno);
 		return;
 	}
 
@@ -907,7 +910,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	}
 #endif
 
-	// log::info("event::URingData", "io_uring features: ", features.str());
+	// log::source().info("event::URingData", "io_uring features: ", features.str());
 
 	sq.ringSize = _params.sq_off.array + _params.sq_entries * sizeof(unsigned);
 	cq.ringSize = _params.cq_off.cqes + _params.cq_entries * CQESize;
@@ -919,7 +922,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	sq.ring = (uint8_t *)::mmap(0, sq.ringSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
 			ringFd, IORING_OFF_SQ_RING);
 	if (sq.ring == MAP_FAILED) {
-		log::error("event::URingData", "Fail to mmap SQ");
+		log::source().error("event::URingData", "Fail to mmap SQ");
 		cleanup();
 		return;
 	}
@@ -931,7 +934,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 		cq.ring = (uint8_t *)::mmap(0, cq.ringSize, PROT_READ | PROT_WRITE,
 				MAP_SHARED | MAP_POPULATE, ringFd, IORING_OFF_CQ_RING);
 		if (cq.ring == MAP_FAILED) {
-			log::error("event::URingData", "Fail to mmap CQ");
+			log::source().error("event::URingData", "Fail to mmap CQ");
 			cleanup();
 			return;
 		}
@@ -941,7 +944,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	sq.sqes = (io_uring_sqe *)::mmap(0, _params.sq_entries * sizeof(io_uring_sqe),
 			PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, ringFd, IORING_OFF_SQES);
 	if (sq.sqes == MAP_FAILED) {
-		log::error("event::URingData", "Fail to mmap SQE");
+		log::source().error("event::URingData", "Fail to mmap SQE");
 		cleanup();
 		return;
 	}
@@ -950,7 +953,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	memset(&_probe, 0, sizeof(URingProbe));
 	auto err = io_uring_register(ringFd, IORING_REGISTER_PROBE, &_probe, URingProbe::OpcodeCount);
 	if (err < 0) {
-		log::error("event::URingData", "Fail to register probe: ", err);
+		log::source().error("event::URingData", "Fail to register probe: ", err);
 		cleanup();
 		return;
 	}
@@ -994,7 +997,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 		err = io_uring_register(ringFd, IORING_REGISTER_FILES2, &fdTableReg,
 				sizeof(io_uring_rsrc_register));
 		if (err < 0) {
-			log::error("event::URingData", "Fail to set fd table");
+			log::source().error("event::URingData", "Fail to set fd table");
 			cleanup();
 			return;
 		}
@@ -1013,7 +1016,7 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 
 			err = io_uring_register(ringFd, IORING_REGISTER_FILE_ALLOC_RANGE, &range, 0);
 			if (err < 0) {
-				log::error("event::URingData", "Fail to register file alloc range");
+				log::source().error("event::URingData", "Fail to register file alloc range");
 				cleanup();
 				return;
 			}

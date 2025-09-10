@@ -409,7 +409,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 				values.emplace_back(it.second.data());
 			} else if (it.first != "driver" && it.first == "nmin" && it.first == "nkeep"
 					&& it.first == "nmax" && it.first == "exptime" && it.first == "persistent") {
-				log::error("pq::Driver", "unknown connection parameter: ", it.first, "=",
+				log::source().error("pq::Driver", "unknown connection parameter: ", it.first, "=",
 						it.second);
 			}
 		}
@@ -470,12 +470,12 @@ int Driver::listenForNotifications(Handle handle) const {
 	auto query = toString("LISTEN ", config::BROADCAST_CHANNEL_NAME, ";");
 	int querySent = _handle->PQsendQuery(conn, query.data());
 	if (querySent == 0) {
-		log::error("Postgres", _handle->PQerrorMessage(conn));
+		log::source().error("Postgres", _handle->PQerrorMessage(conn));
 		return -1;
 	}
 
 	if (_handle->PQsetnonblocking(conn, 1) == -1) {
-		log::error("Postgres", _handle->PQerrorMessage(conn));
+		log::source().error("Postgres", _handle->PQerrorMessage(conn));
 		return -1;
 	} else {
 		return _handle->PQsocket(conn);
@@ -492,7 +492,7 @@ bool Driver::consumeNotifications(Handle handle, const Callback<void(StringView)
 
 	int rc = _handle->PQconsumeInput(conn);
 	if (rc == 0) {
-		log::error("Postgres", _handle->PQerrorMessage(conn));
+		log::source().error("Postgres", _handle->PQerrorMessage(conn));
 		return false;
 	}
 	pgNotify *notify;
@@ -943,7 +943,8 @@ struct DriverExternalHandle {
 Driver::Handle Driver::doConnect(const char *const *keywords, const char *const *values,
 		int expand_dbname) const {
 	if (_external) {
-		log::error("pq::Driver", "Driver in external mode can not do connection by itself");
+		log::source().error("pq::Driver",
+				"Driver in external mode can not do connection by itself");
 		return Driver::Handle(nullptr);
 	}
 
@@ -956,7 +957,8 @@ Driver::Handle Driver::doConnect(const char *const *keywords, const char *const 
 	if (h->conn) {
 		auto status = _handle->PQstatus(h->conn);
 		if (status != CONNECTION_OK) {
-			log::error("db::pq::Driver", "Fail to connect: ", _handle->PQerrorMessage(h->conn));
+			log::source().error("db::pq::Driver",
+					"Fail to connect: ", _handle->PQerrorMessage(h->conn));
 			_handle->PQfinish(h->conn);
 			return Driver::Handle(nullptr);
 		}

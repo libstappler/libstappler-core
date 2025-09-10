@@ -22,6 +22,7 @@ THE SOFTWARE.
 **/
 
 #include "SPMemPoolInterface.h"
+#include "SPMemPoolStruct.h"
 
 #include "SPMemFunction.h"
 #include "SPMemPoolApi.h"
@@ -101,7 +102,7 @@ protected:
 	stack<Info> _stack;
 };
 
-AllocStack::AllocStack() { _stack.push(Info{nullptr, 0, nullptr, STAPPLER_LOCATION}); }
+AllocStack::AllocStack() { _stack.push(Info{nullptr, 0, nullptr, SP_FUNC}); }
 
 pool_t *AllocStack::top() const { return _stack.get().pool; }
 
@@ -131,7 +132,7 @@ void AllocStack::pop(pool_t *p, const char *source) {
 	if (_stack.get().pool == p && (!source || _stack.get().source == source)) {
 		_stack.pop();
 	} else {
-		log::error("memory", "Unbalansed pool::push found");
+		log::source().error("memory", "Unbalansed pool::push found");
 		abort();
 	}
 #else
@@ -339,7 +340,7 @@ struct debug_bt_info {
 };
 
 static void debug_backtrace_error(void *data, const char *msg, int errnum) {
-	log::error("Backtrace", msg);
+	log::source().error("Backtrace", msg);
 }
 
 static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *filename, int lineno,
@@ -526,7 +527,7 @@ void destroy(pool_t *p) {
 	// That can not be tracked another way
 	foreach_info(p, [](void *ptr, pool_t *p, uint32_t, const void *) {
 		if (ptr == p) {
-			log::error("memory",
+			log::source().error("memory",
 					"pool::destroy was called on pool, that currently on stack/in use");
 			abort();
 		}
@@ -552,7 +553,8 @@ void clear(pool_t *p) {
 	// That can not be tracked another way
 	foreach_info(p, [](void *ptr, pool_t *p, uint32_t, const void *) {
 		if (ptr == p) {
-			log::error("memory", "pool::clear was called on pool, that currently on stack/in use");
+			log::source().error("memory",
+					"pool::clear was called on pool, that currently on stack/in use");
 			abort();
 		}
 		return true;
@@ -582,7 +584,7 @@ void *alloc(pool_t *pool, size_t &size) {
 void *alloc(pool_t *pool, size_t &size, uint32_t alignment) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
-			log::error("memory", "APR pool can not allocate aligned mem");
+			log::source().error("memory", "APR pool can not allocate aligned mem");
 			return nullptr;
 		}
 	}
@@ -601,7 +603,7 @@ void *palloc(pool_t *pool, size_t size) {
 void *palloc(pool_t *pool, size_t size, uint32_t alignment) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
-			log::error("memory", "APR pool can not allocate aligned mem");
+			log::source().error("memory", "APR pool can not allocate aligned mem");
 			return nullptr;
 		}
 	}
@@ -631,7 +633,7 @@ void cleanup_kill(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			apr::pool::cleanup_kill((apr::pool_t *)pool, ptr,
-					(stappler::mempool::apr::status_t(*)(void *))cb);
+					(stappler::mempool::apr::status_t (*)(void *))cb);
 			return;
 		}
 	}
@@ -642,7 +644,7 @@ void cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			apr::pool::cleanup_register((apr::pool_t *)pool, ptr,
-					(stappler::mempool::apr::status_t(*)(void *))cb);
+					(stappler::mempool::apr::status_t (*)(void *))cb);
 			return;
 		}
 	}
@@ -653,7 +655,7 @@ void pre_cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			apr::pool::pre_cleanup_register((apr::pool_t *)pool, ptr,
-					(stappler::mempool::apr::status_t(*)(void *))cb);
+					(stappler::mempool::apr::status_t (*)(void *))cb);
 			return;
 		}
 	}
@@ -664,7 +666,7 @@ Status userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *po
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			return Status(apr::pool::userdata_set(data, key,
-					(stappler::mempool::apr::status_t(*)(void *))cb, (apr::pool_t *)pool));
+					(stappler::mempool::apr::status_t (*)(void *))cb, (apr::pool_t *)pool));
 		}
 	}
 	return ((custom::Pool *)pool)->userdata_set(data, key, (custom::Cleanup::Callback)cb);
@@ -674,7 +676,7 @@ Status userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *p
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			return Status(apr::pool::userdata_setn(data, key,
-					(stappler::mempool::apr::status_t(*)(void *))cb, (apr::pool_t *)pool));
+					(stappler::mempool::apr::status_t (*)(void *))cb, (apr::pool_t *)pool));
 		}
 	}
 	return ((custom::Pool *)pool)->userdata_setn(data, key, (custom::Cleanup::Callback)cb);

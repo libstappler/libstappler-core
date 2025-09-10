@@ -91,7 +91,7 @@ struct Looper::Data : public memory::AllocPool {
 		if (d->threadPool) {
 			d->threadPool->cancel();
 			d->threadPool = nullptr;
-			log::debug("Looper", "Cleanup: ", thread::ThreadInfo::getThreadInfo()->name);
+			log::source().debug("Looper", "Cleanup: ", thread::ThreadInfo::getThreadInfo()->name);
 		}
 
 		if (d->queue) {
@@ -109,7 +109,7 @@ struct Looper::Data : public memory::AllocPool {
 					stream << "[" << id << ":" << time.toHttp<memory::StandartInterface>()
 						   << "]:\n";
 					for (auto &it : vec) { stream << "\t" << it << "\n"; }
-					log::debug("event::Queue", stream.str());
+					log::source().debug("event::Queue", stream.str());
 				});
 			} else {
 				q = nullptr;

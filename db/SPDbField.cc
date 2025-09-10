@@ -36,24 +36,29 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::db {
 
 AutoFieldScheme::AutoFieldScheme(const Scheme &s, ReqVec &&vec, ViewLinkageFn &&fn, ReqVec &&lvec)
-: scheme(s), requiresForAuto(sp::move(vec)), linkage(sp::move(fn)), requiresForLinking(sp::move(lvec)) { }
+: scheme(s)
+, requiresForAuto(sp::move(vec))
+, linkage(sp::move(fn))
+, requiresForLinking(sp::move(lvec)) { }
 
 AutoFieldScheme::AutoFieldScheme(const Scheme &s, ReqVec &&vec, ReqVec &&lvec)
-: scheme(s), requiresForAuto(sp::move(vec)), linkage(nullptr), requiresForLinking(sp::move(lvec)) { }
+: scheme(s)
+, requiresForAuto(sp::move(vec))
+, linkage(nullptr)
+, requiresForLinking(sp::move(lvec)) { }
 
-bool Field::Slot::isProtected() const {
-	return hasFlag(Flags::Protected) || hasFlag(Flags::Admin);
-}
+bool Field::Slot::isProtected() const { return hasFlag(Flags::Protected) || hasFlag(Flags::Admin); }
 
 bool Field::isReference() const {
 	if (slot->type == Type::Object || slot->type == Type::Set) {
 		auto ref = static_cast<const FieldObject *>(slot);
-		return ref->onRemove == RemovePolicy::Reference || ref->onRemove == RemovePolicy::StrongReference;
+		return ref->onRemove == RemovePolicy::Reference
+				|| ref->onRemove == RemovePolicy::StrongReference;
 	}
 	return false;
 }
 
-const Scheme * Field::getForeignScheme() const {
+const Scheme *Field::getForeignScheme() const {
 	if (slot->type == Type::Object || slot->type == Type::Set) {
 		auto ref = static_cast<const FieldObject *>(slot);
 		return ref->scheme;
@@ -84,17 +89,39 @@ Value Field::getTypeDesc() const {
 	Value ret;
 	if (slot->flags != Flags::None) {
 		auto &f = ret.emplace("flags");
-		if ((slot->flags & Flags::Required) != Flags::None) { f.addString("required"); }
-		if ((slot->flags & Flags::Protected) != Flags::None) { f.addString("protected"); }
-		if ((slot->flags & Flags::ReadOnly) != Flags::None) { f.addString("readonly"); }
-		if ((slot->flags & Flags::Reference) != Flags::None) { f.addString("reference"); }
-		if ((slot->flags & Flags::Unique) != Flags::None) { f.addString("unique"); }
-		if ((slot->flags & Flags::AutoCTime) != Flags::None) { f.addString("auto-ctime"); }
-		if ((slot->flags & Flags::AutoMTime) != Flags::None) { f.addString("auto-mtime"); }
-		if ((slot->flags & Flags::AutoUser) != Flags::None) { f.addString("auto-user"); }
-		if ((slot->flags & Flags::Indexed) != Flags::None) { f.addString("indexed"); }
-		if ((slot->flags & Flags::Admin) != Flags::None) { f.addString("admin"); }
-		if ((slot->flags & Flags::ForceInclude) != Flags::None) { f.addString("forceinclude"); }
+		if ((slot->flags & Flags::Required) != Flags::None) {
+			f.addString("required");
+		}
+		if ((slot->flags & Flags::Protected) != Flags::None) {
+			f.addString("protected");
+		}
+		if ((slot->flags & Flags::ReadOnly) != Flags::None) {
+			f.addString("readonly");
+		}
+		if ((slot->flags & Flags::Reference) != Flags::None) {
+			f.addString("reference");
+		}
+		if ((slot->flags & Flags::Unique) != Flags::None) {
+			f.addString("unique");
+		}
+		if ((slot->flags & Flags::AutoCTime) != Flags::None) {
+			f.addString("auto-ctime");
+		}
+		if ((slot->flags & Flags::AutoMTime) != Flags::None) {
+			f.addString("auto-mtime");
+		}
+		if ((slot->flags & Flags::AutoUser) != Flags::None) {
+			f.addString("auto-user");
+		}
+		if ((slot->flags & Flags::Indexed) != Flags::None) {
+			f.addString("indexed");
+		}
+		if ((slot->flags & Flags::Admin) != Flags::None) {
+			f.addString("admin");
+		}
+		if ((slot->flags & Flags::ForceInclude) != Flags::None) {
+			f.addString("forceinclude");
+		}
 	}
 
 	if (slot->transform != Transform::None) {
@@ -144,9 +171,7 @@ Value Field::getTypeDesc() const {
 		ret.setString("extra", "type");
 		if (auto e = static_cast<const FieldExtra *>(slot)) {
 			auto &f = ret.emplace("fields");
-			for (auto &it : e->fields) {
-				f.setValue(it.second.getTypeDesc(), it.first);
-			}
+			for (auto &it : e->fields) { f.setValue(it.second.getTypeDesc(), it.first); }
 		}
 		break;
 	case Type::Object:
@@ -203,9 +228,7 @@ Value Field::getTypeDesc() const {
 			ret.setInteger(f->maxSize, "maxFileSize");
 			if (!f->allowedTypes.empty()) {
 				auto &t = ret.emplace("allowed");
-				for (auto &it : f->allowedTypes) {
-					t.addString(it);
-				}
+				for (auto &it : f->allowedTypes) { t.addString(it); }
 			}
 		}
 		break;
@@ -216,9 +239,7 @@ Value Field::getTypeDesc() const {
 				ret.setInteger(f->maxSize, "maxFileSize");
 				if (!f->allowedTypes.empty()) {
 					auto &t = ret.emplace("allowed");
-					for (auto &it : f->allowedTypes) {
-						t.addString(it);
-					}
+					for (auto &it : f->allowedTypes) { t.addString(it); }
 				}
 
 				auto &min = ret.emplace("minImageSize");
@@ -257,9 +278,7 @@ Value Field::getTypeDesc() const {
 
 			if (!v->requireFields.empty()) {
 				auto &f = ret.emplace("requires");
-				for (auto &it : v->requireFields) {
-					f.addString(it);
-				}
+				for (auto &it : v->requireFields) { f.addString(it); }
 			}
 
 			if (v->delta) {
@@ -291,7 +310,8 @@ Value Field::Slot::getDefault(const Value &patch) const {
 	}
 }
 
-bool Field::Slot::transformValue(const Scheme &scheme, const Value &obj, Value &val, bool isCreate) const {
+bool Field::Slot::transformValue(const Scheme &scheme, const Value &obj, Value &val,
+		bool isCreate) const {
 	if (!val.isBasicType() && type != Type::Data) {
 		return false;
 	}
@@ -330,9 +350,7 @@ bool Field::Slot::transformValue(const Scheme &scheme, const Value &obj, Value &
 			return true;
 		}
 		break;
-	default:
-		return false;
-		break;
+	default: return false; break;
 	}
 
 	return true;
@@ -342,11 +360,13 @@ void Field::Slot::hash(StringStream &stream, ValidationLevel l) const {
 	if (l == ValidationLevel::NamesAndTypes) {
 		stream << name << stappler::toInt(type);
 	} else {
-		stream << name << stappler::toInt(flags) << stappler::toInt(type) << stappler::toInt(transform);
+		stream << name << stappler::toInt(flags) << stappler::toInt(type)
+			   << stappler::toInt(transform);
 	}
 }
 
-bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &val, bool isCreate) const {
+bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &val,
+		bool isCreate) const {
 	switch (type) {
 	case Type::Text: {
 		if (!val.isBasicType()) {
@@ -382,7 +402,7 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 		switch (transform) {
 		case Transform::None:
 		case Transform::Text:
-			if ( !stappler::valid::validateText(str)) {
+			if (!stappler::valid::validateText(str)) {
 				return false;
 			}
 			break;
@@ -417,8 +437,7 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 				return false;
 			}
 			break;
-		default:
-			break;
+		default: break;
 		}
 		break;
 	}
@@ -431,14 +450,16 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 					return false;
 				}
 
-				val.setBytes(stappler::base16::decode<Interface>(StringView(str.data() + 4, str.size() - 4)));
+				val.setBytes(stappler::base16::decode<Interface>(
+						StringView(str.data() + 4, str.size() - 4)));
 			} else if (str.size() > 7 && strncasecmp(str.data(), "base64:", 7) == 0) {
 				auto len = stappler::base64::decodeSize(str.size() - 7);
 				if (len < minLength || len > maxLength) {
 					return false;
 				}
 
-				val.setBytes(stappler::base64::decode<Interface>(StringView(str.data() + 7, str.size() - 7)));
+				val.setBytes(stappler::base64::decode<Interface>(
+						StringView(str.data() + 7, str.size() - 7)));
 			} else if (transform == Transform::Uuid) {
 				auto b = stappler::memory::uuid(str).bytes();
 				if (b.empty()) {
@@ -450,9 +471,7 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 				if (StringView(str).starts_with("ssh-")) {
 					crypto::PublicKey key;
 					if (key.importOpenSSH(str)) {
-						return key.exportDer([&] (BytesView bytes) {
-							val.setBytes(bytes);
-						});
+						return key.exportDer([&](BytesView bytes) { val.setBytes(bytes); });
 					}
 					return false;
 				}
@@ -462,9 +481,7 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 					return false;
 				}
 
-				return pk.exportDer([&] (BytesView bytes) {
-					val.setBytes(bytes);
-				});
+				return pk.exportDer([&](BytesView bytes) { val.setBytes(bytes); });
 			}
 		} else if (val.isBytes()) {
 			auto &bytes = val.getBytes();
@@ -474,9 +491,7 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 					return false;
 				}
 
-				return pk.exportDer([&] (BytesView bytes) {
-					val.setBytes(bytes);
-				});
+				return pk.exportDer([&](BytesView bytes) { val.setBytes(bytes); });
 			}
 
 			if (bytes.size() < minLength || bytes.size() > maxLength) {
@@ -484,9 +499,7 @@ bool FieldText::transformValue(const Scheme &scheme, const Value &obj, Value &va
 			}
 		}
 		break;
-	default:
-		return false;
-		break;
+	default: return false; break;
 	}
 	return true;
 }
@@ -499,7 +512,8 @@ void FieldText::hash(StringStream &stream, ValidationLevel l) const {
 }
 
 
-bool FieldPassword::transformValue(const Scheme &scheme, const Value &, Value &val, bool isCreate) const {
+bool FieldPassword::transformValue(const Scheme &scheme, const Value &, Value &val,
+		bool isCreate) const {
 	if (!val.isString() && !val.isBytes()) {
 		return false;
 	}
@@ -524,7 +538,7 @@ void FieldPassword::hash(StringStream &stream, ValidationLevel l) const {
 
 
 bool FieldExtra::hasDefault() const {
-	for (auto & it : fields) {
+	for (auto &it : fields) {
 		if (it.second.hasDefault()) {
 			return true;
 		}
@@ -540,7 +554,7 @@ Value FieldExtra::getDefault(const Value &patch) const {
 	}
 
 	Value ret;
-	for (auto & it : fields) {
+	for (auto &it : fields) {
 		if (it.second.hasDefault()) {
 			ret.setValue(it.second.getDefault(patch), it.first);
 		}
@@ -548,8 +562,9 @@ Value FieldExtra::getDefault(const Value &patch) const {
 	return ret;
 }
 
-bool FieldExtra::transformValue(const Scheme &scheme, const Value &obj, Value &v, bool isCreate) const {
-	auto processValue = [&, this] (Value &val) -> bool {
+bool FieldExtra::transformValue(const Scheme &scheme, const Value &obj, Value &v,
+		bool isCreate) const {
+	auto processValue = [&, this](Value &val) -> bool {
 		if (!val.isDictionary()) {
 			return false;
 		}
@@ -559,11 +574,11 @@ bool FieldExtra::transformValue(const Scheme &scheme, const Value &obj, Value &v
 			auto f_it = fields.find(it->first);
 			if (f_it != fields.end()) {
 				if (it->second.isNull()) {
-					it ++;
+					it++;
 				} else if (!f_it->second.transform(scheme, obj, it->second, isCreate)) {
 					it = val.getDict().erase(it);
 				} else {
-					it ++;
+					it++;
 				}
 			} else {
 				it = val.getDict().erase(it);
@@ -587,7 +602,7 @@ bool FieldExtra::transformValue(const Scheme &scheme, const Value &obj, Value &v
 		auto it = arr.begin();
 		while (it != arr.end()) {
 			if (processValue(*it)) {
-				++ it;
+				++it;
 			} else {
 				it = arr.erase(it);
 			}
@@ -606,9 +621,7 @@ bool FieldExtra::transformValue(const Scheme &scheme, const Value &obj, Value &v
 void FieldExtra::hash(StringStream &stream, ValidationLevel l) const {
 	Slot::hash(stream, l);
 	if (l == ValidationLevel::Full) {
-		for (auto &it : fields) {
-			it.second.hash(stream, l);
-		}
+		for (auto &it : fields) { it.second.hash(stream, l); }
 	}
 }
 
@@ -616,25 +629,22 @@ void FieldFile::hash(StringStream &stream, ValidationLevel l) const {
 	Slot::hash(stream, l);
 	if (l == ValidationLevel::Full) {
 		stream << maxSize;
-		for (auto &it : allowedTypes) {
-			stream << it;
-		}
+		for (auto &it : allowedTypes) { stream << it; }
 	}
 }
 
 void FieldImage::hash(StringStream &stream, ValidationLevel l) const {
 	Slot::hash(stream, l);
 	if (l == ValidationLevel::Full) {
-		stream << maxSize << primary
-				<< maxImageSize.width << maxImageSize.height << stappler::toInt(maxImageSize.policy)
-				<< minImageSize.width << minImageSize.height << stappler::toInt(minImageSize.policy);
-		for (auto &it : allowedTypes) {
-			stream << it;
-		}
+		stream << maxSize << primary << maxImageSize.width << maxImageSize.height
+			   << stappler::toInt(maxImageSize.policy) << minImageSize.width << minImageSize.height
+			   << stappler::toInt(minImageSize.policy);
+		for (auto &it : allowedTypes) { stream << it; }
 	}
 }
 
-bool FieldObject::transformValue(const Scheme &scheme, const Value &obj, Value &val, bool isCreate) const {
+bool FieldObject::transformValue(const Scheme &scheme, const Value &obj, Value &val,
+		bool isCreate) const {
 	switch (type) {
 	case Type::Object:
 		if (val.isBasicType()) {
@@ -658,16 +668,14 @@ bool FieldObject::transformValue(const Scheme &scheme, const Value &obj, Value &
 					it = arr.erase(it);
 					continue;
 				}
-				++ it;
+				++it;
 			}
 			return true;
 		} else if (val.isInteger()) {
 			return true;
 		}
 		break;
-	default:
-		return false;
-		break;
+	default: return false; break;
 	}
 	return false;
 }
@@ -682,7 +690,8 @@ void FieldObject::hash(StringStream &stream, ValidationLevel l) const {
 	}
 }
 
-bool FieldArray::transformValue(const Scheme &scheme, const Value &obj, Value &val, bool isCreate) const {
+bool FieldArray::transformValue(const Scheme &scheme, const Value &obj, Value &val,
+		bool isCreate) const {
 	if (val.isArray()) {
 		if (tfield) {
 			auto &arr = val.asArray();
@@ -691,7 +700,7 @@ bool FieldArray::transformValue(const Scheme &scheme, const Value &obj, Value &v
 				if (!tfield.transform(scheme, obj, *it, isCreate)) {
 					it = arr.erase(it);
 				} else {
-					++ it;
+					++it;
 				}
 			}
 		}
@@ -716,16 +725,19 @@ FullTextQuery FieldFullTextView::parseQuery(const Value &data) const {
 	return FullTextQuery();
 }
 
-bool FieldVirtual::transformValue(const Scheme &scheme, const Value &obj, Value &value, bool isCreate) const {
+bool FieldVirtual::transformValue(const Scheme &scheme, const Value &obj, Value &value,
+		bool isCreate) const {
 	if (!writeFn) {
-		log::error("FieldVirtual", "Fail to write into virtual fields", data::EncodeFormat::Pretty, Value({
-			stappler::pair("object", Value(obj)),
-			stappler::pair("value", Value(value)),
-		}));
+		log::source().error("FieldVirtual", "Fail to write into virtual fields",
+				data::EncodeFormat::Pretty,
+				Value({
+					stappler::pair("object", Value(obj)),
+					stappler::pair("value", Value(value)),
+				}));
 		return false;
 	}
 
 	return true;
 }
 
-}
+} // namespace stappler::db

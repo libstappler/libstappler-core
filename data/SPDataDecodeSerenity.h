@@ -189,7 +189,7 @@ inline void Decoder<Interface>::transformToDict(ValueType &current) {
 		if (!str.empty()) {
 			dict.emplace(sp::move(str), ValueType(true));
 		} else {
-			log::error("DataSerenityDecoder", "Invalid token within SubArray");
+			log::source().error("DataSerenityDecoder", "Invalid token within SubArray");
 		}
 	}
 	current = ValueType(sp::move(dict));
@@ -226,7 +226,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 						StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				r.skipChars<StringView::CharGroup<CharGroupId::WhiteSpace>>();
 				if (r.is(':')) {
-					log::error("DataSerenityDecoder",
+					log::source().error("DataSerenityDecoder",
 							"Colon sequence within plain list is invalid");
 					stop = true;
 					break;
@@ -264,7 +264,8 @@ void Decoder<Interface>::parse(ValueType &val) {
 					back->arrayVal->emplace_back(ValueType::Type::EMPTY);
 					push(BackIsGeneric, &back->arrayVal->back());
 				} else {
-					log::error("DataSerenityDecoder", "Generic value can not be used as key");
+					log::source().error("DataSerenityDecoder",
+							"Generic value can not be used as key");
 					stop = true;
 					break;
 				}
@@ -294,7 +295,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 						push(BackIsPlain,
 								&back->dictVal->emplace(key, ValueType::Type::EMPTY).first->second);
 					} else {
-						log::error("DataSerenityDecoder",
+						log::source().error("DataSerenityDecoder",
 								"Colon sequence within plain list is invalid");
 						stop = true;
 						break;
@@ -327,7 +328,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 					}
 				}
 			} else {
-				log::error("DataSerenityDecoder", "Invalid token in plain list");
+				log::source().error("DataSerenityDecoder", "Invalid token in plain list");
 				stop = true;
 				break;
 			}
@@ -345,7 +346,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 				pop();
 				continue;
 			} else {
-				log::error("DataSerenityDecoder", "Invalid token in plain stop");
+				log::source().error("DataSerenityDecoder", "Invalid token in plain stop");
 				stop = true;
 			}
 			break;
@@ -406,7 +407,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 				if (!r.is<TokenSpecials>()
 						&& !r.is<StringView::CharGroup<CharGroupId::Alphanumeric>>()) {
 					stop = true;
-					log::error("DataSerenityDecoder", "Invalid key");
+					log::source().error("DataSerenityDecoder", "Invalid key");
 					break;
 				}
 
@@ -425,7 +426,7 @@ void Decoder<Interface>::parse(ValueType &val) {
 					back->dictVal->emplace(key, ValueType(true));
 				} else {
 					stop = true;
-					log::error("DataSerenityDecoder", "Invalid token in value");
+					log::source().error("DataSerenityDecoder", "Invalid token in value");
 					break;
 				}
 			} else {
@@ -483,7 +484,8 @@ void Decoder<Interface>::parse(ValueType &val) {
 					}
 				}
 			} else {
-				log::error("DataSerenityDecoder", "Invalid token in plain stop: '", r.sub(16), "'");
+				log::source().error("DataSerenityDecoder", "Invalid token in plain stop: '",
+						r.sub(16), "'");
 			}
 
 			break;

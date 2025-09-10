@@ -298,6 +298,26 @@ inline void toStringStream(Stream &stream, T value, Args && ... args) {
 
 }
 
+template <typename... Args>
+static StatusValue<uint32_t> toStringBuffer(char *buf, size_t bufLen, Args && ... args)  {
+	if constexpr (detail::IsFastToStringAvailable<Args ...>::value) {
+		auto size = detail::getBufferSize(std::forward<Args>(args)...);
+		if (size > bufLen) {
+			return Status::ErrorBufferOverflow;
+		}
+
+		auto s = detail::writeBuffer(buf, std::forward<Args>(args)...);
+		if (s != size) {
+			std::cout << "[core]: Invalid buffer size for toString<fast>\n";
+			abort();
+		}
+
+		return StatusValue<uint32_t>(uint32_t(s));
+	} else {
+		return Status::ErrorInvalidArguemnt;
+	}
+}
+
 template <typename Interface, typename... Args>
 static auto toString(Args && ... args) -> typename Interface::StringType {
 	if constexpr (detail::IsFastToStringAvailable<Args ...>::value) {
@@ -561,6 +581,26 @@ inline void toStringStream(Stream &stream, T value, Args && ... args) {
 	toStringStream(stream, std::forward<Args>(args)...);
 }
 
+}
+
+template <typename... Args>
+static StatusValue<uint32_t> toWideStringBuffer(char16_t *buf, size_t bufLen, Args && ... args)  {
+	if constexpr (wdetail::IsFastToStringAvailable<Args ...>::value) {
+		auto size = wdetail::getBufferSize(std::forward<Args>(args)...);
+		if (size > bufLen) {
+			return Status::ErrorBufferOverflow;
+		}
+
+		auto s = wdetail::writeBuffer(buf, std::forward<Args>(args)...);
+		if (s != size) {
+			std::cout << "[core]: Invalid buffer size for toString<fast>\n";
+			abort();
+		}
+
+		return StatusValue<uint32_t>(uint32_t(s));
+	} else {
+		return Status::ErrorInvalidArguemnt;
+	}
 }
 
 template <typename Interface, typename... Args>

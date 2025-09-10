@@ -75,11 +75,12 @@ bool Handle<memory::StandartInterface>::perform() {
 }
 
 template <>
-bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memory::PoolInterface> *, Ref *)> &cb) {
+bool MultiHandle<memory::PoolInterface>::perform(
+		const Callback<bool(Handle<memory::PoolInterface> *, Ref *)> &cb) {
 	auto m = curl_multi_init();
 	memory::PoolInterface::MapType<CURL *, Context<memory::PoolInterface>> handles;
 
-	auto initPending = [&, this] () -> int {
+	auto initPending = [&, this]() -> int {
 		for (auto &it : pending) {
 			auto h = CurlHandle_alloc();
 			auto i = handles.emplace(h, Context<memory::PoolInterface>()).first;
@@ -112,14 +113,14 @@ bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memo
 	do {
 		auto err = curl_multi_perform(m, &running);
 		if (err != CURLM_OK) {
-			log::error("CURL", "Fail to perform multi: ", err);
+			log::source().error("CURL", "Fail to perform multi: ", err);
 			return false;
 		}
 
 		if (running > 0) {
-			err = curl_multi_poll(m, NULL, 0, 1000, nullptr);
+			err = curl_multi_poll(m, NULL, 0, 1'000, nullptr);
 			if (err != CURLM_OK) {
-				log::error("CURL", "Fail to poll multi: ", err);
+				log::source().error("CURL", "Fail to poll multi: ", err);
 				return false;
 			}
 		}
@@ -154,15 +155,16 @@ bool MultiHandle<memory::PoolInterface>::perform(const Callback<bool(Handle<memo
 	} while (running > 0);
 
 	curl_multi_cleanup(m);
- 	return true;
+	return true;
 }
 
 template <>
-bool MultiHandle<memory::StandartInterface>::perform(const Callback<bool(Handle<memory::StandartInterface> *, Ref *)> &cb) {
+bool MultiHandle<memory::StandartInterface>::perform(
+		const Callback<bool(Handle<memory::StandartInterface> *, Ref *)> &cb) {
 	auto m = curl_multi_init();
 	memory::StandartInterface::MapType<CURL *, Context<memory::StandartInterface>> handles;
 
-	auto initPending = [&, this] () -> int {
+	auto initPending = [&, this]() -> int {
 		for (auto &it : pending) {
 			auto h = CurlHandle_alloc();
 			auto i = handles.emplace(h, Context<memory::StandartInterface>()).first;
@@ -195,14 +197,16 @@ bool MultiHandle<memory::StandartInterface>::perform(const Callback<bool(Handle<
 	do {
 		auto err = curl_multi_perform(m, &running);
 		if (err != CURLM_OK) {
-			log::error("CURL", string::toString<memory::StandartInterface>("Fail to perform multi: ", err));
+			log::source().error("CURL",
+					string::toString<memory::StandartInterface>("Fail to perform multi: ", err));
 			return false;
 		}
 
 		if (running > 0) {
-			err = curl_multi_poll(m, NULL, 0, 1000, nullptr);
+			err = curl_multi_poll(m, NULL, 0, 1'000, nullptr);
 			if (err != CURLM_OK) {
-				log::error("CURL", string::toString<memory::StandartInterface>("Fail to poll multi: ", err));
+				log::source().error("CURL",
+						string::toString<memory::StandartInterface>("Fail to poll multi: ", err));
 				return false;
 			}
 		}
@@ -237,7 +241,7 @@ bool MultiHandle<memory::StandartInterface>::perform(const Callback<bool(Handle<
 	} while (running > 0);
 
 	curl_multi_cleanup(m);
- 	return true;
+	return true;
 }
 
-}
+} // namespace stappler::network

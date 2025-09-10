@@ -158,7 +158,7 @@ struct WebpStruct {
 		case PixelFormat::I8:
 		case PixelFormat::IA88:
 		case PixelFormat::Auto:
-			log::error("Bitmap", "Webp supports only RGB888 and RGBA8888");
+			log::source().error("Bitmap", "Webp supports only RGB888 and RGBA8888");
 			return false;
 		default: break;
 		}
@@ -236,7 +236,7 @@ struct WebpStruct {
 		});
 
 		if (!fp) {
-			log::error("Bitmap", "fail to open file ", filename, " to write webp data");
+			log::source().error("Bitmap", "fail to open file ", filename, " to write webp data");
 			valid = false;
 			return;
 		}
@@ -303,7 +303,7 @@ static bool saveWebpLossless(const FileInfo &filename, const uint8_t *data, Bitm
 		return false;
 	}
 	if (invert) {
-		log::error("Bitmap", "Inverted output is not supported for webp");
+		log::source().error("Bitmap", "Inverted output is not supported for webp");
 		return false;
 	}
 
@@ -314,7 +314,7 @@ static bool saveWebpLossless(const FileInfo &filename, const uint8_t *data, Bitm
 static bool writeWebpLossless(const uint8_t *data, BitmapWriter &state, bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color) || invert) {
 		if (invert) {
-			log::error("Bitmap", "Inverted output is not supported for webp");
+			log::source().error("Bitmap", "Inverted output is not supported for webp");
 		}
 		return false;
 	}
@@ -327,7 +327,7 @@ static bool saveWebpLossy(const FileInfo &filename, const uint8_t *data, BitmapW
 		bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color) || invert) {
 		if (invert) {
-			log::error("Bitmap", "Inverted output is not supported for webp");
+			log::source().error("Bitmap", "Inverted output is not supported for webp");
 		}
 		return false;
 	}
@@ -339,7 +339,7 @@ static bool saveWebpLossy(const FileInfo &filename, const uint8_t *data, BitmapW
 static bool writeWebpLossy(const uint8_t *data, BitmapWriter &state, bool invert) {
 	if (!WebpStruct::isWebpSupported(state.color) || invert) {
 		if (invert) {
-			log::error("Bitmap", "Inverted output is not supported for webp");
+			log::source().error("Bitmap", "Inverted output is not supported for webp");
 		}
 		return false;
 	}

@@ -63,7 +63,7 @@ Status Handle::pause() {
 
 	auto status = _class->suspendFn(_class, this, _data);
 	if (status != Status::Ok && status != Status::Done) {
-		log::error("event::Handle", "Fail to pause handle: ", _status);
+		log::source().error("event::Handle", "Fail to pause handle: ", _status);
 	} else {
 		_status = Status::Declined;
 		return Status::Ok;
@@ -83,7 +83,7 @@ Status Handle::resume() {
 
 	auto status = _class->resumeFn(_class, this, _data);
 	if (status != Status::Ok && status != Status::Done) {
-		log::error("event::Handle", "Fail to resume handle: ", status);
+		log::source().error("event::Handle", "Fail to resume handle: ", status);
 	} else {
 		status = _status = Status::Ok;
 	}
@@ -160,7 +160,7 @@ Status Handle::run() {
 			// initial run
 			auto status = _class->runFn(_class, this, _data);
 			if (status != Status::Ok && status != Status::Done) {
-				log::error("event::Handle", "Fail to run handle: ", _status);
+				log::source().error("event::Handle", "Fail to run handle: ", _status);
 			} else {
 				_status = Status::Ok;
 				if (status == Status::Done) {
@@ -178,7 +178,7 @@ Status Handle::suspend() {
 	if (_class->suspendFn) {
 		auto status = _class->suspendFn(_class, this, _data);
 		if (status != Status::Ok && status != Status::Done) {
-			log::error("event::Handle", "Fail to suspend handle: ", _status);
+			log::source().error("event::Handle", "Fail to suspend handle: ", _status);
 		} else {
 			_status = Status::Suspended;
 			return Status::Ok;
@@ -190,12 +190,12 @@ Status Handle::suspend() {
 
 Status Handle::prepareRearm() {
 	if (_status == Status::Ok) {
-		log::error("event::Handle", "Fail to prepareRearm handle: ErrorAlreadyPerformed");
+		log::source().error("event::Handle", "Fail to prepareRearm handle: ErrorAlreadyPerformed");
 		return Status::ErrorAlreadyPerformed;
 	}
 
 	if (_status != Status::Declined && _status != Status::Pending && _status != Status::Suspended) {
-		log::error("event::Handle", "Fail to prepareRearm handle: : ErrorNotPermitted");
+		log::source().error("event::Handle", "Fail to prepareRearm handle: : ErrorNotPermitted");
 		return Status::ErrorNotPermitted;
 	}
 

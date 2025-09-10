@@ -110,7 +110,7 @@ void *Pool::palloc(size_t in_size, uint32_t alignment) {
 	alignment = std::max(alignment, DefaultAlignment);
 
 	if (alignment > 1'024) {
-		log::error("memory", STAPPLER_LOCATION, ": alignment value too large: ", alignment);
+		log::source().error("memory", SP_FUNC, ": alignment value too large: ", alignment);
 		return nullptr;
 	}
 
@@ -156,7 +156,7 @@ void *Pool::palloc(size_t in_size, uint32_t alignment) {
 		if (mem) {
 			node->first_avail += size + ((node->endp - node->first_avail) - space);
 		} else {
-			log::error("memory", STAPPLER_LOCATION,
+			log::source().error("memory", SP_FUNC,
 					": fail to allocate aligned memory: ", alignment);
 			return nullptr;
 		}

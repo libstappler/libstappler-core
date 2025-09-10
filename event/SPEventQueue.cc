@@ -46,7 +46,7 @@ bool Queue::init(const QueueInfo &info) {
 
 Rc<TimerHandle> Queue::scheduleTimer(TimerInfo &&info, Ref *ref) {
 	if (info.count == 0 || (!info.interval && !info.timeout)) {
-		log::error("event::Queue", "Invalid parameters for timer");
+		log::source().error("event::Queue", "Invalid parameters for timer");
 		return nullptr;
 	}
 

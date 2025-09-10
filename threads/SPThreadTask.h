@@ -73,27 +73,28 @@ public:
 	/* Function to be executed after task is performed */
 	using CompleteCallback = std::function<void(const Task &, bool)>;
 
-	using PriorityType = ValueWrapper<memory::PriorityQueue<Rc<Task>>::PriorityType, class PriorityTypeFlag>;
+	using PriorityType =
+			ValueWrapper<memory::PriorityQueue<Rc<Task>>::PriorityType, class PriorityTypeFlag>;
 
 	virtual ~Task() = default;
 
 	/* creates empty task with only complete function to be used as callback from other thread */
-	bool init(const CompleteCallback &, Ref * = nullptr,
-			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
-	bool init(CompleteCallback &&, Ref * = nullptr,
-			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
+	bool init(const CompleteCallback &, Ref * = nullptr, TaskGroup * = nullptr,
+			StringView tag = SP_FUNC);
+	bool init(CompleteCallback &&, Ref * = nullptr, TaskGroup * = nullptr,
+			StringView tag = SP_FUNC);
 
 	/* creates regular async task without initialization phase */
 	bool init(const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr,
-			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
+			TaskGroup * = nullptr, StringView tag = SP_FUNC);
 	bool init(ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr,
-			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
+			TaskGroup * = nullptr, StringView tag = SP_FUNC);
 
 	/* creates regular async task with initialization phase */
-	bool init(const PrepareCallback &, const ExecuteCallback &, const CompleteCallback & = nullptr, Ref * = nullptr,
-			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
-	bool init(PrepareCallback &&, ExecuteCallback &&, CompleteCallback && = nullptr, Ref * = nullptr,
-			TaskGroup * = nullptr, StringView tag = STAPPLER_LOCATION);
+	bool init(const PrepareCallback &, const ExecuteCallback &, const CompleteCallback & = nullptr,
+			Ref * = nullptr, TaskGroup * = nullptr, StringView tag = SP_FUNC);
+	bool init(PrepareCallback &&, ExecuteCallback &&, CompleteCallback && = nullptr,
+			Ref * = nullptr, TaskGroup * = nullptr, StringView tag = SP_FUNC);
 
 	/* adds one more function to be executed before task is added to queue, functions executed as FIFO */
 	void addPrepareCallback(const PrepareCallback &);
@@ -111,7 +112,7 @@ public:
 	void setTag(StringView tag) { _tag = tag; }
 
 	/* returns tag */
-	StringView getTag()  const{ return _tag; }
+	StringView getTag() const { return _tag; }
 
 	/* set default task priority */
 	void setPriority(PriorityType::Type priority) { _priority = PriorityType(priority); }
@@ -121,10 +122,16 @@ public:
 
 	TaskGroup *getGroup() const { return _group; }
 
-	void addRef(Ref *target) { if (target) { _refs.emplace_back(target); } }
+	void addRef(Ref *target) {
+		if (target) {
+			_refs.emplace_back(target);
+		}
+	}
 
 	/* if task execution was successful */
-	bool isSuccessful() const { return _state == TaskState::ExecutedSuccessful || _state == TaskState::CompletedSuccessful; }
+	bool isSuccessful() const {
+		return _state == TaskState::ExecutedSuccessful || _state == TaskState::CompletedSuccessful;
+	}
 
 	const std::vector<PrepareCallback> &getPrepareTasks() const { return _prepare; }
 	const std::vector<ExecuteCallback> &getExecuteTasks() const { return _execute; }
@@ -159,6 +166,6 @@ protected:
 	Rc<TaskGroup> _group;
 };
 
-}
+} // namespace stappler::thread
 
 #endif /* STAPPLER_THREADS_SPTHREADTASK_H_ */

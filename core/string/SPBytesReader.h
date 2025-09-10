@@ -32,6 +32,9 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler {
 
+template <typename _Type>
+class SpanView;
+
 template <typename _CharType>
 class BytesReader {
 public:
@@ -493,7 +496,6 @@ protected: // char-matching inline functions
 	bool match(MatchCharType c);
 };
 
-
 template <Endian Endianess = Endian::Network>
 class BytesViewTemplate : public BytesReader<uint8_t> {
 public:
@@ -605,7 +607,11 @@ public:
 
 	template <Endian OtherEndianess = Endianess>
 	auto readBytes(size_t s) -> BytesViewTemplate<OtherEndianess>; // read fixed-size string
+
+	template <typename T>
+	auto readSpan(size_t) -> SpanView<T>;
 };
+
 
 using StringView = StringViewBase<char>;
 using WideStringView = StringViewBase<char16_t>;
@@ -614,6 +620,193 @@ using BytesView = BytesViewTemplate<Endian::Host>;
 using BytesViewNetwork = BytesViewTemplate<Endian::Network>;
 using BytesViewHost = BytesViewTemplate<Endian::Host>;
 
+
+template <typename _Type>
+class SpanView {
+public:
+	using Type = _Type;
+	using Self = SpanView<Type>;
+	using iterator = memory::pointer_iterator<const Type, const Type *, const Type &>;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+
+	constexpr SpanView() = default;
+	constexpr SpanView(const Type *p, size_t l) : ptr(p), len(l) { }
+	constexpr SpanView(const Type *begin, const Type *end) : ptr(begin), len(end - begin) { }
+
+	static Self alloc(memory::pool_t *pool, size_t count) {
+		auto mem = (Type *)memory::pool::palloc(pool, count * sizeof(Type));
+		return Self(mem, count);
+	}
+
+	template <size_t N>
+	SpanView(const _Type value[N]) : ptr(&value[0]), len(N) { }
+
+	template < typename InputIt,
+			typename = std::enable_if_t<std::is_convertible<_Type *, InputIt>::value> >
+	SpanView(InputIt first, InputIt last) : ptr(&(*first)), len(std::distance(first, last)) { }
+
+	SpanView(InitializerList<Type> il) : ptr(il.begin()), len(il.size()) { }
+
+	SpanView(const std::vector<Type> &vec) : ptr(vec.data()), len(vec.size()) { }
+	SpanView(const std::vector<Type> &vec, size_t count)
+	: ptr(vec.data()), len(std::min(vec.size(), count)) { }
+	SpanView(const std::vector<Type> &vec, size_t off, size_t count)
+	: ptr(vec.data() + off), len(std::min(vec.size() - off, count)) { }
+
+	SpanView(const memory::vector<Type> &vec) : ptr(vec.data()), len(vec.size()) { }
+	SpanView(const memory::vector<Type> &vec, size_t count)
+	: ptr(vec.data()), len(std::min(vec.size(), count)) { }
+	SpanView(const memory::vector<Type> &vec, size_t off, size_t count)
+	: ptr(vec.data() + off), len(std::min(vec.size() - off, count)) { }
+
+	template <size_t Size>
+	SpanView(const Type (&array)[Size]) : ptr(&array[0]), len(Size) { }
+
+	template <size_t Size>
+	SpanView(const std::array<Type, Size> &arr) : ptr(arr.data()), len(arr.size()) { }
+
+	SpanView(const Self &v) = default;
+	SpanView(const Self &v, size_t len) : ptr(v.data()), len(std::min(len, v.size())) { }
+	SpanView(const Self &v, size_t pos, size_t len)
+	: ptr(v.data() + pos), len(std::min(len, v.size() - pos)) { }
+
+	Self &operator=(const memory::vector<Type> &vec) {
+		ptr = vec.data();
+		len = vec.size();
+		return *this;
+	}
+	Self &operator=(const std::vector<Type> &vec) {
+		ptr = vec.data();
+		len = vec.size();
+		return *this;
+	}
+
+	template <size_t Size>
+	Self &operator=(const std::array<Type, Size> &arr) {
+		ptr = arr.data();
+		len = arr.size();
+		return *this;
+	}
+	constexpr Self &operator=(const Self &v) = default;
+
+	Self &set(const Type *p, size_t l) {
+		ptr = p;
+		len = l;
+		return *this;
+	}
+
+	void offset(size_t l) {
+		if (l > len) {
+			len = 0;
+		} else {
+			ptr += l;
+			len -= l;
+		}
+	}
+
+	const Type *data() const { return ptr; }
+	size_t size() const { return len; }
+
+	iterator begin() const noexcept { return iterator(ptr); }
+	iterator end() const noexcept { return iterator(ptr + len); }
+
+	reverse_iterator rbegin() const noexcept { return reverse_iterator(end()); }
+	reverse_iterator rend() const noexcept { return reverse_iterator(begin()); }
+
+	bool operator>(const size_t &val) const { return len > val; }
+	bool operator>=(const size_t &val) const { return len >= val; }
+	bool operator<(const size_t &val) const { return len < val; }
+	bool operator<=(const size_t &val) const { return len <= val; }
+
+	Self &operator++() {
+		if (len > 0) {
+			ptr++;
+			len--;
+		}
+		return *this;
+	}
+	Self operator++(int) {
+		auto tmp = *this;
+		if (len > 0) {
+			ptr++;
+			len--;
+		}
+		return tmp;
+	}
+	Self &operator+=(size_t l) {
+		if (len > 0) {
+			offset(l);
+		}
+		return *this;
+	}
+
+	bool operator==(const Self &other) const {
+		return len == other.size() && std::equal(begin(), end(), other.begin());
+	}
+	bool operator!=(const Self &other) const {
+		return len != other.size() || !std::equal(begin(), end(), other.begin());
+	}
+
+	const Type &front() const { return *ptr; }
+	const Type &back() const { return ptr[len - 1]; }
+
+	const Type &at(const size_t &s) const { return ptr[s]; }
+	const Type &operator[](const size_t &s) const { return ptr[s]; }
+	const Type &operator*() const { return *ptr; }
+
+	void clear() { len = 0; }
+	bool empty() const { return len == 0 || !ptr; }
+
+	Self first(size_t count) const { return Self(ptr, std::min(count, len)); }
+	Self last(size_t count) const {
+		return (count < len) ? Self(ptr + len - count, count) : Self(ptr, len);
+	}
+
+	Self pop_front(size_t count = 1) {
+		auto ret = first(count);
+		offset(count);
+		return ret;
+	}
+	Self pop_back(size_t count = 1) {
+		auto ret = last(count);
+		len -= ret.size();
+		return ret;
+	}
+
+	template <typename Interface>
+	auto vec() const -> typename Interface::template VectorType<Type> {
+		return typename Interface::template VectorType<Type>(ptr, ptr + len);
+	}
+
+	BytesView bytes() const { return BytesView((uint8_t *)ptr, len * sizeof(Type)); }
+
+	Self pdup(memory::pool_t *p = nullptr) const {
+		if (!p) {
+			p = memory::pool::acquire();
+		}
+		auto buf = (Type *)memory::pool::palloc(p, this->size() * sizeof(Type));
+		memcpy((void *)buf, this->data(), this->size() * sizeof(Type));
+		return Self(buf, this->size());
+	}
+
+	size_t hash() const {
+		if constexpr (sizeof(size_t) == 4) {
+			return hash::hash32((const char *)data(), size() * sizeof(_Type));
+		} else {
+			return hash::hash64((const char *)data(), size() * sizeof(_Type));
+		}
+	}
+
+	Self sub(size_t pos = 0, size_t len = maxOf<size_t>()) const { return Self(*this, pos, len); }
+
+protected:
+	const Type *ptr = nullptr;
+	size_t len = 0;
+};
+
+//
+// Implementation
+//
 
 template <typename CharType>
 inline size_t BytesReader<CharType>::find(const CharType *__s, size_t __pos, size_t __n) const {
@@ -633,10 +826,6 @@ inline size_t BytesReader<CharType>::find(const CharType *__s, size_t __pos, siz
 	}
 	return maxOf<size_t>();
 }
-
-//
-// Implementation
-//
 
 template <typename CharType>
 inline size_t BytesReader<CharType>::find(CharType __c, size_t __pos) const {

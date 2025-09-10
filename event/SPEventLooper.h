@@ -79,14 +79,14 @@ public:
 	// Perform function on this thread
 	// If current thread is looper thread - performs in place
 	Status performOnThread(mem_std::Function<void()> &&func, Ref *target, bool immediate = false,
-			StringView tag = STAPPLER_LOCATION);
+			StringView tag = SP_FUNC);
 
 	// Perform task in workers pool (if there is one)
 	Status performAsync(Rc<thread::Task> &&task, bool first = false);
 
 	// Perform function in workers pool (if there is one)
 	Status performAsync(mem_std::Function<void()> &&, Ref * = nullptr, bool first = false,
-			StringView tag = STAPPLER_LOCATION);
+			StringView tag = SP_FUNC);
 
 	// Perform Handle in queue (if supported)
 	Status performHandle(Handle *);

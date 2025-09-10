@@ -209,7 +209,7 @@ static void StapplerFilesystemFileDrop(wasm_exec_env_t exec_env, uint32_t handle
 	auto mod = ExecEnv::get(exec_env)->getInstance();
 	auto file = mod->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[resource-drop]file: invalid handle");
+		log::source().error("wasm::Runtime", "[resource-drop]file: invalid handle");
 		return;
 	}
 
@@ -219,7 +219,7 @@ static void StapplerFilesystemFileDrop(wasm_exec_env_t exec_env, uint32_t handle
 static uint32_t StapplerFilesystemFileRead(wasm_exec_env_t exec_env, uint32_t handle, uint8_t *buf, uint32_t bufSize) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.read: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.read: invalid handle");
 		return 0;
 	}
 
@@ -229,7 +229,7 @@ static uint32_t StapplerFilesystemFileRead(wasm_exec_env_t exec_env, uint32_t ha
 static uint64_t StapplerFilesystemFileSeek(wasm_exec_env_t exec_env, uint32_t handle, int64_t offset, io::Seek pos) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.seek: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.seek: invalid handle");
 		return 0;
 	}
 
@@ -239,7 +239,7 @@ static uint64_t StapplerFilesystemFileSeek(wasm_exec_env_t exec_env, uint32_t ha
 static uint64_t StapplerFilesystemFileTell(wasm_exec_env_t exec_env, uint32_t handle) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.tell: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.tell: invalid handle");
 		return 0;
 	}
 
@@ -249,7 +249,7 @@ static uint64_t StapplerFilesystemFileTell(wasm_exec_env_t exec_env, uint32_t ha
 static uint64_t StapplerFilesystemFileSize(wasm_exec_env_t exec_env, uint32_t handle) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.size: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.size: invalid handle");
 		return 0;
 	}
 
@@ -259,7 +259,7 @@ static uint64_t StapplerFilesystemFileSize(wasm_exec_env_t exec_env, uint32_t ha
 static int32_t StapplerFilesystemFileXsgetc(wasm_exec_env_t exec_env, uint32_t handle) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.xsgetc: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.xsgetc: invalid handle");
 		return 0;
 	}
 
@@ -269,7 +269,7 @@ static int32_t StapplerFilesystemFileXsgetc(wasm_exec_env_t exec_env, uint32_t h
 static int32_t StapplerFilesystemFileXsputc(wasm_exec_env_t exec_env, uint32_t handle, int32_t c) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.xsputc: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.xsputc: invalid handle");
 		return 0;
 	}
 
@@ -279,7 +279,7 @@ static int32_t StapplerFilesystemFileXsputc(wasm_exec_env_t exec_env, uint32_t h
 static uint32_t StapplerFilesystemFileXsputn(wasm_exec_env_t exec_env, uint32_t handle, uint8_t *buf, uint32_t bufSize) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.xsputn: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.xsputn: invalid handle");
 		return 0;
 	}
 
@@ -289,7 +289,7 @@ static uint32_t StapplerFilesystemFileXsputn(wasm_exec_env_t exec_env, uint32_t 
 static uint32_t StapplerFilesystemFileXsgetn(wasm_exec_env_t exec_env, uint32_t handle, uint8_t *buf, uint32_t bufSize) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.xsgetn: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.xsgetn: invalid handle");
 		return 0;
 	}
 
@@ -299,7 +299,7 @@ static uint32_t StapplerFilesystemFileXsgetn(wasm_exec_env_t exec_env, uint32_t 
 static uint32_t StapplerFilesystemFileIsOpen(wasm_exec_env_t exec_env, uint32_t handle) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.is-open: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.is-open: invalid handle");
 		return 0;
 	}
 
@@ -309,7 +309,7 @@ static uint32_t StapplerFilesystemFileIsOpen(wasm_exec_env_t exec_env, uint32_t 
 static uint32_t StapplerFilesystemFileEof(wasm_exec_env_t exec_env, uint32_t handle) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.eof: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.eof: invalid handle");
 		return 0;
 	}
 
@@ -319,7 +319,7 @@ static uint32_t StapplerFilesystemFileEof(wasm_exec_env_t exec_env, uint32_t han
 static void StapplerFilesystemFileClose(wasm_exec_env_t exec_env, uint32_t handle) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.close: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.close: invalid handle");
 		return;
 	}
 
@@ -329,7 +329,7 @@ static void StapplerFilesystemFileClose(wasm_exec_env_t exec_env, uint32_t handl
 static void StapplerFilesystemFileCloseRemove(wasm_exec_env_t exec_env, uint32_t handle) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.close-remove: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.close-remove: invalid handle");
 		return;
 	}
 
@@ -339,7 +339,7 @@ static void StapplerFilesystemFileCloseRemove(wasm_exec_env_t exec_env, uint32_t
 static void StapplerFilesystemFileCloseRename(wasm_exec_env_t exec_env, uint32_t handle, char *name, uint32_t len) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.close-rename: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.close-rename: invalid handle");
 		return;
 	}
 
@@ -349,7 +349,7 @@ static void StapplerFilesystemFileCloseRename(wasm_exec_env_t exec_env, uint32_t
 static uint32_t StapplerFilesystemFileGetTmpPath(wasm_exec_env_t exec_env, uint32_t handle, char *buf, uint32_t len) {
 	auto file = ExecEnv::get(exec_env)->getInstance()->getObject<filesystem::File>(handle);
 	if (!file) {
-		log::error("wasm::Runtime", "[method]file.get-tmp-path: invalid handle");
+		log::source().error("wasm::Runtime", "[method]file.get-tmp-path: invalid handle");
 		return 0;
 	}
 

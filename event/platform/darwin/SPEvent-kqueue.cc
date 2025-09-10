@@ -178,7 +178,7 @@ Status KQueueData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval 
 		if (status == Status::Ok) {
 			processEvents(&ctx);
 		} else if (status != Status::ErrorInterrupted) {
-			log::error("event::KQueueData", "kqueue error: ", status);
+			log::source().error("event::KQueueData", "kqueue error: ", status);
 			ctx.wakeupStatus = status;
 			break;
 		}

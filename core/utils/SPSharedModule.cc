@@ -86,7 +86,7 @@ void SharedModuleManager::addModule(SharedModule *module) {
 			it->second = module;
 			return;
 		} else {
-			log::error("SharedModule", "Module '", module->name, "' redefined");
+			log::source().error("SharedModule", "Module '", module->name, "' redefined");
 			abort();
 			return;
 		}
@@ -140,7 +140,7 @@ const void *SharedModuleManager::acquireSymbol(const char *module, const char *s
 			mod = mod->next;
 		}
 	} else {
-		log::error("SharedModule", "Module \"", module, "\" is not defined");
+		log::source().error("SharedModule", "Module \"", module, "\" is not defined");
 	}
 	return nullptr;
 }
@@ -194,10 +194,10 @@ const void *SharedModuleManager::acquireSymbol(const char *module, const char *s
 				}
 				mod = mod->next;
 			}
-			log::error("SharedModule", err.str());
+			log::source().error("SharedModule", err.str());
 		}
 	} else {
-		log::error("SharedModule", "Module \"", module, "\" is not defined");
+		log::source().error("SharedModule", "Module \"", module, "\" is not defined");
 	}
 	return nullptr;
 }

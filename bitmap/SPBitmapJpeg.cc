@@ -38,7 +38,7 @@ struct JpegError {
 		JpegError *myerr = (JpegError *)cinfo->err;
 		char buffer[JMSG_LENGTH_MAX];
 		(*cinfo->err->format_message)(cinfo, buffer);
-		log::error("JPEG", "jpeg error: %s", buffer);
+		log::source().error("JPEG", "jpeg error: %s", buffer);
 		longjmp(myerr->setjmp_buffer, 1);
 	}
 };
@@ -265,7 +265,7 @@ struct JpegWriteStruct {
 		});
 
 		if (!fp) {
-			log::error("Bitmap", "fail to open file ", filename, " to write jpeg data");
+			log::source().error("Bitmap", "fail to open file ", filename, " to write jpeg data");
 			valid = false;
 			return;
 		}
@@ -298,7 +298,7 @@ struct JpegWriteStruct {
 			cinfo.in_color_space = JCS_RGB;
 			break;
 		default:
-			log::error("JPEG", "Color format is not supported by JPEG!");
+			log::source().error("JPEG", "Color format is not supported by JPEG!");
 			return false;
 			break;
 		}

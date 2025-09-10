@@ -75,7 +75,7 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 	}, _data->staticPool);
 
 	if (!_data || !_data->driver) {
-		log::error("db::SimpleServer", "Fail to load db driver");
+		log::source().error("db::SimpleServer", "Fail to load db driver");
 		return false;
 	}
 
@@ -91,7 +91,8 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 		if (!_data->handle.get()) {
 			db::StringStream out;
 			for (auto &it : initParams) { out << "\n\t" << it.first << ": " << it.second; }
-			log::error("db::SimpleServer", "Fail to initialize DB with params: ", out.str());
+			log::source().error("db::SimpleServer",
+					"Fail to initialize DB with params: ", out.str());
 		}
 	}, _data->staticPool);
 
@@ -140,11 +141,11 @@ const Scheme *SimpleServer::getFileScheme() const { return &_data->files; }
 const Scheme *SimpleServer::getUserScheme() const { return &_data->users; }
 
 void SimpleServer::pushErrorMessage(Value &&value) const {
-	log::error("db::SimpleServer", data::EncodeFormat::Pretty, value);
+	log::source().error("db::SimpleServer", data::EncodeFormat::Pretty, value);
 }
 
 void SimpleServer::pushDebugMessage(Value &&value) const {
-	log::debug("db::SimpleServer", data::EncodeFormat::Pretty, value);
+	log::source().debug("db::SimpleServer", data::EncodeFormat::Pretty, value);
 }
 
 StringView SimpleServer::getDatabaseName() const { return _data->interfaceConfig.name; }

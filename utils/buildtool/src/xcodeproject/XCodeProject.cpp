@@ -64,7 +64,8 @@ struct XCodeProject {
 	StringView frameworkPath;
 
 	makefile::Map<const makefile::xcode::PBXFileSystemSynchronizedRootGroup *,
-			makefile::Vector<makefile::String>> sourceDirs;
+			makefile::Vector<makefile::String>>
+			sourceDirs;
 	makefile::Vector<const makefile::xcode::PBXFileReference *> sourceFiles;
 
 	MakefileConfig releaseConfig;
@@ -72,7 +73,7 @@ struct XCodeProject {
 };
 
 static constexpr auto s_workspaceData =
-R"(<?xml version="1.0" encoding="UTF-8"?>
+		R"(<?xml version="1.0" encoding="UTF-8"?>
 <Workspace
    version = "1.0">
    <FileRef
@@ -167,9 +168,7 @@ static void extractLibFlags(StringView flags, const CallbackStream &cb) {
 
 	Vector<StringView> values;
 
-	StringView(flags).split<StringView::WhiteSpace>([&](StringView v) {
-		values.emplace_back(v);
-	});
+	StringView(flags).split<StringView::WhiteSpace>([&](StringView v) { values.emplace_back(v); });
 
 	Set<StringView> frameworks;
 	Set<StringView> libs;
@@ -180,30 +179,30 @@ static void extractLibFlags(StringView flags, const CallbackStream &cb) {
 	while (lIt != lEnd) {
 		if (*lIt == "-framework") {
 			auto tmp = lIt;
-			++ tmp;
+			++tmp;
 			auto name = *tmp;
 			if (frameworks.find(name) == frameworks.end()) {
 				cb << "-framework" << name;
 				frameworks.emplace(StringView(name));
 			}
-			++ lIt;
-			++ lIt;
+			++lIt;
+			++lIt;
 		} else if (lIt->starts_with("-l")) {
 			auto libname = lIt->sub(2);
 			if (libs.find(libname) == libs.end()) {
 				cb << toString("-l", libname);
 				libs.emplace(libname);
 			}
-			++ lIt;
+			++lIt;
 		} else {
 			cb << *lIt;
-			++ lIt;
+			++lIt;
 		}
 	}
 }
 
-static const makefile::xcode::XCBuildConfiguration *makeMacOsFrameworkConfiguration(XCodeProject &xproj,
-		StringView name, bool debug) {
+static const makefile::xcode::XCBuildConfiguration *makeMacOsFrameworkConfiguration(
+		XCodeProject &xproj, StringView name, bool debug) {
 	using namespace makefile;
 	return xcode::XCBuildConfiguration::create(xproj.xctx, [&](xcode::XCBuildConfiguration *list) {
 		list->name = name.str<Interface>();
@@ -223,7 +222,7 @@ static const makefile::xcode::XCBuildConfiguration *makeMacOsFrameworkConfigurat
 		list->buildSettings.emplace("MACH_O_TYPE", "staticlib");
 		list->buildSettings.emplace("MARKETING_VERSION", "1.0");
 		list->buildSettings.emplace("MODULE_VERIFIER_SUPPORTED_LANGUAGES",
-									"objective-c objective-c++");
+				"objective-c objective-c++");
 		list->buildSettings.emplace("SDKROOT", "macosx");
 		list->buildSettings.emplace("SKIP_INSTALL", true);
 		list->buildSettings.emplace("SWIFT_EMIT_LOC_STRINGS", true);
@@ -234,10 +233,10 @@ static const makefile::xcode::XCBuildConfiguration *makeMacOsFrameworkConfigurat
 		auto &config = debug ? xproj.debugConfig : xproj.releaseConfig;
 
 		list->buildSettings.emplace("MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS",
-									toString(config.std, " ", config.stdxx));
+				toString(config.std, " ", config.stdxx));
 		list->buildSettings.emplace("MACOSX_DEPLOYMENT_TARGET", config.depTarget);
 		list->buildSettings.emplace("PRODUCT_BUNDLE_IDENTIFIER",
-									toString(config.bundleName, ".framework"));
+				toString(config.bundleName, ".framework"));
 
 		// process headers paths
 		Value targetHeaderPaths;
@@ -250,9 +249,11 @@ static const makefile::xcode::XCBuildConfiguration *makeMacOsFrameworkConfigurat
 
 		StringView(config.headerPaths).split<StringView::WhiteSpace>([&](StringView path) {
 			if (path.starts_with(StringView(config.frameworkRoot))) {
-				targetHeaderPaths.addString(toString("$(STAPPLER_ROOT)", path.sub(config.frameworkRoot.size())));
+				targetHeaderPaths.addString(
+						toString("$(STAPPLER_ROOT)", path.sub(config.frameworkRoot.size())));
 			} else if (path.starts_with(StringView(config.localOutdir))) {
-				targetHeaderPaths.addString(toString("$(PROJECT_DIR)/..", path.sub(config.localOutdir.size())));
+				targetHeaderPaths.addString(
+						toString("$(PROJECT_DIR)/..", path.sub(config.localOutdir.size())));
 			} else {
 				targetHeaderPaths.addString(path);
 			}
@@ -265,9 +266,7 @@ static const makefile::xcode::XCBuildConfiguration *makeMacOsFrameworkConfigurat
 		// process libflags
 		Value targetldflags;
 
-		extractLibFlags(config.ldflags, [&] (StringView str) {
-			targetldflags.addString(str);
-		});
+		extractLibFlags(config.ldflags, [&](StringView str) { targetldflags.addString(str); });
 
 		if (!targetldflags.empty()) {
 			list->buildSettings.emplace("OTHER_LDFLAGS", targetldflags);
@@ -297,8 +296,9 @@ static const makefile::xcode::XCBuildConfiguration *makeMacOsFrameworkConfigurat
 			list->buildSettings.emplace("OTHER_CPLUSPLUSFLAGS", targetcxxflags);
 		}
 
-		list->buildSettings.emplace("LIBRARY_SEARCH_PATHS", Value{Value("/usr/local/lib"),
-			Value("$(STAPPLER_ROOT)/deps/mac/$(CURRENT_ARCH)/lib")});
+		list->buildSettings.emplace("LIBRARY_SEARCH_PATHS",
+				Value{Value("/usr/local/lib"),
+					Value("$(STAPPLER_ROOT)/deps/mac/$(CURRENT_ARCH)/lib")});
 
 		list->buildSettings.emplace("STAPPLER_ROOT", config.frameworkRoot);
 	});
@@ -316,17 +316,17 @@ static void makeXCodeMacOsTarget(XCodeProject &xproj, makefile::xcode::PBXNative
 			xcode::PBXSourcesBuildPhase::create(xproj.xctx, [&](xcode::PBXSourcesBuildPhase *list) {
 		for (auto &it : xproj.sourceDirs) {
 			if (!it.second.empty()) {
-				it.first->exceptions.emplace_back(xcode::PBXFileSystemSynchronizedBuildFileExceptionSet::create(xproj.xctx,
-						[&] (xcode::PBXFileSystemSynchronizedBuildFileExceptionSet *set) {
+				it.first->exceptions.emplace_back(
+						xcode::PBXFileSystemSynchronizedBuildFileExceptionSet::create(xproj.xctx,
+								[&](xcode::PBXFileSystemSynchronizedBuildFileExceptionSet *set) {
 					set->membershipExceptions = it.second;
 					set->target = target;
 				}));
 			}
 		}
 		for (auto &it : xproj.sourceFiles) {
-			list->files.emplace_back(xcode::PBXBuildFile::create(xproj.xctx, [&] (xcode::PBXBuildFile *file) {
-				file->file = it;
-			}));
+			list->files.emplace_back(xcode::PBXBuildFile::create(xproj.xctx,
+					[&](xcode::PBXBuildFile *file) { file->file = it; }));
 		}
 	}));
 
@@ -402,26 +402,28 @@ static void makeConfigs(StringView path, makefile::Makefile *make) {
 static const makefile::xcode::PBXGroup *makeModuleGroup(XCodeProject &xproj, StringView mod) {
 	using namespace makefile;
 
-	return xcode::PBXGroup::create(xproj.xctx, [&] (xcode::PBXGroup *group) {
+	return xcode::PBXGroup::create(xproj.xctx, [&](xcode::PBXGroup *group) {
 		group->sourceTree.type = xcode::PBXSourceTree::group;
 		group->name = mod.str<Interface>();
 
 		StringView(getVariable(xproj.release, toString("$(MODULE_", mod, ")_SRCS_DIRS")))
-			.split<StringView::WhiteSpace>([&] (StringView str) {
-				auto path = filepath::reconstructPath<Interface>(str);
-				auto g = xcode::PBXFileSystemSynchronizedRootGroup::create(xproj.xctx,
-						[&] (xcode::PBXFileSystemSynchronizedRootGroup *g) {
-					g->name = filepath::lastComponent(str).str<Interface>();
-					g->path = path;
-				});
+				.split<StringView::WhiteSpace>([&](StringView str) {
+			auto path = filepath::reconstructPath<Interface>(str);
+			auto g = xcode::PBXFileSystemSynchronizedRootGroup::create(xproj.xctx,
+					[&](xcode::PBXFileSystemSynchronizedRootGroup *g) {
+				g->name = filepath::lastComponent(str).str<Interface>();
+				g->path = path;
+			});
 
-				group->children.emplace_back(g);
-				xproj.sourceDirs.emplace(g, Vector<String>());
+			group->children.emplace_back(g);
+			xproj.sourceDirs.emplace(g, Vector<String>());
 		});
 
-		auto files = getExpression(xproj.release, toString("$(call sp_toolkit_source_list, $($(MODULE_", mod, ")_SRCS_DIRS), $($(MODULE_", mod, ")_SRCS_OBJS))"));
+		auto files = getExpression(xproj.release,
+				toString("$(call sp_toolkit_source_list, $($(MODULE_", mod,
+						")_SRCS_DIRS), $($(MODULE_", mod, ")_SRCS_OBJS))"));
 
-		StringView(files).split<StringView::WhiteSpace>([&] (StringView str) {
+		StringView(files).split<StringView::WhiteSpace>([&](StringView str) {
 			auto path = filepath::reconstructPath<Interface>(str);
 			bool addedAsException = false;
 			for (auto &it : xproj.sourceDirs) {
@@ -434,7 +436,7 @@ static const makefile::xcode::PBXGroup *makeModuleGroup(XCodeProject &xproj, Str
 			}
 			if (!addedAsException) {
 				auto fileRef = xcode::PBXFileReference::create(xproj.xctx,
-						[&] (xcode::PBXFileReference *file) {
+						[&](xcode::PBXFileReference *file) {
 					file->name = filepath::lastComponent(str).str<Interface>();
 					file->path = str.str<Interface>();
 					file->sourceTree.type = xcode::PBXSourceTree::absolute;
@@ -449,26 +451,27 @@ static const makefile::xcode::PBXGroup *makeModuleGroup(XCodeProject &xproj, Str
 static const makefile::xcode::PBXGroup *makeProjectGroup(XCodeProject &xproj) {
 	using namespace makefile;
 
-	return xcode::PBXGroup::create(xproj.xctx, [&] (xcode::PBXGroup *group) {
+	return xcode::PBXGroup::create(xproj.xctx, [&](xcode::PBXGroup *group) {
 		group->sourceTree.type = xcode::PBXSourceTree::group;
 		group->name = "project";
 
 		StringView(getExpression(xproj.release, "$(realpath $(LOCAL_SRCS_DIRS))"))
-			.split<StringView::WhiteSpace>([&] (StringView str) {
-				auto path = filepath::reconstructPath<Interface>(str);
-				auto g = xcode::PBXFileSystemSynchronizedRootGroup::create(xproj.xctx,
-						[&] (xcode::PBXFileSystemSynchronizedRootGroup *g) {
-					g->name = filepath::lastComponent(str).str<Interface>();
-					g->path = path;
-				});
-
-				group->children.emplace_back(g);
-				xproj.sourceDirs.emplace(g, Vector<String>());
+				.split<StringView::WhiteSpace>([&](StringView str) {
+			auto path = filepath::reconstructPath<Interface>(str);
+			auto g = xcode::PBXFileSystemSynchronizedRootGroup::create(xproj.xctx,
+					[&](xcode::PBXFileSystemSynchronizedRootGroup *g) {
+				g->name = filepath::lastComponent(str).str<Interface>();
+				g->path = path;
 			});
 
-		auto files = getExpression(xproj.release, "$(call sp_local_source_list,$(LOCAL_SRCS_DIRS),$(LOCAL_SRCS_OBJS))");
+			group->children.emplace_back(g);
+			xproj.sourceDirs.emplace(g, Vector<String>());
+		});
 
-		StringView(files).split<StringView::WhiteSpace>([&] (StringView str) {
+		auto files = getExpression(xproj.release,
+				"$(call sp_local_source_list,$(LOCAL_SRCS_DIRS),$(LOCAL_SRCS_OBJS))");
+
+		StringView(files).split<StringView::WhiteSpace>([&](StringView str) {
 			auto path = filepath::reconstructPath<Interface>(str);
 			bool addedAsException = false;
 			for (auto &it : xproj.sourceDirs) {
@@ -481,7 +484,7 @@ static const makefile::xcode::PBXGroup *makeProjectGroup(XCodeProject &xproj) {
 			}
 			if (!addedAsException) {
 				auto fileRef = xcode::PBXFileReference::create(xproj.xctx,
-															   [&] (xcode::PBXFileReference *file) {
+						[&](xcode::PBXFileReference *file) {
 					file->name = filepath::lastComponent(str).str<Interface>();
 					file->path = str.str<Interface>();
 					file->sourceTree.type = xcode::PBXSourceTree::absolute;
@@ -502,7 +505,8 @@ static const makefile::xcode::PBXGroup *makeProjectGroup(XCodeProject &xproj) {
 			xproj.sourceFiles.emplace_back(fileRef);
 		}*/
 
-		auto fileRef = xcode::PBXFileReference::create(xproj.xctx, [&] (xcode::PBXFileReference *file) {
+		auto fileRef =
+				xcode::PBXFileReference::create(xproj.xctx, [&](xcode::PBXFileReference *file) {
 			file->name = "stappler-appconfig.cpp";
 			file->path = "src/stappler-appconfig.cpp";
 			file->sourceTree.type = xcode::PBXSourceTree::sourceRoot;
@@ -517,7 +521,7 @@ static void writeXCConfig(XCodeProject &xproj, const CallbackStream &cb) {
 
 	cb << "//Autogenerated file\n\n";
 
-	auto writeValue = [&] (StringView name, StringView debug, StringView release) {
+	auto writeValue = [&](StringView name, StringView debug, StringView release) {
 		if (debug == release) {
 			cb << name << " = " << release << "\n";
 		} else {
@@ -528,28 +532,39 @@ static void writeXCConfig(XCodeProject &xproj, const CallbackStream &cb) {
 
 	writeValue("STAPPLER_STD", xproj.debugConfig.std, xproj.releaseConfig.std);
 	writeValue("STAPPLER_STDXX", xproj.debugConfig.stdxx, xproj.releaseConfig.stdxx);
-	writeValue("STAPPLER_MACOSX_DEPLOYMENT_TARGET", xproj.debugConfig.depTarget, xproj.releaseConfig.depTarget);
-	writeValue("STAPPLER_BUNDLE_NAME", xproj.debugConfig.bundleName, xproj.releaseConfig.bundleName);
+	writeValue("STAPPLER_MACOSX_DEPLOYMENT_TARGET", xproj.debugConfig.depTarget,
+			xproj.releaseConfig.depTarget);
+	writeValue("STAPPLER_BUNDLE_NAME", xproj.debugConfig.bundleName,
+			xproj.releaseConfig.bundleName);
 	writeValue("STAPPLER_ROOT", xproj.debugConfig.frameworkRoot, xproj.releaseConfig.frameworkRoot);
 	writeValue("STAPPLER_OUTDIR", xproj.debugConfig.localOutdir, xproj.releaseConfig.localOutdir);
 	writeValue("STAPPLER_LIBS", xproj.debugConfig.libs, xproj.releaseConfig.libs);
 	writeValue("STAPPLER_GENERAL_CFLAGS", xproj.debugConfig.cflags, xproj.releaseConfig.cflags);
-	writeValue("STAPPLER_GENERAL_CXXFLAGS", xproj.debugConfig.cxxflags, xproj.releaseConfig.cxxflags);
-	writeValue("STAPPLER_EXEC_CFLAGS", xproj.debugConfig.cflagsExec, xproj.releaseConfig.cflagsExec);
-	writeValue("STAPPLER_EXEC_CXXFLAGS", xproj.debugConfig.cxxflagsExec, xproj.releaseConfig.cxxflagsExec);
+	writeValue("STAPPLER_GENERAL_CXXFLAGS", xproj.debugConfig.cxxflags,
+			xproj.releaseConfig.cxxflags);
+	writeValue("STAPPLER_EXEC_CFLAGS", xproj.debugConfig.cflagsExec,
+			xproj.releaseConfig.cflagsExec);
+	writeValue("STAPPLER_EXEC_CXXFLAGS", xproj.debugConfig.cxxflagsExec,
+			xproj.releaseConfig.cxxflagsExec);
 	writeValue("STAPPLER_LIB_CFLAGS", xproj.debugConfig.cflagsLib, xproj.releaseConfig.cflagsLib);
-	writeValue("STAPPLER_LIB_CXXFLAGS", xproj.debugConfig.cxxflagsLib, xproj.releaseConfig.cxxflagsLib);
+	writeValue("STAPPLER_LIB_CXXFLAGS", xproj.debugConfig.cxxflagsLib,
+			xproj.releaseConfig.cxxflagsLib);
 
-	cb << "STAPPLER_CONFIG_INCLUDE[config=Release] = $(PROJECT_DIR)/$(STAPPLER_OUTDIR)/mac/release/include\n";
-	cb << "STAPPLER_CONFIG_INCLUDE[config=Debug] = $(PROJECT_DIR)/$(STAPPLER_OUTDIR)/mac/debug/include\n";
+	cb << "STAPPLER_CONFIG_INCLUDE[config=Release] = "
+		  "$(PROJECT_DIR)/$(STAPPLER_OUTDIR)/mac/release/include\n";
+	cb << "STAPPLER_CONFIG_INCLUDE[config=Debug] = "
+		  "$(PROJECT_DIR)/$(STAPPLER_OUTDIR)/mac/debug/include\n";
 
 	if (xproj.debugConfig.headerPaths == xproj.releaseConfig.headerPaths) {
 		Vector<String> targetHeaderPaths;
-		StringView(xproj.releaseConfig.headerPaths).split<StringView::WhiteSpace>([&](StringView path) {
+		StringView(xproj.releaseConfig.headerPaths)
+				.split<StringView::WhiteSpace>([&](StringView path) {
 			if (path.starts_with(StringView(xproj.releaseConfig.frameworkRoot))) {
-				targetHeaderPaths.emplace_back(toString("$(STAPPLER_ROOT)", path.sub(xproj.releaseConfig.frameworkRoot.size())));
+				targetHeaderPaths.emplace_back(toString("$(STAPPLER_ROOT)",
+						path.sub(xproj.releaseConfig.frameworkRoot.size())));
 			} else if (path.starts_with(StringView(xproj.releaseConfig.localOutdir))) {
-				targetHeaderPaths.emplace_back(toString("$(PROJECT_DIR)/$(STAPPLER_OUTDIR)", path.sub(xproj.releaseConfig.localOutdir.size())));
+				targetHeaderPaths.emplace_back(toString("$(PROJECT_DIR)/$(STAPPLER_OUTDIR)",
+						path.sub(xproj.releaseConfig.localOutdir.size())));
 			} else {
 				targetHeaderPaths.emplace_back(path.str<Interface>());
 			}
@@ -558,18 +573,19 @@ static void writeXCConfig(XCodeProject &xproj, const CallbackStream &cb) {
 		targetHeaderPaths.emplace_back("$(STAPPLER_ROOT)/deps/mac/$(CURRENT_ARCH)/include");
 
 		cb << "STAPPLER_HEADER_SEARCH_PATH = $(STAPPLER_CONFIG_INCLUDE)";
-		for (auto &it : targetHeaderPaths) {
-			cb << " " << it;
-		}
+		for (auto &it : targetHeaderPaths) { cb << " " << it; }
 		cb << "\n";
 	} else {
 		do {
 			Vector<String> targetHeaderPaths;
-			StringView(xproj.releaseConfig.headerPaths).split<StringView::WhiteSpace>([&](StringView path) {
+			StringView(xproj.releaseConfig.headerPaths)
+					.split<StringView::WhiteSpace>([&](StringView path) {
 				if (path.starts_with(StringView(xproj.releaseConfig.frameworkRoot))) {
-					targetHeaderPaths.emplace_back(toString("$(STAPPLER_ROOT)", path.sub(xproj.releaseConfig.frameworkRoot.size())));
+					targetHeaderPaths.emplace_back(toString("$(STAPPLER_ROOT)",
+							path.sub(xproj.releaseConfig.frameworkRoot.size())));
 				} else if (path.starts_with(StringView(xproj.releaseConfig.localOutdir))) {
-					targetHeaderPaths.emplace_back(toString("$(PROJECT_DIR)/$(STAPPLER_OUTDIR)", path.sub(xproj.releaseConfig.localOutdir.size())));
+					targetHeaderPaths.emplace_back(toString("$(PROJECT_DIR)/$(STAPPLER_OUTDIR)",
+							path.sub(xproj.releaseConfig.localOutdir.size())));
 				} else {
 					targetHeaderPaths.emplace_back(path.str<Interface>());
 				}
@@ -578,19 +594,20 @@ static void writeXCConfig(XCodeProject &xproj, const CallbackStream &cb) {
 			targetHeaderPaths.emplace_back("$(STAPPLER_ROOT)/deps/mac/$(CURRENT_ARCH)/include");
 
 			cb << "STAPPLER_HEADER_SEARCH_PATH[config=Release] = $(STAPPLER_CONFIG_INCLUDE)";
-			for (auto &it : targetHeaderPaths) {
-				cb << " " << it;
-			}
+			for (auto &it : targetHeaderPaths) { cb << " " << it; }
 			cb << "\n";
 		} while (0);
 
 		do {
 			Vector<String> targetHeaderPaths;
-			StringView(xproj.debugConfig.headerPaths).split<StringView::WhiteSpace>([&](StringView path) {
+			StringView(xproj.debugConfig.headerPaths)
+					.split<StringView::WhiteSpace>([&](StringView path) {
 				if (path.starts_with(StringView(xproj.debugConfig.frameworkRoot))) {
-					targetHeaderPaths.emplace_back(toString("$(STAPPLER_ROOT)", path.sub(xproj.debugConfig.frameworkRoot.size())));
+					targetHeaderPaths.emplace_back(toString("$(STAPPLER_ROOT)",
+							path.sub(xproj.debugConfig.frameworkRoot.size())));
 				} else if (path.starts_with(StringView(xproj.debugConfig.localOutdir))) {
-					targetHeaderPaths.emplace_back(toString("$(PROJECT_DIR)/$(STAPPLER_OUTDIR)", path.sub(xproj.debugConfig.localOutdir.size())));
+					targetHeaderPaths.emplace_back(toString("$(PROJECT_DIR)/$(STAPPLER_OUTDIR)",
+							path.sub(xproj.debugConfig.localOutdir.size())));
 				} else {
 					targetHeaderPaths.emplace_back(path.str<Interface>());
 				}
@@ -599,34 +616,26 @@ static void writeXCConfig(XCodeProject &xproj, const CallbackStream &cb) {
 			targetHeaderPaths.emplace_back("$(STAPPLER_ROOT)/deps/mac/$(CURRENT_ARCH)/include");
 
 			cb << "STAPPLER_HEADER_SEARCH_PATH[config=Debug] = $(STAPPLER_CONFIG_INCLUDE)";
-			for (auto &it : targetHeaderPaths) {
-				cb << " " << it;
-			}
+			for (auto &it : targetHeaderPaths) { cb << " " << it; }
 			cb << "\n";
 		} while (0);
 	}
 
 	if (xproj.debugConfig.ldflags == xproj.releaseConfig.ldflags) {
 		cb << "STAPPLER_GENERAL_LDFLAGS =";
-		extractLibFlags(xproj.releaseConfig.ldflags, [&] (StringView str) {
-			cb << " " << str;
-		});
+		extractLibFlags(xproj.releaseConfig.ldflags, [&](StringView str) { cb << " " << str; });
 		cb << "\n";
 	}
 
 	if (xproj.debugConfig.ldflagsExec == xproj.releaseConfig.ldflagsExec) {
 		cb << "STAPPLER_EXEC_LDFLAGS =";
-		extractLibFlags(xproj.releaseConfig.ldflagsExec, [&] (StringView str) {
-			cb << " " << str;
-		});
+		extractLibFlags(xproj.releaseConfig.ldflagsExec, [&](StringView str) { cb << " " << str; });
 		cb << "\n";
 	}
 
 	if (xproj.debugConfig.ldflagsLib == xproj.releaseConfig.ldflagsLib) {
 		cb << "STAPPLER_LIB_LDFLAGS =";
-		extractLibFlags(xproj.releaseConfig.ldflagsLib, [&] (StringView str) {
-			cb << " " << str;
-		});
+		extractLibFlags(xproj.releaseConfig.ldflagsLib, [&](StringView str) { cb << " " << str; });
 		cb << "\n";
 	}
 
@@ -636,7 +645,8 @@ static void writeXCConfig(XCodeProject &xproj, const CallbackStream &cb) {
 	cb << "MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = $(STAPPLER_STD) $(STAPPLER_STDXX)\n";
 	cb << "MACOSX_DEPLOYMENT_TARGET = $(STAPPLER_MACOSX_DEPLOYMENT_TARGET)\n";
 	cb << "HEADER_SEARCH_PATHS = $(inherited) $(STAPPLER_HEADER_SEARCH_PATH)\n";
-	cb << "LIBRARY_SEARCH_PATHS = $(inherited) /usr/local/lib $(STAPPLER_ROOT)/deps/mac/$(CURRENT_ARCH)/lib\n";
+	cb << "LIBRARY_SEARCH_PATHS = $(inherited) /usr/local/lib "
+		  "$(STAPPLER_ROOT)/deps/mac/$(CURRENT_ARCH)/lib\n";
 	cb << "OTHER_LDFLAGS = $(STAPPLER_GENERAL_LDFLAGS)\n";
 	cb << "OTHER_CFLAGS = $(STAPPLER_GENERAL_CFLAGS)\n";
 	cb << "OTHER_CPLUSPLUSFLAGS = $(STAPPLER_GENERAL_CXXFLAGS)\n";
@@ -649,10 +659,12 @@ bool makeXCodeProject(StringView buildRoot, FileInfo projMakefilePath) {
 	xproj.frameworkPath = buildRoot;
 
 	xproj.release = Rc<MakefileRef>::create();
-	xproj.release->setIncludeCallback([] (void *xproj, StringView path, const Makefile::PathCallback &cb) {
+	xproj.release->setIncludeCallback(
+			[](void *xproj, StringView path, const Makefile::PathCallback &cb) {
 		Bytes data;
 		if (!filepath::isAbsolute(path)) {
-			auto filepath = filepath::merge<Interface>(reinterpret_cast<XCodeProject *>(xproj)->frameworkPath, path);
+			auto filepath = filepath::merge<Interface>(
+					reinterpret_cast<XCodeProject *>(xproj)->frameworkPath, path);
 			data = filesystem::readIntoMemory<Interface>(FileInfo{filepath});
 		} else {
 			data = filesystem::readIntoMemory<Interface>(FileInfo{path});
@@ -670,17 +682,19 @@ bool makeXCodeProject(StringView buildRoot, FileInfo projMakefilePath) {
 	xproj.release->setRootPath(filepath::root(projMakefilePath));
 
 	if (!xproj.release->include(projMakefilePath)) {
-		log::error("XCodeProject", "Fail to load project Makefile");
+		log::source().error("XCodeProject", "Fail to load project Makefile");
 		return false;
 	}
 
 	xproj.releaseConfig.load(xproj.release);
 
 	xproj.debug = Rc<MakefileRef>::create();
-	xproj.debug->setIncludeCallback([] (void *xproj, StringView path, const Makefile::PathCallback &cb) {
+	xproj.debug->setIncludeCallback(
+			[](void *xproj, StringView path, const Makefile::PathCallback &cb) {
 		Bytes data;
 		if (!filepath::isAbsolute(path)) {
-			auto filepath = filepath::merge<Interface>(reinterpret_cast<XCodeProject *>(xproj)->frameworkPath, path);
+			auto filepath = filepath::merge<Interface>(
+					reinterpret_cast<XCodeProject *>(xproj)->frameworkPath, path);
 			data = filesystem::readIntoMemory<Interface>(FileInfo{filepath});
 		} else {
 			data = filesystem::readIntoMemory<Interface>(FileInfo{path});
@@ -697,7 +711,7 @@ bool makeXCodeProject(StringView buildRoot, FileInfo projMakefilePath) {
 	xproj.debug->setRootPath(filepath::root(projMakefilePath));
 
 	if (!xproj.debug->include(projMakefilePath)) {
-		log::error("XCodeProject", "Fail to load project Makefile");
+		log::source().error("XCodeProject", "Fail to load project Makefile");
 		return false;
 	}
 
@@ -710,7 +724,7 @@ bool makeXCodeProject(StringView buildRoot, FileInfo projMakefilePath) {
 	String localLibrary = getVariable(xproj.release, "LOCAL_LIBRARY");
 
 	if (localOutdir.empty() || (localExecutable.empty() && localLibrary.empty())) {
-		log::error("XCodeProject", "Fail to detect build targets");
+		log::source().error("XCodeProject", "Fail to detect build targets");
 		return false;
 	}
 
@@ -732,7 +746,7 @@ bool makeXCodeProject(StringView buildRoot, FileInfo projMakefilePath) {
 	auto appSource = filepath::merge<Interface>(srcdir, "stappler-appconfig.cpp");
 	auto appSourceFile = filesystem::File::open_tmp("stappler-appconfig-cpp");
 	makeMergedAppConfigSource(xproj.release, xproj.debug,
-						[&](StringView str) { appSourceFile.xsputn(str.data(), str.size()); });
+			[&](StringView str) { appSourceFile.xsputn(str.data(), str.size()); });
 	updateFile(appSourceFile, appSource);
 
 	xproj.xctx.root = xcode::PBXProject::create(xproj.xctx, [&](xcode::PBXProject *proj) {
@@ -743,7 +757,8 @@ bool makeXCodeProject(StringView buildRoot, FileInfo projMakefilePath) {
 
 		proj->mainGroup = xcode::PBXGroup::create(xproj.xctx, [&](xcode::PBXGroup *group) {
 			// this will fill source files and dirs
-			StringView(getVariable(xproj.release, "GLOBAL_MODULES")).split<StringView::WhiteSpace>([&] (StringView mod) {
+			StringView(getVariable(xproj.release, "GLOBAL_MODULES"))
+					.split<StringView::WhiteSpace>([&](StringView mod) {
 				group->children.emplace_back(makeModuleGroup(xproj, mod));
 			});
 

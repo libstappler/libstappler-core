@@ -73,12 +73,20 @@ inline auto isnan(T &&t) -> bool {
 
 template <class T>
 inline constexpr T maxOf() {
-	return NumericLimits<T>::max();
+	if constexpr (std::is_enum_v<T>) {
+		return T(NumericLimits<std::underlying_type_t<T>>::max());
+	} else {
+		return NumericLimits<T>::max();
+	}
 }
 
 template <class T>
 inline constexpr T minOf() {
-	return NumericLimits<T>::min();
+	if constexpr (std::is_enum_v<T>) {
+		return T(NumericLimits<std::underlying_type_t<T>>::min());
+	} else {
+		return NumericLimits<T>::min();
+	}
 }
 
 // For floats - use lowest: https://en.cppreference.com/w/cpp/types/numeric_limits/lowest

@@ -55,7 +55,7 @@ Status PerformEngine::perform(Rc<thread::Task> &&task) {
 			_pendingBlocksFront = _pendingBlocksTail = next;
 		}
 		++_blocksWaiting;
-		//log::debug("PerformEngine", this, " perform ", _blocksWaiting, " ", _blocksFree, " ", next->tag);
+		//log::source().debug("PerformEngine", this, " perform ", _blocksWaiting, " ", _blocksFree, " ", next->tag);
 	}, _pool);
 
 	return Status::Ok;
@@ -90,7 +90,7 @@ Status PerformEngine::perform(mem_std::Function<void()> &&fn, Ref *ref, StringVi
 			_pendingBlocksFront = _pendingBlocksTail = next;
 		}
 		++_blocksWaiting;
-		//log::debug("PerformEngine", this, " perform ", _blocksWaiting, " ", _blocksFree, " ", next->tag);
+		//log::source().debug("PerformEngine", this, " perform ", _blocksWaiting, " ", _blocksFree, " ", next->tag);
 	}, _pool);
 
 	return Status::Ok;
@@ -133,7 +133,7 @@ uint32_t PerformEngine::runAllTasks(memory::pool_t *tmpPool) {
 	}
 
 	//if (nevents > 0) {
-	//	log::debug("PerformEngine", this, " end runAllTasks ", nevents, " ", _blocksWaiting, " ", _blocksFree);
+	//	log::source().debug("PerformEngine", this, " end runAllTasks ", nevents, " ", _blocksWaiting, " ", _blocksFree);
 	//}
 	return nevents;
 }
@@ -173,7 +173,7 @@ uint32_t QueueData::suspendAll() {
 				++ret;
 			}
 		} else if (it->getStatus() != Status::Declined) {
-			log::error("event::QueueData",
+			log::source().error("event::QueueData",
 					"suspendAll: Invalid status for a resumable handle: ", it->getStatus());
 		}
 	}
@@ -194,7 +194,7 @@ uint32_t QueueData::resumeAll() {
 				++ret;
 			}
 		} else if (it->getStatus() != Status::Declined) {
-			log::error("event::QueueData",
+			log::source().error("event::QueueData",
 					"resumeAll: Invalid status for a resumable handle: ", it->getStatus());
 		}
 	}

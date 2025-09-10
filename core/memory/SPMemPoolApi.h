@@ -51,11 +51,10 @@ public:
 		destroy, // destroy pool after pop
 	};
 
-	explicit context(const pool_type &__m, finalize_flag = discard,
-			const char *source = STAPPLER_LOCATION);
+	explicit context(const pool_type &__m, finalize_flag = discard, const char *source = SP_FUNC);
 
 	context(const pool_type &__m, uint32_t tag, void *userdata, finalize_flag = discard,
-			const char *source = STAPPLER_LOCATION);
+			const char *source = SP_FUNC);
 	~context();
 
 	context(const context &) = delete;
@@ -87,34 +86,33 @@ private:
 using finalize_flag = context<pool_t *>::finalize_flag;
 
 template <typename Callback>
-inline auto perform(const Callback &cb, memory::pool_t *p, const char * = STAPPLER_LOCATION);
+inline auto perform(const Callback &cb, memory::pool_t *p, const char * = SP_FUNC);
 
 template <typename Callback>
 inline auto perform(const Callback &cb, memory::pool_t *p, uint32_t tag, void *userdata = nullptr,
-		const char * = STAPPLER_LOCATION);
+		const char * = SP_FUNC);
 
 template <typename Callback>
-inline auto perform_conditional(const Callback &cb, memory::pool_t *p,
-		const char * = STAPPLER_LOCATION);
+inline auto perform_conditional(const Callback &cb, memory::pool_t *p, const char * = SP_FUNC);
 
 template <typename Callback>
 inline auto perform_conditional(const Callback &cb, memory::pool_t *p, uint32_t tag,
-		void *userdata = nullptr, const char * = STAPPLER_LOCATION);
+		void *userdata = nullptr, const char * = SP_FUNC);
 
 template <typename Callback>
-inline auto perform_clear(const Callback &cb, memory::pool_t *p, const char * = STAPPLER_LOCATION);
+inline auto perform_clear(const Callback &cb, memory::pool_t *p, const char * = SP_FUNC);
 
 template <typename Callback>
 inline auto perform_clear(const Callback &cb, memory::pool_t *p, uint32_t tag,
-		void *userdata = nullptr, const char * = STAPPLER_LOCATION);
+		void *userdata = nullptr, const char * = SP_FUNC);
 
 template <typename Callback>
 inline auto perform_temporary(const Callback &cb, memory::pool_t *p = nullptr,
-		const char * = STAPPLER_LOCATION);
+		const char * = SP_FUNC);
 
 template <typename Callback>
 inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t tag,
-		void *userdata = nullptr, const char * = STAPPLER_LOCATION);
+		void *userdata = nullptr, const char * = SP_FUNC);
 
 template <typename Callback>
 inline int perform_main(const Callback &cb);

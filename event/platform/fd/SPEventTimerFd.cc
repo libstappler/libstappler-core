@@ -36,16 +36,17 @@ bool TimerFdSource::init(const TimerInfo &info) {
 	case ClockType::Monotonic: clockid = CLOCK_MONOTONIC; break;
 	case ClockType::Realtime: clockid = CLOCK_REALTIME; break;
 	case ClockType::Process:
-		log::error("event::Queue",
+		log::source().error("event::Queue",
 				"ClockType::Process is not supported for a timer on this system");
 		return false;
 		break;
 	case ClockType::Thread:
-		log::error("event::Queue", "ClockType::Thread is not supported for a timer on this system");
+		log::source().error("event::Queue",
+				"ClockType::Thread is not supported for a timer on this system");
 		return false;
 		break;
 	case ClockType::Hardware:
-		log::error("event::Queue",
+		log::source().error("event::Queue",
 				"ClockType::Hardware is not supported for a timer on this system");
 		return false;
 		break;
@@ -56,7 +57,7 @@ bool TimerFdSource::init(const TimerInfo &info) {
 	}
 
 	if (fd < 0) {
-		log::error("event::Queue", "fail to timerfd_create");
+		log::source().error("event::Queue", "fail to timerfd_create");
 		return false;
 	}
 

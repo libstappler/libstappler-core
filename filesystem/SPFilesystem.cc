@@ -38,7 +38,7 @@ File File::open_tmp(StringView prefix, bool delOnClose) {
 	}
 
 #if WIN32
-	log::warn("filesystem", "File::open_tmp unavailable on win32");
+	log::source().warn("filesystem", "File::open_tmp unavailable on win32");
 #else
 	char buf[256] = {0};
 	const char *tmp = P_tmpdir;
@@ -295,7 +295,7 @@ void File::set_tmp_path(const char *buf) { memcpy(_buf, buf, 256); }
 MemoryMappedRegion MemoryMappedRegion::mapFile(const FileInfo &info, MappingType type,
 		ProtFlags prot, size_t offset, size_t len) {
 	if (math::align(offset, size_t(sp::platform::getMemoryPageSize())) != offset) {
-		log::error("filesystem",
+		log::source().error("filesystem",
 				"offset for MemoryMappedRegion::mapFile should be aligned as "
 				"platform::_getMemoryPageSize");
 		return MemoryMappedRegion();
@@ -305,7 +305,7 @@ MemoryMappedRegion MemoryMappedRegion::mapFile(const FileInfo &info, MappingType
 
 	Stat stat;
 	if (native::stat_fn(path, stat) != Status::Ok) {
-		log::error("filesystem", "Fail to get stat for a file: ", path);
+		log::source().error("filesystem", "Fail to get stat for a file: ", path);
 		return MemoryMappedRegion();
 	}
 
@@ -313,7 +313,7 @@ MemoryMappedRegion MemoryMappedRegion::mapFile(const FileInfo &info, MappingType
 
 	if (offset > 0) {
 		if (offset > stat.size) {
-			log::error("filesystem", "Offset (", offset, ") for a file ", path,
+			log::source().error("filesystem", "Offset (", offset, ") for a file ", path,
 					" is larger then file itself");
 			return MemoryMappedRegion();
 		} else {

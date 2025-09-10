@@ -75,8 +75,8 @@ void BusDelegate::invalidate() {
 
 void BusDelegate::handleEvent(Bus &bus, const BusEvent &event) {
 	if (!_looper->isOnThisThread()) {
-		log::error("event::BusDelegate", "BusEvent '", bus.getCategoryName(event.getCategory()),
-				"' should be handled in looper context");
+		log::source().error("event::BusDelegate", "BusEvent '",
+				bus.getCategoryName(event.getCategory()), "' should be handled in looper context");
 		return;
 	}
 
@@ -175,7 +175,7 @@ void Bus::invalidateLooper(Looper *looper) {
 
 void Bus::doAddListener(BusDelegate *delegate, std::unique_lock<std::mutex> &) {
 	if (delegate->getBus()) {
-		log::error("event::BusDelegate", "BusDelegate already attached to bus");
+		log::source().error("event::BusDelegate", "BusDelegate already attached to bus");
 		return;
 	}
 
@@ -200,7 +200,7 @@ void Bus::doAddListener(BusDelegate *delegate, std::unique_lock<std::mutex> &) {
 
 void Bus::doRemoveListener(BusDelegate *delegate, std::unique_lock<std::mutex> &) {
 	if (delegate->getBus() != this) {
-		log::error("event::BusDelegate", "BusDelegate is not attached to this bus");
+		log::source().error("event::BusDelegate", "BusDelegate is not attached to this bus");
 		return;
 	}
 

@@ -65,9 +65,7 @@ void Makefile::setIncludeCallback(IncludeCallback cb, void *ref) {
 	_includeCallbackRef = ref;
 }
 
-void Makefile::setRootPath(StringView str) {
-	_engine.setRootPath(str);
-}
+void Makefile::setRootPath(StringView str) { _engine.setRootPath(str); }
 
 bool Makefile::include(StringView name, StringView data, bool copyData, ErrorReporter *e) {
 	return perform([&] {
@@ -99,7 +97,7 @@ bool Makefile::include(StringView name, StringView data, bool copyData, ErrorRep
 bool Makefile::include(const FileInfo &info, ErrorReporter *err, bool optional) {
 	auto path = filesystem::findPath<Interface>(info, filesystem::Access::Read);
 	if (path.empty()) {
-		log::error("Makefile", "Fail to open ", info);
+		log::source().error("Makefile", "Fail to open ", info);
 		return false;
 	}
 	auto f = filesystem::openForReading(FileInfo{path});
@@ -114,7 +112,7 @@ bool Makefile::include(const FileInfo &info, ErrorReporter *err, bool optional) 
 		return include(path, BytesView(buf, fsize).toStringView(), false, err);
 	} else {
 		if (!optional) {
-			log::error("Makefile", "Fail to open ", info);
+			log::source().error("Makefile", "Fail to open ", info);
 		}
 		return false;
 	}

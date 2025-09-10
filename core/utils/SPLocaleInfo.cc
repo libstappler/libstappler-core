@@ -885,7 +885,7 @@ LocaleIdentifier::LocaleIdentifier(StringView iloc) noexcept {
 			}
 			valid = true;
 		} else {
-			log::error("LocaleManager", "Invalid locale name: ", iloc);
+			log::source().error("LocaleManager", "Invalid locale name: ", iloc);
 			valid = false;
 			return;
 		}
@@ -905,7 +905,7 @@ LocaleIdentifier::LocaleIdentifier(StringView iloc) noexcept {
 		offset += lang.size();
 		remains -= lang.size();
 	} else {
-		log::error("LocaleManager", "Invalid locale name: ", iloc);
+		log::source().error("LocaleManager", "Invalid locale name: ", iloc);
 		valid = false;
 		return;
 	}
@@ -914,7 +914,7 @@ LocaleIdentifier::LocaleIdentifier(StringView iloc) noexcept {
 		data[offset++] = '-';
 		--remains;
 	} else {
-		log::error("LocaleManager", "Invalid locale name: ", iloc);
+		log::source().error("LocaleManager", "Invalid locale name: ", iloc);
 		valid = false;
 		return;
 	}
@@ -928,7 +928,7 @@ LocaleIdentifier::LocaleIdentifier(StringView iloc) noexcept {
 		offset += terr.size();
 		remains -= terr.size();
 	} else {
-		log::error("LocaleManager", "Invalid locale name: ", iloc);
+		log::source().error("LocaleManager", "Invalid locale name: ", iloc);
 		valid = false;
 		return;
 	}
@@ -940,7 +940,7 @@ LocaleIdentifier::LocaleIdentifier(StringView iloc) noexcept {
 			data[offset++] = '.';
 			--remains;
 		} else {
-			log::error("LocaleManager", "Invalid locale name: ", iloc);
+			log::source().error("LocaleManager", "Invalid locale name: ", iloc);
 			valid = false;
 			return;
 		}
@@ -951,7 +951,7 @@ LocaleIdentifier::LocaleIdentifier(StringView iloc) noexcept {
 			offset += cp.size();
 			remains -= cp.size();
 		} else {
-			log::error("LocaleManager", "Invalid locale name: ", iloc);
+			log::source().error("LocaleManager", "Invalid locale name: ", iloc);
 			valid = false;
 			return;
 		}

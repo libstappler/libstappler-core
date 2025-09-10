@@ -97,7 +97,7 @@ protected:
 		readWhitespace();
 
 		bool readNext = true;
-		while(readNext) {
+		while (readNext) {
 			readNext = readDrawTo();
 			if (readNext) {
 				readWhitespace();
@@ -112,9 +112,11 @@ protected:
 			readWhitespace();
 			bool relative = true;
 			if (reader.is('M')) {
-				relative = false; ++ reader;
+				relative = false;
+				++reader;
 			} else if (reader.is('m')) {
-				relative = true; ++ reader;
+				relative = true;
+				++reader;
 			} else {
 				return false;
 			}
@@ -128,7 +130,7 @@ protected:
 	bool readDrawTo() {
 		if (reader >= 1) {
 			auto c = reader[0];
-			++ reader;
+			++reader;
 
 			readWhitespace();
 			if (c == 'M' || c == 'm') {
@@ -172,11 +174,19 @@ protected:
 			if (first && !readNext) {
 				return false;
 			} else if (readNext) {
-				if (first) { ret = true; first = false; }
-				if (relative) { x = _x + x; y = _y + y; }
+				if (first) {
+					ret = true;
+					first = false;
+				}
+				if (relative) {
+					x = _x + x;
+					y = _y + y;
+				}
 
 				SP_PATH_LOG("L %f %f (%f %f)", x, y, x - _x, y - _y);
-				_x = x; _y = y; _b = false;
+				_x = x;
+				_y = y;
+				_b = false;
 				path->lineTo(x, y);
 			}
 		}
@@ -192,11 +202,17 @@ protected:
 			if (first && !readNext) {
 				return false;
 			} else if (readNext) {
-				if (first) { ret = true; first = false; }
-				if (relative) { x = _x + x; }
+				if (first) {
+					ret = true;
+					first = false;
+				}
+				if (relative) {
+					x = _x + x;
+				}
 
 				SP_PATH_LOG("H %f (%f)", x, x - _x);
-				_x = x; _b = false;
+				_x = x;
+				_b = false;
 				path->lineTo(x, _y);
 			}
 		}
@@ -212,11 +228,17 @@ protected:
 			if (first && !readNext) {
 				return false;
 			} else if (readNext) {
-				if (first) { ret = true; first = false; }
-				if (relative) { y = _y + y; }
+				if (first) {
+					ret = true;
+					first = false;
+				}
+				if (relative) {
+					y = _y + y;
+				}
 
 				SP_PATH_LOG("V %f (%f)", y, y - _y);
-				_y = y; _b = false;
+				_y = y;
+				_b = false;
 				path->lineTo(_x, y);
 			}
 		}
@@ -232,13 +254,23 @@ protected:
 			if (first && !readNext) {
 				return false;
 			} else if (readNext) {
-				if (first) { ret = true; first = false; }
-				if (relative) {
-					x1 = _x + x1; y1 = _y + y1;
-					x2 = _x + x2; y2 = _y + y2;
-					x = _x + x; y = _y + y;
+				if (first) {
+					ret = true;
+					first = false;
 				}
-				_x = x; _y = y; _bx = x2; _by = y2; _b = true;
+				if (relative) {
+					x1 = _x + x1;
+					y1 = _y + y1;
+					x2 = _x + x2;
+					y2 = _y + y2;
+					x = _x + x;
+					y = _y + y;
+				}
+				_x = x;
+				_y = y;
+				_bx = x2;
+				_by = y2;
+				_b = true;
 				SP_PATH_LOG("C %f %f %f %f %f %f", x1, y1, x2, y2, x, y);
 				path->cubicTo(x1, y1, x2, y2, x, y);
 			}
@@ -255,14 +287,23 @@ protected:
 			if (first && !readNext) {
 				return false;
 			} else if (readNext) {
-				if (first) { ret = true; first = false; }
+				if (first) {
+					ret = true;
+					first = false;
+				}
 
 				getNewBezierParams(x1, y1);
 				if (relative) {
-					x2 = _x + x2; y2 = _y + y2;
-					x = _x + x; y = _y + y;
+					x2 = _x + x2;
+					y2 = _y + y2;
+					x = _x + x;
+					y = _y + y;
 				}
-				_x = x; _y = y; _bx = x2; _by = y2; _b = true;
+				_x = x;
+				_y = y;
+				_bx = x2;
+				_by = y2;
+				_b = true;
 				SP_PATH_LOG("S (%f %f) %f %f %f %f", x1, y1, x2, y2, x, y);
 				path->cubicTo(x1, y1, x2, y2, x, y);
 			}
@@ -279,12 +320,21 @@ protected:
 			if (first && !readNext) {
 				return false;
 			} else if (readNext) {
-				if (first) { ret = true; first = false; }
-				if (relative) {
-					x1 = _x + x1; y1 = _y + y1;
-					x = _x + x; y = _y + y;
+				if (first) {
+					ret = true;
+					first = false;
 				}
-				_x = x; _y = y; _bx = x1; _by = y1; _b = true;
+				if (relative) {
+					x1 = _x + x1;
+					y1 = _y + y1;
+					x = _x + x;
+					y = _y + y;
+				}
+				_x = x;
+				_y = y;
+				_bx = x1;
+				_by = y1;
+				_b = true;
 				path->quadTo(x1, y1, x, y);
 			}
 		}
@@ -300,12 +350,20 @@ protected:
 			if (first && !readNext) {
 				return false;
 			} else if (readNext) {
-				if (first) { ret = true; first = false; }
+				if (first) {
+					ret = true;
+					first = false;
+				}
 				getNewBezierParams(x1, y1);
 				if (relative) {
-					x = _x + x; y = _y + y;
+					x = _x + x;
+					y = _y + y;
 				}
-				_x = x; _y = y; _bx = x1; _by = y1; _b = true;
+				_x = x;
+				_y = y;
+				_bx = x1;
+				_by = y1;
+				_b = true;
 				path->quadTo(x1, y1, x, y);
 			}
 		}
@@ -323,16 +381,24 @@ protected:
 			if (first && !readNext) {
 				return false;
 			} else if (readNext) {
-				if (first) { ret = true; first = false; }
+				if (first) {
+					ret = true;
+					first = false;
+				}
 				if (relative) {
-					x = _x + x; y = _y + y;
+					x = _x + x;
+					y = _y + y;
 				}
 
 				if (rx == 0 || ry == 0) {
-					_x = x; _y = y; _b = false;
+					_x = x;
+					_y = y;
+					_b = false;
 					path->lineTo(x, y);
 				} else {
-					_x = x; _y = y; _b = false;
+					_x = x;
+					_y = y;
+					_b = false;
 					path->arcTo(rx, ry, xAxisRotation, largeArc, sweep, x, y);
 				}
 			}
@@ -355,9 +421,9 @@ protected:
 		_x = x;
 		_y = y;
 		//if (!_pathStarted) {
-			_sx = _x;
-			_sy = _y;
-			_pathStarted = true;
+		_sx = _x;
+		_sy = _y;
+		_pathStarted = true;
 		//}
 
 		SP_PATH_LOG("M %f %f", _x, _y);
@@ -398,8 +464,8 @@ protected:
 		return true;
 	}
 
-	bool readEllipticalArcArg(double &_rx, double &_ry, double &_xAxisRotation,
-			bool &_largeArc, bool &_sweep, double &_dx, double &_dy) {
+	bool readEllipticalArcArg(double &_rx, double &_ry, double &_xAxisRotation, bool &_largeArc,
+			bool &_sweep, double &_dx, double &_dy) {
 		double rx, ry, xAxisRotation, x, y;
 		bool largeArc, sweep;
 
@@ -440,9 +506,7 @@ protected:
 		return true;
 	}
 
-	bool readSmoothQuadraticCurveToArg(double &x, double &y) {
-		return readCoordPair(x, y);
-	}
+	bool readSmoothQuadraticCurveToArg(double &x, double &y) { return readCoordPair(x, y); }
 
 	bool readCoordPair(double &x, double &y) {
 		double value1 = 0.0f, value2 = 0.0f;
@@ -465,7 +529,7 @@ protected:
 		if (reader >= 1) {
 			bool ws = readWhitespace();
 			if (reader.is(',')) {
-				++ reader;
+				++reader;
 			} else {
 				return ws;
 			}
@@ -489,7 +553,7 @@ protected:
 		if (reader >= 1) {
 			if (reader.is('0') || reader.is('1')) {
 				flag = (reader.is('1'));
-				++ reader;
+				++reader;
 				return true;
 			}
 		}
@@ -498,14 +562,15 @@ protected:
 
 	void getNewBezierParams(double &bx, double &by) {
 		if (_b) {
-			bx = _x * 2 - _bx; by = _y * 2 - _by;
+			bx = _x * 2 - _bx;
+			by = _y * 2 - _by;
 		} else {
-			bx = _x; by = _y;
+			bx = _x;
+			by = _y;
 		}
 	}
 
-	SVGPathReader(PathWriter *d, const StringView &r)
-	: path(d), reader(r) { }
+	SVGPathReader(PathWriter *d, const StringView &r) : path(d), reader(r) { }
 
 	double _x = 0.0f, _y = 0.0f;
 
@@ -523,9 +588,7 @@ class PathBinaryEncoder {
 public: // utility
 	PathBinaryEncoder(typename Interface::BytesType *b) : buffer(b) { }
 
-	void emplace(uint8_t c) {
-		buffer->emplace_back(c);
-	}
+	void emplace(uint8_t c) { buffer->emplace_back(c); }
 
 	void emplace(const uint8_t *buf, size_t size) {
 		size_t tmpSize = buffer->size();
@@ -539,11 +602,12 @@ private:
 
 template <typename Interface, typename Source>
 auto encodePath(const PathData<Source> &source) -> typename Interface::BytesType {
-	size_t bufferSize = source.commands.size() * sizeof(Command) + source.points.size() * sizeof(CommandData) + 2 * (sizeof(size_t) + 1);
+	size_t bufferSize = source.commands.size() * sizeof(Command)
+			+ source.points.size() * sizeof(CommandData) + 2 * (sizeof(size_t) + 1);
 
 	bool hasUV = false;
 	if ((source.params.style & DrawFlags::UV) != DrawFlags::None) {
-		bufferSize +=  source.uv.size() * sizeof(Vec2);
+		bufferSize += source.uv.size() * sizeof(Vec2);
 		hasUV = true;
 	}
 
@@ -562,7 +626,7 @@ auto encodePath(const PathData<Source> &source) -> typename Interface::BytesType
 		if (hasUV) {
 			data::cbor::_writeNumber(enc, uv->x);
 			data::cbor::_writeNumber(enc, uv->y);
-			++ uv;
+			++uv;
 		}
 
 		switch (it) {
@@ -571,7 +635,7 @@ auto encodePath(const PathData<Source> &source) -> typename Interface::BytesType
 			data::cbor::_writeNumber(enc, d[0].p.x);
 			data::cbor::_writeNumber(enc, d[0].p.y);
 			SP_PATH_LOG_TEXT("L ", d[0].p.x, " ", d[0].p.y);
-			++ d;
+			++d;
 			break;
 		case Command::QuadTo:
 			data::cbor::_writeNumber(enc, d[0].p.x);
@@ -588,7 +652,8 @@ auto encodePath(const PathData<Source> &source) -> typename Interface::BytesType
 			data::cbor::_writeNumber(enc, d[1].p.y);
 			data::cbor::_writeNumber(enc, d[2].p.x);
 			data::cbor::_writeNumber(enc, d[2].p.y);
-			SP_PATH_LOG_TEXT("C ", d[0].p.x, " ", d[0].p.y, " ", d[1].p.x, " ", d[1].p.y, " ", d[2].p.x, " ", d[2].p.y);
+			SP_PATH_LOG_TEXT("C ", d[0].p.x, " ", d[0].p.y, " ", d[1].p.x, " ", d[1].p.y, " ",
+					d[2].p.x, " ", d[2].p.y);
 			d += 3;
 			break;
 		case Command::ArcTo:
@@ -597,14 +662,15 @@ auto encodePath(const PathData<Source> &source) -> typename Interface::BytesType
 			data::cbor::_writeNumber(enc, d[1].p.x);
 			data::cbor::_writeNumber(enc, d[1].p.y);
 			data::cbor::_writeNumber(enc, d[2].f.v);
-			data::cbor::_writeInt(enc, (uint32_t(d[2].f.a ? 1 : 0) << 1) | uint32_t(d[2].f.b ? 1 : 0));
-			SP_PATH_LOG_TEXT("A ", d[0].p.x, " ", d[0].p.y, " ", d[1].p.x, " ", d[1].p.y, " " << d[2].f.v, " ",
-					((uint32_t(d[2].f.a ? 1 : 0) << 1) | uint32_t(d[2].f.b ? 1 : 0)), " ", d[2].f.a, " ", d[2].f.b);
+			data::cbor::_writeInt(enc,
+					(uint32_t(d[2].f.a ? 1 : 0) << 1) | uint32_t(d[2].f.b ? 1 : 0));
+			SP_PATH_LOG_TEXT("A ", d[0].p.x, " ", d[0].p.y, " ", d[1].p.x, " ", d[1].p.y,
+					" " << d[2].f.v, " ",
+					((uint32_t(d[2].f.a ? 1 : 0) << 1) | uint32_t(d[2].f.b ? 1 : 0)), " ", d[2].f.a,
+					" ", d[2].f.b);
 			d += 3;
 			break;
-		case Command::ClosePath:
-			SP_PATH_LOG_TEXT("Z");
-			break;
+		case Command::ClosePath: SP_PATH_LOG_TEXT("Z"); break;
 		default: break;
 		}
 	}
@@ -625,31 +691,27 @@ auto pathToString(const Source &source, bool newline) -> typename Interface::Str
 				buffer.putc('\n');
 			}
 			buffer.putStrings("M ", d[0].p.x, ",", d[0].p.y, " ");
-			++ d;
+			++d;
 			break;
 		case Command::LineTo:
 			buffer.putStrings("L ", d[0].p.x, ",", d[0].p.y, " ");
-			++ d;
+			++d;
 			break;
 		case Command::QuadTo:
 			buffer.putStrings("Q ", d[0].p.x, ",", d[0].p.y, " ", d[1].p.x, ",", d[1].p.y, " ");
 			d += 2;
 			break;
 		case Command::CubicTo:
-			buffer.putStrings("C ", d[0].p.x, ",", d[0].p.y, " ",
-					d[1].p.x, ",", d[1].p.y, " ",
+			buffer.putStrings("C ", d[0].p.x, ",", d[0].p.y, " ", d[1].p.x, ",", d[1].p.y, " ",
 					d[2].p.x, ",", d[2].p.y, " ");
 			d += 3;
 			break;
 		case Command::ArcTo:
-			buffer.putStrings("A ", d[0].p.x, ",", d[0].p.y, " ",
-					d[2].f.v, " ", int32_t(d[2].f.a), " ", int32_t(d[2].f.b), " ",
-					d[1].p.x, ",", d[1].p.y, " ");
+			buffer.putStrings("A ", d[0].p.x, ",", d[0].p.y, " ", d[2].f.v, " ", int32_t(d[2].f.a),
+					" ", int32_t(d[2].f.b), " ", d[1].p.x, ",", d[1].p.y, " ");
 			d += 3;
 			break;
-		case Command::ClosePath:
-			buffer.put("Z ", 2);
-			break;
+		case Command::ClosePath: buffer.put("Z ", 2); break;
 		default: break;
 		}
 	}
@@ -685,49 +747,57 @@ PathWriter PathData<memory::StandartInterface>::getWriter() {
 
 template <>
 template <>
-auto PathData<memory::PoolInterface>::encode<memory::PoolInterface>() const -> memory::PoolInterface::BytesType {
+auto PathData<memory::PoolInterface>::encode<memory::PoolInterface>() const
+		-> memory::PoolInterface::BytesType {
 	return encodePath<memory::PoolInterface>(*this);
 }
 
 template <>
 template <>
-auto PathData<memory::PoolInterface>::encode<memory::StandartInterface>() const -> memory::StandartInterface::BytesType {
+auto PathData<memory::PoolInterface>::encode<memory::StandartInterface>() const
+		-> memory::StandartInterface::BytesType {
 	return encodePath<memory::StandartInterface>(*this);
 }
 
 template <>
 template <>
-auto PathData<memory::StandartInterface>::encode<memory::PoolInterface>() const -> memory::PoolInterface::BytesType {
+auto PathData<memory::StandartInterface>::encode<memory::PoolInterface>() const
+		-> memory::PoolInterface::BytesType {
 	return encodePath<memory::PoolInterface>(*this);
 }
 
 template <>
 template <>
-auto PathData<memory::StandartInterface>::encode<memory::StandartInterface>() const -> memory::StandartInterface::BytesType {
+auto PathData<memory::StandartInterface>::encode<memory::StandartInterface>() const
+		-> memory::StandartInterface::BytesType {
 	return encodePath<memory::StandartInterface>(*this);
 }
 
 template <>
 template <>
-auto PathData<memory::PoolInterface>::toString<memory::PoolInterface>(bool newline) const -> memory::PoolInterface::StringType {
+auto PathData<memory::PoolInterface>::toString<memory::PoolInterface>(bool newline) const
+		-> memory::PoolInterface::StringType {
 	return pathToString<memory::PoolInterface>(*this, newline);
 }
 
 template <>
 template <>
-auto PathData<memory::PoolInterface>::toString<memory::StandartInterface>(bool newline) const -> memory::StandartInterface::StringType {
+auto PathData<memory::PoolInterface>::toString<memory::StandartInterface>(bool newline) const
+		-> memory::StandartInterface::StringType {
 	return pathToString<memory::StandartInterface>(*this, newline);
 }
 
 template <>
 template <>
-auto PathData<memory::StandartInterface>::toString<memory::PoolInterface>(bool newline) const -> memory::PoolInterface::StringType {
+auto PathData<memory::StandartInterface>::toString<memory::PoolInterface>(bool newline) const
+		-> memory::PoolInterface::StringType {
 	return pathToString<memory::PoolInterface>(*this, newline);
 }
 
 template <>
 template <>
-auto PathData<memory::StandartInterface>::toString<memory::StandartInterface>(bool newline) const -> memory::StandartInterface::StringType {
+auto PathData<memory::StandartInterface>::toString<memory::StandartInterface>(bool newline) const
+		-> memory::StandartInterface::StringType {
 	return pathToString<memory::StandartInterface>(*this, newline);
 }
 
@@ -737,13 +807,9 @@ PathWriter::PathWriter(PathData<mem_std::Interface> &d)
 PathWriter::PathWriter(PathData<mem_pool::Interface> &d)
 : points(d.points), commands(d.commands), uvPoints(d.uv) { }
 
-PathWriter::operator bool () const {
-	return points && commands;
-}
+PathWriter::operator bool() const { return points && commands; }
 
-bool PathWriter::empty() const {
-	return commands.empty();
-}
+bool PathWriter::empty() const { return commands.empty(); }
 
 void PathWriter::reserve(size_t size) {
 	commands.reserve(size);
@@ -804,7 +870,9 @@ PathWriter &PathWriter::moveTo(const Vec2 &point, const Vec2 &uv) {
 }
 
 PathWriter &PathWriter::lineTo(float x, float y, float u, float v) {
-	commands.emplace_back((commands.empty() || commands.back() == Command::ClosePath) ? Command::MoveTo : Command::LineTo);
+	commands.emplace_back((commands.empty() || commands.back() == Command::ClosePath)
+					? Command::MoveTo
+					: Command::LineTo);
 	uvPoints.emplace_back(Vec2(u, v));
 	points.emplace_back(CommandData(x, y));
 	return *this;
@@ -821,12 +889,13 @@ PathWriter &PathWriter::quadTo(float x1, float y1, float x2, float y2, float u, 
 	points.emplace_back(CommandData(x2, y2));
 	return *this;
 }
-PathWriter &PathWriter::quadTo(const Vec2& p1, const Vec2& p2, const Vec2 &uv) {
+PathWriter &PathWriter::quadTo(const Vec2 &p1, const Vec2 &p2, const Vec2 &uv) {
 	this->quadTo(p1.x, p1.y, p2.x, p2.y, uv.x, uv.y);
 	return *this;
 }
 
-PathWriter &PathWriter::cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, float u, float v) {
+PathWriter &PathWriter::cubicTo(float x1, float y1, float x2, float y2, float x3, float y3, float u,
+		float v) {
 	commands.emplace_back(Command::CubicTo);
 	uvPoints.emplace_back(Vec2(u, v));
 	points.emplace_back(CommandData(x1, y1));
@@ -834,13 +903,14 @@ PathWriter &PathWriter::cubicTo(float x1, float y1, float x2, float y2, float x3
 	points.emplace_back(CommandData(x3, y3));
 	return *this;
 }
-PathWriter &PathWriter::cubicTo(const Vec2& p1, const Vec2& p2, const Vec2& p3, const Vec2 &uv) {
+PathWriter &PathWriter::cubicTo(const Vec2 &p1, const Vec2 &p2, const Vec2 &p3, const Vec2 &uv) {
 	this->cubicTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, uv.x, uv.y);
 	return *this;
 }
 
 // use _to_rad user suffix to convert from degrees to radians
-PathWriter &PathWriter::arcTo(float rx, float ry, float rotation, bool largeFlag, bool sweepFlag, float x, float y, float u, float v) {
+PathWriter &PathWriter::arcTo(float rx, float ry, float rotation, bool largeFlag, bool sweepFlag,
+		float x, float y, float u, float v) {
 	commands.emplace_back(Command::ArcTo);
 	uvPoints.emplace_back(Vec2(u, v));
 	points.emplace_back(CommandData(rx, ry));
@@ -848,7 +918,8 @@ PathWriter &PathWriter::arcTo(float rx, float ry, float rotation, bool largeFlag
 	points.emplace_back(CommandData(rotation, largeFlag, sweepFlag));
 	return *this;
 }
-PathWriter &PathWriter::arcTo(const Vec2 & r, float rotation, bool largeFlag, bool sweepFlag, const Vec2 &target, const Vec2 &uv) {
+PathWriter &PathWriter::arcTo(const Vec2 &r, float rotation, bool largeFlag, bool sweepFlag,
+		const Vec2 &target, const Vec2 &uv) {
 	this->arcTo(r.x, r.y, rotation, largeFlag, sweepFlag, target.x, target.y, uv.x, uv.y);
 	return *this;
 }
@@ -859,12 +930,12 @@ PathWriter &PathWriter::closePath() {
 	return *this;
 }
 
-PathWriter &PathWriter::addRect(const Rect& rect) {
+PathWriter &PathWriter::addRect(const Rect &rect) {
 	addRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
 	return *this;
 }
 
-PathWriter &PathWriter::addRect(const Rect& rect, float rx, float ry) {
+PathWriter &PathWriter::addRect(const Rect &rect, float rx, float ry) {
 	addRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height, rx, ry);
 	return *this;
 }
@@ -878,7 +949,7 @@ PathWriter &PathWriter::addRect(float x, float y, float width, float height) {
 	return *this;
 }
 
-PathWriter &PathWriter::addOval(const Rect& oval) {
+PathWriter &PathWriter::addOval(const Rect &oval) {
 	addEllipse(oval.getMidX(), oval.getMidY(), oval.size.width / 2.0f, oval.size.height / 2.0f);
 	return *this;
 }
@@ -903,7 +974,8 @@ PathWriter &PathWriter::addEllipse(float x, float y, float rx, float ry) {
 	return *this;
 }
 
-PathWriter &PathWriter::addArc(const Rect& oval, float startAngleInRadians, float sweepAngleInRadians) {
+PathWriter &PathWriter::addArc(const Rect &oval, float startAngleInRadians,
+		float sweepAngleInRadians) {
 	const auto rx = oval.size.width / 2;
 	const auto ry = oval.size.height / 2;
 
@@ -914,7 +986,8 @@ PathWriter &PathWriter::addArc(const Rect& oval, float startAngleInRadians, floa
 	const auto sy = ry * sinf(startAngleInRadians + sweepAngleInRadians);
 
 	moveTo(oval.origin.x + rx + x, oval.origin.y + ry + y);
-	arcTo(rx, ry, 0.0f, (sweepAngleInRadians > numbers::pi)?true:false, true, oval.origin.x + rx + sx, oval.origin.y + ry + sy);
+	arcTo(rx, ry, 0.0f, (sweepAngleInRadians > numbers::pi) ? true : false, true,
+			oval.origin.x + rx + sx, oval.origin.y + ry + sy);
 	return *this;
 }
 
@@ -983,7 +1056,7 @@ bool PathWriter::addPath(BytesView data) {
 
 	auto version = data::cbor::_readInt(reader);
 	if (version != 1 && version != 2) {
-		log::error("vg::PathWriter", "Unsupported binary encoding version: ", version);
+		log::source().error("vg::PathWriter", "Unsupported binary encoding version: ", version);
 		return false; // unsupported version
 	}
 
@@ -1038,7 +1111,8 @@ bool PathWriter::addPath(BytesView data) {
 			y2 = data::cbor::_readNumber(reader);
 			x3 = data::cbor::_readNumber(reader);
 			tmp = uint32_t(data::cbor::_readInt(reader));
-			SP_PATH_LOG_TEXT("A ", x1, " ", y1, " ", x2, " ", y2, " ", x3, " ", tmp, " ", ((tmp & 2) != 0), " ", ((tmp & 1) != 0));
+			SP_PATH_LOG_TEXT("A ", x1, " ", y1, " ", x2, " ", y2, " ", x3, " ", tmp, " ",
+					((tmp & 2) != 0), " ", ((tmp & 1) != 0));
 			arcTo(x1, y1, x3, (tmp & 2) != 0, (tmp & 1) != 0, x2, y2, u, v);
 			break;
 		case toInt(Command::ClosePath):
@@ -1051,8 +1125,6 @@ bool PathWriter::addPath(BytesView data) {
 	return true;
 }
 
-bool PathWriter::addPath(StringView str) {
-	return SVGPathReader::readPath(this, str);
-}
+bool PathWriter::addPath(StringView str) { return SVGPathReader::readPath(this, str); }
 
-}
+} // namespace stappler::vg

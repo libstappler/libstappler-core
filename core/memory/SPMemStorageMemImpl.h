@@ -421,6 +421,15 @@ public:
 	// РџСЂРѕРІРµСЂРєР°, РІР»Р°РґРµРµРј Р»Рё Р±Р»РѕРєРѕРј РїР°РјСЏС‚Рё
 	bool is_weak() const noexcept { return is_large() && _large.is_weak(); }
 
+	// reserve memory block, optimal for realloc/free
+	// useful for small temporary buffers
+	// this memory block can be reused by next temporary buffer of same size
+	// so, no pool memory will be leaked
+	pointer reserve_block_optimal() {
+		auto target = mempool::custom::BlockThreshold / sizeof(Type) + 1;
+		return reserve(target);
+	}
+
 	pointer reserve(size_type s, bool grow = false) {
 		const auto _allocated = capacity();
 		const auto _used = size();

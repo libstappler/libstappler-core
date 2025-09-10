@@ -621,7 +621,8 @@ auto UrlView::parseArgs<memory::PoolInterface>(StringView str, size_t maxVarSize
 			decltype(&data::readUrlencoded<memory::PoolInterface>)>(
 			buildconfig::MODULE_STAPPLER_DATA_NAME, "readUrlencoded");
 	if (!fn) {
-		log::error("UrlView", "Module MODULE_STAPPLER_DATA declared, but not available in runtime");
+		log::source().error("UrlView",
+				"Module MODULE_STAPPLER_DATA declared, but not available in runtime");
 	}
 	return fn(str, maxVarSize);
 }
@@ -641,7 +642,8 @@ auto UrlView::parseArgs<memory::StandartInterface>(StringView str, size_t maxVar
 			decltype(&data::readUrlencoded<memory::StandartInterface>)>(
 			buildconfig::MODULE_STAPPLER_DATA_NAME, "readUrlencoded");
 	if (!fn) {
-		log::error("UrlView", "Module MODULE_STAPPLER_DATA declared, but not available in runtime");
+		log::source().error("UrlView",
+				"Module MODULE_STAPPLER_DATA declared, but not available in runtime");
 	}
 	return fn(str, maxVarSize);
 }

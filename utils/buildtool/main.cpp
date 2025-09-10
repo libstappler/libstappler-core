@@ -289,7 +289,7 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 					}
 					return 0;
 				} else {
-					log::error("main", "File not found: ", argv[nextArg++]);
+					log::source().error("main", "File not found: ", argv[nextArg++]);
 					return -1;
 				}
 			} else {

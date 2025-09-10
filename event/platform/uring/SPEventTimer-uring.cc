@@ -69,7 +69,7 @@ bool TimerURingHandle::reset(TimerInfo &&info) {
 		return source->init(info) && Handle::reset();
 	}
 
-	log::info("TimerURingHandle",
+	log::source().info("TimerURingHandle",
 			"TimerURingHandle can only be reset with 1 or TimerInfo::Infinite `count`");
 	return false;
 }
@@ -100,7 +100,7 @@ Status TimerURingHandle::rearm(URingData *uring, TimerUringSource *source) {
 			}, URingPushFlags::Submit);
 		}
 	}
-	//log::debug("TimerURingHandle", uring->_tick, ": rearm");
+	//log::source().debug("TimerURingHandle", uring->_tick, ": rearm");
 	return status;
 }
 
@@ -113,7 +113,7 @@ Status TimerURingHandle::disarm(URingData *uring, TimerUringSource *source) {
 		++_timeline;
 	}
 
-	//log::debug("TimerURingHandle", uring->_tick, ": disarm");
+	//log::source().debug("TimerURingHandle", uring->_tick, ": disarm");
 	return status;
 }
 
@@ -122,7 +122,7 @@ void TimerURingHandle::notify(URingData *uring, TimerUringSource *source, const 
 		return;
 	}
 
-	//log::debug("TimerURingHandle", uring->_tick, ": notify");
+	//log::source().debug("TimerURingHandle", uring->_tick, ": notify");
 
 	bool more = (data.queueFlags & IORING_CQE_F_MORE);
 	if (!more) {

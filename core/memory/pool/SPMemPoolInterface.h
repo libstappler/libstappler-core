@@ -54,8 +54,8 @@ namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
 SP_PUBLIC pool_t *acquire();
 SP_PUBLIC Pair<uint32_t, const void *> info();
 
-SP_PUBLIC void push(pool_t *, const char * = STAPPLER_LOCATION);
-SP_PUBLIC void push(pool_t *, uint32_t, const void * = nullptr, const char * = STAPPLER_LOCATION);
+SP_PUBLIC void push(pool_t *, const char * = SP_FUNC);
+SP_PUBLIC void push(pool_t *, uint32_t, const void * = nullptr, const char * = SP_FUNC);
 SP_PUBLIC void pop(pool_t *, const char *source);
 
 SP_PUBLIC void foreach_info(void *, bool (*)(void *, pool_t *, uint32_t, const void *));

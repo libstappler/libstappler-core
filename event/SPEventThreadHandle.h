@@ -44,7 +44,7 @@ public:
 
 	// Perform function on this event queue
 	virtual Status perform(mem_std::Function<void()> &&func, Ref *target = nullptr,
-			StringView tag = STAPPLER_LOCATION) override {
+			StringView tag = SP_FUNC) override {
 		return Status::ErrorNotImplemented;
 	}
 

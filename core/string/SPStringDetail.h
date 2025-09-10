@@ -1851,6 +1851,18 @@ auto BytesViewTemplate<Endianess>::readBytes(size_t s) -> BytesViewTemplate<Targ
 	return ret;
 }
 
+template <Endian Endianess>
+template <typename T>
+auto BytesViewTemplate<Endianess>::readSpan(size_t s) -> SpanView<T> {
+	if (len < s * sizeof(T)) {
+		s = len / sizeof(T);
+	}
+
+	SpanView<T> ret(reinterpret_cast<const T *>(ptr), s);
+	ptr += s * sizeof(T);
+	len -= s * sizeof(T);
+	return ret;
+}
 
 template <typename Compare>
 inline int compareDataRanges(const uint8_t *l, size_t __lsize, const uint8_t *r, size_t __rsize,
@@ -2071,6 +2083,54 @@ inline bool operator>=(const BytesViewTemplate<Endianess> &l,
 			r.data() + r.size(), std::greater_equal<uint8_t>());
 }
 
+template <typename _Tp>
+inline bool operator<(const SpanView<_Tp> &__x, const SpanView<_Tp> &__y) {
+	return std::lexicographical_compare(__x.begin(), __x.end(), __y.begin(), __y.end());
+}
+
+/// Based on operator<
+template <typename _Tp>
+inline bool operator>(const SpanView<_Tp> &__x, const SpanView<_Tp> &__y) {
+	return __y < __x;
+}
+
+/// Based on operator<
+template <typename _Tp>
+inline bool operator<=(const SpanView<_Tp> &__x, const SpanView<_Tp> &__y) {
+	return !(__y < __x);
+}
+
+/// Based on operator<
+template <typename _Tp>
+inline bool operator>=(const SpanView<_Tp> &__x, const SpanView<_Tp> &__y) {
+	return !(__x < __y);
+}
+
+template <typename Type>
+auto makeSpanView(const std::vector<Type> &vec) -> SpanView<Type> {
+	return SpanView<Type>(vec);
+}
+
+template <typename Type>
+auto makeSpanView(const memory::vector<Type> &vec) -> SpanView<Type> {
+	return SpanView<Type>(vec);
+}
+
+template <typename Type, size_t Size>
+auto makeSpanView(const std::array<Type, Size> &vec) -> SpanView<Type> {
+	return SpanView<Type>(vec);
+}
+
+template <typename Type>
+auto makeSpanView(const Type *ptr, size_t size) -> SpanView<Type> {
+	return SpanView<Type>(ptr, size);
+}
+
+template <typename Type, size_t Size>
+auto makeSpanView(const Type (&array)[Size]) -> SpanView<Type> {
+	return SpanView<Type>(array, Size);
+}
+
 } // namespace STAPPLER_VERSIONIZED stappler
 
 namespace std {
@@ -2144,6 +2204,13 @@ struct hash< STAPPLER_VERSIONIZED_NAMESPACE::BytesViewTemplate<
 		} else {
 			return stappler::hash::hash64((const char *)value.data(), value.size());
 		}
+	}
+};
+
+template <typename Value>
+struct hash<STAPPLER_VERSIONIZED_NAMESPACE::SpanView<Value>> {
+	size_t operator()(const STAPPLER_VERSIONIZED_NAMESPACE::SpanView<Value> &value) {
+		return value.hash();
 	}
 };
 

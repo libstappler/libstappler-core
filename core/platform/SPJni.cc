@@ -57,8 +57,7 @@ Local::~Local() {
 	}
 }
 
-Local::Local(jobject obj, JNIEnv *env)
-: _obj(obj), _env(env) { }
+Local::Local(jobject obj, JNIEnv *env) : _obj(obj), _env(env) { }
 
 Local::Local(Local &&other) {
 	_obj = other._obj;
@@ -67,7 +66,7 @@ Local::Local(Local &&other) {
 	other._env = nullptr;
 }
 
-Local & Local::operator=(Local &&other) {
+Local &Local::operator=(Local &&other) {
 	if (&other == this) {
 		return *this;
 	}
@@ -86,7 +85,7 @@ Local & Local::operator=(Local &&other) {
 
 Local::Local(std::nullptr_t) : _obj(nullptr), _env(nullptr) { }
 
-Local & Local::operator=(std::nullptr_t) {
+Local &Local::operator=(std::nullptr_t) {
 	if (_obj) {
 		_env->DeleteLocalRef(_obj);
 		_obj = nullptr;
@@ -97,22 +96,18 @@ Local & Local::operator=(std::nullptr_t) {
 	return *this;
 }
 
-Global Local::getGlobal() const {
-	return Global(*this);
-}
+Global Local::getGlobal() const { return Global(*this); }
 
-LocalClass::LocalClass(jclass obj, JNIEnv *env)
-: Local(obj, env) { }
+LocalClass::LocalClass(jclass obj, JNIEnv *env) : Local(obj, env) { }
 
-LocalClass::LocalClass(LocalClass &&other)
-: Local(nullptr) {
+LocalClass::LocalClass(LocalClass &&other) : Local(nullptr) {
 	_obj = other._obj;
 	_env = other._env;
 	other._obj = nullptr;
 	other._env = nullptr;
 }
 
-LocalClass & LocalClass::operator=(LocalClass &&other) {
+LocalClass &LocalClass::operator=(LocalClass &&other) {
 	if (&other == this) {
 		return *this;
 	}
@@ -129,10 +124,9 @@ LocalClass & LocalClass::operator=(LocalClass &&other) {
 	return *this;
 }
 
-LocalClass::LocalClass(std::nullptr_t)
-: Local(nullptr) { }
+LocalClass::LocalClass(std::nullptr_t) : Local(nullptr) { }
 
-LocalClass & LocalClass::operator=(std::nullptr_t) {
+LocalClass &LocalClass::operator=(std::nullptr_t) {
 	if (_obj) {
 		_env->DeleteLocalRef(_obj);
 		_obj = nullptr;
@@ -144,9 +138,7 @@ LocalClass & LocalClass::operator=(std::nullptr_t) {
 }
 
 
-GlobalClass LocalClass::getGlobal() const {
-	return GlobalClass(*this);
-}
+GlobalClass LocalClass::getGlobal() const { return GlobalClass(*this); }
 
 Global::~Global() {
 	if (_obj) {
@@ -173,7 +165,7 @@ Global::Global(const Global &other) {
 	}
 }
 
-Global & Global::operator=(const Global &other) {
+Global &Global::operator=(const Global &other) {
 	if (&other == this) {
 		return *this;
 	}
@@ -196,7 +188,7 @@ Global::Global(Global &&other) {
 	other._obj = nullptr;
 }
 
-Global & Global::operator=(Global &&other) {
+Global &Global::operator=(Global &&other) {
 	if (&other == this) {
 		return *this;
 	}
@@ -213,7 +205,7 @@ Global & Global::operator=(Global &&other) {
 
 Global::Global(std::nullptr_t) : _obj(nullptr) { }
 
-Global & Global::operator=(std::nullptr_t) {
+Global &Global::operator=(std::nullptr_t) {
 	if (_obj) {
 		Env::getEnv().deleteGlobalRef(_obj);
 		_obj = nullptr;
@@ -223,41 +215,34 @@ Global & Global::operator=(std::nullptr_t) {
 	return *this;
 }
 
-JNIEnv *Global::getEnv() const {
-	return Env::getEnv();
-}
+JNIEnv *Global::getEnv() const { return Env::getEnv(); }
 
-LocalString::~LocalString() {
-	reset();
-}
+LocalString::~LocalString() { reset(); }
 
-LocalString::LocalString(jstring obj, JNIEnv *env)
-: Local(obj, env) { }
+LocalString::LocalString(jstring obj, JNIEnv *env) : Local(obj, env) { }
 
 LocalString::LocalString(LocalString &&other) : Local(move(other)) { }
 
-LocalString & LocalString::operator=(LocalString &&other) {
+LocalString &LocalString::operator=(LocalString &&other) {
 	if (&other == this) {
 		return *this;
 	}
 
 	reset();
-	Local::operator =(move(other));
+	Local::operator=(move(other));
 	return *this;
 }
 
 LocalString::LocalString(std::nullptr_t) : Local(nullptr) { }
 
-LocalString & LocalString::operator=(std::nullptr_t) {
+LocalString &LocalString::operator=(std::nullptr_t) {
 	reset();
 
-	Local::operator =(nullptr);
+	Local::operator=(nullptr);
 	return *this;
 }
 
-GlobalString LocalString::getGlobal() const {
-	return GlobalString(*this);
-}
+GlobalString LocalString::getGlobal() const { return GlobalString(*this); }
 
 GlobalString::GlobalString(const LocalString &obj) : Global(nullptr) {
 	if (obj) {
@@ -273,30 +258,30 @@ GlobalString::GlobalString(const RefString &obj) : Global(nullptr) {
 
 GlobalString::GlobalString(const GlobalString &other) : Global(other) { }
 
-GlobalString & GlobalString::operator=(const GlobalString &other) {
+GlobalString &GlobalString::operator=(const GlobalString &other) {
 	if (&other == this) {
 		return *this;
 	}
 
-	Global::operator =(other);
+	Global::operator=(other);
 	return *this;
 }
 
 GlobalString::GlobalString(GlobalString &&other) : Global(move(other)) { }
 
-GlobalString & GlobalString::operator=(GlobalString &&other) {
+GlobalString &GlobalString::operator=(GlobalString &&other) {
 	if (&other == this) {
 		return *this;
 	}
 
-	Global::operator =(move(other));
+	Global::operator=(move(other));
 	return *this;
 }
 
 GlobalString::GlobalString(std::nullptr_t) : Global(nullptr) { }
 
-GlobalString & GlobalString::operator=(std::nullptr_t) {
-	Global::operator =(nullptr);
+GlobalString &GlobalString::operator=(std::nullptr_t) {
+	Global::operator=(nullptr);
 	return *this;
 }
 
@@ -314,7 +299,7 @@ GlobalClass::GlobalClass(const RefClass &obj) : Global(nullptr) {
 
 GlobalClass::GlobalClass(const GlobalClass &other) : Global(other) { }
 
-GlobalClass & GlobalClass::operator=(const GlobalClass &other) {
+GlobalClass &GlobalClass::operator=(const GlobalClass &other) {
 	if (&other == this) {
 		return *this;
 	}
@@ -325,7 +310,7 @@ GlobalClass & GlobalClass::operator=(const GlobalClass &other) {
 
 GlobalClass::GlobalClass(GlobalClass &&other) : Global(move(other)) { }
 
-GlobalClass & GlobalClass::operator=(GlobalClass &&other) {
+GlobalClass &GlobalClass::operator=(GlobalClass &&other) {
 	if (&other == this) {
 		return *this;
 	}
@@ -336,33 +321,25 @@ GlobalClass & GlobalClass::operator=(GlobalClass &&other) {
 
 GlobalClass::GlobalClass(std::nullptr_t) : Global(nullptr) { }
 
-GlobalClass & GlobalClass::operator=(std::nullptr_t) {
+GlobalClass &GlobalClass::operator=(std::nullptr_t) {
 	Global::operator=(nullptr);
 	return *this;
 }
 
-Global Ref::getGlobal() const {
-	return Global(*this);
-}
+Global Ref::getGlobal() const { return Global(*this); }
 
-RefString::~RefString() {
-	reset();
-}
+RefString::~RefString() { reset(); }
 
-GlobalString RefString::getGlobal() const {
-	return GlobalString(*this);
-}
+GlobalString RefString::getGlobal() const { return GlobalString(*this); }
 
-GlobalClass RefClass::getGlobal() const {
-	return GlobalClass(*this);
-}
+GlobalClass RefClass::getGlobal() const { return GlobalClass(*this); }
 
 static JNIEnv *getVmEnv() {
 	void *ret = nullptr;
 	if (s_vm) {
 		s_vm->GetEnv(&ret, JNI_VERSION_1_6);
 	} else {
-		log::error("JNI", "JavaVM not found");
+		log::source().error("JNI", "JavaVM not found");
 	}
 	return reinterpret_cast<JNIEnv *>(ret);
 }
@@ -380,12 +357,9 @@ Env Env::getEnv() {
 		}
 	}
 	return tl_thread.env;
-
 }
 
-int32_t Env::getSdkVersion() {
-	return s_sdk;
-}
+int32_t Env::getSdkVersion() { return s_sdk; }
 
 void Env::loadJava(JavaVM *vm, int32_t sdk) {
 	s_vm = vm;
@@ -400,7 +374,7 @@ void Env::finalizeJava() {
 	platform::i18n::finalize();
 }
 
-void Env::checkErrors()  const {
+void Env::checkErrors() const {
 	if (_env->ExceptionCheck()) {
 		// Read exception msg
 		auto e = Local(_env->ExceptionOccurred(), _env);
@@ -414,10 +388,10 @@ void Env::checkErrors()  const {
 		auto message = e.callMethod<jstring>(getMessage);
 		auto exName = clazz.callMethod<jstring>(getName);
 
-		log::error("JNI", "[", exName.getString(), "] ", message.getString());
+		log::source().error("JNI", "[", exName.getString(), "] ", message.getString());
 	}
 }
 
-}
+} // namespace stappler::jni
 
 #endif

@@ -25,7 +25,7 @@
 #include "SPFontLibrary.h"
 #include "SPLog.h"
 
-#include "ft2build.h"
+#include "ft2build.h" // IWYU pragma: keep
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 #include FT_MULTIPLE_MASTERS_H
@@ -170,7 +170,8 @@ FontLayoutParameters FontFaceData::acquireDefaultParams(FT_Face face) {
 			}
 		}
 	} else {
-		log::error("font::FontFaceData", "No preconfigured style or OS/2 table for font: ", _name);
+		log::source().error("font::FontFaceData",
+				"No preconfigured style or OS/2 table for font: ", _name);
 	}
 	return sfnt;
 }
@@ -352,7 +353,7 @@ bool FontFaceObject::acquireTextureUnsafe(char32_t theChar,
 		}
 	} else {
 		if (!chars::isspace(theChar) && theChar != char16_t(0x0A)) {
-			log::format(log::Warn, "Font", "error: no bitmap for (%d) '%s'", theChar,
+			log::format(log::Warn, "Font", SP_LOCATION, "error: no bitmap for (%d) '%s'", theChar,
 					string::toUtf8<Interface>(theChar).data());
 		}
 	}

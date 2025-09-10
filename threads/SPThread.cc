@@ -136,7 +136,7 @@ Thread::~Thread() {
 
 bool Thread::run(ThreadFlags flags) {
 	if (_type != nullptr) {
-		log::error("Thread", "Thread already started");
+		log::source().error("Thread", "Thread already started");
 		return false;
 	}
 

@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::bitmap::gif {
 
-static bool isGif(const uint8_t * data, size_t dataLen) {
+static bool isGif(const uint8_t *data, size_t dataLen) {
 	if (dataLen <= 8) {
 		return false;
 	}
@@ -39,7 +39,8 @@ static bool isGif(const uint8_t * data, size_t dataLen) {
 			|| memcmp(GIF_SIGNATURE_2, data, sizeof(GIF_SIGNATURE_2)) == 0;
 }
 
-static bool getGifImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width, uint32_t &height) {
+static bool getGifImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width,
+		uint32_t &height) {
 	if (isGif(data.data(), data.size())) {
 		auto reader = BytesViewTemplate<Endian::Little>(data.data() + 6, 4);
 
@@ -60,7 +61,7 @@ static int Gif_InputFunc(GifFileType *file, GifByteType *bytes, int count) {
 	return 0;
 }
 
-static int bitmap_DGifCloseFile(GifFileType * GifFile, int *error) {
+static int bitmap_DGifCloseFile(GifFileType *GifFile, int *error) {
 #if GIFLIB_MAJOR >= 5
 	return DGifCloseFile(GifFile, error);
 #else
@@ -91,17 +92,17 @@ struct GifReadStruct {
 		file = bitmap_DGifOpen((void *)&reader, &Gif_InputFunc, &error);
 
 		if (!file || error != 0) {
-			log::error("GIF", "fail to open file");
+			log::source().error("GIF", "fail to open file");
 			return false;
 		}
 
 		if (DGifSlurp(file) != GIF_OK) {
-			log::error("GIF", "fail to read file");
+			log::source().error("GIF", "fail to read file");
 			return false;
 		}
 
 		if (file->ImageCount == 0) {
-			log::error("GIF", "no images found");
+			log::source().error("GIF", "no images found");
 			return false;
 		}
 
@@ -109,18 +110,18 @@ struct GifReadStruct {
 	}
 
 	bool info(ImageInfo &outputData) {
-		ColorMapObject *colors =  (file->SavedImages->ImageDesc.ColorMap) ? file->SavedImages->ImageDesc.ColorMap : file->SColorMap;
+		ColorMapObject *colors = (file->SavedImages->ImageDesc.ColorMap)
+				? file->SavedImages->ImageDesc.ColorMap
+				: file->SColorMap;
 		if (!colors) {
-			log::error("GIF", "no color profile found");
+			log::source().error("GIF", "no color profile found");
 			return false;
 		}
 
-		auto checkGrayscale = [&] (GifColorType &c) {
-			return c.Red == c.Green && c.Red == c.Blue;
-		};
+		auto checkGrayscale = [&](GifColorType &c) { return c.Red == c.Green && c.Red == c.Blue; };
 
 		bool isGrayscale = true;
-		for (size_t i = 0; i < size_t(colors->ColorCount); ++ i) {
+		for (size_t i = 0; i < size_t(colors->ColorCount); ++i) {
 			if (!checkGrayscale(colors->Colors[i])) {
 				isGrayscale = false;
 				break;
@@ -129,9 +130,11 @@ struct GifReadStruct {
 
 #if GIFLIB_MAJOR >= 5
 		if (file->ExtensionBlockCount > 0) {
-			for (size_t i = 0; i < size_t(file->ExtensionBlockCount); ++ i) {
+			for (size_t i = 0; i < size_t(file->ExtensionBlockCount); ++i) {
 				GraphicsControlBlock GCB;
-				if (DGifExtensionToGCB(file->ExtensionBlocks[i].ByteCount, file->ExtensionBlocks[i].Bytes, &GCB) == GIF_OK) {
+				if (DGifExtensionToGCB(file->ExtensionBlocks[i].ByteCount,
+							file->ExtensionBlocks[i].Bytes, &GCB)
+						== GIF_OK) {
 					if (GCB.TransparentColor != NO_TRANSPARENT_COLOR) {
 						transparent = GCB.TransparentColor;
 					}
@@ -154,13 +157,16 @@ struct GifReadStruct {
 
 		outputData.color = (transparent != maxOf<size_t>())
 				? (isGrayscale ? PixelFormat::IA88 : PixelFormat::RGBA8888)
-				: (isGrayscale ? ((outputData.color == PixelFormat::A8) ? PixelFormat::A8 : PixelFormat::I8) : PixelFormat::RGB888);
+				: (isGrayscale ? ((outputData.color == PixelFormat::A8) ? PixelFormat::A8
+																		: PixelFormat::I8)
+							   : PixelFormat::RGB888);
 
 		outputData.alpha = (transparent != maxOf<size_t>() || outputData.color == PixelFormat::A8)
 				? AlphaFormat::Unpremultiplied
 				: AlphaFormat::Opaque;
 
-		outputData.stride = max(outputData.stride, (uint32_t)(outputData.width * getBytesPerPixel(outputData.color)));
+		outputData.stride = max(outputData.stride,
+				(uint32_t)(outputData.width * getBytesPerPixel(outputData.color)));
 
 		return true;
 	}
@@ -170,26 +176,29 @@ struct GifReadStruct {
 			return false;
 		}
 
-		ColorMapObject *colors =  (file->SavedImages->ImageDesc.ColorMap) ? file->SavedImages->ImageDesc.ColorMap : file->SColorMap;
+		ColorMapObject *colors = (file->SavedImages->ImageDesc.ColorMap)
+				? file->SavedImages->ImageDesc.ColorMap
+				: file->SColorMap;
 		if (!colors) {
-			log::error("GIF", "no color profile found");
+			log::source().error("GIF", "no color profile found");
 			return false;
 		}
 
 		if (outputData.getStride) {
-			outputData.stride = (uint32_t)outputData.getStride(outputData.target, outputData.color, outputData.width);
+			outputData.stride = (uint32_t)outputData.getStride(outputData.target, outputData.color,
+					outputData.width);
 		}
 
-	    auto dataLen = outputData.stride * outputData.height;
-	    outputData.resize(outputData.target, dataLen);
+		auto dataLen = outputData.stride * outputData.height;
+		outputData.resize(outputData.target, dataLen);
 
 		auto input = file->SavedImages->RasterBits;
 		auto location = outputData.getData(outputData.target, 0);
 
 		if (outputData.color == PixelFormat::RGB888) {
-			for (size_t i = 0; i < outputData.height; ++ i) {
+			for (size_t i = 0; i < outputData.height; ++i) {
 				auto loc = location;
-				for (size_t j = 0; j < outputData.width; ++ j) {
+				for (size_t j = 0; j < outputData.width; ++j) {
 					auto &c = colors->Colors[input[i * outputData.width + j]];
 					*loc++ = c.Red;
 					*loc++ = c.Green;
@@ -198,18 +207,18 @@ struct GifReadStruct {
 				location += outputData.stride;
 			}
 		} else if (outputData.color == PixelFormat::A8 || outputData.color == PixelFormat::I8) {
-			for (size_t i = 0; i < outputData.height; ++ i) {
+			for (size_t i = 0; i < outputData.height; ++i) {
 				auto loc = location;
-				for (size_t j = 0; j < outputData.width; ++ j) {
+				for (size_t j = 0; j < outputData.width; ++j) {
 					auto &c = colors->Colors[input[i * outputData.width + j]];
 					*loc++ = c.Red;
 				}
 				location += outputData.stride;
 			}
 		} else if (outputData.color == PixelFormat::IA88) {
-			for (size_t i = 0; i < outputData.height; ++ i) {
+			for (size_t i = 0; i < outputData.height; ++i) {
 				auto loc = location;
-				for (size_t j = 0; j < outputData.width; ++ j) {
+				for (size_t j = 0; j < outputData.width; ++j) {
 					auto idx = input[i * outputData.width + j];
 					*loc++ = colors->Colors[idx].Red;
 					if (idx == transparent) {
@@ -221,9 +230,9 @@ struct GifReadStruct {
 				location += outputData.stride;
 			}
 		} else if (outputData.color == PixelFormat::RGBA8888) {
-			for (size_t i = 0; i < outputData.height; ++ i) {
+			for (size_t i = 0; i < outputData.height; ++i) {
 				auto loc = location;
-				for (size_t j = 0; j < outputData.width; ++ j) {
+				for (size_t j = 0; j < outputData.width; ++j) {
 					auto idx = input[i * outputData.width + j];
 					auto &c = colors->Colors[idx];
 					*loc++ = c.Red;
@@ -258,4 +267,4 @@ SPUNUSED static bool loadGif(const uint8_t *inputData, size_t size, BitmapWriter
 	return readStruct.init(inputData, size) && readStruct.load(outputData);
 }
 
-}
+} // namespace stappler::bitmap::gif

@@ -120,7 +120,7 @@ Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path) {
 		if (l->_initialize() == SQLITE_OK) {
 			return new (std::nothrow) Driver(pool, app, path, l);
 		} else {
-			log::error("sqlite::Driver", "sqlite3_initialize failed");
+			log::source().error("sqlite::Driver", "sqlite3_initialize failed");
 			DriverLibStorage::getInstance()->closeLib(l);
 		}
 	}
@@ -229,7 +229,7 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 				auto cmode =
 						stappler::string::toupper<Interface>(Driver_exec(_handle, p, db, query));
 				if (mode.empty() || cmode != m) {
-					log::error("sqlite::Driver", "fail to enable journal_mode '", m, "'");
+					log::source().error("sqlite::Driver", "fail to enable journal_mode '", m, "'");
 					_handle->close(db);
 					return Driver::Handle(nullptr);
 				}
@@ -257,7 +257,7 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 				auto info = d->getInfo(Driver::Connection(db), err);
 				info.setString(performedQuery, "query");
 #if DEBUG
-				log::debug("pq::Handle", EncodeFormat::Pretty, info);
+				log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 				break;
 			}
@@ -268,7 +268,7 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 				auto info = d->getInfo(Driver::Connection(db), err);
 				info.setString(nextQuery, "query");
 #if DEBUG
-				log::debug("pq::Handle", EncodeFormat::Pretty, info);
+				log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 				_handle->finalize(stmt);
 				break;
@@ -400,8 +400,8 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 				}
 			} else if (it.first != "driver" && it.first == "nmin" && it.first == "nkeep"
 					&& it.first == "nmax" && it.first == "exptime" && it.first == "persistent") {
-				log::error("sqlite::Driver", "unknown connection parameter: ", it.first, "=",
-						it.second);
+				log::source().error("sqlite::Driver", "unknown connection parameter: ", it.first,
+						"=", it.second);
 			}
 		}
 
@@ -415,7 +415,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 			} else if (mode == "memory") {
 				flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MEMORY;
 			} else {
-				log::error("sqlite::Driver", "unknown mode parameter: ", mode);
+				log::source().error("sqlite::Driver", "unknown mode parameter: ", mode);
 			}
 		} else {
 			flags |= SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
@@ -491,7 +491,7 @@ uint64_t Driver::insertWord(Handle h, StringView word) const {
 				_handle->reset(data->wordsQuery);
 				break;
 			} else {
-				log::debug("sqlite::Driver", "Hash collision: ", w, " ", word, " ", hash);
+				log::source().debug("sqlite::Driver", "Hash collision: ", w, " ", word, " ", hash);
 			}
 		}
 		_handle->reset(data->wordsQuery);

@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 // Umbrella header for BytesView implementation
 
-#include "SPBytesReader.h"
-#include "SPStringDetail.h"
+#include "SPBytesReader.h" // IWYU pragma: keep
+#include "SPStringDetail.h" // IWYU pragma: keep
 
 #endif /* STAPPLER_CORE_UTILS_SPDATAREADER_H_ */

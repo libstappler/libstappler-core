@@ -25,8 +25,8 @@ THE SOFTWARE.
 #define STAPPLER_CORE_UTILS_SPLOG_H_
 
 #include "SPString.h"
-#include "SPStringView.h"
-#include "SPRef.h"
+#include "SPStringView.h" // IWYU pragma: keep
+#include "SPRef.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::log {
 
@@ -46,16 +46,16 @@ struct SP_PUBLIC CustomLog {
 		Format
 	};
 
-	using log_fn = bool (*) (LogType, StringView, Type, VA &);
+	using log_fn = bool (*)(LogType, StringView, const SourceLocation &, Type, VA &);
 
 	CustomLog(log_fn fn);
 	~CustomLog();
 
 	CustomLog(const CustomLog &) = delete;
-	CustomLog& operator=(const CustomLog &) = delete;
+	CustomLog &operator=(const CustomLog &) = delete;
 
 	CustomLog(CustomLog &&);
-	CustomLog& operator=(CustomLog &&);
+	CustomLog &operator=(CustomLog &&);
 
 	log_fn fn;
 	void *manager;
@@ -72,39 +72,93 @@ SP_PUBLIC void setLogFilterMask(std::bitset<6> &&);
 SP_PUBLIC void setLogFilterMask(InitializerList<LogType>);
 SP_PUBLIC std::bitset<6> getlogFilterMask();
 
-SP_PUBLIC void format(LogType, const StringView &tag, const char *, ...) SPPRINTF(3, 4);
-SP_PUBLIC void text(LogType, const StringView &tag, const StringView &);
+SP_PUBLIC void format(LogType, StringView tag, const SourceLocation &, const char *, ...)
+		SPPRINTF(4, 5);
+SP_PUBLIC void text(LogType, StringView tag, StringView, const SourceLocation & = SP_LOCATION);
 
-template <typename ... Args>
-void verbose(const StringView &tag, Args && ... args) {
-	text(LogType::Verbose, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+template <typename... Args>
+void verbose(StringView tag, Args &&...args) {
+	text(LogType::Verbose, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+			SourceLocation());
 }
 
-template <typename ... Args>
-void debug(const StringView &tag, Args && ... args) {
-	text(LogType::Debug, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+template <typename... Args>
+void debug(StringView tag, Args &&...args) {
+	text(LogType::Debug, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+			SourceLocation());
 }
 
-template <typename ... Args>
-void info(const StringView &tag, Args && ... args) {
-	text(LogType::Info, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+template <typename... Args>
+void info(StringView tag, Args &&...args) {
+	text(LogType::Info, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+			SourceLocation());
 }
 
-template <typename ... Args>
-void warn(const StringView &tag, Args && ... args) {
-	text(LogType::Warn, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+template <typename... Args>
+void warn(StringView tag, Args &&...args) {
+	text(LogType::Warn, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+			SourceLocation());
 }
 
-template <typename ... Args>
-void error(const StringView &tag, Args && ... args) {
-	text(LogType::Error, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+template <typename... Args>
+void error(StringView tag, Args &&...args) {
+	text(LogType::Error, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+			SourceLocation());
 }
 
-template <typename ... Args>
-void fatal(const StringView &tag, Args && ... args) {
-	text(LogType::Fatal, tag, StringView(mem_std::toString(std::forward<Args>(args)...)));
+template <typename... Args>
+void fatal(StringView tag, Args &&...args) {
+	text(LogType::Fatal, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+			SourceLocation());
 }
 
+// Wrap current source location to forward it into log entry
+struct SP_PUBLIC SourceWapper {
+	constexpr SourceWapper(const SourceLocation &loc = SP_LOCATION) : source(loc) { }
+
+	template <typename... Args>
+	void verbose(StringView tag, Args &&...args) {
+		text(LogType::Verbose, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+				source);
+	}
+
+	template <typename... Args>
+	void debug(StringView tag, Args &&...args) {
+		text(LogType::Debug, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+				source);
+	}
+
+	template <typename... Args>
+	void info(StringView tag, Args &&...args) {
+		text(LogType::Info, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+				source);
+	}
+
+	template <typename... Args>
+	void warn(StringView tag, Args &&...args) {
+		text(LogType::Warn, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+				source);
+	}
+
+	template <typename... Args>
+	void error(StringView tag, Args &&...args) {
+		text(LogType::Error, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+				source);
+	}
+
+	template <typename... Args>
+	void fatal(StringView tag, Args &&...args) {
+		text(LogType::Fatal, tag, StringView(mem_std::toString(std::forward<Args>(args)...)),
+				source);
+	}
+
+	SourceLocation source;
+};
+
+SP_PUBLIC inline SourceWapper source(const SourceLocation &loc = SP_LOCATION) {
+	return SourceWapper(loc);
 }
+
+} // namespace stappler::log
 
 #endif /* STAPPLER_CORE_UTILS_SPLOG_H_ */

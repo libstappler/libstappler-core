@@ -125,14 +125,14 @@ Status ALooperData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval
 	while (ctx.state == RunContext::Running) {
 		ret = ALooper_pollOnce(-1, nullptr, nullptr, nullptr);
 		if (ret == ALOOPER_POLL_ERROR) {
-			log::error("event::ALooperData", "ALooper error: ", ret);
+			log::source().error("event::ALooperData", "ALooper error: ", ret);
 			ctx.wakeupStatus = Status::ErrorUnknown;
 			break;
 		}
 	}
 
 	if (ret == ALOOPER_POLL_ERROR) {
-		log::error("event::Queue", "ALooper failed with error");
+		log::source().error("event::Queue", "ALooper failed with error");
 	}
 
 	if (timerHandle) {
@@ -166,7 +166,7 @@ ALooperData::ALooperData(QueueRef *q, Queue::Data *data, const QueueInfo &info, 
 	};
 
 	if (hasFlag(_flags, QueueFlags::Protected)) {
-		log::warn("event::Queue",
+		log::source().warn("event::Queue",
 				"QueueFlags::Protected is not supported by ALooper queue, ignored");
 	}
 

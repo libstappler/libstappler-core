@@ -36,8 +36,8 @@ static long futex_wake(volatile uint32_t *uaddr, uint32_t bitset, int nr_wake, u
 	return syscall(SYS_futex_wake, uaddr, bitset, nr_wake, flags);
 }
 
-static long futex_wait(volatile uint32_t *uaddr, uint32_t val, uint32_t mask,
-		uint32_t flags, __kernel_timespec *timespec, clockid_t clockid) {
+static long futex_wait(volatile uint32_t *uaddr, uint32_t val, uint32_t mask, uint32_t flags,
+		__kernel_timespec *timespec, clockid_t clockid) {
 	return syscall(SYS_futex_wait, uaddr, val, mask, flags, timespec, clockid);
 }
 
@@ -59,8 +59,8 @@ static uint32_t atomicExchange(volatile uint32_t *ptr, uint32_t value) {
 	return __atomic_exchange_n(ptr, value, __ATOMIC_SEQ_CST);
 }
 
-static constexpr uint32_t LOCK_VALUE =   0b0001;
-static constexpr uint32_t WAIT_VALUE =   0b0010;
+static constexpr uint32_t LOCK_VALUE = 0b0001;
+static constexpr uint32_t WAIT_VALUE = 0b0010;
 static constexpr uint32_t SIGNAL_VALUE = 0b0100;
 static constexpr uint32_t FULL_VALUE = LOCK_VALUE | SIGNAL_VALUE | WAIT_VALUE;
 
@@ -74,8 +74,8 @@ void FutexImpl::client_lock() {
 			if ((c & WAIT_VALUE) != 0 || (atomicFetchOr(&_futex, WAIT_VALUE) & LOCK_VALUE) != 0) {
 				// futex should have all three flags set at this moment
 				// wait for unlock
-				futex_wait(&_futex, FULL_VALUE,
-						CLIENT_MASK, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE, nullptr, CLOCK_MONOTONIC);
+				futex_wait(&_futex, FULL_VALUE, CLIENT_MASK, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE,
+						nullptr, CLOCK_MONOTONIC);
 			}
 			// check if lock still in place by fetching value and set all flags
 		} while (((c = atomicFetchOr(&_futex, FULL_VALUE)) & LOCK_VALUE) != 0);
@@ -114,9 +114,7 @@ bool FutexImpl::server_unlock() {
 	return false;
 }
 
-uint32_t FutexImpl::load() {
-	return atomicLoadSeq(&_futex);
-}
+uint32_t FutexImpl::load() { return atomicLoadSeq(&_futex); }
 
 
 bool ThreadUringSource::init(TimeInterval ival) {
@@ -135,7 +133,8 @@ bool ThreadUringHandle::init(HandleClass *cl) {
 	return source->init(FAILSAFE_TIMER_INTERVAL);
 }
 
-Status ThreadUringHandle::rearm(URingData *uring, ThreadUringSource *source, bool unlock, bool init) {
+Status ThreadUringHandle::rearm(URingData *uring, ThreadUringSource *source, bool unlock,
+		bool init) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
 		if (unlock) {
@@ -150,7 +149,7 @@ Status ThreadUringHandle::rearm(URingData *uring, ThreadUringSource *source, boo
 			rearmFailsafe(uring, source);
 		}
 
-		auto result = uring->pushSqe({IORING_OP_FUTEX_WAIT}, [&] (io_uring_sqe *sqe, uint32_t n) {
+		auto result = uring->pushSqe({IORING_OP_FUTEX_WAIT}, [&](io_uring_sqe *sqe, uint32_t n) {
 			sqe->fd = FUTEX2_SIZE_U32 | FUTEX2_PRIVATE;
 			sqe->futex_flags = 0;
 			sqe->len = 0;
@@ -174,7 +173,7 @@ Status ThreadUringHandle::disarm(URingData *uring, ThreadUringSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		if (source->failsafe) {
-			uring->pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&] (io_uring_sqe *sqe, uint32_t n) {
+			uring->pushSqe({IORING_OP_TIMEOUT_REMOVE}, [&](io_uring_sqe *sqe, uint32_t n) {
 				sqe->len = 0;
 				sqe->addr = reinterpret_cast<uintptr_t>(this) | URING_USERDATA_ALT_BIT;
 				sqe->off = 0;
@@ -183,12 +182,14 @@ Status ThreadUringHandle::disarm(URingData *uring, ThreadUringSource *source) {
 			source->failsafe = false;
 		}
 
-		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT, URingCancelFlags::Suspend);
+		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this) | URING_USERDATA_RETAIN_BIT,
+				URingCancelFlags::Suspend);
 	}
 	return status;
 }
 
-void ThreadUringHandle::notify(URingData *uring, ThreadUringSource *source, const NotifyData &data) {
+void ThreadUringHandle::notify(URingData *uring, ThreadUringSource *source,
+		const NotifyData &data) {
 	// !!! futex now should be on 0
 	if (_status != Status::Ok) {
 		return; // just exit
@@ -200,16 +201,17 @@ void ThreadUringHandle::notify(URingData *uring, ThreadUringSource *source, cons
 			rearmFailsafe(uring, source);
 		}
 		if (source->futex.server_try_lock()) {
-			auto ev = performAll([&] (uint32_t count) {
+			auto ev = performAll([&](uint32_t count) {
 				if constexpr (URING_THREAD_DEBUG_SWITCH_TIMER) {
 					if (count == 1) {
-						log::info("event::ThreadUringHandle", "B ", sp::platform::nanoclock(ClockType::Monotonic) - _switchTimer);
+						log::source().info("event::ThreadUringHandle", "B ",
+								sp::platform::nanoclock(ClockType::Monotonic) - _switchTimer);
 					}
 				}
 				source->futex.server_unlock();
 			});
 			if (ev > 0) {
-				//log::info("event::ThreadUringHandle", "events was processed with failsafe timer: ", ev);
+				//log::source().info("event::ThreadUringHandle", "events was processed with failsafe timer: ", ev);
 			}
 		}
 	} else {
@@ -228,16 +230,17 @@ void ThreadUringHandle::notify(URingData *uring, ThreadUringSource *source, cons
 			return;
 		} else {
 			// now we own futex
-			auto ev = performAll([&] (uint32_t count) {
+			auto ev = performAll([&](uint32_t count) {
 				if constexpr (URING_THREAD_DEBUG_SWITCH_TIMER) {
 					if (count == 1) {
-						log::info("event::ThreadUringHandle", "A ", sp::platform::nanoclock(ClockType::Monotonic) - _switchTimer);
+						log::source().info("event::ThreadUringHandle", "A ",
+								sp::platform::nanoclock(ClockType::Monotonic) - _switchTimer);
 					}
 				}
 				rearm(uring, source, true, false);
 			});
 			if (ev > 0) {
-				//log::info("event::ThreadUringHandle", "events was processed with futex: ", ev);
+				//log::source().info("event::ThreadUringHandle", "events was processed with futex: ", ev);
 			}
 		}
 	}
@@ -290,7 +293,7 @@ Status ThreadUringHandle::perform(mem_std::Function<void()> &&func, Ref *target,
 }
 
 void ThreadUringHandle::rearmFailsafe(URingData *uring, ThreadUringSource *source) {
-	uring->pushSqe({IORING_OP_TIMEOUT}, [&] (io_uring_sqe *sqe, uint32_t n) {
+	uring->pushSqe({IORING_OP_TIMEOUT}, [&](io_uring_sqe *sqe, uint32_t n) {
 		sqe->fd = -1;
 		sqe->len = 1;
 		sqe->addr = reinterpret_cast<uintptr_t>(&source->interval);
@@ -314,7 +317,7 @@ Status ThreadEventFdHandle::rearm(URingData *uring, EventFdSource *source, bool 
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
 		if (hasFlag(uring->_uflags, URingFlags::ReadMultishotSupported)) {
-			auto fillMultishot = [&] (io_uring_sqe *sqe) {
+			auto fillMultishot = [&](io_uring_sqe *sqe) {
 				sqe->fd = source->fd;
 				sqe->buf_group = _bufferGroup;
 				sqe->off = -1;
@@ -325,17 +328,18 @@ Status ThreadEventFdHandle::rearm(URingData *uring, EventFdSource *source, bool 
 
 			if (!_bufferGroup) {
 				_bufferGroup = uring->registerBufferGroup(EventFdSource::TARGET_BUFFER_COUNT,
-					sizeof(uint64_t), (uint8_t *)source->target);
+						sizeof(uint64_t), (uint8_t *)source->target);
 			} else if (updateBuffers) {
-				_bufferGroup = uring->reloadBufferGroup(_bufferGroup, EventFdSource::TARGET_BUFFER_COUNT,
-					sizeof(uint64_t), (uint8_t *)source->target);
+				_bufferGroup =
+						uring->reloadBufferGroup(_bufferGroup, EventFdSource::TARGET_BUFFER_COUNT,
+								sizeof(uint64_t), (uint8_t *)source->target);
 			}
 
-			status = uring->pushSqe({IORING_OP_READ_MULTISHOT}, [&] (io_uring_sqe *sqe, uint32_t) {
+			status = uring->pushSqe({IORING_OP_READ_MULTISHOT}, [&](io_uring_sqe *sqe, uint32_t) {
 				fillMultishot(sqe);
 			}, URingPushFlags::Submit);
 		} else {
-			status = uring->pushSqe({IORING_OP_READ}, [&] (io_uring_sqe *sqe, uint32_t) {
+			status = uring->pushSqe({IORING_OP_READ}, [&](io_uring_sqe *sqe, uint32_t) {
 				sqe->fd = source->fd;
 				sqe->addr = reinterpret_cast<uintptr_t>(source->target);
 				sqe->len = sizeof(uint64_t);
@@ -352,8 +356,9 @@ Status ThreadEventFdHandle::disarm(URingData *uring, EventFdSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this)
-				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
-		++ _timeline;
+						| (_timeline & URING_USERDATA_SERIAL_MASK),
+				URingCancelFlags::Suspend);
+		++_timeline;
 		if (_bufferGroup) {
 			uring->unregisterBufferGroup(_bufferGroup, EventFdSource::TARGET_BUFFER_COUNT);
 			_bufferGroup = 0;
@@ -380,10 +385,11 @@ void ThreadEventFdHandle::notify(URingData *uring, EventFdSource *source, const 
 	}
 
 	auto performUnlock = [&] {
-		performAll([&] (uint32_t count) {
+		performAll([&](uint32_t count) {
 			if constexpr (URING_THREAD_DEBUG_SWITCH_TIMER) {
 				if (count == 1) {
-					log::info("event::ThreadUringHandle", "C ", sp::platform::nanoclock(ClockType::Monotonic) - _switchTimer);
+					log::source().info("event::ThreadUringHandle", "C ",
+							sp::platform::nanoclock(ClockType::Monotonic) - _switchTimer);
 				}
 			}
 			_mutex.unlock();
@@ -447,6 +453,6 @@ Status ThreadEventFdHandle::perform(mem_std::Function<void()> &&func, Ref *targe
 	return Status::Ok;
 }
 
-}
+} // namespace stappler::event
 
 #endif

@@ -73,7 +73,7 @@ bool CommandLinePatternParsingData::parsePatternString() {
 	if (!str.empty()) {
 		// match fixed block
 		if (!target.starts_with(str)) {
-			log::error("CommandLine",
+			log::source().error("CommandLine",
 					"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target, " for ",
 					type, pattern->pattern, pattern->args);
 			return false;
@@ -91,7 +91,7 @@ bool CommandLinePatternParsingData::parsePatternString() {
 				if (!num.empty()) {
 					result.emplace_back(StringView(num));
 				} else {
-					log::error("CommandLine",
+					log::source().error("CommandLine",
 							"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target,
 							" for ", type, pattern->pattern, pattern->args);
 					return false;
@@ -101,7 +101,7 @@ bool CommandLinePatternParsingData::parsePatternString() {
 				if (!num.empty()) {
 					result.emplace_back(StringView(num));
 				} else {
-					log::error("CommandLine",
+					log::source().error("CommandLine",
 							"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target,
 							" for ", type, pattern->pattern, pattern->args);
 					return false;
@@ -116,14 +116,14 @@ bool CommandLinePatternParsingData::parsePatternString() {
 				if (!data.empty()) {
 					result.emplace_back(StringView(data));
 				} else {
-					log::error("CommandLine",
+					log::source().error("CommandLine",
 							"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target,
 							" for ", type, pattern->pattern, pattern->args);
 					return false;
 				}
 			}
 		} else {
-			log::error("CommandLine", "Invalid pattern: ", pattern->args, " for ", type,
+			log::source().error("CommandLine", "Invalid pattern: ", pattern->args, " for ", type,
 					pattern->pattern);
 			return false;
 		}
@@ -140,13 +140,13 @@ bool CommandLinePatternParsingData::parseWhitespace() {
 				++offset;
 				target = StringView(argv[offset - 1]);
 				if (offset > argv.size() && !args.empty()) {
-					log::error("CommandLine", "Not enough arguments for ", type, pattern->pattern,
-							pattern->args);
+					log::source().error("CommandLine", "Not enough arguments for ", type,
+							pattern->pattern, pattern->args);
 					return false;
 				}
 			}
 		} else {
-			log::error("CommandLine",
+			log::source().error("CommandLine",
 					"Invalid option input: ", (offset > 0) ? argv[offset - 1] : target, " for ",
 					type, pattern->pattern, pattern->args);
 			return false;
@@ -214,7 +214,7 @@ bool CommandLineParserBase::parse(void *output, int argc, const char *argv[],
 									success);
 						}
 					} else {
-						log::error("CommandLine", "Unknown command line option: --", init);
+						log::source().error("CommandLine", "Unknown command line option: --", init);
 						success = false;
 					}
 				} else {
@@ -228,7 +228,7 @@ bool CommandLineParserBase::parse(void *output, int argc, const char *argv[],
 							i += parseCharPattern(output, *it, init,
 									makeSpanView(argsVec).sub(i + 1), success);
 						} else {
-							log::error("CommandLine", "Unknown command line option: -",
+							log::source().error("CommandLine", "Unknown command line option: -",
 									init.sub(0, 1));
 							++init;
 							success = false;
@@ -332,7 +332,7 @@ size_t CommandLineParserBase::parseStringPattern(void *output,
 		pattern.target->callback(output, pattern.pattern, SpanView<StringView>());
 		return 0;
 	} else if (argv.size() == 0) {
-		log::error("CommandLine", "Not enough arguments for --", pattern.pattern);
+		log::source().error("CommandLine", "Not enough arguments for --", pattern.pattern);
 		return 0;
 	}
 

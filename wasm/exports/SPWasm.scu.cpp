@@ -35,30 +35,25 @@ struct Runtime::Data {
 	bool enabled = false;
 };
 
-static void *runtime_malloc(size_t size) {
-	return ::malloc(size);
-}
+static void *runtime_malloc(size_t size) { return ::malloc(size); }
 
-static void runtime_free(void *ptr) {
-	::free(ptr);
-}
+static void runtime_free(void *ptr) { ::free(ptr); }
 
-static void *runtime_realloc(void *ptr, size_t size) {
-	return ::realloc(ptr, size);
-}
+static void *runtime_realloc(void *ptr, size_t size) { return ::realloc(ptr, size); }
 
 static void StapplerWasmDebugPrint(wasm_exec_env_t exec_env, uint32_t ptr, uint32_t size) {
 	auto mod = wasm_runtime_get_module_inst(exec_env);
 	auto sptr = (const char *)wasm_runtime_addr_app_to_native(mod, ptr);
 
-	log::debug("wasm::Runtime", StringView(sptr, size));
+	log::source().debug("wasm::Runtime", StringView(sptr, size));
 }
 
 static NativeSymbol stapper_wasm_symbols[] = {
 	NativeSymbol{"debug-print", (void *)&StapplerWasmDebugPrint, "(ii)", NULL},
 };
 
-static NativeModule s_wasmModule("stappler:wasm/wasm", stapper_wasm_symbols, sizeof(stapper_wasm_symbols) / sizeof(NativeSymbol));
+static NativeModule s_wasmModule("stappler:wasm/wasm", stapper_wasm_symbols,
+		sizeof(stapper_wasm_symbols) / sizeof(NativeSymbol));
 
 Runtime *Runtime::getInstance() {
 	std::unique_lock lock(s_loadMutex);
@@ -125,9 +120,7 @@ NativeModule::NativeModule(StringView n, NativeSymbol *s, uint32_t count)
 	RuntimeNativeStorage::getInstance()->s_nativeModules.emplace(this);
 }
 
-NativeModule::~NativeModule() {
-	RuntimeNativeStorage::getInstance()->s_nativeModules.erase(this);
-}
+NativeModule::~NativeModule() { RuntimeNativeStorage::getInstance()->s_nativeModules.erase(this); }
 
 Module::~Module() {
 	if (_module) {
@@ -137,15 +130,16 @@ Module::~Module() {
 }
 
 bool Module::init(StringView name, BytesView data) {
-	char errorBuf[128] = { 0 };
+	char errorBuf[128] = {0};
 
 	_runtime = Runtime::getInstance();
 
 	_data = data.bytes<Interface>();
 
-	auto mod = wasm_runtime_load(const_cast<uint8_t *>(_data.data()), static_cast<uint32_t>(_data.size()), errorBuf, sizeof(errorBuf));
+	auto mod = wasm_runtime_load(const_cast<uint8_t *>(_data.data()),
+			static_cast<uint32_t>(_data.size()), errorBuf, sizeof(errorBuf));
 	if (!mod) {
-		log::error("wasm::Module", "Fail to load module: ", errorBuf);
+		log::source().error("wasm::Module", "Fail to load module: ", errorBuf);
 		return false;
 	}
 
@@ -153,7 +147,7 @@ bool Module::init(StringView name, BytesView data) {
 	_module = mod;
 
 	if (!wasm_runtime_register_module(_name.data(), _module, errorBuf, sizeof(errorBuf))) {
-		log::error("wasm::Module", "Fail to register module '", name, "': ", errorBuf);
+		log::source().error("wasm::Module", "Fail to register module '", name, "': ", errorBuf);
 		return false;
 	}
 
@@ -161,15 +155,16 @@ bool Module::init(StringView name, BytesView data) {
 }
 
 bool Module::init(StringView name, Bytes &&data) {
-	char errorBuf[128] = { 0 };
+	char errorBuf[128] = {0};
 
 	_runtime = Runtime::getInstance();
 
 	_data = sp::move(data);
 
-	auto mod = wasm_runtime_load(const_cast<uint8_t *>(_data.data()), static_cast<uint32_t>(_data.size()), errorBuf, sizeof(errorBuf));
+	auto mod = wasm_runtime_load(const_cast<uint8_t *>(_data.data()),
+			static_cast<uint32_t>(_data.size()), errorBuf, sizeof(errorBuf));
 	if (!mod) {
-		log::error("wasm::Module", "Fail to load module: ", errorBuf);
+		log::source().error("wasm::Module", "Fail to load module: ", errorBuf);
 		return false;
 	}
 
@@ -177,7 +172,7 @@ bool Module::init(StringView name, Bytes &&data) {
 	_module = mod;
 
 	if (!wasm_runtime_register_module(_name.data(), _module, errorBuf, sizeof(errorBuf))) {
-		log::error("wasm::Module", "Fail to register module '", name, "': ", errorBuf);
+		log::source().error("wasm::Module", "Fail to register module '", name, "': ", errorBuf);
 		return false;
 	}
 
@@ -185,19 +180,20 @@ bool Module::init(StringView name, Bytes &&data) {
 }
 
 bool Module::init(StringView name, const FileInfo &path) {
-	char errorBuf[128] = { 0 };
+	char errorBuf[128] = {0};
 	_data = filesystem::readIntoMemory<Interface>(path);
 
 	if (_data.empty()) {
-		log::error("wasm::Module", "Fail to open file: ", path);
+		log::source().error("wasm::Module", "Fail to open file: ", path);
 		return false;
 	}
 
 	_runtime = Runtime::getInstance();
 
-	auto mod = wasm_runtime_load(const_cast<uint8_t *>(_data.data()), static_cast<uint32_t>(_data.size()), errorBuf, sizeof(errorBuf));
+	auto mod = wasm_runtime_load(const_cast<uint8_t *>(_data.data()),
+			static_cast<uint32_t>(_data.size()), errorBuf, sizeof(errorBuf));
 	if (!mod) {
-		log::error("wasm::Module", "Fail to load module '", path, "': ", errorBuf);
+		log::source().error("wasm::Module", "Fail to load module '", path, "': ", errorBuf);
 		return false;
 	}
 
@@ -205,7 +201,7 @@ bool Module::init(StringView name, const FileInfo &path) {
 	_module = mod;
 
 	if (!wasm_runtime_register_module(_name.data(), _module, errorBuf, sizeof(errorBuf))) {
-		log::error("wasm::Module", "Fail to register module '", path, "': ", errorBuf);
+		log::source().error("wasm::Module", "Fail to register module '", path, "': ", errorBuf);
 		return false;
 	}
 
@@ -235,11 +231,13 @@ ModuleInstance::~ModuleInstance() {
 }
 
 bool ModuleInstance::init(Module *mod, uint32_t stackSize, uint32_t heapSize) {
-	char errorBuf[128] = { 0 };
-	auto inst = wasm_runtime_instantiate(mod->getModule(), stackSize, heapSize, errorBuf, sizeof(errorBuf));
+	char errorBuf[128] = {0};
+	auto inst = wasm_runtime_instantiate(mod->getModule(), stackSize, heapSize, errorBuf,
+			sizeof(errorBuf));
 	/* instantiate the module */
 	if (!inst) {
-		log::error("wasm::Module", "Fail to instantiate module '", mod->getName(), "': ", errorBuf);
+		log::source().error("wasm::Module", "Fail to instantiate module '", mod->getName(),
+				"': ", errorBuf);
 		return false;
 	}
 
@@ -301,9 +299,7 @@ uint32_t ModuleInstance::allocate(uint32_t size, void **ptr) {
 
 uint32_t ModuleInstance::reallocate(uint32_t offset, uint32_t size, void **ptr) {
 	if (_realloc) {
-		uint32_t args[] = {
-			offset, size
-		};
+		uint32_t args[] = {offset, size};
 
 		auto senv = wasm_runtime_get_exec_env_singleton(_inst);
 
@@ -319,9 +315,7 @@ uint32_t ModuleInstance::reallocate(uint32_t offset, uint32_t size, void **ptr) 
 	return uint32_t(wasm_runtime_module_malloc(_inst, size, ptr));
 }
 
-void ModuleInstance::free(uint32_t ptr) {
-	wasm_runtime_module_free(_inst, ptr);
-}
+void ModuleInstance::free(uint32_t ptr) { wasm_runtime_module_free(_inst, ptr); }
 
 Rc<ExecFunction> ModuleInstance::lookup(StringView name) {
 	return Rc<ExecFunction>::create(this, name);
@@ -427,7 +421,8 @@ bool ExecEnv::init(ModuleInstance *inst, uint32_t stackSize) {
 	auto env = wasm_runtime_create_exec_env(inst->getInstance(), stackSize);
 	/* create an execution env */
 	if (!env) {
-		log::error("wasm::Module", "Fail to create exec env for '", inst->getModule()->getName(), "' instance");
+		log::source().error("wasm::Module", "Fail to create exec env for '",
+				inst->getModule()->getName(), "' instance");
 		return false;
 	}
 
@@ -440,7 +435,8 @@ bool ExecEnv::init(ModuleInstance *inst, uint32_t stackSize) {
 	auto debugEnv = ::getenv("WASM_DEBUG");
 	if (debugEnv) {
 		auto port = wasm_runtime_start_debug_instance(env);
-		log::info("wasm::Runtime", "start debug server with port ", port, "; Wait for debugger connection...");
+		log::source().info("wasm::Runtime", "start debug server with port ", port,
+				"; Wait for debugger connection...");
 	}
 #endif
 
@@ -449,7 +445,8 @@ bool ExecEnv::init(ModuleInstance *inst, uint32_t stackSize) {
 
 bool ExecEnv::init(ModuleInstance *inst, wasm_exec_env_t env) {
 	if (wasm_runtime_get_user_data(env)) {
-		log::warn("wasm::Module", "Userdata is not empty for '", inst->getModule()->getName(), "' instance env, it will be lost");
+		log::source().warn("wasm::Module", "Userdata is not empty for '",
+				inst->getModule()->getName(), "' instance env, it will be lost");
 	}
 
 	_env = env;
@@ -461,9 +458,7 @@ bool ExecEnv::init(ModuleInstance *inst, wasm_exec_env_t env) {
 	return true;
 }
 
-uint32_t ExecEnv::nativeToApp(void *ptr) const {
-	return _instance->nativeToApp(ptr);
-}
+uint32_t ExecEnv::nativeToApp(void *ptr) const { return _instance->nativeToApp(ptr); }
 
 bool ExecEnv::callIndirect(uint32_t fn, uint32_t argc, uint32_t argv[]) {
 	return wasm_runtime_call_indirect(_env, fn, argc, argv);
@@ -481,7 +476,8 @@ bool ExecFunction::init(ModuleInstance *inst, StringView name) {
 	}
 
 	if (!fn) {
-		log::warn("wasm::ExecFunction", "Fail to lookup function '", name, "' in module '", inst->getModule()->getName(), "'");
+		log::source().warn("wasm::ExecFunction", "Fail to lookup function '", name, "' in module '",
+				inst->getModule()->getName(), "'");
 		return false;
 	}
 
@@ -491,13 +487,15 @@ bool ExecFunction::init(ModuleInstance *inst, StringView name) {
 	_nResults = wasm_func_get_result_count(_func, _inst->getInstance());
 
 	if (_nArgs > StaticArgumentsLimit) {
-		log::warn("wasm::ExecFunction", "Too many arguments for '", _name, "' in module '", inst->getModule()->getName(), "'");
+		log::source().warn("wasm::ExecFunction", "Too many arguments for '", _name, "' in module '",
+				inst->getModule()->getName(), "'");
 	} else {
 		wasm_func_get_param_types(_func, _inst->getInstance(), _argTypesStatic);
 	}
 
 	if (_nResults > StaticResultsLimit) {
-		log::warn("wasm::ExecFunction", "Too many results for '", _name, "' in module '", inst->getModule()->getName(), "'");
+		log::source().warn("wasm::ExecFunction", "Too many results for '", _name, "' in module '",
+				inst->getModule()->getName(), "'");
 	} else {
 		wasm_func_get_result_types(_func, _inst->getInstance(), _resultTypesStatic);
 	}
@@ -506,37 +504,46 @@ bool ExecFunction::init(ModuleInstance *inst, StringView name) {
 }
 
 Vector<wasm_valkind_t> ExecFunction::getArgsFull() const {
-	Vector<wasm_valkind_t> ret; ret.resize(_nArgs);
+	Vector<wasm_valkind_t> ret;
+	ret.resize(_nArgs);
 	wasm_func_get_param_types(_func, _inst->getInstance(), ret.data());
 	return ret;
 }
 
 Vector<wasm_valkind_t> ExecFunction::getResultsFull() const {
-	Vector<wasm_valkind_t> ret; ret.resize(_nResults);
+	Vector<wasm_valkind_t> ret;
+	ret.resize(_nResults);
 	wasm_func_get_result_types(_func, _inst->getInstance(), ret.data());
 	return ret;
 }
 
-bool ExecFunction::call(ExecEnv *env, SpanView<wasm_val_t> args, VectorAdapter<wasm_val_t> *results) const {
+bool ExecFunction::call(ExecEnv *env, SpanView<wasm_val_t> args,
+		VectorAdapter<wasm_val_t> *results) const {
 	if (args.size() != _nArgs) {
-		log::warn("wasm::ExecFunction", "Wrong number of arguments for '", _name, "' from module '", _inst->getModule()->getName(), "'");
+		log::source().warn("wasm::ExecFunction", "Wrong number of arguments for '", _name,
+				"' from module '", _inst->getModule()->getName(), "'");
 	}
 
 	bool ret = false;
 	if (results) {
 		results->resize(_nResults);
-		ret = wasm_runtime_call_wasm_a(env->getEnv(), _func, _nResults, results->begin(), uint32_t(args.size()), const_cast<wasm_val_t *>(args.data()));
+		ret = wasm_runtime_call_wasm_a(env->getEnv(), _func, _nResults, results->begin(),
+				uint32_t(args.size()), const_cast<wasm_val_t *>(args.data()));
 	} else {
 		if (_nResults) {
-			log::warn("wasm::ExecFunction", "Results buffer was not provided for call of '", _name, "' from module '", _inst->getModule()->getName(), "'");
+			log::source().warn("wasm::ExecFunction",
+					"Results buffer was not provided for call of '", _name, "' from module '",
+					_inst->getModule()->getName(), "'");
 		}
-		ret = wasm_runtime_call_wasm_a(env->getEnv(), _func, 0, nullptr, uint32_t(args.size()), const_cast<wasm_val_t *>(args.data()));
+		ret = wasm_runtime_call_wasm_a(env->getEnv(), _func, 0, nullptr, uint32_t(args.size()),
+				const_cast<wasm_val_t *>(args.data()));
 	}
 
 	if (!ret) {
 		auto ex = wasm_runtime_get_exception(_inst->getInstance());
 		if (ex) {
-			log::error("wasm::ExecFunction", "Exception when call '", _name, "' from module '", _inst->getModule()->getName(), "': ", ex);
+			log::source().error("wasm::ExecFunction", "Exception when call '", _name,
+					"' from module '", _inst->getModule()->getName(), "': ", ex);
 		}
 	}
 
@@ -545,7 +552,8 @@ bool ExecFunction::call(ExecEnv *env, SpanView<wasm_val_t> args, VectorAdapter<w
 
 wasm_val_t ExecFunction::call1(ExecEnv *env, SpanView<wasm_val_t> args) const {
 	if (args.size() != _nArgs) {
-		log::warn("wasm::ExecFunction", "Wrong number of arguments for '", _name, "' from module '", _inst->getModule()->getName(), "'");
+		log::source().warn("wasm::ExecFunction", "Wrong number of arguments for '", _name,
+				"' from module '", _inst->getModule()->getName(), "'");
 	}
 
 	wasm_val_t ret;
@@ -553,16 +561,19 @@ wasm_val_t ExecFunction::call1(ExecEnv *env, SpanView<wasm_val_t> args) const {
 	ret.of.foreign = 0;
 
 	if (_nResults != 1) {
-		log::warn("wasm::ExecFunction", "Function '", _name, "' from module '", _inst->getModule()->getName(), "' called as single-argument function");
+		log::source().warn("wasm::ExecFunction", "Function '", _name, "' from module '",
+				_inst->getModule()->getName(), "' called as single-argument function");
 	}
-	auto success = wasm_runtime_call_wasm_a(env->getEnv(), _func, 1, &ret, uint32_t(args.size()), const_cast<wasm_val_t *>(args.data()));
+	auto success = wasm_runtime_call_wasm_a(env->getEnv(), _func, 1, &ret, uint32_t(args.size()),
+			const_cast<wasm_val_t *>(args.data()));
 	if (!success) {
 		auto ex = wasm_runtime_get_exception(_inst->getInstance());
 		if (ex) {
-			log::error("wasm::ExecFunction", "Exception when call '", _name, "' from module '", _inst->getModule()->getName(), "': ", ex);
+			log::source().error("wasm::ExecFunction", "Exception when call '", _name,
+					"' from module '", _inst->getModule()->getName(), "': ", ex);
 		}
 	}
 	return ret;
 }
 
-}
+} // namespace stappler::wasm

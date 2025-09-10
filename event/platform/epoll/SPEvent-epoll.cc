@@ -167,7 +167,7 @@ Status EPollData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval w
 		if (status == Status::Ok) {
 			processEvents();
 		} else if (status != Status::ErrorInterrupted) {
-			log::error("event::EPollData", "epoll error: ", status);
+			log::source().error("event::EPollData", "epoll error: ", status);
 			ctx.wakeupStatus = status;
 			break;
 		}
@@ -220,14 +220,14 @@ EPollData::EPollData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 	}));
 
 	if (!_eventFd) {
-		log::error("event::Queue", "Fail to initialize eventfd");
+		log::source().error("event::Queue", "Fail to initialize eventfd");
 		return;
 	}
 
 	if (hasFlag(_flags, QueueFlags::Protected)) {
 		_signalFd = Rc<SignalFdEPollHandle>::create(&data->_epollSignalFdClass, sigs);
 		if (!_signalFd) {
-			log::error("event::Queue", "Fail to initialize signalfd");
+			log::source().error("event::Queue", "Fail to initialize signalfd");
 			return;
 		}
 	}
@@ -235,7 +235,7 @@ EPollData::EPollData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 #if LINUX
 	struct utsname buffer;
 	if (uname(&buffer) != 0) {
-		log::info("event::EPollData", "Fail to detect kernel version");
+		log::source().info("event::EPollData", "Fail to detect kernel version");
 		return;
 	}
 

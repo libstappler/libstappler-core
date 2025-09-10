@@ -36,123 +36,123 @@ struct siginfo {
 
 static const siginfo siglist[] = {
 #ifdef SIGABRT
-	{SIGABRT  , "SIGABRT"  , "Abort signal"},
+	{SIGABRT, "SIGABRT", "Abort signal"},
 #endif
 #ifdef SIGALRM
-	{SIGALRM  , "SIGALRM"  , "Timer signal"},
+	{SIGALRM, "SIGALRM", "Timer signal"},
 #endif
 #ifdef SIGBUS
-	{SIGBUS   , "SIGBUS"   , "Bus error (bad memory access)"},
+	{SIGBUS, "SIGBUS", "Bus error (bad memory access)"},
 #endif
 #ifdef SIGCHLD
-	{SIGCHLD  , "SIGCHLD"  , "Child stopped or terminated"},
+	{SIGCHLD, "SIGCHLD", "Child stopped or terminated"},
 #endif
 #ifdef SIGCLD
-	{SIGCLD   , "SIGCLD"   , "Child stopped or terminated"},
+	{SIGCLD, "SIGCLD", "Child stopped or terminated"},
 #endif
 #ifdef SIGCONT
-	{SIGCONT  , "SIGCONT"  , "Continue if stopped"},
+	{SIGCONT, "SIGCONT", "Continue if stopped"},
 #endif
 #ifdef SIGEMT
-	{SIGEMT   , "SIGEMT"   , "Emulator trap"},
+	{SIGEMT, "SIGEMT", "Emulator trap"},
 #endif
 #ifdef SIGFPE
-	{SIGFPE   , "SIGFPE"   , "Floating-point exception"},
+	{SIGFPE, "SIGFPE", "Floating-point exception"},
 #endif
 #ifdef SIGHUP
-	{SIGHUP   , "SIGHUP"   , "Hangup detected on controlling terminal or death of controlling process"},
+	{SIGHUP, "SIGHUP", "Hangup detected on controlling terminal or death of controlling process"},
 #endif
 #ifdef SIGILL
-	{SIGILL   , "SIGILL"   , "Illegal Instruction"},
+	{SIGILL, "SIGILL", "Illegal Instruction"},
 #endif
 #ifdef SIGINFO
-	{SIGINFO  , "SIGINFO"  , "Power failure"},
+	{SIGINFO, "SIGINFO", "Power failure"},
 #endif
 #ifdef SIGINT
-	{SIGINT   , "SIGINT"   , "Interrupt from keyboard"},
+	{SIGINT, "SIGINT", "Interrupt from keyboard"},
 #endif
 #ifdef SIGIO
-	{SIGIO    , "SIGIO"    , "I/O now possible"},
+	{SIGIO, "SIGIO", "I/O now possible"},
 #endif
 #ifdef SIGIOT
-	{SIGIOT   , "SIGIOT"   , "IOT trap: Abort signal"},
+	{SIGIOT, "SIGIOT", "IOT trap: Abort signal"},
 #endif
 #ifdef SIGKILL
-	{SIGKILL  , "SIGKILL"  , "Kill signal"},
+	{SIGKILL, "SIGKILL", "Kill signal"},
 #endif
 #ifdef SIGLOST
-	{SIGLOST  , "SIGLOST"  , "File lock lost "},
+	{SIGLOST, "SIGLOST", "File lock lost "},
 #endif
 #ifdef SIGPIPE
-	{SIGPIPE  , "SIGPIPE"  , "Broken pipe: write to pipe with no readers"},
+	{SIGPIPE, "SIGPIPE", "Broken pipe: write to pipe with no readers"},
 #endif
 #ifdef SIGPOLL
-	{SIGPOLL  , "SIGPOLL"  , "Pollable event: I/O now possible"},
+	{SIGPOLL, "SIGPOLL", "Pollable event: I/O now possible"},
 #endif
 #ifdef SIGPROF
-	{SIGPROF  , "SIGPROF"  , "Profiling timer expired"},
+	{SIGPROF, "SIGPROF", "Profiling timer expired"},
 #endif
 #ifdef SIGPWR
-	{SIGPWR   , "SIGPWR"   , "Power failure"},
+	{SIGPWR, "SIGPWR", "Power failure"},
 #endif
 #ifdef SIGQUIT
-	{SIGQUIT  , "SIGQUIT"  , "Quit from keyboard"},
+	{SIGQUIT, "SIGQUIT", "Quit from keyboard"},
 #endif
 #ifdef SIGSEGV
-	{SIGSEGV  , "SIGSEGV"  , "Invalid memory reference"},
+	{SIGSEGV, "SIGSEGV", "Invalid memory reference"},
 #endif
 #ifdef SIGSTKFLT
 	{SIGSTKFLT, "SIGSTKFLT", "Stack fault on coprocessor"},
 #endif
 #ifdef SIGSTOP
-	{SIGSTOP  , "SIGSTOP"  , "Stop process"},
+	{SIGSTOP, "SIGSTOP", "Stop process"},
 #endif
 #ifdef SIGTSTP
-	{SIGTSTP  , "SIGTSTP"  , "Stop typed at terminal"},
+	{SIGTSTP, "SIGTSTP", "Stop typed at terminal"},
 #endif
 #ifdef SIGSYS
-	{SIGSYS   , "SIGSYS"   , "Bad system call "},
+	{SIGSYS, "SIGSYS", "Bad system call "},
 #endif
 #ifdef SIGTERM
-	{SIGTERM  , "SIGTERM"  , "Termination signal"},
+	{SIGTERM, "SIGTERM", "Termination signal"},
 #endif
 #ifdef SIGTRAP
-	{SIGTRAP  , "SIGTRAP"  , "Trace/breakpoint trap"},
+	{SIGTRAP, "SIGTRAP", "Trace/breakpoint trap"},
 #endif
 #ifdef SIGTTIN
-	{SIGTTIN  , "SIGTTIN"  , "Terminal input for background process"},
+	{SIGTTIN, "SIGTTIN", "Terminal input for background process"},
 #endif
 #ifdef SIGTTOU
-	{SIGTTOU  , "SIGTTOU"  , "Terminal output for background process"},
+	{SIGTTOU, "SIGTTOU", "Terminal output for background process"},
 #endif
 #ifdef SIGUNUSED
 	{SIGUNUSED, "SIGUNUSED", "Bad system call "},
 #endif
 #ifdef SIGURG
-	{SIGURG   , "SIGURG"   , "Urgent condition on socket "},
+	{SIGURG, "SIGURG", "Urgent condition on socket "},
 #endif
 #ifdef SIGUSR1
-	{SIGUSR1  , "SIGUSR1"  , "User-defined signal 1"},
+	{SIGUSR1, "SIGUSR1", "User-defined signal 1"},
 #endif
 #ifdef SIGUSR2
-	{SIGUSR2  , "SIGUSR2"  , "User-defined signal 2"},
+	{SIGUSR2, "SIGUSR2", "User-defined signal 2"},
 #endif
 #ifdef SIGVTALRM
 	{SIGVTALRM, "SIGVTALRM", "Virtual alarm clock "},
 #endif
 #ifdef SIGXCPU
-	{SIGXCPU  , "SIGXCPU"  , "CPU time limit exceeded "},
+	{SIGXCPU, "SIGXCPU", "CPU time limit exceeded "},
 #endif
 #ifdef SIGXFSZ
-	{SIGXFSZ  , "SIGXFSZ"  , "File size limit exceeded"},
+	{SIGXFSZ, "SIGXFSZ", "File size limit exceeded"},
 #endif
 #ifdef SIGWINCH
-	{SIGWINCH , "SIGWINCH" , "Window resize signal"},
+	{SIGWINCH, "SIGWINCH", "Window resize signal"},
 #endif
 };
 
 static const siginfo *getSignalInfo(int sig) {
-	for (size_t i = 0; i < sizeof(siglist) / sizeof(siginfo); ++ i) {
+	for (size_t i = 0; i < sizeof(siglist) / sizeof(siginfo); ++i) {
 		if (siglist[i].code == sig) {
 			return &siglist[i];
 		}
@@ -177,10 +177,12 @@ void SignalFdSource::cancel() {
 }
 
 bool SignalFdHandle::init(HandleClass *cl, SpanView<int> sigs) {
-	static_assert(sizeof(SignalFdSource) <= DataSize && std::is_standard_layout<SignalFdSource>::value);
+	static_assert(
+			sizeof(SignalFdSource) <= DataSize && std::is_standard_layout<SignalFdSource>::value);
 
-	if (!Handle::init(cl, CompletionHandle<SignalFdHandle>::create<SignalFdHandle>(this,
-			[] (SignalFdHandle *, SignalFdHandle *h, uint32_t value, Status st) {
+	if (!Handle::init(cl,
+				CompletionHandle<SignalFdHandle>::create<SignalFdHandle>(this,
+						[](SignalFdHandle *, SignalFdHandle *h, uint32_t value, Status st) {
 		if (isSuccessful(st)) {
 			h->process();
 		}
@@ -191,9 +193,7 @@ bool SignalFdHandle::init(HandleClass *cl, SpanView<int> sigs) {
 	sigemptyset(&_sigset);
 	sigemptyset(&_default);
 
-	for (auto &it : sigs) {
-		::sigaddset(&_default, it);
-	}
+	for (auto &it : sigs) { ::sigaddset(&_default, it); }
 
 	auto source = reinterpret_cast<SignalFdSource *>(_data);
 
@@ -227,9 +227,11 @@ bool SignalFdHandle::process() {
 
 	auto sig = getSignalInfo(_info.ssi_signo);
 	if (sig) {
-		log::info("event::Queue", "Signal intercepted with signalfd: ", sig->name, ", errno: ", _info.ssi_errno);
+		log::source().info("event::Queue", "Signal intercepted with signalfd: ", sig->name,
+				", errno: ", _info.ssi_errno);
 	} else {
-		log::info("event::Queue", "Signal intercepted with signalfd: (unknown), errno: ", _info.ssi_errno);
+		log::source().info("event::Queue",
+				"Signal intercepted with signalfd: (unknown), errno: ", _info.ssi_errno);
 	}
 
 	sigset_t sigset;
@@ -274,7 +276,7 @@ void SignalFdHandle::enable(const sigset_t *sigset) {
 		}
 	}
 
-	log::debug("event::Queue", "signalfd enabled:", signals.str());
+	log::source().debug("event::Queue", "signalfd enabled:", signals.str());
 
 	::signalfd(source->fd, &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
 }
@@ -286,20 +288,16 @@ void SignalFdHandle::disable() {
 	::signalfd(source->fd, &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
 }
 
-const sigset_t *SignalFdHandle::getDefaultSigset() const {
-	return &_default;
-}
+const sigset_t *SignalFdHandle::getDefaultSigset() const { return &_default; }
 
-const sigset_t *SignalFdHandle::getCurrentSigset() const {
-	return &_sigset;
-}
+const sigset_t *SignalFdHandle::getCurrentSigset() const { return &_sigset; }
 
 #ifdef SP_EVENT_URING
 Status SignalFdURingHandle::rearm(URingData *uring, SignalFdSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
-		status = uring->pushRead(source->fd, (uint8_t *)&_info, sizeof(signalfd_siginfo), reinterpret_cast<uintptr_t>(this)
-				| (_timeline & URING_USERDATA_SERIAL_MASK));
+		status = uring->pushRead(source->fd, (uint8_t *)&_info, sizeof(signalfd_siginfo),
+				reinterpret_cast<uintptr_t>(this) | (_timeline & URING_USERDATA_SERIAL_MASK));
 		if (status == Status::Suspended) {
 			status = uring->submit();
 		}
@@ -311,8 +309,9 @@ Status SignalFdURingHandle::disarm(URingData *uring, SignalFdSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = uring->cancelOp(reinterpret_cast<uintptr_t>(this)
-				| (_timeline & URING_USERDATA_SERIAL_MASK), URingCancelFlags::Suspend);
-		++ _timeline;
+						| (_timeline & URING_USERDATA_SERIAL_MASK),
+				URingCancelFlags::Suspend);
+		++_timeline;
 	}
 	return status;
 }
@@ -331,7 +330,7 @@ void SignalFdURingHandle::notify(URingData *uring, SignalFdSource *source, const
 
 		sendCompletion(0, Status::Ok);
 		process();
-	} else{
+	} else {
 		cancel(URingData::getErrnoStatus(data.result));
 	}
 }
@@ -352,7 +351,7 @@ Status SignalFdEPollHandle::disarm(EPollData *epoll, SignalFdSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = epoll->remove(source->fd);
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
@@ -367,9 +366,7 @@ void SignalFdEPollHandle::notify(EPollData *epoll, SignalFdSource *source, const
 	bool notify = false;
 
 	if (data.queueFlags & EPOLLIN) {
-		while (read()) {
-			notify = true;
-		}
+		while (read()) { notify = true; }
 	}
 
 	if ((data.queueFlags & EPOLLERR) || (data.queueFlags & EPOLLHUP)) {
@@ -392,14 +389,15 @@ Status SignalFdALooperHandle::disarm(ALooperData *alooper, SignalFdSource *sourc
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = alooper->remove(source->fd);
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
 	return status;
 }
 
-void SignalFdALooperHandle::notify(ALooperData *alooper, SignalFdSource *source, const NotifyData &data) {
+void SignalFdALooperHandle::notify(ALooperData *alooper, SignalFdSource *source,
+		const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
@@ -407,13 +405,10 @@ void SignalFdALooperHandle::notify(ALooperData *alooper, SignalFdSource *source,
 	bool notify = false;
 
 	if (data.queueFlags & ALOOPER_EVENT_INPUT) {
-		while (read()) {
-			notify = true;
-		}
+		while (read()) { notify = true; }
 	}
 
-	if ((data.queueFlags & ALOOPER_EVENT_ERROR)
-			|| (data.queueFlags & ALOOPER_EVENT_HANGUP)
+	if ((data.queueFlags & ALOOPER_EVENT_ERROR) || (data.queueFlags & ALOOPER_EVENT_HANGUP)
 			|| (data.queueFlags & ALOOPER_EVENT_INVALID)) {
 		cancel();
 	} else if (notify) {
@@ -422,4 +417,4 @@ void SignalFdALooperHandle::notify(ALooperData *alooper, SignalFdSource *source,
 }
 #endif
 
-}
+} // namespace stappler::event

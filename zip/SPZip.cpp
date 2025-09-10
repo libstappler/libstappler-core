@@ -31,7 +31,8 @@ static zip_t *_createZipArchive(BytesView b, ZipBuffer<Interface> *d) {
 	if (!b.empty()) {
 		d->data.put(b.data(), b.size());
 	}
-	auto source = zip_source_function_create([] (void *ud, void *data, zip_uint64_t size, zip_source_cmd_t cmd) -> zip_int64_t {
+	auto source = zip_source_function_create(
+			[](void *ud, void *data, zip_uint64_t size, zip_source_cmd_t cmd) -> zip_int64_t {
 		auto d = (ZipBuffer<Interface> *)ud;
 		switch (cmd) {
 		case ZIP_SOURCE_REMOVE:
@@ -56,31 +57,31 @@ static zip_t *_createZipArchive(BytesView b, ZipBuffer<Interface> *d) {
 			break; /* get meta information */
 		}
 		case ZIP_SOURCE_ERROR: {
-			int * errdata = (int *)data;
+			int *errdata = (int *)data;
 			errdata[0] = ZIP_ER_INTERNAL;
 			errdata[1] = EINVAL;
 			break; /* get error information */
 		}
 		case ZIP_SOURCE_SEEK_WRITE:
-			d->buffer.seek(zip_source_seek_compute_offset(d->buffer.size(), d->buffer.input(), data, size, nullptr));
+			d->buffer.seek(zip_source_seek_compute_offset(d->buffer.size(), d->buffer.input(), data,
+					size, nullptr));
 			return 0;
 			break; /* get write position */
 		case ZIP_SOURCE_SEEK:
-			d->data.seek(zip_source_seek_compute_offset(d->data.size(), d->data.input(), data, size, nullptr));
+			d->data.seek(zip_source_seek_compute_offset(d->data.size(), d->data.input(), data, size,
+					nullptr));
 			return 0;
-			break;  /* set position for reading */
-		case ZIP_SOURCE_TELL_WRITE:
-			return d->buffer.size();
-			break; /* get write position */
-		case ZIP_SOURCE_TELL:
-			return d->data.size();
-			break; /* get read position */
+			break; /* set position for reading */
+		case ZIP_SOURCE_TELL_WRITE: return d->buffer.size(); break; /* get write position */
+		case ZIP_SOURCE_TELL: return d->data.size(); break; /* get read position */
 		case ZIP_SOURCE_SUPPORTS: {
-			auto supports = zip_source_make_command_bitmap(ZIP_SOURCE_OPEN, ZIP_SOURCE_READ, ZIP_SOURCE_CLOSE, ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR,
-					ZIP_SOURCE_FREE, ZIP_SOURCE_SEEK, ZIP_SOURCE_TELL, ZIP_SOURCE_SUPPORTS, ZIP_SOURCE_BEGIN_WRITE, ZIP_SOURCE_COMMIT_WRITE,
-					ZIP_SOURCE_ROLLBACK_WRITE, ZIP_SOURCE_SEEK_WRITE, ZIP_SOURCE_TELL_WRITE, ZIP_SOURCE_REMOVE, ZIP_SOURCE_WRITE);
+			auto supports = zip_source_make_command_bitmap(ZIP_SOURCE_OPEN, ZIP_SOURCE_READ,
+					ZIP_SOURCE_CLOSE, ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR, ZIP_SOURCE_FREE,
+					ZIP_SOURCE_SEEK, ZIP_SOURCE_TELL, ZIP_SOURCE_SUPPORTS, ZIP_SOURCE_BEGIN_WRITE,
+					ZIP_SOURCE_COMMIT_WRITE, ZIP_SOURCE_ROLLBACK_WRITE, ZIP_SOURCE_SEEK_WRITE,
+					ZIP_SOURCE_TELL_WRITE, ZIP_SOURCE_REMOVE, ZIP_SOURCE_WRITE);
 			return supports;
-			break;   /* check whether source supports command */
+			break; /* check whether source supports command */
 		}
 		case ZIP_SOURCE_BEGIN_WRITE:
 			d->buffer.clear();
@@ -99,8 +100,7 @@ static zip_t *_createZipArchive(BytesView b, ZipBuffer<Interface> *d) {
 		case ZIP_SOURCE_WRITE:
 			return d->buffer.put((const uint8_t *)data, size);
 			break; /* write data */
-		default:
-			break;
+		default: break;
 		}
 		return -1;
 	}, d, nullptr);
@@ -108,7 +108,7 @@ static zip_t *_createZipArchive(BytesView b, ZipBuffer<Interface> *d) {
 	zip_error_t err;
 	auto handle = zip_open_from_source(source, ZIP_CREATE | ZIP_TRUNCATE, &err);
 	if (!handle) {
-		log::warn("ZipArchive", "Fail to create archive: ", err.str);
+		log::source().warn("ZipArchive", "Fail to create archive: ", err.str);
 	}
 	return handle;
 }
@@ -133,11 +133,13 @@ static bool addFileToArchive(zip_t *_handle, StringView name, BytesView data, bo
 		source = zip_source_buffer(_handle, buf, data.size(), 1);
 	}
 	if (source) {
-		auto idx = zip_file_add(_handle, name.terminated() ? name.data() : name.str<Interface>().data(), source, ZIP_FL_ENC_UTF_8);
+		auto idx = zip_file_add(_handle,
+				name.terminated() ? name.data() : name.str<Interface>().data(), source,
+				ZIP_FL_ENC_UTF_8);
 		if (idx < 0) {
 			auto err = zip_get_error(_handle);
 			if (err) {
-				log::error("ZIP", zip_error_strerror(err));
+				log::source().error("ZIP", zip_error_strerror(err));
 			}
 
 			zip_source_free(source);
@@ -154,12 +156,14 @@ static bool addFileToArchive(zip_t *_handle, StringView name, BytesView data, bo
 }
 
 template <>
-zip_t *ZipArchive<memory::StandartInterface>::createZipArchive(BytesView b, ZipBuffer<memory::StandartInterface> *d) {
+zip_t *ZipArchive<memory::StandartInterface>::createZipArchive(BytesView b,
+		ZipBuffer<memory::StandartInterface> *d) {
 	return _createZipArchive(b, d);
 }
 
 template <>
-zip_t *ZipArchive<memory::PoolInterface>::createZipArchive(BytesView b, ZipBuffer<memory::PoolInterface> *d) {
+zip_t *ZipArchive<memory::PoolInterface>::createZipArchive(BytesView b,
+		ZipBuffer<memory::PoolInterface> *d) {
 	return _createZipArchive(b, d);
 }
 
@@ -191,21 +195,29 @@ ZipArchive<memory::PoolInterface>::~ZipArchive() {
 
 template <>
 bool ZipArchive<memory::StandartInterface>::addDir(StringView name) {
-	return zip_dir_add(_handle, name.terminated() ? name.data() : name.str<memory::StandartInterface>().data(), ZIP_FL_ENC_UTF_8) >= 0;
+	return zip_dir_add(_handle,
+				   name.terminated() ? name.data() : name.str<memory::StandartInterface>().data(),
+				   ZIP_FL_ENC_UTF_8)
+			>= 0;
 }
 
 template <>
 bool ZipArchive<memory::PoolInterface>::addDir(StringView name) {
-	return zip_dir_add(_handle, name.terminated() ? name.data() : name.str<memory::PoolInterface>().data(), ZIP_FL_ENC_UTF_8) >= 0;
+	return zip_dir_add(_handle,
+				   name.terminated() ? name.data() : name.str<memory::PoolInterface>().data(),
+				   ZIP_FL_ENC_UTF_8)
+			>= 0;
 }
 
 template <>
-bool ZipArchive<memory::StandartInterface>::addFile(StringView name, BytesView data, bool uncompressed) {
+bool ZipArchive<memory::StandartInterface>::addFile(StringView name, BytesView data,
+		bool uncompressed) {
 	return addFileToArchive<memory::StandartInterface>(_handle, name, data, uncompressed);
 }
 
 template <>
-bool ZipArchive<memory::PoolInterface>::addFile(StringView name, BytesView data, bool uncompressed) {
+bool ZipArchive<memory::PoolInterface>::addFile(StringView name, BytesView data,
+		bool uncompressed) {
 	return addFileToArchive<memory::PoolInterface>(_handle, name, data, uncompressed);
 }
 
@@ -243,30 +255,34 @@ size_t ZipArchive<memory::PoolInterface>::size(bool original) const {
 
 template <>
 StringView ZipArchive<memory::StandartInterface>::getName(size_t idx, bool original) const {
-	return zip_get_name(_handle, idx, original ? ZIP_FL_UNCHANGED | ZIP_FL_ENC_GUESS : ZIP_FL_ENC_GUESS);
+	return zip_get_name(_handle, idx,
+			original ? ZIP_FL_UNCHANGED | ZIP_FL_ENC_GUESS : ZIP_FL_ENC_GUESS);
 }
 
 template <>
 StringView ZipArchive<memory::PoolInterface>::getName(size_t idx, bool original) const {
-	return zip_get_name(_handle, idx, original ? ZIP_FL_UNCHANGED | ZIP_FL_ENC_GUESS : ZIP_FL_ENC_GUESS);
+	return zip_get_name(_handle, idx,
+			original ? ZIP_FL_UNCHANGED | ZIP_FL_ENC_GUESS : ZIP_FL_ENC_GUESS);
 }
 
 template <>
-void ZipArchive<memory::StandartInterface>::ftw(const Callback<void(StringView path, size_t size, Time time)> &cb, bool original) const {
+void ZipArchive<memory::StandartInterface>::ftw(
+		const Callback<void(StringView path, size_t size, Time time)> &cb, bool original) const {
 	zip_stat_t stat;
-	for (size_t i = 0; i < size(original); ++ i) {
+	for (size_t i = 0; i < size(original); ++i) {
 		zip_stat_index(_handle, i, ZIP_STAT_SIZE | ZIP_STAT_MTIME | ZIP_STAT_NAME, &stat);
 		cb(stat.name, stat.size, Time::seconds(stat.mtime));
 	}
 }
 
 template <>
-void ZipArchive<memory::PoolInterface>::ftw(const Callback<void(StringView path, size_t size, Time time)> &cb, bool original) const {
+void ZipArchive<memory::PoolInterface>::ftw(
+		const Callback<void(StringView path, size_t size, Time time)> &cb, bool original) const {
 	zip_stat_t stat;
-	for (size_t i = 0; i < size(original); ++ i) {
+	for (size_t i = 0; i < size(original); ++i) {
 		zip_stat_index(_handle, i, ZIP_STAT_SIZE | ZIP_STAT_MTIME | ZIP_STAT_NAME, &stat);
 		cb(stat.name, stat.size, Time::seconds(stat.mtime));
 	}
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler

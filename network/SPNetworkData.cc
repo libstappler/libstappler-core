@@ -71,7 +71,8 @@ template <typename Interface>
 static void Handle_addMailTo(HandleData<Interface> &data, StringView name) {
 	auto nameStr = name.str<Interface>();
 	if (!valid::validateEmail(nameStr)) {
-		log::error("NetworkHandle", "Fail to add MailTo: ", name, ": invalid email address");
+		log::source().error("NetworkHandle", "Fail to add MailTo: ", name,
+				": invalid email address");
 		return;
 	}
 
@@ -129,7 +130,7 @@ static Pair<bitmap::FileFormat, StringView> Handle_detectFormat(const FileInfo &
 	bitmap_detectFormat = SharedModule::acquireTypedSymbol<decltype(bitmap_detectFormat)>(
 			buildconfig::MODULE_STAPPLER_BITMAP_NAME, "detectFormat");
 	if (!bitmap_detectFormat) {
-		log::error("network",
+		log::source().error("network",
 				"Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
 		return Pair<bitmap::FileFormat, StringView>(bitmap::FileFormat::Custom, StringView());
 	}
@@ -142,7 +143,7 @@ static StringView Handle_getMimeType(bitmap::FileFormat fmt) {
 	bitmap_getMimeType = SharedModule::acquireTypedSymbol<decltype(bitmap_getMimeType)>(
 			buildconfig::MODULE_STAPPLER_BITMAP_NAME, "getMimeType");
 	if (!bitmap_getMimeType) {
-		log::error("network",
+		log::source().error("network",
 				"Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
 		return StringView();
 	}
@@ -154,7 +155,7 @@ static StringView Handle_getMimeType(StringView name) {
 	bitmap_getMimeType = SharedModule::acquireTypedSymbol<decltype(bitmap_getMimeType)>(
 			buildconfig::MODULE_STAPPLER_BITMAP_NAME, "getMimeType");
 	if (!bitmap_getMimeType) {
-		log::error("network",
+		log::source().error("network",
 				"Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
 		return StringView();
 	}

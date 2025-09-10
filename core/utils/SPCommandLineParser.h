@@ -215,8 +215,8 @@ inline void CommandLineParser<Output>::add(InitializerList<CommandLineOption<Out
 					args.backwardSkipChars<StringView::WhiteSpace>();
 					if (!mem_pool::emplace_ordered(*_stringPatterns,
 								detail::CommandLinePatternData{patternInit, args, data})) {
-						log::error("CommandLineParser", "Duplicate string pattern: '", patternInit,
-								"'");
+						log::source().error("CommandLineParser", "Duplicate string pattern: '",
+								patternInit, "'");
 					}
 				} else if (StringView(pattern).starts_with("-")) {
 					auto args = StringView(pattern).sub(1);
@@ -228,8 +228,8 @@ inline void CommandLineParser<Output>::add(InitializerList<CommandLineOption<Out
 							patternInit.sub(0, 1));
 					if (prev != _charPatterns->end()
 							&& prev->pattern.starts_with(patternInit.sub(0, 1))) {
-						log::error("CommandLineParser", "Duplicate char pattern: '", patternInit,
-								"'; previosely defined as '", prev->pattern, "'");
+						log::source().error("CommandLineParser", "Duplicate char pattern: '",
+								patternInit, "'; previosely defined as '", prev->pattern, "'");
 					} else {
 						mem_pool::emplace_ordered(*_charPatterns,
 								detail::CommandLinePatternData{patternInit, args, data});

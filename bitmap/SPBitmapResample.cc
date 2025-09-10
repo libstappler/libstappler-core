@@ -440,8 +440,9 @@ static Resampler::Real kaiser_filter(Resampler::Real t) {
 	if (t < KAISER_SUPPORT) {
 		// db atten
 		const Resampler::Real att = 40.0f;
-		const Resampler::Real alpha = (Resampler::Real)(
-				exp(::log((double)0.58417 * (att - 20.96)) * 0.4) + 0.07886 * (att - 20.96));
+		const Resampler::Real alpha =
+				(Resampler::Real)(exp(::log((double)0.58417 * (att - 20.96)) * 0.4)
+						+ 0.07886 * (att - 20.96));
 		//const Real alpha = KAISER_ALPHA;
 		return (Resampler::Real)clean(sinc(t) * kaiser(alpha, KAISER_SUPPORT, t));
 	}
@@ -1273,15 +1274,16 @@ auto BitmapTemplate<memory::PoolInterface>::resample(ResampleFilter f, uint32_t 
 	}
 
 	if ((min(width, height) <= 1) || (max(height, height) > Resampler::MaxDimensions)) {
-		log::format(log::Error, "Bitmap",
+		log::format(log::Error, "Bitmap", SP_LOCATION,
 				"Invalid resample width/height (%u x %u), max dimension is %u", width, height,
 				Resampler::MaxDimensions);
 		return ret;
 	}
 
 	if ((max(_width, _height) > Resampler::MaxDimensions)) {
-		log::format(log::Error, "Bitmap", "Bitmap is too large (%u x %u), max dimension is %u",
-				width, height, Resampler::MaxDimensions);
+		log::format(log::Error, "Bitmap", SP_LOCATION,
+				"Bitmap is too large (%u x %u), max dimension is %u", width, height,
+				Resampler::MaxDimensions);
 		return ret;
 	}
 
@@ -1317,15 +1319,16 @@ auto BitmapTemplate<memory::StandartInterface>::resample(ResampleFilter f, uint3
 	}
 
 	if ((min(width, height) <= 1) || (max(height, height) > Resampler::MaxDimensions)) {
-		log::format(log::Error, "Bitmap",
+		log::format(log::Error, "Bitmap", SP_LOCATION,
 				"Invalid resample width/height (%u x %u), max dimension is %u", width, height,
 				Resampler::MaxDimensions);
 		return ret;
 	}
 
 	if ((max(_width, _height) > Resampler::MaxDimensions)) {
-		log::format(log::Error, "Bitmap", "Bitmap is too large (%u x %u), max dimension is %u",
-				width, height, Resampler::MaxDimensions);
+		log::format(log::Error, "Bitmap", SP_LOCATION,
+				"Bitmap is too large (%u x %u), max dimension is %u", width, height,
+				Resampler::MaxDimensions);
 		return ret;
 	}
 

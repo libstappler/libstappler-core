@@ -215,7 +215,7 @@ inline void Decoder<Interface>::parseValue(ValueType &current) {
 	case '}':
 	case ':':
 	case ',':
-		log::error("json::Decoder", "Invalid token: ", r.sub(0, 1), "; expected value");
+		log::source().error("json::Decoder", "Invalid token: ", r.sub(0, 1), "; expected value");
 		r.skipUntil<StringView::Chars<'"', 't', 'f', 'n', '+', '-', '[', '{', ']', '}'>,
 				StringView::Range<'0', '9'>>();
 		++r;

@@ -557,7 +557,7 @@ bool PrivateKey::exportPem(const Callback<void(BytesView)> &cb, KeyFormat fmt,
 	}
 
 	if (fmt == KeyFormat::RSA && getType() != KeyType::RSA) {
-		log::error("Crypto", "Unable to export non-RSA key in PKCS#1 format");
+		log::source().error("Crypto", "Unable to export non-RSA key in PKCS#1 format");
 		return false;
 	}
 
@@ -581,7 +581,7 @@ bool PrivateKey::exportDer(const Callback<void(BytesView)> &cb, KeyFormat fmt,
 	}
 
 	if (fmt == KeyFormat::RSA && getType() != KeyType::RSA) {
-		log::error("Crypto", "Unable to export non-RSA key in PKCS#1 format");
+		log::source().error("Crypto", "Unable to export non-RSA key in PKCS#1 format");
 		return false;
 	}
 

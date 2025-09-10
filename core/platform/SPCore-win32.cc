@@ -398,22 +398,23 @@ bool initialize(int &resultCode) {
 
 		//hr = ::DeleteAppContainerProfile((const wchar_t *)profileName);
 		//if (!SUCCEEDED(hr)) {
-		//	log::warn("core", "Fail to delete temporary profile");
+		//	log::source().warn("core", "Fail to delete temporary profile");
 		//}
 
 		hr = ::CreateAppContainerProfile((const wchar_t *)profileName, (const wchar_t *)publicName,
 				desc, nullptr, 0, &s_containerId);
 		if (!SUCCEEDED(hr)) {
 			if (hr == E_ACCESSDENIED) {
-				log::warn("core", "Fail to create temporary profile: E_ACCESSDENIED");
+				log::source().warn("core", "Fail to create temporary profile: E_ACCESSDENIED");
 			} else if (hr == HRESULT_FROM_WIN32(ERROR_ALREADY_EXISTS)) {
 				hr = ::DeriveAppContainerSidFromAppContainerName((const wchar_t *)profileName,
 						&s_containerId);
 				if (!SUCCEEDED(hr)) {
-					log::warn("core", "Fail to create temporary profile: ERROR_ALREADY_EXISTS");
+					log::source().warn("core",
+							"Fail to create temporary profile: ERROR_ALREADY_EXISTS");
 				}
 			} else if (hr == E_INVALIDARG) {
-				log::warn("core", "Fail to create temporary profile: E_INVALIDARG");
+				log::source().warn("core", "Fail to create temporary profile: E_INVALIDARG");
 			}
 		} else {
 			wchar_t *commonDirPath = nullptr;
@@ -444,7 +445,7 @@ bool initialize(int &resultCode) {
 	for (auto &it : s_defaultAppContainerCaps) {
 		if (!AllocateAndInitializeSid(&authority, SECURITY_BUILTIN_CAPABILITY_RID_COUNT,
 					SECURITY_CAPABILITY_BASE_RID, it, 0, 0, 0, 0, 0, 0, &capsAttrs[i].Sid)) {
-			log::warn("core", "Fail to allocate capability SID");
+			log::source().warn("core", "Fail to allocate capability SID");
 		}
 		capsAttrs[i].Attributes = SE_GROUP_ENABLED;
 		++i;
@@ -475,7 +476,7 @@ bool initialize(int &resultCode) {
 	if (!::UpdateProcThreadAttribute(si.lpAttributeList, 0,
 				PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES, &sc, sizeof(SECURITY_CAPABILITIES),
 				nullptr, nullptr)) {
-		log::error("core", "Fail to update proc attributes for AppContainer: ",
+		log::source().error("core", "Fail to update proc attributes for AppContainer: ",
 				status::lastErrorToStatus(GetLastError()));
 		return false;
 	}
@@ -497,7 +498,7 @@ bool initialize(int &resultCode) {
 		resultCode = code;
 	} else {
 		auto lastError = GetLastError();
-		log::error("core",
+		log::source().error("core",
 				"Fail to create AppContainer process: ", status::lastErrorToStatus(lastError));
 		resultCode = -1'024;
 	}

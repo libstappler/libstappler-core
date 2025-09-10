@@ -902,7 +902,7 @@ bool parsePhrase(StringView str, const Callback<ParserStatus(StringView, ParserT
 				return false;
 			}
 			if (r.data() == control) {
-				log::error("search", "Parsing is stalled");
+				log::source().error("search", "Parsing is stalled");
 			}
 		}
 	}

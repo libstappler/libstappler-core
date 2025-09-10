@@ -34,7 +34,7 @@ struct ExecParamData {
 	Vector<int> sizesVec;
 	Vector<int> formatsVec;
 
-	const char *const * paramValues = nullptr;
+	const char *const *paramValues = nullptr;
 	const int *paramLengths = nullptr;
 	const int *paramFormats = nullptr;
 
@@ -48,7 +48,7 @@ struct ExecParamData {
 			sizesVec.reserve(size);
 			formatsVec.reserve(size);
 
-			for (size_t i = 0; i < size; ++ i) {
+			for (size_t i = 0; i < size; ++i) {
 				const Bytes &d = queryInterface->params.at(i);
 				bool bin = queryInterface->binary.at(i);
 				valuesVec.emplace_back((const char *)d.data());
@@ -60,7 +60,7 @@ struct ExecParamData {
 			paramLengths = sizesVec.data();
 			paramFormats = formatsVec.data();
 		} else {
-			for (size_t i = 0; i < size; ++ i) {
+			for (size_t i = 0; i < size; ++i) {
 				const Bytes &d = queryInterface->params.at(i);
 				bool bin = queryInterface->binary.at(i);
 				values[i] = (const char *)d.data();
@@ -99,9 +99,12 @@ SPUNUSED static String pg_numeric_to_string(BytesViewNetwork r) {
 		i = 1;
 	}
 
-	String str; str.reserve(i + dscale + DEC_DIGITS + 2);
+	String str;
+	str.reserve(i + dscale + DEC_DIGITS + 2);
 
-	if (sign == NUMERIC_NEG) { str.push_back('-'); }
+	if (sign == NUMERIC_NEG) {
+		str.push_back('-');
+	}
 	if (weight < 0) {
 		d = weight + 1;
 		str.push_back('0');
@@ -110,18 +113,24 @@ SPUNUSED static String pg_numeric_to_string(BytesViewNetwork r) {
 			dig = (d < ndigits) ? digits[d] : 0;
 
 			bool putit = (d > 0);
-			d1 = dig / 1000;
-			dig -= d1 * 1000;
+			d1 = dig / 1'000;
+			dig -= d1 * 1'000;
 			putit |= (d1 > 0);
-			if (putit) { str.push_back(d1 + '0'); }
+			if (putit) {
+				str.push_back(d1 + '0');
+			}
 			d1 = dig / 100;
 			dig -= d1 * 100;
 			putit |= (d1 > 0);
-			if (putit) { str.push_back(d1 + '0'); }
+			if (putit) {
+				str.push_back(d1 + '0');
+			}
 			d1 = dig / 10;
 			dig -= d1 * 10;
 			putit |= (d1 > 0);
-			if (putit) { str.push_back(d1 + '0'); }
+			if (putit) {
+				str.push_back(d1 + '0');
+			}
 			str.push_back(dig + '0');
 		}
 	}
@@ -131,8 +140,8 @@ SPUNUSED static String pg_numeric_to_string(BytesViewNetwork r) {
 		for (i = 0; i < dscale; d++, i += DEC_DIGITS) {
 			dig = (d >= 0 && d < ndigits) ? digits[d] : 0;
 
-			d1 = dig / 1000;
-			dig -= d1 * 1000;
+			d1 = dig / 1'000;
+			dig -= d1 * 1'000;
 			str.push_back(d1 + '0');
 			d1 = dig / 100;
 			dig -= d1 * 100;
@@ -171,9 +180,7 @@ size_t PgQueryInterface::push(Bytes &&val) {
 size_t PgQueryInterface::push(StringStream &query, const Value &val, bool force, bool compress) {
 	if (!force || val.getType() == Value::Type::EMPTY) {
 		switch (val.getType()) {
-		case Value::Type::EMPTY:
-			query << "NULL";
-			break;
+		case Value::Type::EMPTY: query << "NULL"; break;
 		case Value::Type::BOOLEAN:
 			if (val.asBool()) {
 				query << "TRUE";
@@ -181,9 +188,7 @@ size_t PgQueryInterface::push(StringStream &query, const Value &val, bool force,
 				query << "FALSE";
 			}
 			break;
-		case Value::Type::INTEGER:
-			query << val.asInteger();
-			break;
+		case Value::Type::INTEGER: query << val.asInteger(); break;
 		case Value::Type::DOUBLE:
 			if (std::isnan(val.asDouble())) {
 				query << "NaN";
@@ -192,7 +197,8 @@ size_t PgQueryInterface::push(StringStream &query, const Value &val, bool force,
 			} else if (-val.asDouble() == std::numeric_limits<double>::infinity()) {
 				query << "Infinity";
 			} else {
-				query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << val.asDouble();
+				query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1)
+					  << val.asDouble();
 			}
 			break;
 		case Value::Type::CHARSTRING:
@@ -208,29 +214,29 @@ size_t PgQueryInterface::push(StringStream &query, const Value &val, bool force,
 			break;
 		case Value::Type::ARRAY:
 		case Value::Type::DICTIONARY:
-			params.emplace_back(data::write<Interface>(val, EncodeFormat(EncodeFormat::Cbor,
-					compress ? EncodeFormat::LZ4HCCompression : EncodeFormat::DefaultCompress)));
+			params.emplace_back(data::write<Interface>(val,
+					EncodeFormat(EncodeFormat::Cbor,
+							compress ? EncodeFormat::LZ4HCCompression
+									 : EncodeFormat::DefaultCompress)));
 			binary.emplace_back(true);
 			query << "$" << params.size() << "::bytea";
 			break;
 		default: break;
 		}
 	} else {
-		params.emplace_back(data::write<Interface>(val, EncodeFormat(EncodeFormat::Cbor,
-				compress ? EncodeFormat::LZ4HCCompression : EncodeFormat::DefaultCompress)));
+		params.emplace_back(data::write<Interface>(val,
+				EncodeFormat(EncodeFormat::Cbor,
+						compress ? EncodeFormat::LZ4HCCompression
+								 : EncodeFormat::DefaultCompress)));
 		binary.emplace_back(true);
 		query << "$" << params.size() << "::bytea";
 	}
 	return params.size();
 }
 
-void PgQueryInterface::bindInt(db::Binder &, StringStream &query, int64_t val) {
-	query << val;
-}
+void PgQueryInterface::bindInt(db::Binder &, StringStream &query, int64_t val) { query << val; }
 
-void PgQueryInterface::bindUInt(db::Binder &, StringStream &query, uint64_t val) {
-	query << val;
-}
+void PgQueryInterface::bindUInt(db::Binder &, StringStream &query, uint64_t val) { query << val; }
 
 void PgQueryInterface::bindDouble(db::Binder &, StringStream &query, double val) {
 	query << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << val;
@@ -266,7 +272,8 @@ void PgQueryInterface::bindMoveBytes(db::Binder &, StringStream &query, Bytes &&
 	}
 }
 
-void PgQueryInterface::bindCoderSource(db::Binder &, StringStream &query, const stappler::CoderSource &val) {
+void PgQueryInterface::bindCoderSource(db::Binder &, StringStream &query,
+		const stappler::CoderSource &val) {
 	if (auto num = push(Bytes(val.data(), val.data() + val.size()))) {
 		query << "$" << num << "::bytea";
 	}
@@ -276,7 +283,8 @@ void PgQueryInterface::bindValue(db::Binder &, StringStream &query, const Value 
 	push(query, val, false);
 }
 
-void PgQueryInterface::bindDataField(db::Binder &, StringStream &query, const db::Binder::DataField &f) {
+void PgQueryInterface::bindDataField(db::Binder &, StringStream &query,
+		const db::Binder::DataField &f) {
 	if (f.field && f.field->getType() == db::Type::Custom) {
 		auto custom = f.field->getSlot<db::FieldCustom>();
 		if (auto info = driver->getCustomFieldInfo(custom->getDriverTypeName())) {
@@ -291,13 +299,15 @@ void PgQueryInterface::bindDataField(db::Binder &, StringStream &query, const db
 	}
 }
 
-void PgQueryInterface::bindTypeString(db::Binder &, StringStream &query, const db::Binder::TypeString &type) {
+void PgQueryInterface::bindTypeString(db::Binder &, StringStream &query,
+		const db::Binder::TypeString &type) {
 	if (auto num = push(type.str)) {
 		query << "$" << num << "::" << type.type;
 	}
 }
 
-void PgQueryInterface::bindFullText(db::Binder &, StringStream &query, const db::Binder::FullTextField &d) {
+void PgQueryInterface::bindFullText(db::Binder &, StringStream &query,
+		const db::Binder::FullTextField &d) {
 	if (d.data.empty()) {
 		query << "NULL";
 	} else {
@@ -308,29 +318,33 @@ void PgQueryInterface::bindFullText(db::Binder &, StringStream &query, const db:
 	}
 }
 
-void PgQueryInterface::bindFullTextFrom(db::Binder &, StringStream &query, const db::Binder::FullTextFrom &) {
+void PgQueryInterface::bindFullTextFrom(db::Binder &, StringStream &query,
+		const db::Binder::FullTextFrom &) { }
 
-}
-
-void PgQueryInterface::bindFullTextRank(db::Binder &, StringStream &query, const db::Binder::FullTextRank &d) {
+void PgQueryInterface::bindFullTextRank(db::Binder &, StringStream &query,
+		const db::Binder::FullTextRank &d) {
 	auto slot = d.field->getSlot<FieldFullTextView>();
-	query << " ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", " << d.query << ", " << toInt(slot->normalization) << ")";
+	query << " ts_rank(" << d.scheme << ".\"" << d.field->getName() << "\", " << d.query << ", "
+		  << toInt(slot->normalization) << ")";
 }
 
-void PgQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query, const db::Binder::FullTextQueryRef &d) {
+void PgQueryInterface::bindFullTextQuery(db::Binder &, StringStream &query,
+		const db::Binder::FullTextQueryRef &d) {
 	StringStream tmp;
-	d.query.encode([&] (StringView str) {
-		tmp << str;
-	}, FullTextQuery::Postgresql);
+	d.query.encode([&](StringView str) { tmp << str; }, FullTextQuery::Postgresql);
 	auto idx = push(tmp.str());
-	query  << " $" << idx << "::tsquery ";
+	query << " $" << idx << "::tsquery ";
 }
 
 void PgQueryInterface::bindIntVector(Binder &, StringStream &query, const Vector<int64_t> &vec) {
 	query << "(";
 	bool start = true;
 	for (auto &it : vec) {
-		if (start) { start = false; } else { query << ","; }
+		if (start) {
+			start = false;
+		} else {
+			query << ",";
+		}
 		query << it;
 	}
 	query << ")";
@@ -340,17 +354,26 @@ void PgQueryInterface::bindDoubleVector(Binder &b, StringStream &query, const Ve
 	query << "(";
 	bool start = true;
 	for (auto &it : vec) {
-		if (start) { start = false; } else { query << ","; }
+		if (start) {
+			start = false;
+		} else {
+			query << ",";
+		}
 		bindDouble(b, query, it);
 	}
 	query << ")";
 }
 
-void PgQueryInterface::bindStringVector(Binder &b, StringStream &query, const Vector<StringView> &vec) {
+void PgQueryInterface::bindStringVector(Binder &b, StringStream &query,
+		const Vector<StringView> &vec) {
 	query << "(";
 	bool start = true;
 	for (auto &it : vec) {
-		if (start) { start = false; } else { query << ","; }
+		if (start) {
+			start = false;
+		} else {
+			query << ",";
+		}
 		bindStringView(b, query, it);
 	}
 	query << ")";
@@ -367,7 +390,7 @@ Handle::Handle(const Driver *d, Driver::Handle h) : SqlHandle(d), driver(d), han
 		if (c.get()) {
 			conn = c;
 
-			performSimpleSelect("SELECT current_database();", [&, this] (db::Result &qResult) {
+			performSimpleSelect("SELECT current_database();", [&, this](db::Result &qResult) {
 				if (!qResult.empty()) {
 					dbName = qResult.current().toString(0).pdup();
 				}
@@ -376,29 +399,23 @@ Handle::Handle(const Driver *d, Driver::Handle h) : SqlHandle(d), driver(d), han
 	}
 }
 
-Handle::operator bool() const {
-	return conn.get() != nullptr;
-}
+Handle::operator bool() const { return conn.get() != nullptr; }
 
-Driver::Handle Handle::getHandle() const {
-	return handle;
-}
+Driver::Handle Handle::getHandle() const { return handle; }
 
-Driver::Connection Handle::getConnection() const {
-	return conn;
-}
+Driver::Connection Handle::getConnection() const { return conn; }
 
-void Handle::close() {
-	conn = Driver::Connection(nullptr);
-}
+void Handle::close() { conn = Driver::Connection(nullptr); }
 
-void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb, const sql::QueryStorageHandle *s) {
+void Handle::makeQuery(const stappler::Callback<void(sql::SqlQuery &)> &cb,
+		const sql::QueryStorageHandle *s) {
 	PgQueryInterface interface(_driver, s);
 	db::sql::SqlQuery query(&interface, _driver);
 	cb(query);
 }
 
-bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bool(sql::Result &)> &cb,
+bool Handle::selectQuery(const sql::SqlQuery &query,
+		const stappler::Callback<bool(sql::Result &)> &cb,
 		const Callback<void(const Value &)> &errCb) {
 	if (!conn.get() || getTransactionStatus() == db::TransactionStatus::Rollback) {
 		return false;
@@ -407,18 +424,20 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	auto queryInterface = static_cast<PgQueryInterface *>(query.getInterface());
 
 	ExecParamData data(query);
-	ResultCursor res(driver, driver->exec(conn, query.getQuery().weak().data(), 	int(queryInterface->params.size()),
-			data.paramValues, data.paramLengths, data.paramFormats, 1));
+	ResultCursor res(driver,
+			driver->exec(conn, query.getQuery().weak().data(), int(queryInterface->params.size()),
+					data.paramValues, data.paramLengths, data.paramFormats, 1));
 	if (!res.isSuccess()) {
 		auto info = res.getInfo();
 		info.setString(query.getQuery().str(), "query");
 #if DEBUG
-		log::debug("pq::Handle", EncodeFormat::Pretty, info);
+		log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query",
+				sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction_pg();
 	}
@@ -429,7 +448,8 @@ bool Handle::selectQuery(const sql::SqlQuery &query, const stappler::Callback<bo
 	return cb(ret);
 }
 
-bool Handle::performSimpleQuery(const StringView &query, const Callback<void(const Value &)> &errCb) {
+bool Handle::performSimpleQuery(const StringView &query,
+		const Callback<void(const Value &)> &errCb) {
 	if (getTransactionStatus() == db::TransactionStatus::Rollback) {
 		return false;
 	}
@@ -440,19 +460,21 @@ bool Handle::performSimpleQuery(const StringView &query, const Callback<void(con
 		auto info = res.getInfo();
 		info.setString(query, "query");
 #if DEBUG
-		log::debug("pq::Handle", EncodeFormat::Pretty, info);
+		log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query",
+				sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction_pg();
 	}
 	return res.isSuccess();
 }
 
-bool Handle::performSimpleSelect(const StringView &query, const stappler::Callback<void(sql::Result &)> &cb,
+bool Handle::performSimpleSelect(const StringView &query,
+		const stappler::Callback<void(sql::Result &)> &cb,
 		const Callback<void(const Value &)> &errCb) {
 	if (getTransactionStatus() == db::TransactionStatus::Rollback) {
 		return false;
@@ -469,12 +491,13 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 		auto info = res.getInfo();
 		info.setString(query, "query");
 #if DEBUG
-		log::debug("pq::Handle", EncodeFormat::Pretty, info);
+		log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 		if (errCb) {
 			errCb(info);
 		}
-		driver->getApplicationInterface()->debug("Database", "Fail to perform query", sp::move(info));
+		driver->getApplicationInterface()->debug("Database", "Fail to perform query",
+				sp::move(info));
 		driver->getApplicationInterface()->error("Database", "Fail to perform query");
 		cancelTransaction_pg();
 	}
@@ -482,21 +505,20 @@ bool Handle::performSimpleSelect(const StringView &query, const stappler::Callba
 	return false;
 }
 
-bool Handle::isSuccess() const {
-	return ResultCursor::pgsql_is_success(lastError);
-}
+bool Handle::isSuccess() const { return ResultCursor::pgsql_is_success(lastError); }
 
 bool Handle::beginTransaction_pg(TransactionLevel l) {
 	int64_t userId = _driver->getApplicationInterface()->getUserIdFromContext();
 	int64_t now = stappler::Time::now().toMicros();
 
 	if (transactionStatus != db::TransactionStatus::None) {
-		log::error("pq::Handle", "Transaction already started");
+		log::source().error("pq::Handle", "Transaction already started");
 		return false;
 	}
 
 	auto setVariables = [&, this] {
-		performSimpleQuery(toString("SET LOCAL serenity.\"user\" = ", userId, ";SET LOCAL serenity.\"now\" = ", now, ";"));
+		performSimpleQuery(toString("SET LOCAL serenity.\"user\" = ", userId,
+				";SET LOCAL serenity.\"now\" = ", now, ";"));
 	};
 
 	switch (l) {
@@ -524,15 +546,12 @@ bool Handle::beginTransaction_pg(TransactionLevel l) {
 			return true;
 		}
 		break;
-	default:
-		break;
+	default: break;
 	}
 	return false;
 }
 
-void Handle::cancelTransaction_pg() {
-	transactionStatus = db::TransactionStatus::Rollback;
-}
+void Handle::cancelTransaction_pg() { transactionStatus = db::TransactionStatus::Rollback; }
 
 bool Handle::endTransaction_pg() {
 	switch (transactionStatus) {
@@ -550,10 +569,9 @@ bool Handle::endTransaction_pg() {
 			return false;
 		}
 		break;
-	default:
-		break;
+	default: break;
 	}
 	return false;
 }
 
-}
+} // namespace stappler::db::pq

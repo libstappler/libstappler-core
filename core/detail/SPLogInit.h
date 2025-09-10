@@ -24,7 +24,10 @@
 #define CORE_CORE_DETAIL_SPLOGINIT_H_
 
 #include "SPPlatformInit.h"
-#include <string.h>
+
+#if __cplusplus >= 202'002L
+#include <source_location>
+#endif
 
 // GCC-specific formatting attribute
 #if defined(__GNUC__) && (__GNUC__ >= 4)
@@ -43,13 +46,34 @@
 #if DEBUG
 #define SPASSERT(cond, msg) do { \
 	if (!(cond)) { \
-		if (strlen(msg)) { STAPPLER_VERSIONIZED_NAMESPACE::log::format(STAPPLER_VERSIONIZED_NAMESPACE::log::LogType::Fatal, "Assert", "%s", msg);} \
+		if (strlen(msg)) { STAPPLER_VERSIONIZED_NAMESPACE::log::format(STAPPLER_VERSIONIZED_NAMESPACE::log::LogType::Fatal, "Assert", SP_LOCATION, "%s", msg);} \
 		assert(cond); \
 	} \
 } while (0)
 #else
 #define SPASSERT(cond, msg)
 #endif
+
+namespace STAPPLER_VERSIONIZED stappler {
+
+// Initialize this with SP_LOCATION
+struct SourceLocation {
+	const char *fileName = nullptr;
+	const char *functionName = nullptr;
+	unsigned line = 0;
+
+	constexpr bool empty() const {
+		return line == 0 && fileName == nullptr && functionName == nullptr;
+	}
+
+	constexpr SourceLocation() = default;
+#if __cplusplus >= 202'002L
+	constexpr SourceLocation(const std::source_location &loc)
+	: fileName(loc.file_name()), functionName(loc.function_name()), line(loc.line()) { }
+#endif
+};
+
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace STAPPLER_VERSIONIZED stappler::log {
 
@@ -63,9 +87,10 @@ enum LogType {
 	Default = Debug,
 };
 
-SP_PUBLIC void format(LogType, const char *tag, const char *, ...) SPPRINTF(3, 4);
-SP_PUBLIC void text(LogType, const char *tag, const char *);
+SP_PUBLIC void format(LogType, const char *tag, const SourceLocation &source, const char *, ...)
+		SPPRINTF(4, 5);
+SP_PUBLIC void text(LogType, const char *tag, const SourceLocation &source, const char *);
 
-}
+} // namespace stappler::log
 
 #endif /* CORE_CORE_DETAIL_SPLOGINIT_H_ */

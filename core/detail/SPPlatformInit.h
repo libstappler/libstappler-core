@@ -106,22 +106,39 @@
 
 #define SP_EXTERN_C			extern "C"
 
+// SP_SOURCE_DEBUG controls source info output in log and async tasks tags
+#if DEBUG
+#define SP_SOURCE_DEBUG 1
+#else
+#define SP_SOURCE_DEBUG 0
+#endif
+
 // Macro to print current active function context name
 // Available only from C++20
 // Widely used as 'tag' for async tasks
 //
 // Note that, not like `__func__`, this returns name by constructing argument
 // in place of a call, instead of macro substitution in place of occurrence
+#if SP_SOURCE_DEBUG
 #if __cplusplus >= 202002L
-#define STAPPLER_LOCATION (std::source_location::current().function_name())
+#define __STAPPLER_LOCATION (std::source_location::current().function_name())
+#define __STAPPLER_LOCATION_FULL (STAPPLER_VERSIONIZED_NAMESPACE::SourceLocation(std::source_location::current()))
 #else
-#define STAPPLER_LOCATION ("")
+#define __STAPPLER_LOCATION ("")
+#define __STAPPLER_LOCATION_FULL (STAPPLER_VERSIONIZED_NAMESPACE::SourceLocation())
 #endif
+#else
+#define __STAPPLER_LOCATION ("")
+#define __STAPPLER_LOCATION_FULL (STAPPLER_VERSIONIZED_NAMESPACE::SourceLocation())
+#endif // SP_SOURCE_DEBUG
+
+#define SP_FUNC __STAPPLER_LOCATION
+#define SP_LOCATION __STAPPLER_LOCATION_FULL
 
 #else
 #define SP_EXTERN_C
-#define STAPPLER_LOCATION ("")
-#endif
+#define __STAPPLER_LOCATION ("")
+#endif // __cplusplus
 
 /*
  * IDE-specific section

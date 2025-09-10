@@ -47,14 +47,16 @@ FontFaceObjectHandle::~FontFaceObjectHandle() {
 	_face = nullptr;
 }
 
-bool FontFaceObjectHandle::init(const Rc<FontLibrary> &lib, Rc<FontFaceObject> &&obj, Function<void(const FontFaceObjectHandle *)> &&onDestroy) {
+bool FontFaceObjectHandle::init(const Rc<FontLibrary> &lib, Rc<FontFaceObject> &&obj,
+		Function<void(const FontFaceObjectHandle *)> &&onDestroy) {
 	_face = move(obj);
 	_library = lib;
 	_onDestroy = sp::move(onDestroy);
 	return true;
 }
 
-bool FontFaceObjectHandle::acquireTexture(char16_t theChar, const Callback<void(const CharTexture &)> &cb) {
+bool FontFaceObjectHandle::acquireTexture(char16_t theChar,
+		const Callback<void(const CharTexture &)> &cb) {
 	return _face->acquireTextureUnsafe(theChar, cb);
 }
 
@@ -62,16 +64,20 @@ BytesView FontLibrary::getFont(DefaultFontName name) {
 	switch (name) {
 	case DefaultFontName::None: return BytesView(); break;
 	case DefaultFontName::RobotoFlex_VariableFont:
-		return BytesView(reinterpret_cast<const uint8_t *>(s_font_RobotoFlex_VariableFont), sizeof(s_font_RobotoFlex_VariableFont));
+		return BytesView(reinterpret_cast<const uint8_t *>(s_font_RobotoFlex_VariableFont),
+				sizeof(s_font_RobotoFlex_VariableFont));
 		break;
 	case DefaultFontName::RobotoMono_VariableFont:
-		return BytesView(reinterpret_cast<const uint8_t *>(s_font_RobotoMono_VariableFont), sizeof(s_font_RobotoMono_VariableFont));
+		return BytesView(reinterpret_cast<const uint8_t *>(s_font_RobotoMono_VariableFont),
+				sizeof(s_font_RobotoMono_VariableFont));
 		break;
 	case DefaultFontName::RobotoMono_Italic_VariableFont:
-		return BytesView(reinterpret_cast<const uint8_t *>(s_font_RobotoMono_Italic_VariableFont), sizeof(s_font_RobotoMono_Italic_VariableFont));
+		return BytesView(reinterpret_cast<const uint8_t *>(s_font_RobotoMono_Italic_VariableFont),
+				sizeof(s_font_RobotoMono_Italic_VariableFont));
 		break;
 	case DefaultFontName::DejaVuSans:
-		return BytesView(reinterpret_cast<const uint8_t *>(s_font_DejaVuSansStappler), sizeof(s_font_DejaVuSansStappler));
+		return BytesView(reinterpret_cast<const uint8_t *>(s_font_DejaVuSansStappler),
+				sizeof(s_font_DejaVuSansStappler));
 		break;
 	}
 	return BytesView();
@@ -80,17 +86,21 @@ BytesView FontLibrary::getFont(DefaultFontName name) {
 StringView FontLibrary::getFontName(DefaultFontName name) {
 	switch (name) {
 	case DefaultFontName::None: return StringView(); break;
-	case DefaultFontName::RobotoFlex_VariableFont: return StringView("RobotoFlex_VariableFont"); break;
-	case DefaultFontName::RobotoMono_VariableFont: return StringView("RobotoMono_VariableFont"); break;
-	case DefaultFontName::RobotoMono_Italic_VariableFont: return StringView("RobotoMono_Italic_VariableFont"); break;
+	case DefaultFontName::RobotoFlex_VariableFont:
+		return StringView("RobotoFlex_VariableFont");
+		break;
+	case DefaultFontName::RobotoMono_VariableFont:
+		return StringView("RobotoMono_VariableFont");
+		break;
+	case DefaultFontName::RobotoMono_Italic_VariableFont:
+		return StringView("RobotoMono_Italic_VariableFont");
+		break;
 	case DefaultFontName::DejaVuSans: return StringView("DejaVuSans"); break;
 	}
 	return StringView();
 }
 
-FontLibrary::FontLibrary() {
-	FT_Init_FreeType( &_library );
-}
+FontLibrary::FontLibrary() { FT_Init_FreeType(&_library); }
 
 FontLibrary::~FontLibrary() {
 	if (_library) {
@@ -142,7 +152,8 @@ Rc<FontFaceData> FontLibrary::openFontData(StringView dataName, FontLayoutParame
 	return dataObject;
 }
 
-Rc<FontFaceObject> FontLibrary::openFontFace(StringView dataName, const FontSpecializationVector &spec, const Callback<FontData()> &dataCallback) {
+Rc<FontFaceObject> FontLibrary::openFontFace(StringView dataName,
+		const FontSpecializationVector &spec, const Callback<FontData()> &dataCallback) {
 	String faceName = mem_std::toString(dataName, spec.getSpecializationArgs<Interface>());
 
 	std::unique_lock lock(_mutex);
@@ -156,7 +167,8 @@ Rc<FontFaceObject> FontLibrary::openFontFace(StringView dataName, const FontSpec
 	auto it = _data.find(dataName);
 	if (it != _data.end()) {
 		auto face = newFontFace(it->second->getView());
-		auto ret = Rc<FontFaceObject>::create(faceName, it->second, _library, face, spec, getNextId());
+		auto ret =
+				Rc<FontFaceObject>::create(faceName, it->second, _library, face, spec, getNextId());
 		if (ret) {
 			_faces.emplace(ret->getName(), ret);
 		} else {
@@ -184,7 +196,8 @@ Rc<FontFaceObject> FontLibrary::openFontFace(StringView dataName, const FontSpec
 	if (dataObject) {
 		_data.emplace(dataObject->getName(), dataObject);
 		auto face = newFontFace(dataObject->getView());
-		auto ret = Rc<FontFaceObject>::create(faceName, it->second, _library, face, spec, getNextId());
+		auto ret =
+				Rc<FontFaceObject>::create(faceName, it->second, _library, face, spec, getNextId());
 		if (ret) {
 			_faces.emplace(ret->getName(), ret);
 		} else {
@@ -196,8 +209,10 @@ Rc<FontFaceObject> FontLibrary::openFontFace(StringView dataName, const FontSpec
 	return nullptr;
 }
 
-Rc<FontFaceObject> FontLibrary::openFontFace(const Rc<FontFaceData> &dataObject, const FontSpecializationVector &spec) {
-	String faceName = mem_std::toString(dataObject->getName(), spec.getSpecializationArgs<Interface>());
+Rc<FontFaceObject> FontLibrary::openFontFace(const Rc<FontFaceData> &dataObject,
+		const FontSpecializationVector &spec) {
+	String faceName =
+			mem_std::toString(dataObject->getName(), spec.getSpecializationArgs<Interface>());
 
 	std::unique_lock lock(_mutex);
 	do {
@@ -238,7 +253,7 @@ void FontLibrary::update() {
 				erased.emplace_back(it->second.get());
 				it = _faces.erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 		}
 	} while (0);
@@ -249,7 +264,7 @@ void FontLibrary::update() {
 			if (it->second->getReferenceCount() == 1) {
 				it = _data.erase(it);
 			} else {
-				++ it;
+				++it;
 			}
 		}
 	} while (0);
@@ -257,13 +272,11 @@ void FontLibrary::update() {
 	lock.unlock();
 
 	std::unique_lock uniqueLock(_sharedMutex);
-	for (auto &it : erased) {
-		_threads.erase(it.get());
-	}
+	for (auto &it : erased) { _threads.erase(it.get()); }
 }
 
 uint16_t FontLibrary::getNextId() {
-	for (uint32_t i = 1; i < _fontIds.size(); ++ i) {
+	for (uint32_t i = 1; i < _fontIds.size(); ++i) {
 		if (!_fontIds.test(i)) {
 			_fontIds.set(i);
 			return i;
@@ -273,9 +286,7 @@ uint16_t FontLibrary::getNextId() {
 	return 0;
 }
 
-void FontLibrary::releaseId(uint16_t id) {
-	_fontIds.reset(id);
-}
+void FontLibrary::releaseId(uint16_t id) { _fontIds.reset(id); }
 
 Rc<FontFaceObjectHandle> FontLibrary::makeThreadHandle(const Rc<FontFaceObject> &obj) {
 	std::shared_lock sharedLock(_sharedMutex);
@@ -300,13 +311,17 @@ Rc<FontFaceObjectHandle> FontLibrary::makeThreadHandle(const Rc<FontFaceObject> 
 	std::unique_lock lock(_mutex);
 	auto face = newFontFace(obj->getData()->getView());
 	lock.unlock();
-	auto target = Rc<FontFaceObject>::create(obj->getName(), obj->getData(), _library, face, obj->getSpec(), obj->getId());
+	auto target = Rc<FontFaceObject>::create(obj->getName(), obj->getData(), _library, face,
+			obj->getSpec(), obj->getId());
 
 	if (it == _threads.end()) {
 		it = _threads.emplace(obj.get(), Map<std::thread::id, Rc<FontFaceObjectHandle>>()).first;
 	}
 
-	auto iit = it->second.emplace(std::this_thread::get_id(), Rc<FontFaceObjectHandle>::create(this, move(target), [this] (const FontFaceObjectHandle *obj) {
+	auto iit = it->second
+					   .emplace(std::this_thread::get_id(),
+							   Rc<FontFaceObjectHandle>::create(this, move(target),
+									   [this](const FontFaceObjectHandle *obj) {
 		std::unique_lock lock(_mutex);
 		doneFontFace(obj->getFace());
 	})).first->second;
@@ -318,10 +333,10 @@ FT_Face FontLibrary::newFontFace(BytesView data) {
 	FT_Face ret = nullptr;
 	FT_Error err = FT_Err_Ok;
 
-	err = FT_New_Memory_Face(_library, data.data(), data.size(), 0, &ret );
+	err = FT_New_Memory_Face(_library, data.data(), data.size(), 0, &ret);
 	if (err != FT_Err_Ok) {
 		auto str = FT_Error_String(err);
-		log::error("font::FontLibrary", str ? StringView(str) : "Unknown error");
+		log::source().error("font::FontLibrary", str ? StringView(str) : "Unknown error");
 		return nullptr;
 	}
 
@@ -334,4 +349,4 @@ void FontLibrary::doneFontFace(FT_Face face) {
 	}
 }
 
-}
+} // namespace stappler::font

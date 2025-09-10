@@ -104,7 +104,7 @@ db::Adapter ApplicationInterface::getAdapterFromContext() const {
 
 void ApplicationInterface::scheduleAyncDbTask(
 		const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const {
-	log::error("ApplicationInterface", "scheduleAyncDbTask is not define");
+	log::source().error("ApplicationInterface", "scheduleAyncDbTask is not define");
 	::abort();
 }
 
@@ -118,11 +118,11 @@ StringView ApplicationInterface::getDocumentRoot() const {
 }
 
 void ApplicationInterface::pushErrorMessage(Value &&val) const {
-	log::error("ApplicationInterface", data::EncodeFormat::Pretty, val);
+	log::source().error("ApplicationInterface", data::EncodeFormat::Pretty, val);
 }
 
 void ApplicationInterface::pushDebugMessage(Value &&val) const {
-	log::debug("ApplicationInterface", data::EncodeFormat::Pretty, val);
+	log::source().debug("ApplicationInterface", data::EncodeFormat::Pretty, val);
 }
 
 void ApplicationInterface::reportDbUpdate(StringView data, bool successful) {
@@ -722,10 +722,10 @@ void Binder::writeBindArray(StringStream &query, const Value &val) {
 			for (auto &it : val.asArray()) { vec.emplace_back(it.getString()); }
 			_iface->bindStringVector(*this, query, vec);
 		} else {
-			log::error("db::Binder", "Malformed Value for writeBindArray - not an array");
+			log::source().error("db::Binder", "Malformed Value for writeBindArray - not an array");
 		}
 	} else {
-		log::error("db::Binder", "Malformed Value for writeBindArray - not an array");
+		log::source().error("db::Binder", "Malformed Value for writeBindArray - not an array");
 	}
 }
 

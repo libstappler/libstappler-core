@@ -54,31 +54,31 @@ struct Reader {
 	using StringReader = Parser::StringReader;
 
 	inline void onBeginTag(Parser &p, Tag &tag) {
-		log::debug("onBeginTag", tag.name);
+		log::source().debug("onBeginTag", tag.name);
 	}
 
 	inline void onEndTag(Parser &p, Tag &tag, bool isClosable) {
-		log::debug("onEndTag", tag.name);
+		log::source().debug("onEndTag", tag.name);
 	}
 
 	inline void onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringReader &value) {
-		log::debug("onTagAttribute", tag.name, ": ", name, " = ", value);
+		log::source().debug("onTagAttribute", tag.name, ": ", name, " = ", value);
 	}
 
 	inline void onPushTag(Parser &p, Tag &tag) {
-		log::debug("onPushTag", tag.name);
+		log::source().debug("onPushTag", tag.name);
 	}
 
 	inline void onPopTag(Parser &p, Tag &tag) {
-		log::debug("onPopTag", tag.name);
+		log::source().debug("onPopTag", tag.name);
 	}
 
 	inline void onInlineTag(Parser &p, Tag &tag) {
-		log::debug("onInlineTag", tag.name);
+		log::source().debug("onInlineTag", tag.name);
 	}
 
 	inline void onTagContent(Parser &p, Tag &tag, StringReader &s) {
-		log::debug("onTagContent", tag.name, ": ", s);
+		log::source().debug("onTagContent", tag.name, ": ", s);
 	}
 };
 */

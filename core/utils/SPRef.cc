@@ -158,8 +158,8 @@ using backtrace_full_callback = int (*)(void *data, uintptr_t pc, const char *fi
 SP_EXTERN_C backtrace_state *backtrace_create_state(const char *filename, int threaded,
 		backtrace_error_callback error_callback, void *data);
 
-SP_EXTERN_C int backtrace_full(backtrace_state *state, int skip,
-		backtrace_full_callback callback, backtrace_error_callback error_callback, void *data);
+SP_EXTERN_C int backtrace_full(backtrace_state *state, int skip, backtrace_full_callback callback,
+		backtrace_error_callback error_callback, void *data);
 
 SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView filename,
 		int lineno, StringView function) {
@@ -207,7 +207,7 @@ SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView 
 namespace STAPPLER_VERSIONIZED stappler {
 
 static void debug_backtrace_error(void *data, const char *msg, int errnum) {
-	log::error("Backtrace", msg);
+	log::source().error("Backtrace", msg);
 }
 
 static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *filename, int lineno,
@@ -235,12 +235,13 @@ struct BacktraceState {
 	}
 
 	BacktraceState() {
-		backtraceState = backtrace::detail::backtrace_create_state(nullptr, 1, debug_backtrace_error, nullptr);
+		backtraceState = backtrace::detail::backtrace_create_state(nullptr, 1,
+				debug_backtrace_error, nullptr);
 	}
 
 	void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
-		backtrace::detail::backtrace_full(backtraceState, int(2 + offset), debug_backtrace_full_callback,
-				debug_backtrace_error, (void *)&cb);
+		backtrace::detail::backtrace_full(backtraceState, int(2 + offset),
+				debug_backtrace_full_callback, debug_backtrace_error, (void *)&cb);
 	}
 
 	backtrace::detail::backtrace_state *backtraceState = nullptr;

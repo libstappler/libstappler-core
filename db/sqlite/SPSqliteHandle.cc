@@ -336,7 +336,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query,
 		auto info = driver->getInfo(conn, err);
 		info.setString(query.getQuery().str(), "query");
 #if DEBUG
-		log::debug("pq::Handle", EncodeFormat::Pretty, info);
+		log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 		if (errCb) {
 			errCb(info);
@@ -368,7 +368,7 @@ bool Handle::selectQuery(const sql::SqlQuery &query,
 		auto info = driver->getInfo(conn, err);
 		info.setString(query.getQuery().str(), "query");
 #if DEBUG
-		log::debug("pq::Handle", EncodeFormat::Pretty, info);
+		log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 		if (errCb) {
 			errCb(info);
@@ -414,7 +414,7 @@ bool Handle::performSimpleQuery(const StringView &query,
 			auto info = driver->getInfo(conn, err);
 			info.setString(performedQuery, "query");
 #if DEBUG
-			log::debug("pq::Handle", EncodeFormat::Pretty, info);
+			log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 			if (errCb) {
 				errCb(info);
@@ -432,7 +432,7 @@ bool Handle::performSimpleQuery(const StringView &query,
 			auto info = driver->getInfo(conn, err);
 			info.setString(nextQuery, "query");
 #if DEBUG
-			log::debug("pq::Handle", EncodeFormat::Pretty, info);
+			log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 			if (errCb) {
 				errCb(info);
@@ -465,7 +465,7 @@ bool Handle::performSimpleSelect(const StringView &query,
 		auto info = driver->getInfo(conn, err);
 		info.setString(query, "query");
 #if DEBUG
-		log::debug("pq::Handle", EncodeFormat::Pretty, info);
+		log::source().debug("pq::Handle", EncodeFormat::Pretty, info);
 #endif
 		if (errCb) {
 			errCb(info);

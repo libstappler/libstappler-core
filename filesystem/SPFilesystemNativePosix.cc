@@ -148,7 +148,7 @@ static mode_t getModeFormProtFlags(ProtFlags flags) {
 
 Status remove_fn(StringView path) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem",
+		log::source().error("filesystem",
 				"filesystem::native::remove_fn should be used with absolute paths");
 		return Status::Declined;
 	}
@@ -161,7 +161,7 @@ Status remove_fn(StringView path) {
 
 Status unlink_fn(StringView path) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem",
+		log::source().error("filesystem",
 				"filesystem::native::unlink_fn should be used with absolute paths");
 		return Status::Declined;
 	}
@@ -174,7 +174,8 @@ Status unlink_fn(StringView path) {
 
 Status mkdir_fn(StringView path, ProtFlags flags) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem", "filesystem::native::mkdir_fn should be used with absolute paths");
+		log::source().error("filesystem",
+				"filesystem::native::mkdir_fn should be used with absolute paths");
 		return Status::Declined;
 	}
 
@@ -189,7 +190,7 @@ Status mkdir_fn(StringView path, ProtFlags flags) {
 
 Status access_fn(StringView path, Access mode) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem",
+		log::source().error("filesystem",
 				"filesystem::native::access_fn should be used with absolute paths");
 		return Status::Declined;
 	}
@@ -238,7 +239,8 @@ Status access_fn(StringView path, Access mode) {
 
 Status stat_fn(StringView path, Stat &stat) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem", "filesystem::native::stat_fn should be used with absolute paths");
+		log::source().error("filesystem",
+				"filesystem::native::stat_fn should be used with absolute paths");
 		return Status::Declined;
 	}
 
@@ -286,7 +288,8 @@ Status stat_fn(StringView path, Stat &stat) {
 
 Status touch_fn(StringView path) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem", "filesystem::native::touch_fn should be used with absolute paths");
+		log::source().error("filesystem",
+				"filesystem::native::touch_fn should be used with absolute paths");
 		return Status::Declined;
 	}
 
@@ -400,7 +403,8 @@ static Status _ftw_fn(int dirfd, StringView path,
 Status ftw_fn(StringView path, const Callback<bool(StringView, FileType)> &callback, int depth,
 		bool dirFirst) {
 	if (!path.starts_with("/")) {
-		log::error("filesystem", "filesystem::native::ftw_fn should be used with absolute paths");
+		log::source().error("filesystem",
+				"filesystem::native::ftw_fn should be used with absolute paths");
 		return Status::Declined;
 	}
 

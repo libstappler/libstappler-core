@@ -42,10 +42,11 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::crypto {
 
-static constexpr size_t MBEDTLS_KEY_BUFFER_SIZE = 12_KiB; // Должен вмещать ключ в формате DER и PEM максимального размера
+static constexpr size_t MBEDTLS_KEY_BUFFER_SIZE =
+		12_KiB; // Должен вмещать ключ в формате DER и PEM максимального размера
 
 static constexpr auto PERSONALIZATION_STRING = "SP_PERSONALIZATION_STRING";
-static constexpr int PUBLIC_EXPONENT = 65537;
+static constexpr int PUBLIC_EXPONENT = 65'537;
 
 static KeyType getMbedTLSKeyType(mbedtls_pk_type_t a) {
 	switch (a) {
@@ -66,7 +67,9 @@ struct EntropyContext {
 		mbedtls_entropy_init(&entropy);
 
 		if (mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-				reinterpret_cast<const unsigned char*>(PERSONALIZATION_STRING), strlen(PERSONALIZATION_STRING)) == 0) {
+					reinterpret_cast<const unsigned char *>(PERSONALIZATION_STRING),
+					strlen(PERSONALIZATION_STRING))
+				== 0) {
 			valid = true;
 		}
 	}
@@ -76,9 +79,7 @@ struct EntropyContext {
 		mbedtls_entropy_free(&entropy);
 	}
 
-	explicit operator bool() const {
-		return valid;
-	}
+	explicit operator bool() const { return valid; }
 };
 
 static BackendCtx s_mbedTLSCtx = {
@@ -86,7 +87,7 @@ static BackendCtx s_mbedTLSCtx = {
 	.title = StringView("MbedTLS"),
 	.flags = BackendFlags::SupportsPKCS1 | BackendFlags::SupportsAes | BackendFlags::SecureLibrary,
 	.initialize = [] (BackendCtx &) {
-		log::verbose("Crypto", "MbedTLS backend loaded");
+		log::source().verbose("Crypto", "MbedTLS backend loaded");
 	},
 	.finalize = [] (BackendCtx &) { },
 	.encryptBlock = [] (const BlockKey256 &key, BytesView d, const Callback<void(BytesView)> &cb) -> bool {
@@ -246,16 +247,16 @@ static BackendCtx s_mbedTLSCtx = {
 	},
 	.privGen = [] (KeyContext &ctx, KeyBits bits, KeyType type) -> bool {
 		if (type != KeyType::RSA) {
-			log::error("Crypto-mbedtls", "Unsupported key type for keygen");
+			log::source().error("Crypto-mbedtls", "Unsupported key type for keygen");
 			return false;
 		}
 
 		int nbits = 0;
 
 		switch (bits) {
-		case KeyBits::_1024: nbits = 1024; break;
-		case KeyBits::_2048: nbits = 2048; break;
-		case KeyBits::_4096: nbits = 4096; break;
+		case KeyBits::_1024: nbits = 1'024; break;
+		case KeyBits::_2048: nbits = 2'048; break;
+		case KeyBits::_4096: nbits = 4'096; break;
 		}
 
 		if (nbits == 0) {
@@ -333,10 +334,10 @@ static BackendCtx s_mbedTLSCtx = {
 
 		auto key = reinterpret_cast<const mbedtls_pk_context *>(&ctx);
 
-		if (fmt == KeyFormat::PKCS8) { log::error("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1"); }
+		if (fmt == KeyFormat::PKCS8) { log::source().error("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1"); }
 
 		if (!passPhrase.empty()) {
-			log::error("Crypto", "Password-encoding is not supported for PKCS1");
+			log::source().error("Crypto", "Password-encoding is not supported for PKCS1");
 		}
 		ret = mbedtls_pk_write_key_pem(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
 		if (ret > 0) {
@@ -358,10 +359,10 @@ static BackendCtx s_mbedTLSCtx = {
 
 		auto key = reinterpret_cast<const mbedtls_pk_context *>(&ctx);
 
-		if (fmt == KeyFormat::PKCS8) { log::error("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1"); }
+		if (fmt == KeyFormat::PKCS8) { log::source().error("Crypto", "KeyFormat::PKCS8 is not supported by mbedtls backend, Fallback to PKCS1"); }
 
 		if (!passPhrase.empty()) {
-			log::error("Crypto", "Password-encoding is not supported for PKCS1");
+			log::source().error("Crypto", "Password-encoding is not supported for PKCS1");
 		}
 		ret = mbedtls_pk_write_key_der(key, buf, MBEDTLS_KEY_BUFFER_SIZE);
 		if (ret > 0) {
@@ -678,6 +679,6 @@ static BackendCtx s_mbedTLSCtx = {
 
 BackendCtxRef s_mbedTlsRef(&s_mbedTLSCtx);
 
-}
+} // namespace stappler::crypto
 
 #endif

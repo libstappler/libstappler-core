@@ -169,7 +169,7 @@ const Scheme &Scheme::define(UniqueConstraintDef &&def) {
 				fields.emplace(iit, f);
 			}
 		} else {
-			log::error("Scheme", "Field for unique constraint not found",
+			log::source().error("Scheme", "Field for unique constraint not found",
 					data::EncodeFormat::Pretty, Value(it));
 		}
 	}
@@ -581,7 +581,7 @@ Value Scheme::updateWithWorker(Worker &w, const Value &obj, const Value &data,
 
 stappler::Pair<bool, Value> Scheme::prepareUpdate(const Value &data, bool isProtected) const {
 	if (!data.isDictionary()) {
-		log::error("Storage", "Invalid changeset data for object");
+		log::source().error("Storage", "Invalid changeset data for object");
 		return stappler::pair(false, Value());
 	}
 
@@ -593,7 +593,7 @@ stappler::Pair<bool, Value> Scheme::prepareUpdate(const Value &data, bool isProt
 		if (changeSet.hasValue(it.first)) {
 			auto &val = changeSet.getValue(it.first);
 			if (val.isNull() && it.second.hasFlag(Flags::Required)) {
-				log::error("Storage", "Value for required field can not be removed",
+				log::source().error("Storage", "Value for required field can not be removed",
 						data::EncodeFormat::Pretty,
 						Value({std::make_pair("field", Value(it.first))}));
 				stop = true;
@@ -1293,7 +1293,8 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 				viewScheme->fields.emplace(&fit->second);
 				_forceInclude.emplace(&fit->second);
 			} else {
-				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty,
+				log::source().error("Scheme", "Field for view not foumd",
+						data::EncodeFormat::Pretty,
 						Value({stappler::pair("view",
 									   Value(toString(s->getName(), ".", f->getName()))),
 							stappler::pair("field", Value(toString(getName(), ".", it)))}));
@@ -1319,7 +1320,8 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 			linked = true;
 		}
 		if (!linked) {
-			log::error("Scheme", "Failed to autolink view field", data::EncodeFormat::Pretty,
+			log::source().error("Scheme", "Failed to autolink view field",
+					data::EncodeFormat::Pretty,
 					Value({
 						stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
 					}));
@@ -1339,7 +1341,8 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				viewScheme->fields.emplace(f);
 				_autoFieldReq.emplace(f);
 			} else {
-				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty,
+				log::source().error("Scheme", "Field for view not foumd",
+						data::EncodeFormat::Pretty,
 						Value({stappler::pair("view", Value(toString(s->getName(), ".", it))),
 							stappler::pair("field", Value(toString(getName(), ".", it)))}));
 			}
@@ -1359,7 +1362,8 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				viewScheme->fields.emplace(f);
 				_forceInclude.emplace(f);
 			} else {
-				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty,
+				log::source().error("Scheme", "Field for view not foumd",
+						data::EncodeFormat::Pretty,
 						Value({stappler::pair("view", Value(toString(s->getName(), ".", it))),
 							stappler::pair("field", Value(toString(getName(), ".", it)))}));
 			}
@@ -1369,7 +1373,8 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 				viewScheme->fields.emplace(f);
 				_autoFieldReq.emplace(f);
 			} else {
-				log::error("Scheme", "Field for view not foumd", data::EncodeFormat::Pretty,
+				log::source().error("Scheme", "Field for view not foumd",
+						data::EncodeFormat::Pretty,
 						Value({stappler::pair("view", Value(toString(s->getName(), ".", it))),
 							stappler::pair("field", Value(toString(getName(), ".", it)))}));
 			}
@@ -1394,7 +1399,8 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 			linked = true;
 		}
 		if (!linked) {
-			log::error("Scheme", "Failed to autolink view field", data::EncodeFormat::Pretty,
+			log::source().error("Scheme", "Failed to autolink view field",
+					data::EncodeFormat::Pretty,
 					Value({
 						stappler::pair("view", Value(toString(s->getName(), ".", f->getName()))),
 					}));

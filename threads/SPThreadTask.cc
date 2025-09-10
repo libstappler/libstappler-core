@@ -31,12 +31,10 @@ bool TaskGroup::init(mem_std::Function<void(const TaskGroup &, const Task &)> &&
 	return true;
 }
 
-void TaskGroup::handleAdded(const Task *task) {
-	++ _added;
-}
+void TaskGroup::handleAdded(const Task *task) { ++_added; }
 
 void TaskGroup::handleCompleted(const Task *task) {
-	++ _completed;
+	++_completed;
 	if (_notifyFn) {
 		_notifyFn(*this, *task);
 	}
@@ -68,7 +66,8 @@ bool Task::init(CompleteCallback &&c, Ref *t, TaskGroup *g, StringView tag) {
 }
 
 /* creates regular async task without initialization phase */
-bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g, StringView tag) {
+bool Task::init(const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g,
+		StringView tag) {
 	addRef(t);
 	if (e) {
 		_execute.push_back(e);
@@ -95,7 +94,8 @@ bool Task::init(ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g,
 }
 
 /* creates regular async task with initialization phase */
-bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const CompleteCallback &c, Ref *t, TaskGroup *g, StringView tag) {
+bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const CompleteCallback &c,
+		Ref *t, TaskGroup *g, StringView tag) {
 	addRef(t);
 	if (p) {
 		_prepare.push_back(p);
@@ -111,7 +111,8 @@ bool Task::init(const PrepareCallback &p, const ExecuteCallback &e, const Comple
 	return true;
 }
 
-bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, Ref *t, TaskGroup *g, StringView tag) {
+bool Task::init(PrepareCallback &&p, ExecuteCallback &&e, CompleteCallback &&c, Ref *t,
+		TaskGroup *g, StringView tag) {
 	addRef(t);
 	if (p) {
 		_prepare.emplace_back(sp::move(p));
@@ -192,7 +193,8 @@ bool Task::prepare() const {
 		_state = TaskState::Prepared;
 		return true;
 	} else {
-		log::warn("thread::Task", "Task::prepare was called on the task, that was already prepared");
+		log::source().warn("thread::Task",
+				"Task::prepare was called on the task, that was already prepared");
 	}
 	return false;
 }
@@ -211,7 +213,8 @@ bool Task::execute() const {
 		_state = TaskState::ExecutedSuccessful;
 		return true;
 	} else {
-		log::warn("thread::Task", "Task::execute was called on the task, that is not in TaskState::Prepared");
+		log::source().warn("thread::Task",
+				"Task::execute was called on the task, that is not in TaskState::Prepared");
 	}
 	return false;
 }
@@ -233,7 +236,9 @@ void Task::handleCompleted() const {
 		}
 		break;
 	default:
-		log::warn("thread::Task", "Task::handleComplete was called on the task, that is not in TaskState::ExecutedSuccessful or TaskState::ExecutedFailed");
+		log::source().warn("thread::Task",
+				"Task::handleComplete was called on the task, that is not in "
+				"TaskState::ExecutedSuccessful or TaskState::ExecutedFailed");
 		break;
 	}
 }
@@ -243,8 +248,9 @@ void Task::cancel() const {
 		_state = TaskState::ExecutedFailed;
 		handleCompleted();
 	} else {
-		log::warn("thread::Task", "Task::cancel was called on the task, that is not in TaskState::Prepared");
+		log::source().warn("thread::Task",
+				"Task::cancel was called on the task, that is not in TaskState::Prepared");
 	}
 }
 
-}
+} // namespace stappler::thread

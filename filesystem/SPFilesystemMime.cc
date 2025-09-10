@@ -854,7 +854,7 @@ StringView detectMimeType(StringView path) {
 	bitmap_getMimeType2 = SharedModule::acquireTypedSymbol<decltype(bitmap_getMimeType2)>(
 			buildconfig::MODULE_STAPPLER_BITMAP_NAME, "getMimeType");
 	if (!bitmap_detectFormat || !bitmap_getMimeType1 || !bitmap_getMimeType2) {
-		log::error("filesystem",
+		log::source().error("filesystem",
 				"Module MODULE_STAPPLER_BITMAP declared, but not available in runtime");
 		return StringView();
 	}

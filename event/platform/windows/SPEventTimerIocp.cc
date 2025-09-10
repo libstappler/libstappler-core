@@ -31,7 +31,7 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 static void timeToFileTime(LARGE_INTEGER &ftime, TimeInterval ival) {
 	// ticks in 100ns
 	auto ticks = ival.toMicros() * 10;
-	ftime.QuadPart = - ticks;
+	ftime.QuadPart = -ticks;
 }
 
 bool TimerIocpSource::init(const TimerInfo &info) {
@@ -47,29 +47,31 @@ bool TimerIocpSource::init(const TimerInfo &info) {
 	LARGE_INTEGER dueDate;
 	timeToFileTime(dueDate, info.timeout);
 
-	if (interval.toMicros() < 1000) {
+	if (interval.toMicros() < 1'000) {
 		subintervals = true;
 	}
 
 	if (info.count == 1) {
 		// oneshot timer
-		result = SetWaitableTimerEx (handle, &dueDate, 0, 0, 0, 0, 0);
+		result = SetWaitableTimerEx(handle, &dueDate, 0, 0, 0, 0, 0);
 	} else if (!subintervals) {
-		result = SetWaitableTimerEx (handle, &dueDate, interval.toMillis(), 0, 0, 0, 0);
+		result = SetWaitableTimerEx(handle, &dueDate, interval.toMillis(), 0, 0, 0, 0);
 	} else {
-		result = SetWaitableTimerEx (handle, &dueDate, 0, 0, 0, 0, 0);
+		result = SetWaitableTimerEx(handle, &dueDate, 0, 0, 0, 0, 0);
 	}
 	if (!result) {
-		log::error("event::Queue", "Fail to create WaitableTimer: ", status::lastErrorToStatus(GetLastError()));
+		log::source().error("event::Queue",
+				"Fail to create WaitableTimer: ", status::lastErrorToStatus(GetLastError()));
 	}
-	
+
 	active = true;
 	return result;
 }
 
 bool TimerIocpSource::start() {
 	if (!handle) {
-		handle = CreateWaitableTimerEx(0, 0, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+		handle = CreateWaitableTimerEx(0, 0, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+				TIMER_ALL_ACCESS);
 		active = false;
 	}
 
@@ -78,9 +80,9 @@ bool TimerIocpSource::start() {
 		LARGE_INTEGER dueDate;
 		timeToFileTime(dueDate, interval);
 		if (!subintervals) {
-			result = SetWaitableTimerEx (handle, &dueDate, interval.toMillis(), 0, 0, 0, 0);
+			result = SetWaitableTimerEx(handle, &dueDate, interval.toMillis(), 0, 0, 0, 0);
 		} else {
-			result = SetWaitableTimerEx (handle, &dueDate, 0, 0, 0, 0, 0);
+			result = SetWaitableTimerEx(handle, &dueDate, 0, 0, 0, 0, 0);
 		}
 		if (result) {
 			active = true;
@@ -123,11 +125,12 @@ void TimerIocpSource::cancel() {
 		CancelWaitableTimer(handle);
 		CloseHandle(handle);
 		handle = nullptr;
-	}	
+	}
 }
 
 bool TimerIocpHandle::init(HandleClass *cl, TimerInfo &&info) {
-	static_assert(sizeof(TimerIocpSource) <= DataSize && std::is_standard_layout<TimerIocpSource>::value);
+	static_assert(
+			sizeof(TimerIocpSource) <= DataSize && std::is_standard_layout<TimerIocpSource>::value);
 
 	if (!TimerHandle::init(cl, info.completion)) {
 		return false;
@@ -153,12 +156,13 @@ Status TimerIocpHandle::rearm(IocpData *iocp, TimerIocpSource *source) {
 		}
 		if (!source->event) {
 			source->event = ReportEventAsCompletion(iocp->_port, source->handle, _timeline,
-				reinterpret_cast<uintptr_t>(this), nullptr);
+					reinterpret_cast<uintptr_t>(this), nullptr);
 			if (!source->event) {
 				return status::lastErrorToStatus(GetLastError());
 			}
 		} else {
-			if (!RestartEventCompletion(source->event, iocp->_port, source->handle,_timeline, reinterpret_cast<uintptr_t>(this), nullptr)) {
+			if (!RestartEventCompletion(source->event, iocp->_port, source->handle, _timeline,
+						reinterpret_cast<uintptr_t>(this), nullptr)) {
 				return status::lastErrorToStatus(GetLastError());
 			}
 		}
@@ -170,7 +174,7 @@ Status TimerIocpHandle::disarm(IocpData *iocp, TimerIocpSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		source->stop();
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
@@ -188,7 +192,7 @@ void TimerIocpHandle::notify(IocpData *iocp, TimerIocpSource *source, const Noti
 	auto count = source->count;
 	auto current = source->value;
 
-	++ current;
+	++current;
 	source->value = current;
 
 	if (count == TimerInfo::Infinite || current < count) {
@@ -200,4 +204,4 @@ void TimerIocpHandle::notify(IocpData *iocp, TimerIocpSource *source, const Noti
 	sendCompletion(current, _status == Status::Suspended ? Status::Ok : _status);
 }
 
-}
+} // namespace stappler::event

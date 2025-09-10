@@ -170,7 +170,7 @@ static StringView readVariable(memory::pool_t *pool, StringView str) {
 void _initSystemPaths(FilesystemResourceData &data) {
 	auto home = ::getenv("HOME");
 	if (!home) {
-		log::error("filesystem", "HOME envvar is not defined");
+		log::source().error("filesystem", "HOME envvar is not defined");
 		return;
 	}
 
@@ -342,7 +342,8 @@ void _initSystemPaths(FilesystemResourceData &data) {
 	}
 
 	if (!userConfigFound) {
-		log::warn("filesystem", "XDG defaults (user-dirs.dirs) not found, fallback to home dir");
+		log::source().warn("filesystem",
+				"XDG defaults (user-dirs.dirs) not found, fallback to home dir");
 	}
 
 	if (bundleName && data._appPathCommon) {

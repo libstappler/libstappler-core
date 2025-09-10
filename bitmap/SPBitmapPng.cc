@@ -43,8 +43,8 @@ static bool isPng(const uint8_t *data, size_t dataLen) {
 	return memcmp(PNG_SIGNATURE, data, sizeof(PNG_SIGNATURE)) == 0;
 }
 
-static bool getPngImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width,
-		uint32_t &height) {
+SP_UNUSED static bool getPngImageSize(const io::Producer &file, StackBuffer<512> &data,
+		uint32_t &width, uint32_t &height) {
 	if (isPng(data.data(), data.size()) && data.size() >= 24) {
 		auto reader = BytesViewNetwork(data.data() + 16, 8);
 
@@ -77,19 +77,19 @@ struct PngReadStruct {
 	bool init(const uint8_t *inputData, size_t size) {
 		png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 		if (png_ptr == NULL) {
-			log::error("libpng", "fail to create read struct");
+			log::source().error("libpng", "fail to create read struct");
 			return false;
 		}
 
 		info_ptr = png_create_info_struct(png_ptr);
 		if (info_ptr == NULL) {
-			log::error("libpng", "fail to create info struct");
+			log::source().error("libpng", "fail to create info struct");
 			png_destroy_read_struct(&png_ptr, NULL, NULL);
 			return false;
 		}
 
 		if (setjmp(png_jmpbuf(png_ptr))) {
-			log::error("libpng", "error in processing (setjmp return)");
+			log::source().error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
 
@@ -106,7 +106,7 @@ struct PngReadStruct {
 
 	bool info(ImageInfo &info) {
 		if (setjmp(png_jmpbuf(png_ptr))) {
-			log::error("libpng", "error in processing (setjmp return)");
+			log::source().error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
 
@@ -150,7 +150,7 @@ struct PngReadStruct {
 			info.width = 0;
 			info.height = 0;
 			info.stride = 0;
-			log::format(log::Error, "libpng", "unsupported color type: %u",
+			log::format(log::Error, "libpng", SP_LOCATION, "unsupported color type: %u",
 					(unsigned int)color_type);
 			return false;
 		}
@@ -172,7 +172,7 @@ struct PngReadStruct {
 		}
 
 		if (setjmp(png_jmpbuf(png_ptr))) {
-			log::error("libpng", "error in processing (setjmp return)");
+			log::source().error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
 
@@ -225,13 +225,13 @@ struct PngWriteStruct {
 	PngWriteStruct() {
 		png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 		if (png_ptr == nullptr) {
-			log::error("libpng", "fail to create write struct");
+			log::source().error("libpng", "fail to create write struct");
 			return;
 		}
 
 		info_ptr = png_create_info_struct(png_ptr);
 		if (info_ptr == nullptr) {
-			log::error("libpng", "fail to create info struct");
+			log::source().error("libpng", "fail to create info struct");
 			return;
 		}
 	}
@@ -252,7 +252,7 @@ struct PngWriteStruct {
 		});
 
 		if (!fp) {
-			log::error("Bitmap", "fail to open file ", filename, " to write png data");
+			log::source().error("Bitmap", "fail to open file ", filename, " to write png data");
 			valid = false;
 			return;
 		}
@@ -275,7 +275,7 @@ struct PngWriteStruct {
 		}
 
 		if (setjmp(png_jmpbuf(png_ptr))) {
-			log::error("libpng", "error in processing (setjmp return)");
+			log::source().error("libpng", "error in processing (setjmp return)");
 			return false;
 		}
 
@@ -316,23 +316,23 @@ struct PngWriteStruct {
 	}
 };
 
-static bool infoPng(const uint8_t *inputData, size_t size, ImageInfo &outputData) {
+SP_UNUSED static bool infoPng(const uint8_t *inputData, size_t size, ImageInfo &outputData) {
 	PngReadStruct pngStruct;
 	return pngStruct.init(inputData, size) && pngStruct.info(outputData);
 }
 
-static bool loadPng(const uint8_t *inputData, size_t size, BitmapWriter &outputData) {
+SP_UNUSED static bool loadPng(const uint8_t *inputData, size_t size, BitmapWriter &outputData) {
 	PngReadStruct pngStruct;
 	return pngStruct.init(inputData, size) && pngStruct.load(outputData);
 }
 
-static bool savePng(const FileInfo &filename, const uint8_t *data, BitmapWriter &state,
+SP_UNUSED static bool savePng(const FileInfo &filename, const uint8_t *data, BitmapWriter &state,
 		bool invert) {
 	PngWriteStruct s(filename);
 	return s.write(data, state, invert);
 }
 
-static bool writePng(const uint8_t *data, BitmapWriter &state, bool invert) {
+SP_UNUSED static bool writePng(const uint8_t *data, BitmapWriter &state, bool invert) {
 	PngWriteStruct s(&state);
 	return s.write(data, state, invert);
 }

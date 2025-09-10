@@ -607,7 +607,7 @@ bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx,
 
 	if (!check) {
 		if (!iface.process.silent) {
-			log::error("CURL", "Fail to setup: ", iface.send.url.data());
+			log::source().error("CURL", "Fail to setup: ", iface.send.url.data());
 		}
 		return false;
 	}
@@ -615,7 +615,7 @@ bool prepare(HandleData<Interface> &iface, Context<Interface> *ctx,
 	if (onBeforePerform) {
 		if (!onBeforePerform(ctx->curl)) {
 			if (!iface.process.silent) {
-				log::error("CURL", "onBeforePerform failed");
+				log::source().error("CURL", "onBeforePerform failed");
 			}
 			return false;
 		}
@@ -645,7 +645,8 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx,
 		size_t allowedRange = size_t(iface.getReceivedHeaderInt("X-Range"));
 		if (allowedRange == ctx->inputPos) {
 			if (!iface.process.silent) {
-				log::warn("CURL", "Get 0-range is not an error, fixed error code to CURLE_OK");
+				log::source().warn("CURL",
+						"Get 0-range is not an error, fixed error code to CURLE_OK");
 			}
 			ctx->success = true;
 			iface.process.errorCode = CURLE_OK;
@@ -673,7 +674,7 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx,
 				if (allowedRange == ctx->inputPos) {
 					iface.process.responseCode = 200;
 					if (!iface.process.silent) {
-						log::warn("CURL", iface.send.url,
+						log::source().warn("CURL", iface.send.url,
 								": Get 0-range is not an error, fixed response code to 200");
 					}
 				}
@@ -689,15 +690,15 @@ bool finalize(HandleData<Interface> &iface, Context<Interface> *ctx,
 		}
 	} else {
 		if (!iface.process.silent) {
-			log::format(log::Error, "CURL", "fail to perform %s: (%ld) %s", iface.send.url.data(),
-					iface.process.errorCode, ctx->error.data());
+			log::format(log::Error, "CURL", SP_LOCATION, "fail to perform %s: (%ld) %s",
+					iface.send.url.data(), iface.process.errorCode, ctx->error.data());
 		}
 		iface.process.error = ctx->error.data();
 		if (iface.process.debug) {
 			std::visit([&](auto &&arg) {
 				using T = std::decay_t<decltype(arg)>;
 				if constexpr (std::is_same_v<T, typename HandleData<Interface>::String>) {
-					log::debug("CURL", "Input file: ", arg);
+					log::source().debug("CURL", "Input file: ", arg);
 				}
 			}, iface.receive.data);
 		}

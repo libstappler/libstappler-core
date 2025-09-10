@@ -52,7 +52,7 @@ static uint32_t detectSvgSize(StringView value) {
 	} else if (str == "cm") {
 		fvalue = fvalue * 35.43307f;
 	} else {
-		log::error("Bitmap", "Invalid size metric in svg: %s", str.data());
+		log::source().error("Bitmap", "Invalid size metric in svg: %s", str.data());
 		return 0;
 	}
 
@@ -105,7 +105,7 @@ static bool detectSvg(const StringView &buf) {
 	return detectSvg(buf, w, h);
 }
 
-static bool isSvg(const uint8_t * data, size_t dataLen) {
+static bool isSvg(const uint8_t *data, size_t dataLen) {
 	if (dataLen <= 127) {
 		return false;
 	}
@@ -113,7 +113,8 @@ static bool isSvg(const uint8_t * data, size_t dataLen) {
 	return detectSvg(StringView((const char *)data, dataLen));
 }
 
-static bool getSvgImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width, uint32_t &height) {
+static bool getSvgImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width,
+		uint32_t &height) {
 	if (detectSvg(StringView((const char *)data.data(), data.size()), width, height)) {
 		return true;
 	}
@@ -121,20 +122,24 @@ static bool getSvgImageSize(const io::Producer &file, StackBuffer<512> &data, ui
 	return false;
 }
 
-static bool isTiff(const uint8_t * data, size_t dataLen) {
+static bool isTiff(const uint8_t *data, size_t dataLen) {
 	if (dataLen <= 4) {
 		return false;
 	}
 
-	static const char* TIFF_II = "II";
-	static const char* TIFF_MM = "MM";
+	static const char *TIFF_II = "II";
+	static const char *TIFF_MM = "MM";
 
-	return (memcmp(data, TIFF_II, 2) == 0 && *(static_cast<const unsigned char*>(data) + 2) == 42 && *(static_cast<const unsigned char*>(data) + 3) == 0) ||
-		(memcmp(data, TIFF_MM, 2) == 0 && *(static_cast<const unsigned char*>(data) + 2) == 0 && *(static_cast<const unsigned char*>(data) + 3) == 42);
+	return (memcmp(data, TIFF_II, 2) == 0 && *(static_cast<const unsigned char *>(data) + 2) == 42
+				   && *(static_cast<const unsigned char *>(data) + 3) == 0)
+			|| (memcmp(data, TIFF_MM, 2) == 0
+					&& *(static_cast<const unsigned char *>(data) + 2) == 0
+					&& *(static_cast<const unsigned char *>(data) + 3) == 42);
 }
 
 template <typename Reader>
-static bool getTiffImageSizeImpl(const io::Producer &file, StackBuffer<512> &data, uint32_t &width, uint32_t &height) {
+static bool getTiffImageSizeImpl(const io::Producer &file, StackBuffer<512> &data, uint32_t &width,
+		uint32_t &height) {
 	auto reader = Reader(data.data() + 4, 4);
 	auto offset = reader.readUnsigned32();
 
@@ -189,10 +194,12 @@ static bool getTiffImageSizeImpl(const io::Producer &file, StackBuffer<512> &dat
 	return false;
 }
 
-static bool getTiffImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width, uint32_t &height) {
+static bool getTiffImageSize(const io::Producer &file, StackBuffer<512> &data, uint32_t &width,
+		uint32_t &height) {
 	if (isTiff(data.data(), data.size())) {
 		if (memcmp(data.data(), "II", 2) == 0) {
-			if (getTiffImageSizeImpl<BytesViewTemplate<Endian::Little>>(file, data, width, height)) {
+			if (getTiffImageSizeImpl<BytesViewTemplate<Endian::Little>>(file, data, width,
+						height)) {
 				return true;
 			}
 		} else {
@@ -204,4 +211,4 @@ static bool getTiffImageSize(const io::Producer &file, StackBuffer<512> &data, u
 	return false;
 }
 
-}
+} // namespace stappler::bitmap::custom
