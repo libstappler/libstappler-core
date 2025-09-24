@@ -36,6 +36,10 @@ THE SOFTWARE.
 #include <sys/stat.h>
 #endif
 
+#if WIN32
+#include "SPPlatformUnistd.h" // IWYU pragma: keep
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::log {
 
 static const constexpr int MAX_LOG_FUNC = 16;
@@ -515,6 +519,50 @@ static void checkLogFeaturesSupport(LogFeatures &ret) {
 	ret.bcyan = StringView("\033[46m");
 	ret.bwhite = StringView("\033[47m");
 	ret.bdef = StringView("\033[49m");
+}
+
+#endif
+
+#if WIN32
+
+static void checkLogFeaturesSupport(LogFeatures &ret) {
+	/*auto hStdout = ::GetStdHandle(STD_OUTPUT_HANDLE);
+
+	DWORD mode = 0;
+	if (::GetConsoleMode(hStdout, &mode)) {
+		if ((mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0) {*/
+	ret.features = LogFeatures::AnsiCompatible | LogFeatures::Colors | LogFeatures::Bold
+			| LogFeatures::Underline | LogFeatures::Italic | LogFeatures::Reverse
+			| LogFeatures::Dim;
+
+	ret.drop = StringView("\033[0m");
+	ret.bold = StringView("\033[1m");
+	ret.underline = StringView("\033[4m");
+	ret.italic = StringView("\033[3m");
+	ret.reverse = StringView("\033[7m");
+	ret.dim = StringView("\033[2m");
+
+	ret.fblack = StringView("\033[30m");
+	ret.fred = StringView("\033[31m");
+	ret.fgreen = StringView("\033[32m");
+	ret.fyellow = StringView("\033[33m");
+	ret.fblue = StringView("\033[34m");
+	ret.fmagenta = StringView("\033[35m");
+	ret.fcyan = StringView("\033[36m");
+	ret.fwhite = StringView("\033[37m");
+	ret.fdef = StringView("\033[39m");
+
+	ret.bblack = StringView("\033[40m");
+	ret.bred = StringView("\033[41m");
+	ret.bgreen = StringView("\033[42m");
+	ret.byellow = StringView("\033[43m");
+	ret.bblue = StringView("\033[44m");
+	ret.bmagenta = StringView("\033[45m");
+	ret.bcyan = StringView("\033[46m");
+	ret.bwhite = StringView("\033[47m");
+	ret.bdef = StringView("\033[49m");
+	//}
+	//}
 }
 
 #endif

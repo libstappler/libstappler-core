@@ -24,57 +24,67 @@
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
-inline static bool isSpaceOrLineBreak(char16_t c) {
-	return c == char16_t(0x0A) || chars::isspace(c);
+inline static bool isSpaceOrLineBreak(char32_t c) {
+	return c == char32_t(0x0A) || chars::isspace(c);
 }
 
 template <typename Interface>
-static geom::Rect getLabelLineStartRect(const TextLayoutData<Interface> &f, uint16_t lineId, float density, uint32_t c) {
+static geom::Rect getLabelLineStartRect(const TextLayoutData<Interface> &f, uint16_t lineId,
+		float density, uint32_t c) {
 	geom::Rect rect;
 	const LineLayoutData &line = f.lines.at(lineId);
 	if (line.count > 0) {
-		const CharLayoutData & firstChar = f.chars.at(std::max(line.start, c));
-		const CharLayoutData & lastChar = f.chars.at(line.start + line.count - 1);
-		rect.origin = geom::Vec2((firstChar.pos) / density, (line.pos) / density - line.height / density);
-		rect.size = geom::Size2((lastChar.pos + lastChar.advance - firstChar.pos) / density, line.height / density);
+		const CharLayoutData &firstChar = f.chars.at(std::max(line.start, c));
+		const CharLayoutData &lastChar = f.chars.at(line.start + line.count - 1);
+		rect.origin =
+				geom::Vec2((firstChar.pos) / density, (line.pos) / density - line.height / density);
+		rect.size = geom::Size2((lastChar.pos + lastChar.advance - firstChar.pos) / density,
+				line.height / density);
 	}
 
 	return rect;
 }
 
 template <typename Interface>
-static geom::Rect getLabelLineEndRect(const TextLayoutData<Interface> &f, uint16_t lineId, float density, uint32_t c) {
+static geom::Rect getLabelLineEndRect(const TextLayoutData<Interface> &f, uint16_t lineId,
+		float density, uint32_t c) {
 	geom::Rect rect;
 	const LineLayoutData &line = f.lines.at(lineId);
 	if (line.count > 0) {
-		const CharLayoutData & firstChar = f.chars.at(line.start);
-		const CharLayoutData & lastChar = f.chars.at(std::min(line.start + line.count - 1, c));
-		rect.origin = geom::Vec2((firstChar.pos) / density, (line.pos) / density - line.height / density);
-		rect.size = geom::Size2((lastChar.pos + lastChar.advance - firstChar.pos) / density, line.height / density);
+		const CharLayoutData &firstChar = f.chars.at(line.start);
+		const CharLayoutData &lastChar = f.chars.at(std::min(line.start + line.count - 1, c));
+		rect.origin =
+				geom::Vec2((firstChar.pos) / density, (line.pos) / density - line.height / density);
+		rect.size = geom::Size2((lastChar.pos + lastChar.advance - firstChar.pos) / density,
+				line.height / density);
 	}
 	return rect;
 }
 
 template <typename Interface>
-static geom::Rect getCharsRect(const TextLayoutData<Interface> &f, uint32_t lineId, uint32_t firstCharId, uint32_t lastCharId, float density) {
+static geom::Rect getCharsRect(const TextLayoutData<Interface> &f, uint32_t lineId,
+		uint32_t firstCharId, uint32_t lastCharId, float density) {
 	geom::Rect rect;
-	const LineLayoutData & line = f.lines.at(lineId);
-	const CharLayoutData & firstChar = f.chars.at(firstCharId);
-	const CharLayoutData & lastChar = f.chars.at(lastCharId);
-	rect.origin = geom::Vec2((firstChar.pos) / density, (line.pos) / density - line.height / density);
-	rect.size = geom::Size2((lastChar.pos + lastChar.advance - firstChar.pos) / density, line.height / density);
+	const LineLayoutData &line = f.lines.at(lineId);
+	const CharLayoutData &firstChar = f.chars.at(firstCharId);
+	const CharLayoutData &lastChar = f.chars.at(lastCharId);
+	rect.origin =
+			geom::Vec2((firstChar.pos) / density, (line.pos) / density - line.height / density);
+	rect.size = geom::Size2((lastChar.pos + lastChar.advance - firstChar.pos) / density,
+			line.height / density);
 	return rect;
 }
 
 template <typename Interface>
-static void TextLayoutData_str(const TextLayoutData<Interface> &f, const Callback<void(char16_t)> &cb, bool filter) {
-	for (auto it = f.begin(); it != f.end(); ++ it) {
+static void TextLayoutData_str(const TextLayoutData<Interface> &f,
+		const Callback<void(char32_t)> &cb, bool filter) {
+	for (auto it = f.begin(); it != f.end(); ++it) {
 		const RangeLayoutData &range = *it.range;
 		if (!filter || range.align == VerticalAlign::Baseline) {
 			size_t end = it.start() + it.count() - 1;
-			for (size_t i = it.start(); i <= end; ++ i) {
+			for (size_t i = it.start(); i <= end; ++i) {
 				const auto &spec = f.chars[i];
-				if (spec.charID != char16_t(0xAD) && spec.charID != char16_t(0xFFFF)) {
+				if (spec.charID != char32_t(0xAD) && spec.charID != CharLayoutData::InvalidChar) {
 					cb(spec.charID);
 				}
 			}
@@ -83,15 +93,16 @@ static void TextLayoutData_str(const TextLayoutData<Interface> &f, const Callbac
 }
 
 template <typename Interface>
-static void TextLayoutData_str(const TextLayoutData<Interface> &f, const Callback<void(char16_t)> &cb,
-		uint32_t s_start, uint32_t s_end, size_t maxWords, bool ellipsis, bool filter) {
-	for (auto it = f.begin(); it != f.end(); ++ it) {
+static void TextLayoutData_str(const TextLayoutData<Interface> &f,
+		const Callback<void(char32_t)> &cb, uint32_t s_start, uint32_t s_end, size_t maxWords,
+		bool ellipsis, bool filter) {
+	for (auto it = f.begin(); it != f.end(); ++it) {
 		const RangeLayoutData &range = *it.range;
 		if (!filter || range.align == VerticalAlign::Baseline) {
 			size_t end = it.start() + it.count() - 1;
-			for (size_t i = it.start(); i <= end; ++ i) {
+			for (size_t i = it.start(); i <= end; ++i) {
 				const auto &spec = f.chars[i];
-				if (spec.charID != char16_t(0xAD) && spec.charID != char16_t(0xFFFF)) {
+				if (spec.charID != char32_t(0xAD) && spec.charID != CharLayoutData::InvalidChar) {
 					cb(spec.charID);
 				}
 			}
@@ -100,23 +111,18 @@ static void TextLayoutData_str(const TextLayoutData<Interface> &f, const Callbac
 }
 
 template <typename Interface>
-static Pair<uint32_t, CharSelectMode> TextLayoutData_getChar(const TextLayoutData<Interface> &f, int32_t x, int32_t y, CharSelectMode mode) {
+static Pair<uint32_t, CharSelectMode> TextLayoutData_getChar(const TextLayoutData<Interface> &f,
+		int32_t x, int32_t y, CharSelectMode mode) {
 	int32_t yDistance = maxOf<int32_t>();
 	const LineLayoutData *pLine = nullptr;
 	if (!f.lines.empty()) {
 		for (auto &l : f.lines) {
 			int32_t dst = maxOf<int32_t>();
 			switch (mode) {
-			case CharSelectMode::Center:
-				dst = abs(y - (l.pos - l.height / 2));
-				break;
-			case CharSelectMode::Best:
-				dst = abs(y - (l.pos - l.height * 3 / 4));
-				break;
+			case CharSelectMode::Center: dst = abs(y - (l.pos - l.height / 2)); break;
+			case CharSelectMode::Best: dst = abs(y - (l.pos - l.height * 3 / 4)); break;
 			case CharSelectMode::Prefix:
-			case CharSelectMode::Suffix:
-				dst = abs(y - (l.pos - l.height));
-				break;
+			case CharSelectMode::Suffix: dst = abs(y - (l.pos - l.height)); break;
 			};
 			if (dst < yDistance) {
 				pLine = &l;
@@ -126,19 +132,14 @@ static Pair<uint32_t, CharSelectMode> TextLayoutData_getChar(const TextLayoutDat
 			}
 		}
 
-		if (f.chars.back().charID == char16_t(0x0A) && pLine == &f.lines.back() && (mode == CharSelectMode::Best || mode == CharSelectMode::Suffix)) {
+		if (f.chars.back().charID == char32_t(0x0A) && pLine == &f.lines.back()
+				&& (mode == CharSelectMode::Best || mode == CharSelectMode::Suffix)) {
 			int32_t dst = maxOf<int32_t>();
 			switch (mode) {
-			case CharSelectMode::Center:
-				dst = abs(y - (f.height - pLine->height / 2));
-				break;
-			case CharSelectMode::Best:
-				dst = abs(y - (f.height - pLine->height * 3 / 4));
-				break;
+			case CharSelectMode::Center: dst = abs(y - (f.height - pLine->height / 2)); break;
+			case CharSelectMode::Best: dst = abs(y - (f.height - pLine->height * 3 / 4)); break;
 			case CharSelectMode::Prefix:
-			case CharSelectMode::Suffix:
-				dst = abs(y - (f.height - pLine->height));
-				break;
+			case CharSelectMode::Suffix: dst = abs(y - (f.height - pLine->height)); break;
 			};
 			if (dst < yDistance) {
 				return pair(f.chars.size() - 1, CharSelectMode::Suffix);
@@ -158,9 +159,9 @@ static Pair<uint32_t, CharSelectMode> TextLayoutData_getChar(const TextLayoutDat
 	int32_t xDistance = maxOf<int32_t>();
 	const CharLayoutData *pChar = nullptr;
 	uint32_t charNumber = pLine->start;
-	for (uint32_t i = pLine->start; i < pLine->start + pLine->count; ++ i) {
+	for (uint32_t i = pLine->start; i < pLine->start + pLine->count; ++i) {
 		auto &c = f.chars[i];
-		if (c.charID != char16_t(0xAD) && !isSpaceOrLineBreak(c.charID)) {
+		if (c.charID != char32_t(0xAD) && !isSpaceOrLineBreak(c.charID)) {
 			int32_t dst = maxOf<int32_t>();
 			CharSelectMode dstMode = mode;
 			switch (mode) {
@@ -171,9 +172,11 @@ static Pair<uint32_t, CharSelectMode> TextLayoutData_getChar(const TextLayoutDat
 				int32_t prefixDst = abs(x - c.pos);
 				int32_t suffixDst = abs(x - (c.pos + c.advance));
 				if (prefixDst <= suffixDst) {
-					dst = prefixDst; dstMode = CharSelectMode::Prefix;
+					dst = prefixDst;
+					dstMode = CharSelectMode::Prefix;
 				} else {
-					dst = suffixDst; dstMode = CharSelectMode::Suffix;
+					dst = suffixDst;
+					dstMode = CharSelectMode::Suffix;
 				}
 			} break;
 			};
@@ -187,7 +190,7 @@ static Pair<uint32_t, CharSelectMode> TextLayoutData_getChar(const TextLayoutDat
 			}
 		}
 	}
-	if (pLine->count && f.chars[pLine->start + pLine->count - 1].charID == char16_t(0x0A)) {
+	if (pLine->count && f.chars[pLine->start + pLine->count - 1].charID == char32_t(0x0A)) {
 		auto &c = f.chars[pLine->start + pLine->count - 1];
 		int32_t dst = maxOf<int32_t>();
 		switch (mode) {
@@ -203,7 +206,8 @@ static Pair<uint32_t, CharSelectMode> TextLayoutData_getChar(const TextLayoutDat
 		}
 	}
 
-	if ((mode == CharSelectMode::Best || mode == CharSelectMode::Suffix) && pLine == &(f.lines.back())) {
+	if ((mode == CharSelectMode::Best || mode == CharSelectMode::Suffix)
+			&& pLine == &(f.lines.back())) {
 		auto c = f.chars.back();
 		int32_t dst = abs(x - (c.pos + c.advance));
 		if (dst < xDistance) {
@@ -249,7 +253,8 @@ uint32_t TextLayoutData_getLineNumber(const TextLayoutData<Interface> &f, uint32
 }
 
 template <typename Interface>
-float TextLayoutData_getLinePosition(const TextLayoutData<Interface> &f, uint32_t firstCharId, uint32_t lastCharId, float density) {
+float TextLayoutData_getLinePosition(const TextLayoutData<Interface> &f, uint32_t firstCharId,
+		uint32_t lastCharId, float density) {
 	auto firstLine = TextLayoutData_getLine(f, firstCharId);
 	auto lastLine = TextLayoutData_getLine(f, lastCharId);
 
@@ -257,19 +262,19 @@ float TextLayoutData_getLinePosition(const TextLayoutData<Interface> &f, uint32_
 }
 
 template <typename Interface>
-Pair<uint32_t, uint32_t> TextLayoutData_selectWord(const TextLayoutData<Interface> &f, uint32_t origin) {
+Pair<uint32_t, uint32_t> TextLayoutData_selectWord(const TextLayoutData<Interface> &f,
+		uint32_t origin) {
 	Pair<uint32_t, uint32_t> ret(origin, origin);
 	while (ret.second + 1 < f.chars.size() && !isSpaceOrLineBreak(f.chars[ret.second + 1].charID)) {
-		++ ret.second;
+		++ret.second;
 	}
-	while (ret.first > 0 && !isSpaceOrLineBreak(f.chars[ret.first - 1].charID)) {
-		-- ret.first;
-	}
+	while (ret.first > 0 && !isSpaceOrLineBreak(f.chars[ret.first - 1].charID)) { --ret.first; }
 	return Pair<uint32_t, uint32_t>(ret.first, ret.second + 1 - ret.first);
 }
 
 template <typename Interface>
-geom::Rect TextLayoutData_getLineRect(const TextLayoutData<Interface> &f, uint32_t lineId, float density, const geom::Vec2 &origin) {
+geom::Rect TextLayoutData_getLineRect(const TextLayoutData<Interface> &f, uint32_t lineId,
+		float density, const geom::Vec2 &origin) {
 	if (lineId >= f.lines.size()) {
 		return geom::Rect::ZERO;
 	}
@@ -277,20 +282,24 @@ geom::Rect TextLayoutData_getLineRect(const TextLayoutData<Interface> &f, uint32
 }
 
 template <typename Interface>
-geom::Rect TextLayoutData_getLineRect(const TextLayoutData<Interface> &f, const LineLayoutData &line, float density, const geom::Vec2 &origin) {
+geom::Rect TextLayoutData_getLineRect(const TextLayoutData<Interface> &f,
+		const LineLayoutData &line, float density, const geom::Vec2 &origin) {
 	geom::Rect rect;
 	if (line.count > 0) {
-		const CharLayoutData & firstChar = f.chars.at(line.start);
-		const CharLayoutData & lastChar = f.chars.at(line.start + line.count - 1);
-		rect.origin = geom::Vec2((firstChar.pos) / density + origin.x, (line.pos) / density - line.height / density + origin.y);
-		rect.size = geom::Size2((lastChar.pos + lastChar.advance - firstChar.pos) / density, line.height / density);
+		const CharLayoutData &firstChar = f.chars.at(line.start);
+		const CharLayoutData &lastChar = f.chars.at(line.start + line.count - 1);
+		rect.origin = geom::Vec2((firstChar.pos) / density + origin.x,
+				(line.pos) / density - line.height / density + origin.y);
+		rect.size = geom::Size2((lastChar.pos + lastChar.advance - firstChar.pos) / density,
+				line.height / density);
 	}
 	return rect;
 }
 
 template <typename Interface>
-void TextLayoutData_getLabelRects(const TextLayoutData<Interface> &f, const Callback<void(geom::Rect)> &cb,
-		uint32_t firstCharId, uint32_t lastCharId, float density, const geom::Vec2 &origin, const geom::Padding &p) {
+void TextLayoutData_getLabelRects(const TextLayoutData<Interface> &f,
+		const Callback<void(geom::Rect)> &cb, uint32_t firstCharId, uint32_t lastCharId,
+		float density, const geom::Vec2 &origin, const geom::Padding &p) {
 	auto firstLine = TextLayoutData_getLineNumber(f, firstCharId);
 	auto lastLine = TextLayoutData_getLineNumber(f, lastCharId);
 
@@ -364,34 +373,38 @@ void TextLayoutData<memory::PoolInterface>::reserve(size_t nchars, size_t nrange
 }
 
 template <>
-void TextLayoutData<memory::StandartInterface>::str(const Callback<void(char16_t)> &cb, bool filter) const {
+void TextLayoutData<memory::StandartInterface>::str(const Callback<void(char32_t)> &cb,
+		bool filter) const {
 	TextLayoutData_str(*this, cb, filter);
 }
 
 template <>
-void TextLayoutData<memory::PoolInterface>::str(const Callback<void(char16_t)> &cb, bool filter) const {
+void TextLayoutData<memory::PoolInterface>::str(const Callback<void(char32_t)> &cb,
+		bool filter) const {
 	TextLayoutData_str(*this, cb, filter);
 }
 
 template <>
-void TextLayoutData<memory::StandartInterface>::str(const Callback<void(char16_t)> &cb,
+void TextLayoutData<memory::StandartInterface>::str(const Callback<void(char32_t)> &cb,
 		uint32_t s_start, uint32_t s_end, size_t maxWords, bool ellipsis, bool filter) const {
 	TextLayoutData_str(*this, cb, s_start, s_end, maxWords, ellipsis, filter);
 }
 
 template <>
-void TextLayoutData<memory::PoolInterface>::str(const Callback<void(char16_t)> &cb,
+void TextLayoutData<memory::PoolInterface>::str(const Callback<void(char32_t)> &cb,
 		uint32_t s_start, uint32_t s_end, size_t maxWords, bool ellipsis, bool filter) const {
 	TextLayoutData_str(*this, cb, s_start, s_end, maxWords, ellipsis, filter);
 }
 
 template <>
-Pair<uint32_t, CharSelectMode> TextLayoutData<memory::StandartInterface>::getChar(int32_t x, int32_t y, CharSelectMode mode) const {
+Pair<uint32_t, CharSelectMode> TextLayoutData<memory::StandartInterface>::getChar(int32_t x,
+		int32_t y, CharSelectMode mode) const {
 	return TextLayoutData_getChar(*this, x, y, mode);
 }
 
 template <>
-Pair<uint32_t, CharSelectMode> TextLayoutData<memory::PoolInterface>::getChar(int32_t x, int32_t y, CharSelectMode mode) const {
+Pair<uint32_t, CharSelectMode> TextLayoutData<memory::PoolInterface>::getChar(int32_t x, int32_t y,
+		CharSelectMode mode) const {
 	return TextLayoutData_getChar(*this, x, y, mode);
 }
 
@@ -416,55 +429,65 @@ uint32_t TextLayoutData<memory::PoolInterface>::getLineForChar(uint32_t charInde
 }
 
 template <>
-float TextLayoutData<memory::StandartInterface>::getLinePosition(uint32_t firstCharId, uint32_t lastCharId, float density) const {
+float TextLayoutData<memory::StandartInterface>::getLinePosition(uint32_t firstCharId,
+		uint32_t lastCharId, float density) const {
 	return TextLayoutData_getLinePosition(*this, firstCharId, lastCharId, density);
 }
 
 template <>
-float TextLayoutData<memory::PoolInterface>::getLinePosition(uint32_t firstCharId, uint32_t lastCharId, float density) const {
+float TextLayoutData<memory::PoolInterface>::getLinePosition(uint32_t firstCharId,
+		uint32_t lastCharId, float density) const {
 	return TextLayoutData_getLinePosition(*this, firstCharId, lastCharId, density);
 }
 
 template <>
-Pair<uint32_t, uint32_t> TextLayoutData<memory::StandartInterface>::selectWord(uint32_t originChar) const {
+Pair<uint32_t, uint32_t> TextLayoutData<memory::StandartInterface>::selectWord(
+		uint32_t originChar) const {
 	return TextLayoutData_selectWord(*this, originChar);
 }
 
 template <>
-Pair<uint32_t, uint32_t> TextLayoutData<memory::PoolInterface>::selectWord(uint32_t originChar) const {
+Pair<uint32_t, uint32_t> TextLayoutData<memory::PoolInterface>::selectWord(
+		uint32_t originChar) const {
 	return TextLayoutData_selectWord(*this, originChar);
 }
 
 template <>
-geom::Rect TextLayoutData<memory::StandartInterface>::getLineRect(uint32_t lineId, float density, const geom::Vec2 &origin) const {
+geom::Rect TextLayoutData<memory::StandartInterface>::getLineRect(uint32_t lineId, float density,
+		const geom::Vec2 &origin) const {
 	return TextLayoutData_getLineRect(*this, lineId, density, origin);
 }
 
 template <>
-geom::Rect TextLayoutData<memory::PoolInterface>::getLineRect(uint32_t lineId, float density, const geom::Vec2 &origin) const {
+geom::Rect TextLayoutData<memory::PoolInterface>::getLineRect(uint32_t lineId, float density,
+		const geom::Vec2 &origin) const {
 	return TextLayoutData_getLineRect(*this, lineId, density, origin);
 }
 
 template <>
-geom::Rect TextLayoutData<memory::StandartInterface>::getLineRect(const LineLayoutData &line, float density, const geom::Vec2 &origin) const {
+geom::Rect TextLayoutData<memory::StandartInterface>::getLineRect(const LineLayoutData &line,
+		float density, const geom::Vec2 &origin) const {
 	return TextLayoutData_getLineRect(*this, line, density, origin);
 }
 
 template <>
-geom::Rect TextLayoutData<memory::PoolInterface>::getLineRect(const LineLayoutData &line, float density, const geom::Vec2 &origin) const {
+geom::Rect TextLayoutData<memory::PoolInterface>::getLineRect(const LineLayoutData &line,
+		float density, const geom::Vec2 &origin) const {
 	return TextLayoutData_getLineRect(*this, line, density, origin);
 }
 
 template <>
-void TextLayoutData<memory::StandartInterface>::getLabelRects(const Callback<void(geom::Rect)> &cb, uint32_t first, uint32_t last, float density,
-		const geom::Vec2 &origin, const geom::Padding &p) const {
+void TextLayoutData<memory::StandartInterface>::getLabelRects(const Callback<void(geom::Rect)> &cb,
+		uint32_t first, uint32_t last, float density, const geom::Vec2 &origin,
+		const geom::Padding &p) const {
 	return TextLayoutData_getLabelRects(*this, cb, first, last, density, origin, p);
 }
 
 template <>
-void TextLayoutData<memory::PoolInterface>::getLabelRects(const Callback<void(geom::Rect)> &cb, uint32_t first, uint32_t last, float density,
-		const geom::Vec2 &origin, const geom::Padding &p) const {
+void TextLayoutData<memory::PoolInterface>::getLabelRects(const Callback<void(geom::Rect)> &cb,
+		uint32_t first, uint32_t last, float density, const geom::Vec2 &origin,
+		const geom::Padding &p) const {
 	return TextLayoutData_getLabelRects(*this, cb, first, last, density, origin, p);
 }
 
-}
+} // namespace stappler::font

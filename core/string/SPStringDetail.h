@@ -1127,7 +1127,7 @@ inline auto StringViewUtf8::set(const char *p, size_t l) -> Self & {
 inline bool StringViewUtf8::is(const char &c) const { return len > 0 && *ptr == c; }
 inline bool StringViewUtf8::is(const char16_t &c) const {
 	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
-			&& unicode::utf8Decode32(ptr) == c;
+			&& unicode::utf8Decode32(ptr) == char32_t(c);
 }
 inline bool StringViewUtf8::is(const char32_t &c) const {
 	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]

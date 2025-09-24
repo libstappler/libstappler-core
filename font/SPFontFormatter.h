@@ -28,7 +28,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
-class SP_PUBLIC Formatter : public InterfaceObject<memory::StandartInterface>{
+class SP_PUBLIC Formatter : public InterfaceObject<memory::StandartInterface> {
 public:
 	struct LinePosition {
 		uint16_t offset;
@@ -65,13 +65,15 @@ public:
 	void setMaxLines(size_t);
 	void setOpticalAlignment(bool value);
 	void setEmplaceAllChars(bool value);
-	void setFillerChar(char16_t);
+	void setFillerChar(char32_t);
 	void setHyphens(HyphenMap *);
 	void setRequest(ContentRequest);
 
 	void begin(uint16_t indent, uint16_t blockMargin = 0);
-	bool read(const FontParameters &f, const TextParameters &s, WideStringView str, uint16_t front = 0, uint16_t back = 0);
-	bool read(const FontParameters &f, const TextParameters &s, const char16_t *str, size_t len, uint16_t front = 0, uint16_t back = 0);
+	bool read(const FontParameters &f, const TextParameters &s, WideStringView str,
+			uint16_t front = 0, uint16_t back = 0);
+	bool read(const FontParameters &f, const TextParameters &s, const char16_t *str, size_t len,
+			uint16_t front = 0, uint16_t back = 0);
 	bool read(const FontParameters &f, const TextParameters &s, uint16_t w, uint16_t h);
 
 	uint16_t getHeight() const;
@@ -80,7 +82,7 @@ public:
 	uint16_t getLineHeight() const;
 
 protected:
-	bool isSpecial(char16_t) const;
+	bool isSpecial(char32_t) const;
 	uint16_t checkBullet(uint16_t first, uint16_t len) const;
 
 	void parseWhiteSpace(WhiteSpace whiteSpacePolicy);
@@ -98,12 +100,13 @@ protected:
 	inline uint16_t getOriginPosition(const CharLayoutData &) const;
 	inline uint16_t getOriginPosition(uint16_t pos) const;
 
-	bool readWithRange(RangeLayoutData &&, const TextParameters &s, const char16_t *str, size_t len, uint16_t front = 0, uint16_t back = 0);
+	bool readWithRange(RangeLayoutData &&, const TextParameters &s, const char16_t *str, size_t len,
+			uint16_t front = 0, uint16_t back = 0);
 	bool readWithRange(RangeLayoutData &&, const TextParameters &s, uint16_t w, uint16_t h);
 
 	bool readChars(WideStringView &r, const Vector<uint8_t> & = Vector<uint8_t>());
 	void pushLineFiller(bool replaceLastChar = false);
-	bool pushChar(char16_t);
+	bool pushChar(char32_t);
 	bool pushSpace(bool wrap = true);
 	bool pushTab();
 	bool pushLine(uint16_t first, uint16_t len, bool forceAlign);
@@ -135,8 +138,6 @@ protected:
 
 	Output _output;
 
-	size_t _charPosition = 0;
-
 	TextParameters _textStyle;
 
 	bool preserveLineBreaks = false;
@@ -146,8 +147,8 @@ protected:
 	bool emplaceAllChars = false;
 
 	uint16_t faceId = 0;
-	char16_t b = 0;
-	char16_t c = 0;
+	char32_t b = 0;
+	char32_t c = 0;
 
 	uint16_t defaultWidth = 0;
 	uint16_t width = 0;
@@ -173,7 +174,7 @@ protected:
 	uint16_t maxWidth = 0;
 	size_t maxLines = 0;
 
-	char16_t _fillerChar = 0;
+	char32_t _fillerChar = 0;
 	TextAlign alignment = TextAlign::Left;
 
 	ContentRequest request = ContentRequest::Normal;
@@ -182,6 +183,6 @@ protected:
 	LinePositionCallback linePositionFunc = nullptr;
 };
 
-}
+} // namespace stappler::font
 
 #endif /* CORE_FONT_SPFONTFORMATTER_H_ */

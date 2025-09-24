@@ -285,7 +285,13 @@ bool DirHandle::init(QueueRef *q, QueueData *d, OpenDirInfo &&info) {
 	return true;
 }*/
 
-ThreadHandle::~ThreadHandle() { _engine->cleanup(); }
+ThreadHandle::~ThreadHandle() {
+	_outputQueue.clear();
+	_outputCallbacks.clear();
+	_unsafeQueue.clear();
+	_unsafeCallbacks.clear();
+	_engine->cleanup();
+}
 
 bool ThreadHandle::init(HandleClass *cl) {
 	if (!Handle::init(cl, CompletionHandle<void>())) {
@@ -296,7 +302,9 @@ bool ThreadHandle::init(HandleClass *cl) {
 
 	_pool->perform([&](memory::pool_t *pool) {
 		_engine = new (_pool->getPool()) PerformEngine(_pool->getPool());
-		_engine->_performEnabled = true;
+
+		// tasks can be performed at any time on this engine
+		_engine->_performEnabled = 1;
 	});
 
 	_outputQueue.reserve(2);

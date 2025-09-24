@@ -38,10 +38,13 @@ enum class CharSelectMode {
 };
 
 struct SP_PUBLIC CharLayoutData final {
-	char16_t charID = 0;
+	static constexpr char32_t InvalidChar = char32_t(0xFFFF'FFFF);
+
+	char32_t charID = 0;
 	int16_t pos = 0;
 	uint16_t advance = 0;
 	uint16_t face = 0;
+	uint16_t padding = 0;
 };
 
 struct SP_PUBLIC LineLayoutData final {
@@ -71,9 +74,7 @@ struct SP_PUBLIC RangeLineIterator {
 	const RangeLayoutData *range;
 	const LineLayoutData *line;
 
-	uint32_t start() const {
-		return std::max(range->start, line->start);
-	}
+	uint32_t start() const { return std::max(range->start, line->start); }
 	uint32_t count() const {
 		return std::min(range->start + range->count, line->start + line->count) - start();
 	}
@@ -85,12 +86,12 @@ struct SP_PUBLIC RangeLineIterator {
 		const auto rangeEnd = range->start + range->count;
 		const auto lineEnd = line->start + line->count;
 		if (rangeEnd < lineEnd) {
-			++ range;
+			++range;
 		} else if (rangeEnd > lineEnd) {
-			++ line;
+			++line;
 		} else {
-			++ range;
-			++ line;
+			++range;
+			++line;
 		}
 
 		return *this;
@@ -99,9 +100,7 @@ struct SP_PUBLIC RangeLineIterator {
 	bool operator==(const RangeLineIterator &other) const {
 		return other.line == line && other.range == range;
 	}
-	bool operator!=(const RangeLineIterator &other) const {
-		return !(*this == other);
-	}
+	bool operator!=(const RangeLineIterator &other) const { return !(*this == other); }
 };
 
 template <typename Interface>
@@ -120,14 +119,13 @@ struct SP_PUBLIC TextLayoutData : public Interface::AllocBaseType {
 
 	void reserve(size_t nchars, size_t nranges = 0);
 
-	RangeLineIterator begin() const {
-		return RangeLineIterator{&*ranges.begin(), &*lines.begin()};
-	}
+	RangeLineIterator begin() const { return RangeLineIterator{&*ranges.begin(), &*lines.begin()}; }
 
 	RangeLineIterator end() const {
 		// Pass-the-ed pointer acquisition
 		// Ugly trick, but all others is forbidden in msvc debug mode
-		return RangeLineIterator{&ranges.at(ranges.size()  -1) + 1, &lines.at(lines.size()  -1) + 1};
+		return RangeLineIterator{&ranges.at(ranges.size() - 1) + 1,
+			&lines.at(lines.size() - 1) + 1};
 	}
 
 	void clear() {
@@ -140,15 +138,15 @@ struct SP_PUBLIC TextLayoutData : public Interface::AllocBaseType {
 		overflow = false;
 	}
 
-	void str(const Callback<void(char16_t)> &, bool filterAlign = true) const;
-	void str(const Callback<void(char16_t)> &, uint32_t, uint32_t, size_t maxWords = maxOf<size_t>(), bool ellipsis = true, bool filterAlign = true) const;
+	void str(const Callback<void(char32_t)> &, bool filterAlign = true) const;
+	void str(const Callback<void(char32_t)> &, uint32_t, uint32_t,
+			size_t maxWords = maxOf<size_t>(), bool ellipsis = true, bool filterAlign = true) const;
 
-	float getTextIndent(float density) const {
-		return chars.front().pos / density;
-	}
+	float getTextIndent(float density) const { return chars.front().pos / density; }
 
 	// on error maxOf<uint32_t> returned
-	Pair<uint32_t, CharSelectMode> getChar(int32_t x, int32_t y, CharSelectMode = CharSelectMode::Center) const;
+	Pair<uint32_t, CharSelectMode> getChar(int32_t x, int32_t y,
+			CharSelectMode = CharSelectMode::Center) const;
 	const LineLayoutData *getLine(uint32_t charIndex) const;
 	uint32_t getLineForChar(uint32_t charIndex) const;
 
@@ -157,12 +155,14 @@ struct SP_PUBLIC TextLayoutData : public Interface::AllocBaseType {
 	Pair<uint32_t, uint32_t> selectWord(uint32_t originChar) const;
 
 	geom::Rect getLineRect(uint32_t lineId, float density, const geom::Vec2 & = geom::Vec2()) const;
-	geom::Rect getLineRect(const LineLayoutData &, float density, const geom::Vec2 & = geom::Vec2()) const;
+	geom::Rect getLineRect(const LineLayoutData &, float density,
+			const geom::Vec2 & = geom::Vec2()) const;
 
-	void getLabelRects(const Callback<void(geom::Rect)> &, uint32_t first, uint32_t last, float density,
-			const geom::Vec2 & = geom::Vec2(), const geom::Padding &p = geom::Padding()) const;
+	void getLabelRects(const Callback<void(geom::Rect)> &, uint32_t first, uint32_t last,
+			float density, const geom::Vec2 & = geom::Vec2(),
+			const geom::Padding &p = geom::Padding()) const;
 };
 
-}
+} // namespace stappler::font
 
 #endif /* CORE_FONT_SPFONTLAYOUTDATA_H_ */

@@ -266,11 +266,13 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 		_data->mutex = &_mutex;
 		_data->queue = move(q);
 		_data->threadHandle = _data->queue->addThreadHandle();
-		_data->threadPoolInfo = thread::ThreadPoolInfo{.flags = info.workersFlags,
+		_data->threadPoolInfo = thread::ThreadPoolInfo{
+			.flags = info.workersFlags,
 			.name = info.name,
 			.threadCount = info.workersCount,
 			.complete = _data->threadHandle.get(),
-			.ref = _data->threadHandle};
+			.ref = _data->threadHandle,
+		};
 
 		_data->threadPoolInfo.name = StringView(mem_pool::toString(info.name, ":Worker")).pdup();
 

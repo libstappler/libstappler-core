@@ -28,7 +28,7 @@ THE SOFTWARE.
 // Umbrella header for StringView implementation
 
 #include "SPBytesReader.h"
-#include "SPStringDetail.h"
+#include "SPStringDetail.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler {
 

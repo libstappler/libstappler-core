@@ -24,12 +24,11 @@
 #include "SPLog.h"
 #include "SPStatus.h"
 #include "SPString.h"
-#include "SPStringView.h"
 
 #if WIN32
-#include "SPMemory.h"
 #include "SPPlatformUnistd.h"
 #include "SPSharedModule.h"
+#include "SPPlatform.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -521,6 +520,27 @@ uint32_t getMemoryPageSize() {
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	return si.dwPageSize;
+}
+
+StringView getOsLocale() {
+	static char locale[32] = {0};
+	static wchar_t wlocale[32] = {0};
+	auto len = ::GetUserDefaultLocaleName(wlocale, 32);
+
+	auto writePtr = locale;
+	auto ptr = (char16_t *)wlocale;
+	auto end = ptr + len - 1;
+	while (*ptr && ptr < end) {
+		uint8_t offset = 0;
+		auto c = unicode::utf16Decode32(ptr, offset);
+		if (offset > 0) {
+			writePtr += unicode::utf8EncodeBuf(writePtr, c);
+			ptr += offset;
+		} else {
+			break;
+		}
+	}
+	return StringView(locale);
 }
 
 } // namespace stappler::platform

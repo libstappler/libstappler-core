@@ -25,57 +25,34 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-bool PollSource::init(HANDLE h) {
+bool PollIocpSource::init(HANDLE h, PollFlags f) {
 	handle = h;
+	flags = f;
 	return true;
 }
 
-void PollSource::cancel() { handle = nullptr; }
+void PollIocpSource::cancel() { handle = nullptr; }
 
-Rc<PollHandle> PollHandle::create(const Queue *q, HANDLE h, CompletionHandle<PollHandle> &&c) {
-	auto d = q->getData();
-	if (d->_iocp) {
-		return Rc<PollHandle>::create(&d->_iocpPollClass, h, move(c));
-	}
-	return nullptr;
-}
-
-Rc<PollHandle> PollHandle::create(const Queue *q, HANDLE h, mem_std::Function<Status(HANDLE)> &&cb,
-		Ref *ref) {
-	struct PollData : public Ref {
-		HANDLE handle;
-		mem_std::Function<Status(HANDLE)> cb;
-		Rc<Ref> ref;
-	};
-
-	auto data = Rc<PollData>::alloc();
-	data->handle = h;
-	data->cb = sp::move(cb);
-	data->ref = ref;
-
-	auto ret = create(q, h,
-			CompletionHandle<PollHandle>::create<PollData>(data,
-					[](PollData *data, PollHandle *handle, uint32_t value, Status st) {
-		if (st == Status::Ok) {
-			if (data->cb(data->handle) != Status::Ok) {
-				handle->cancel();
-			}
-		}
-	}));
-	ret->setUserdata(data);
-	return ret;
-}
-
-bool PollHandle::init(HandleClass *cl, HANDLE handle, CompletionHandle<PollHandle> &&c) {
+bool PollIocpHandle::init(HandleClass *cl, HANDLE handle, PollFlags flags,
+		CompletionHandle<PollHandle> &&c) {
 	if (!Handle::init(cl, move(c))) {
 		return false;
 	}
 
-	auto source = new (_data) PollSource;
-	return source->init(handle);
+	auto source = new (_data) PollIocpSource;
+	return source->init(handle, flags);
 }
 
-Status PollHandle::rearm(IocpData *iocp, PollSource *source) {
+NativeHandle PollIocpHandle::getNativeHandle() const {
+	return reinterpret_cast<const PollIocpSource *>(_data)->handle;
+}
+
+bool PollIocpHandle::reset(PollFlags flags) {
+	reinterpret_cast<PollIocpSource *>(_data)->flags = flags;
+	return Handle::reset();
+}
+
+Status PollIocpHandle::rearm(IocpData *iocp, PollIocpSource *source) {
 	auto status = prepareRearm();
 	if (status == Status::Ok) {
 		if (!source->event) {
@@ -94,7 +71,7 @@ Status PollHandle::rearm(IocpData *iocp, PollSource *source) {
 	return status;
 }
 
-Status PollHandle::disarm(IocpData *iocp, PollSource *source) {
+Status PollIocpHandle::disarm(IocpData *iocp, PollIocpSource *source) {
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		if (source->event) {
@@ -108,7 +85,7 @@ Status PollHandle::disarm(IocpData *iocp, PollSource *source) {
 	return status;
 }
 
-void PollHandle::notify(IocpData *iocp, PollSource *source, const NotifyData &data) {
+void PollIocpHandle::notify(IocpData *iocp, PollIocpSource *source, const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}

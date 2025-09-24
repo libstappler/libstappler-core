@@ -24,6 +24,7 @@
 #define CORE_EVENT_PLATFORM_WINDOWS_SPEVENTPOLLIOCP_H_
 
 #include "SPEventHandle.h"
+#include "SPEventPollHandle.h"
 
 #if WIN32
 
@@ -31,33 +32,38 @@
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
-struct PollSource {
+struct PollIocpSource {
 	HANDLE handle = nullptr;
 	HANDLE event = nullptr;
-	
-	bool init(HANDLE);
+	PollFlags flags = PollFlags::None;
+
+	bool init(HANDLE, PollFlags);
 	void cancel();
 };
 
-class SP_PUBLIC PollHandle : public Handle {
+class SP_PUBLIC PollIocpHandle : public PollHandle {
 public:
-	static Rc<PollHandle> create(const Queue *, HANDLE,
+	/*static Rc<PollHandle> create(const Queue *, HANDLE,
 			CompletionHandle<PollHandle> &&);
 
 	static Rc<PollHandle> create(const Queue *, HANDLE,
-			mem_std::Function<Status(HANDLE)> &&, Ref *ref);
+			mem_std::Function<Status(HANDLE)> &&, Ref *ref);*/
 
-	virtual ~PollHandle() = default;
+	virtual ~PollIocpHandle() = default;
 
-	bool init(HandleClass *, HANDLE, CompletionHandle<PollHandle> &&);
+	bool init(HandleClass *, HANDLE, PollFlags, CompletionHandle<PollHandle> &&);
 
-	Status rearm(IocpData *, PollSource *);
-	Status disarm(IocpData *, PollSource *);
+	virtual NativeHandle getNativeHandle() const override;
 
-	void notify(IocpData *, PollSource *, const NotifyData &);
+	virtual bool reset(PollFlags) override;
+
+	Status rearm(IocpData *, PollIocpSource *);
+	Status disarm(IocpData *, PollIocpSource *);
+
+	void notify(IocpData *, PollIocpSource *, const NotifyData &);
 };
 
-}
+} // namespace stappler::event
 
 #endif
 

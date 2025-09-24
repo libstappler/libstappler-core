@@ -46,7 +46,7 @@ struct SP_PUBLIC PerformEngine : public mem_pool::AllocBase {
 		StringView tag;
 	};
 
-	bool _performEnabled = false;
+	uint32_t _performEnabled = 0;
 	memory::pool_t *_pool = nullptr;
 	memory::pool_t *_tmpPool = nullptr;
 	Block *_pendingBlocksFront = nullptr;
@@ -107,7 +107,7 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	bool isValid() const { return _platformQueue != nullptr; }
 
 	bool isRunning() const { return _running; }
-	bool isWithinNotify() const { return _performEnabled; }
+	bool isWithinNotify() const { return _performEnabled > 0; }
 
 	// returns number of operations suspended
 	uint32_t suspendAll();

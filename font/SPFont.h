@@ -76,7 +76,9 @@ struct SP_PUBLIC CharId final {
 	static constexpr uint32_t SourceMask = 0xFFFC'0000U;
 	static constexpr uint32_t SourceMax = (SourceMask >> 18);
 
-	static uint32_t getCharId(uint16_t sourceId, char16_t, CharAnchor);
+	// SourceId is Unique id for FontFace object, that bound with specific unicode plane,
+	// so, we can strip plane id from char32_t
+	static uint32_t getCharId(uint16_t sourceId, char32_t, CharAnchor);
 	static uint32_t rebindCharId(uint32_t, CharAnchor);
 	static CharAnchor getAnchorForChar(uint32_t);
 
@@ -95,11 +97,16 @@ struct SP_PUBLIC CharId final {
 	}
 };
 
-struct SP_PUBLIC CharShape final {
+struct SP_PUBLIC CharShape16 final {
 	char16_t charID = 0;
 	uint16_t xAdvance = 0;
+};
 
-	operator char16_t() const { return charID; }
+struct SP_PUBLIC CharShape final {
+	char32_t charID = 0;
+	uint16_t xAdvance = 0;
+
+	operator char32_t() const { return charID; }
 };
 
 struct SP_PUBLIC CharTexture final {
@@ -176,10 +183,10 @@ inline bool operator>(const CharShape &l, const CharShape &c) { return l.charID 
 inline bool operator<=(const CharShape &l, const CharShape &c) { return l.charID <= c.charID; }
 inline bool operator>=(const CharShape &l, const CharShape &c) { return l.charID >= c.charID; }
 
-inline bool operator<(const CharShape &l, const char16_t &c) { return l.charID < c; }
-inline bool operator>(const CharShape &l, const char16_t &c) { return l.charID > c; }
-inline bool operator<=(const CharShape &l, const char16_t &c) { return l.charID <= c; }
-inline bool operator>=(const CharShape &l, const char16_t &c) { return l.charID >= c; }
+inline bool operator<(const CharShape &l, const char32_t &c) { return l.charID < c; }
+inline bool operator>(const CharShape &l, const char32_t &c) { return l.charID > c; }
+inline bool operator<=(const CharShape &l, const char32_t &c) { return l.charID <= c; }
+inline bool operator>=(const CharShape &l, const char32_t &c) { return l.charID >= c; }
 
 } // namespace stappler::font
 

@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 // enable Ref debug mode to track retain/release sources
 #ifndef SP_REF_DEBUG
-#define SP_REF_DEBUG 1
+#define SP_REF_DEBUG 0
 #endif
 
 // WinCRT instantiates Rc's in place of definition, not actual usage
@@ -99,6 +99,7 @@ public:
 	// If SP_REF_DEBUG is not enabled - it's noop
 
 #if SP_REF_DEBUG
+	// In SP_REF_DEBUG mode, you can override retain or release
 	virtual uint64_t retain(uint64_t value = maxOf<uint64_t>());
 	virtual void release(uint64_t id);
 
@@ -120,6 +121,7 @@ public:
 protected:
 	Ref() noexcept : RefAlloc() { }
 
+	// override this method to enable automatic retain/release tracking for subclass
 #if SP_REF_DEBUG
 	virtual bool isRetainTrackerEnabled() const { return false; }
 #endif
@@ -169,9 +171,10 @@ public:
 	memory::allocator_t *getAllocator() const { return _allocator; }
 
 protected:
-#if SP_REF_DEBUG
-	virtual bool isRetainTrackerEnabled() const { return true; }
-#endif
+	// Uncomment to track retain/release cycles
+	//#if SP_REF_DEBUG
+	//	virtual bool isRetainTrackerEnabled() const { return true; }
+	//#endif
 
 	SharedRef(SharedRefMode m, memory::allocator_t *, memory::pool_t *) noexcept;
 
@@ -815,7 +818,7 @@ inline auto RcBase<_Base, _Pointer>::doSwap(Pointer _value) -> Pointer {
 		ptr->release(_id);
 	}
 	_id = id;
-	return value;
+	return (Pointer)value;
 #else
 	if (value) {
 		value->retain();

@@ -41,14 +41,13 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 //                lpOverlapped - user-specified value, provided back by GetQueuedCompletionStatus(Ex)
 //  - returns: I/O Packet HANDLE for the association
 //             NULL on failure, call GetLastError () for details
-//              - ERROR_INVALID_PARAMETER - 
+//              - ERROR_INVALID_PARAMETER -
 //              - ERROR_INVALID_HANDLE - provided hEvent is not supported by this API
 //              - otherwise internal HRESULT is forwarded
 //  - call CloseHandle to free the returned I/O Packet HANDLE when no longer needed
 //
-SP_PUBLIC _Ret_maybenull_ HANDLE ReportEventAsCompletion(
-	HANDLE hIOCP, HANDLE hEvent, DWORD dwNumberOfBytesTransferred,
-	ULONG_PTR dwCompletionKey, LPOVERLAPPED lpOverlapped);
+SP_PUBLIC _Ret_maybenull_ HANDLE ReportEventAsCompletion(HANDLE hIOCP, HANDLE hEvent,
+		DWORD dwNumberOfBytesTransferred, ULONG_PTR dwCompletionKey, LPOVERLAPPED lpOverlapped);
 
 // RestartEventCompletion
 //  - use to wait again, after the event completion was consumed by GetQueuedCompletionStatus(Ex)
@@ -59,9 +58,10 @@ SP_PUBLIC _Ret_maybenull_ HANDLE ReportEventAsCompletion(
 //  - returns: TRUE on success
 //             FALSE on failure, call GetLastError () for details (TBD)
 //
-SP_PUBLIC BOOL RestartEventCompletion (HANDLE hPacket, HANDLE hIOCP, HANDLE hEvent, const OVERLAPPED_ENTRY * oEntry);
-SP_PUBLIC BOOL RestartEventCompletion (HANDLE hPacket, HANDLE hIOCP, HANDLE hEvent, DWORD dwNumberOfBytesTransferred,
-	ULONG_PTR dwCompletionKey, LPOVERLAPPED lpOverlapped);
+SP_PUBLIC BOOL RestartEventCompletion(HANDLE hPacket, HANDLE hIOCP, HANDLE hEvent,
+		const OVERLAPPED_ENTRY *oEntry);
+SP_PUBLIC BOOL RestartEventCompletion(HANDLE hPacket, HANDLE hIOCP, HANDLE hEvent,
+		DWORD dwNumberOfBytesTransferred, ULONG_PTR dwCompletionKey, LPOVERLAPPED lpOverlapped);
 
 // CancelEventCompletion
 //  - stops the Event from completing into the I/O Completion Port
@@ -70,14 +70,13 @@ SP_PUBLIC BOOL RestartEventCompletion (HANDLE hPacket, HANDLE hIOCP, HANDLE hEve
 //                cancel - if TRUE, if already signalled, the completion packet is removed from queue
 //  - returns: TRUE on success
 //             FALSE on failure, call GetLastError () for details (TBD)
-// 
-BOOL CancelEventCompletion (HANDLE hPacket, BOOL cancel);
+//
+BOOL CancelEventCompletion(HANDLE hPacket, BOOL cancel);
 
-struct SP_PUBLIC IocpData : public mem_pool::AllocBase {
-	QueueRef *_queue = nullptr;
-	Queue::Data *_data = nullptr;
-	QueueFlags _flags = QueueFlags::None;
-	
+struct SP_PUBLIC IocpData : public PlatformQueueData {
+	static constexpr DWORD InternalFlag = 1 << 29;
+	static constexpr DWORD CancelFlag = 1 << 30;
+
 	HANDLE _port = nullptr;
 
 	mem_pool::Vector<OVERLAPPED_ENTRY> _events;
@@ -85,35 +84,19 @@ struct SP_PUBLIC IocpData : public mem_pool::AllocBase {
 	uint32_t _receivedEvents = 0;
 	uint32_t _processedEvents = 0;
 
-	struct RunContext {
-		std::atomic_flag shouldWakeup;
-		std::atomic<std::underlying_type_t<WakeupFlags>> wakeupFlags = 0;
-		WakeupFlags runWakeupFlags = WakeupFlags::None;
-		std::atomic<uint64_t> wakeupTimeout;
-		uint32_t wakeupCounter = 0;
-		Status wakeupStatus = Status::Suspended;
-		RunContext *prev = nullptr;
-	};
-
-	RunContext *_runContext = nullptr;
-	std::mutex _runMutex;
-
 	void pollMessages();
 
 	Status runPoll(TimeInterval, bool infinite = false);
-	uint32_t processEvents();
+	uint32_t processEvents(RunContext *ctx);
 
 	Status submit();
 	uint32_t poll();
 	uint32_t wait(TimeInterval);
 	Status run(TimeInterval, WakeupFlags, TimeInterval wakeupTimeout);
 
-	Status wakeup(WakeupFlags, TimeInterval);
+	Status wakeup(WakeupFlags);
 
 	Status suspendHandles();
-	Status doWakeupInterrupt(WakeupFlags, bool externalCall);
-
-	void runInternalHandles();
 
 	void cancel();
 
@@ -121,6 +104,6 @@ struct SP_PUBLIC IocpData : public mem_pool::AllocBase {
 	~IocpData();
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_WINDOWS_SPEVENT_IOCP_H_ */

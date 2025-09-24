@@ -161,7 +161,7 @@ SP_PUBLIC std::ostream &operator<<(std::ostream &, const FileInfo &);
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
-enum Access {
+enum Access : uint32_t {
 	None,
 	Exists = 1 << 0,
 	Read = 1 << 1,

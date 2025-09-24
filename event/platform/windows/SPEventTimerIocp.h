@@ -51,12 +51,14 @@ public:
 
 	bool init(HandleClass *, TimerInfo &&);
 
+	virtual bool reset(TimerInfo &&) override;
+
 	Status rearm(IocpData *, TimerIocpSource *);
 	Status disarm(IocpData *, TimerIocpSource *);
 
 	void notify(IocpData *, TimerIocpSource *source, const NotifyData &);
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTIMERIOCP_H_ */

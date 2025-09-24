@@ -36,7 +36,7 @@ class FontLibrary;
 
 class SP_PUBLIC FontFaceData : public Ref, public InterfaceObject<memory::StandartInterface> {
 public:
-	virtual ~FontFaceData() { }
+	virtual ~FontFaceData() = default;
 
 	bool init(StringView, BytesView, bool);
 	bool init(StringView, Bytes &&);
@@ -64,14 +64,19 @@ protected:
 
 class SP_PUBLIC FontFaceObject : public Ref, public InterfaceObject<memory::StandartInterface> {
 public:
-	virtual ~FontFaceObject();
+	virtual ~FontFaceObject() = default;
 
 	bool init(StringView, const Rc<FontFaceData> &, FT_Library, FT_Face,
-			const FontSpecializationVector &, uint16_t);
+			const FontSpecializationVector &, uint16_t, uint16_t plane = 0);
 
 	StringView getName() const { return _name; }
 	uint16_t getId() const { return _id; }
+	uint16_t getPlane() const { return _plane; }
 	FT_Face getFace() const { return _face; }
+
+	// get char id on FontFaceObject's plane
+	char16_t getCharId(char32_t) const;
+
 	const Rc<FontFaceData> &getData() const { return _data; }
 	const FontSpecializationVector &getSpec() const { return _spec; }
 
@@ -82,13 +87,14 @@ public:
 	bool addChars(const Vector<char32_t> &chars, bool expand, Vector<char32_t> *failed);
 	bool addCharGroup(CharGroupId, Interface::VectorType<char32_t> *failed);
 
+	// plane will be added for char automatically
 	bool addRequiredChar(char32_t);
 
 	Interface::VectorType<char32_t> getRequiredChars() const;
 	size_t getRequiredCharsCount() const;
 
-	CharShape getChar(char16_t c) const;
-	int16_t getKerningAmount(char16_t first, char16_t second) const;
+	CharShape getChar(char32_t c) const;
+	int16_t getKerningAmount(char32_t first, char32_t second) const;
 
 	Metrics getMetrics() const { return _metrics; }
 
@@ -98,11 +104,12 @@ protected:
 	Interface::StringType _name;
 	Rc<FontFaceData> _data;
 	uint16_t _id = 0;
+	uint16_t _plane = 0;
 	FT_Face _face = nullptr;
 	FontSpecializationVector _spec;
 	Metrics _metrics;
 	Interface::VectorType<char32_t> _required;
-	FontCharStorage<CharShape> _chars;
+	FontCharStorage<CharShape16> _chars;
 	mem_std::HashMap<uint32_t, int16_t> _kerning;
 	mem_std::Mutex _faceMutex;
 	mutable std::shared_mutex _charsMutex;
@@ -113,7 +120,7 @@ class SP_PUBLIC FontFaceSet : public Ref, public InterfaceObject<memory::Standar
 public:
 	static String constructName(StringView, const FontSpecializationVector &);
 
-	virtual ~FontFaceSet() { }
+	virtual ~FontFaceSet() = default;
 	FontFaceSet() { }
 
 	bool init(String &&, StringView family, FontSpecializationVector &&, Rc<FontFaceData> &&data,
@@ -140,9 +147,9 @@ public:
 	bool addString(const CharVector &, Vector<char32_t> &failed);
 
 	uint16_t getFontHeight() const;
-	int16_t getKerningAmount(char16_t first, char16_t second, uint16_t face) const;
+	int16_t getKerningAmount(char32_t first, char32_t second, uint16_t face) const;
 	Metrics getMetrics() const;
-	CharShape getChar(char16_t, uint16_t &face) const;
+	CharShape getChar(char32_t, uint16_t &face) const;
 
 	size_t getRequiredCharsCount() const;
 

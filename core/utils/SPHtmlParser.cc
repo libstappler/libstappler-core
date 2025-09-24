@@ -25,37 +25,35 @@ THE SOFTWARE.
 
 namespace STAPPLER_VERSIONIZED stappler::html {
 
-using HtmlIdentifier16 = chars::Compose<char16_t,
-		chars::Range<char16_t, u'0', u'9'>,
-		chars::Range<char16_t, u'A', u'Z'>,
-		chars::Range<char16_t, u'a', u'z'>,
-		chars::Chars<char16_t, u'_', u'-', u'!', u'/', u':'>
->;
+using HtmlIdentifier16 = chars::Compose<char16_t, chars::Range<char16_t, u'0', u'9'>,
+		chars::Range<char16_t, u'A', u'Z'>, chars::Range<char16_t, u'a', u'z'>,
+		chars::Chars<char16_t, u'_', u'-', u'!', u'/', u':'> >;
 
-using HtmlIdentifier8 = chars::Compose<char,
-		chars::Range<char, u'0', u'9'>,
-		chars::Range<char, u'A', u'Z'>,
-		chars::Range<char, u'a', u'z'>,
-		chars::Chars<char, u'_', u'-', u'!', u'/', u':'>
->;
+using HtmlIdentifier32 = chars::Compose<char32_t, chars::Range<char32_t, u'0', u'9'>,
+		chars::Range<char32_t, u'A', u'Z'>, chars::Range<char32_t, u'a', u'z'>,
+		chars::Chars<char32_t, u'_', u'-', u'!', u'/', u':'> >;
+
+using HtmlIdentifier8 =
+		chars::Compose<char, chars::Range<char, u'0', u'9'>, chars::Range<char, u'A', u'Z'>,
+				chars::Range<char, u'a', u'z'>, chars::Chars<char, u'_', u'-', u'!', u'/', u':'> >;
 
 
 template <>
 SP_PUBLIC StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is) {
 	StringViewUtf8 s = is;
-	s.skipUntil<HtmlIdentifier16, StringViewUtf8::MatchChars<'>', '?'>>();
+	s.skipUntil<HtmlIdentifier32, StringViewUtf8::MatchChars<'>', '?'>>();
 	if (s.is("!--")) {
 		auto ret = StringViewUtf8(s, "!--"_len);
 		s += "!--"_len;
 		is = s;
 		return ret;
 	}
-	StringViewUtf8 name(s.readChars<HtmlIdentifier16, StringViewUtf8::MatchChars<'?'>>());
+	StringViewUtf8 name(s.readChars<HtmlIdentifier32, StringViewUtf8::MatchChars<'?'>>());
 	if (name.size() > 1 && name.back() == '/') {
 		name.set(name.data(), name.size() - 1);
 		is += (is.size() - s.size() - 1);
 	} else {
-		s.skipUntil<HtmlIdentifier16, StringViewUtf8::MatchChars<'>'>>();
+		s.skipUntil<HtmlIdentifier32, StringViewUtf8::MatchChars<'>'>>();
 		is = s;
 	}
 	return name;
@@ -63,8 +61,8 @@ SP_PUBLIC StringViewUtf8 Tag_readName<StringViewUtf8>(StringViewUtf8 &is) {
 
 template <>
 SP_PUBLIC StringViewUtf8 Tag_readAttrName<StringViewUtf8>(StringViewUtf8 &s) {
-	s.skipUntil<HtmlIdentifier16>();
-	StringViewUtf8 name(s.readChars<HtmlIdentifier16>());
+	s.skipUntil<HtmlIdentifier32>();
+	StringViewUtf8 name(s.readChars<HtmlIdentifier32>());
 	return name;
 }
 
@@ -72,15 +70,15 @@ template <>
 SP_PUBLIC StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s) {
 	s.skipChars<StringViewUtf8::WhiteSpace>();
 	if (!s.is('=')) {
-		s.skipUntil<HtmlIdentifier16>();
+		s.skipUntil<HtmlIdentifier32>();
 		return StringViewUtf8();
 	}
 
-	s ++;
+	s++;
 	char quoted = 0;
 	if (s.is('"') || s.is('\'')) {
 		quoted = s[0];
-		s ++;
+		s++;
 		StringViewUtf8 tmp = s;
 		while (!s.empty() && !s.is(quoted)) {
 			if (quoted == '"') {
@@ -95,13 +93,13 @@ SP_PUBLIC StringViewUtf8 Tag_readAttrValue<StringViewUtf8>(StringViewUtf8 &s) {
 
 		StringViewUtf8 ret(tmp.data(), tmp.size() - s.size());
 		if (s.is(quoted)) {
-			s ++;
+			s++;
 		}
-		s.skipUntil<HtmlIdentifier16, StringViewUtf8::MatchChars<'>'>>();
+		s.skipUntil<HtmlIdentifier32, StringViewUtf8::MatchChars<'>'>>();
 		return ret;
 	}
 
-	return s.readChars<HtmlIdentifier16>();
+	return s.readChars<HtmlIdentifier32>();
 }
 
 
@@ -141,11 +139,11 @@ SP_PUBLIC StringView Tag_readAttrValue<StringView>(StringView &s) {
 		return StringView();
 	}
 
-	s ++;
+	s++;
 	char quoted = 0;
 	if (s.is('"') || s.is('\'')) {
 		quoted = s[0];
-		s ++;
+		s++;
 		StringView tmp = s;
 		while (!s.empty() && !s.is(quoted)) {
 			if (quoted == '"') {
@@ -160,7 +158,7 @@ SP_PUBLIC StringView Tag_readAttrValue<StringView>(StringView &s) {
 
 		StringView ret(tmp.data(), tmp.size() - s.size());
 		if (s.is(quoted)) {
-			s ++;
+			s++;
 		}
 		s.skipUntil<HtmlIdentifier8, StringView::MatchChars<'>'>>();
 		return ret;
@@ -206,11 +204,11 @@ SP_PUBLIC WideStringView Tag_readAttrValue<WideStringView>(WideStringView &s) {
 		return WideStringView();
 	}
 
-	s ++;
+	s++;
 	char16_t quoted = 0;
 	if (s.is(u'"') || s.is(u'\'')) {
 		quoted = s[0];
-		s ++;
+		s++;
 		WideStringView tmp = s;
 		while (!s.empty() && !s.is(quoted)) {
 			if (quoted == '"') {
@@ -225,7 +223,7 @@ SP_PUBLIC WideStringView Tag_readAttrValue<WideStringView>(WideStringView &s) {
 
 		WideStringView ret(tmp.data(), tmp.size() - s.size());
 		if (s.is(quoted)) {
-			s ++;
+			s++;
 		}
 		s.skipUntil<HtmlIdentifier16, WideStringView::MatchChars<u'>'>>();
 		return ret;
@@ -234,4 +232,4 @@ SP_PUBLIC WideStringView Tag_readAttrValue<WideStringView>(WideStringView &s) {
 	return s.readChars<HtmlIdentifier16>();
 }
 
-}
+} // namespace stappler::html

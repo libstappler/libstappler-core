@@ -120,6 +120,7 @@ inline constexpr uint8_t utf8EncodeLength(char32_t c) {
 
 template <typename PutCharFn>
 inline uint8_t utf8EncodeCb(const PutCharFn &cb, char16_t c) {
+	static_assert(std::is_invocable_v<PutCharFn, char>, "Argumnet should be invokable with char");
 	if (c < 0x80) {
 		cb(char(c));
 		return 1;
@@ -137,6 +138,7 @@ inline uint8_t utf8EncodeCb(const PutCharFn &cb, char16_t c) {
 
 template <typename PutCharFn>
 inline uint8_t utf8EncodeCb(const PutCharFn &cb, char32_t c) {
+	static_assert(std::is_invocable_v<PutCharFn, char>, "Argumnet should be invokable with char");
 	if (c < 0x80) {
 		cb(char(c));
 		return 1;
@@ -228,6 +230,8 @@ constexpr inline uint8_t utf16EncodeLength(char32_t c) {
 
 template <typename PutCharFn>
 inline uint8_t utf16EncodeCb(const PutCharFn &cb, char32_t c) {
+	static_assert(std::is_invocable_v<PutCharFn, char16_t>,
+			"Argumnet should be invokable with char16_t");
 	if (c < 0xD800) {
 		cb(char16_t(c));
 		return 1;

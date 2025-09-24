@@ -34,7 +34,11 @@ THE SOFTWARE.
 #endif
 
 #if WIN32
+#define SP_HAS_LIBBACKTRACE 0
+#include "SPPlatformUnistd.h" // IWYU pragma: keep
+#include <dbghelp.h>
 #else
+#define SP_HAS_LIBBACKTRACE 1
 #include <cxxabi.h>
 #endif
 
@@ -120,46 +124,21 @@ void RefAlloc::destroySelfContained(memory::allocator_t *alloc) {
 
 } // namespace stappler
 
-namespace STAPPLER_VERSIONIZED stappler::backtrace {
+
+namespace STAPPLER_VERSIONIZED stappler::backtrace::detail {
 
 static StringView filepath_lastComponent(StringView path) {
+#if WIN32
+	size_t pos = path.rfind('\\');
+#else
 	size_t pos = path.rfind('/');
+#endif
 	if (pos != maxOf<size_t>()) {
 		return path.sub(pos + 1);
 	} else {
 		return path;
 	}
 }
-
-static StringView filepath_name(StringView path) {
-	auto cmp = filepath_lastComponent(path);
-
-	size_t pos = cmp.find('.');
-	if (pos == maxOf<size_t>()) {
-		return cmp;
-	} else {
-		return cmp.sub(0, pos);
-	}
-}
-
-} // namespace stappler::backtrace
-
-// libbacktrace info
-// see https://github.com/ianlancetaylor/libbacktrace
-namespace stappler::backtrace::detail {
-
-struct backtrace_state;
-
-using backtrace_error_callback = void (*)(void *data, const char *msg, int errnum);
-
-using backtrace_full_callback = int (*)(void *data, uintptr_t pc, const char *filename, int lineno,
-		const char *function);
-
-SP_EXTERN_C backtrace_state *backtrace_create_state(const char *filename, int threaded,
-		backtrace_error_callback error_callback, void *data);
-
-SP_EXTERN_C int backtrace_full(backtrace_state *state, int skip, backtrace_full_callback callback,
-		backtrace_error_callback error_callback, void *data);
 
 SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView filename,
 		int lineno, StringView function) {
@@ -169,7 +148,7 @@ SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView 
 	target += w;
 
 	if (!filename.empty()) {
-		auto name = filepath_name(filename);
+		auto name = filepath_lastComponent(filename);
 		if (lineno >= 0) {
 			w = ::snprintf(target, bufLen, " %.*s:%d", int(name.size()), name.data(), lineno);
 		} else {
@@ -204,7 +183,33 @@ SPUNUSED static size_t print(char *buf, size_t bufLen, uintptr_t pc, StringView 
 
 } // namespace stappler::backtrace::detail
 
-namespace STAPPLER_VERSIONIZED stappler {
+#if SP_HAS_LIBBACKTRACE
+
+// libbacktrace info
+// see https://github.com/ianlancetaylor/libbacktrace
+namespace STAPPLER_VERSIONIZED stappler::backtrace::detail {
+
+struct backtrace_state;
+
+struct State {
+	backtrace_state *state = nullptr;
+
+	operator bool() const { return state != nullptr; }
+};
+
+using backtrace_error_callback = void (*)(void *data, const char *msg, int errnum);
+
+using backtrace_full_callback = int (*)(void *data, uintptr_t pc, const char *filename, int lineno,
+		const char *function);
+
+SP_EXTERN_C backtrace_state *backtrace_create_state(const char *filename, int threaded,
+		backtrace_error_callback error_callback, void *data);
+
+SP_EXTERN_C void backtrace_free_state(struct backtrace_state *state,
+		backtrace_error_callback error_callback, void *data);
+
+SP_EXTERN_C int backtrace_full(backtrace_state *state, int skip, backtrace_full_callback callback,
+		backtrace_error_callback error_callback, void *data);
 
 static void debug_backtrace_error(void *data, const char *msg, int errnum) {
 	log::source().error("Backtrace", msg);
@@ -221,40 +226,187 @@ static int debug_backtrace_full_callback(void *data, uintptr_t pc, const char *f
 	return 0;
 }
 
-struct BacktraceState {
-	static BacktraceState *getInstance() {
-		static std::mutex s_mutex;
-		static BacktraceState *s_instance = nullptr;
+static void initState(State &state) {
+	state.state = backtrace_create_state(nullptr, 1, debug_backtrace_error, nullptr);
+}
 
-		s_mutex.lock();
-		if (!s_instance) {
-			s_instance = new BacktraceState();
-		}
-		s_mutex.unlock();
-		return s_instance;
+static void termState(State &state) {
+	if (state.state) {
+		backtrace_free_state(state.state, debug_backtrace_error, nullptr);
+		state.state = nullptr;
 	}
+}
 
-	BacktraceState() {
-		backtraceState = backtrace::detail::backtrace_create_state(nullptr, 1,
-				debug_backtrace_error, nullptr);
-	}
+static void performBacktrace(State &state, size_t offset, const Callback<void(StringView)> &cb) {
+	backtrace_full(state.state, int(offset), debug_backtrace_full_callback, debug_backtrace_error,
+			(void *)&cb);
+}
 
-	void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
-		backtrace::detail::backtrace_full(backtraceState, int(2 + offset),
-				debug_backtrace_full_callback, debug_backtrace_error, (void *)&cb);
-	}
+} // namespace stappler::backtrace::detail
 
-	backtrace::detail::backtrace_state *backtraceState = nullptr;
+#elif WIN32
+
+namespace STAPPLER_VERSIONIZED stappler::backtrace::detail {
+
+struct State {
+	Dso handle;
+	HANDLE hProcess = nullptr;
+
+	decltype(&::SymSetOptions) SymSetOptions = nullptr;
+	decltype(&::SymInitialize) SymInitialize = nullptr;
+	decltype(&::SymCleanup) SymCleanup = nullptr;
+	decltype(&::StackWalk64) StackWalk64 = nullptr;
+	decltype(&::SymGetSymFromAddr64) SymGetSymFromAddr64 = nullptr;
+	decltype(&::SymGetLineFromAddr64) SymGetLineFromAddr64 = nullptr;
+
+	std::mutex mutex;
+
+	operator bool() const { return hProcess != nullptr; }
 };
 
-void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
-	//auto stacktrace = std::stacktrace::current();
+struct StackFrameSym {
+	IMAGEHLP_LINE64 line;
+	IMAGEHLP_SYMBOL64 sym;
+	char symNameBuffer[1_KiB];
+	char targetNameBuffer[1_KiB];
 
-	auto backtraceLib = BacktraceState::getInstance();
-	if (backtraceLib->backtraceState) {
-		backtraceLib->getBacktrace(offset, cb);
+	StackFrameSym() {
+		line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+		sym.SizeOfStruct = sizeof(IMAGEHLP_SYMBOL64) + 1_KiB;
+		sym.MaxNameLength = 1_KiB;
+	}
+};
+
+static void initState(State &state) {
+	HANDLE hCurrentProcess;
+	HANDLE hProcess;
+
+	auto handle = Dso("Dbghelp.dll");
+	if (!handle) {
 		return;
 	}
+
+	state.handle = sp::move(handle);
+	state.SymSetOptions = state.handle.sym<decltype(&::SymSetOptions)>("SymSetOptions");
+	state.SymInitialize = state.handle.sym<decltype(&::SymInitialize)>("SymInitialize");
+	state.SymCleanup = state.handle.sym<decltype(&::SymCleanup)>("SymCleanup");
+	state.StackWalk64 = state.handle.sym<decltype(&::StackWalk64)>("StackWalk64");
+	state.SymGetSymFromAddr64 =
+			state.handle.sym<decltype(&::SymGetSymFromAddr64)>("SymGetSymFromAddr64");
+	state.SymGetLineFromAddr64 =
+			state.handle.sym<decltype(&::SymGetLineFromAddr64)>("SymGetLineFromAddr64");
+
+	if (!state.SymSetOptions || !state.SymInitialize || !state.SymCleanup || !state.StackWalk64
+			|| !state.SymGetSymFromAddr64 || !state.SymGetLineFromAddr64) {
+		state.handle.close();
+		return;
+	}
+
+	state.SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
+
+	hCurrentProcess = GetCurrentProcess();
+
+	if (!DuplicateHandle(hCurrentProcess, hCurrentProcess, hCurrentProcess, &hProcess, 0, FALSE,
+				DUPLICATE_SAME_ACCESS)) {
+		log::source().error("Ref", "Fail to duplicate process handle");
+		return;
+	}
+
+	if (!state.SymInitialize(hProcess, NULL, TRUE)) {
+		log::source().error("Ref", "Fail to load symbol info");
+		return;
+	}
+
+	state.hProcess = hProcess;
+}
+
+static void termState(State &state) {
+	if (state.hProcess) {
+		state.SymCleanup(state.hProcess);
+		CloseHandle(state.hProcess);
+		state.hProcess = nullptr;
+	}
+	state.handle.close();
+}
+
+static void performBacktrace(State &state, size_t offset, const Callback<void(StringView)> &cb) {
+	auto hThread = GetCurrentThread();
+
+	DWORD machine = 0;
+	CONTEXT context;
+	STACKFRAME64 frame;
+	RtlCaptureContext(&context);
+	/*Prepare stackframe for the first StackWalk64 call*/
+	frame.AddrFrame.Mode = frame.AddrPC.Mode = frame.AddrStack.Mode = AddrModeFlat;
+#if (defined _M_IX86)
+	machine = IMAGE_FILE_MACHINE_I386;
+	frame.AddrFrame.Offset = context.Ebp;
+	frame.AddrPC.Offset = context.Eip;
+	frame.AddrStack.Offset = context.Esp;
+#elif (defined _M_X64)
+	machine = IMAGE_FILE_MACHINE_AMD64;
+	frame.AddrFrame.Offset = context.Rbp;
+	frame.AddrPC.Offset = context.Rip;
+	frame.AddrStack.Offset = context.Rsp;
+#else
+#pragma error("unsupported architecture")
+#endif
+
+	std::unique_lock lock(state.mutex);
+
+	DWORD dwDisplacement;
+	StackFrameSym stackSym;
+
+	while (state.StackWalk64(machine, state.hProcess, hThread, &frame, &context, 0, 0, 0, 0)) {
+		if (offset > 0) {
+			--offset;
+			continue;
+		}
+
+		BOOL hasSym = FALSE;
+		BOOL hasLine = FALSE;
+
+		hasSym = state.SymGetSymFromAddr64(state.hProcess, frame.AddrPC.Offset, nullptr,
+				&stackSym.sym);
+		hasLine = state.SymGetLineFromAddr64(state.hProcess, frame.AddrPC.Offset, &dwDisplacement,
+				&stackSym.line);
+
+		auto size = backtrace::detail::print(stackSym.targetNameBuffer, 1_KiB, frame.AddrPC.Offset,
+				hasLine ? stackSym.line.FileName : nullptr, hasLine ? stackSym.line.LineNumber : 0,
+				hasSym ? stackSym.sym.Name : nullptr);
+		cb(StringView(stackSym.targetNameBuffer, size));
+	}
+}
+
+} // namespace stappler::backtrace::detail
+
+#endif
+
+namespace STAPPLER_VERSIONIZED stappler {
+
+struct BacktraceState {
+	static void initialize(void *ptr) { reinterpret_cast<BacktraceState *>(ptr)->init(); }
+	static void terminate(void *ptr) { reinterpret_cast<BacktraceState *>(ptr)->term(); }
+
+	BacktraceState() { addInitializer(this, initialize, terminate); }
+
+	void init() { backtrace::detail::initState(state); }
+
+	void term() { termState(state); }
+
+	void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
+		if (state) {
+			performBacktrace(state, offset + 3, cb);
+		}
+	}
+
+	backtrace::detail::State state;
+};
+
+static BacktraceState s_backtraceState;
+
+void getBacktrace(size_t offset, const Callback<void(StringView)> &cb) {
+	s_backtraceState.getBacktrace(offset, cb);
 }
 
 } // namespace STAPPLER_VERSIONIZED stappler
@@ -279,7 +431,7 @@ uint64_t retainBacktrace(const Ref *ptr, uint64_t id) {
 		id = getNextRefId();
 	}
 	std::vector<std::string> bt;
-	getBacktrace(0, [&](StringView str) { bt.emplace_back(str.str<memory::StandartInterface>()); });
+	getBacktrace(1, [&](StringView str) { bt.emplace_back(str.str<memory::StandartInterface>()); });
 	s_mutex.lock();
 
 	auto it = s_retainMap.find(ptr);

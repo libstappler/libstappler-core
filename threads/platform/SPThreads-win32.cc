@@ -25,6 +25,9 @@
 
 #if (WIN32)
 
+#include "SPString.h"
+#include "SPPlatformUnistd.h"
+
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadCallbacks;
@@ -34,15 +37,16 @@ static bool ThreadCallbacks_worker(const ThreadCallbacks &, Thread *tm);
 static void ThreadCallbacks_dispose(const ThreadCallbacks &, Thread *tm);
 
 SP_LOCAL static void _setThreadName(StringView name) {
-	// TODO: https://learn.microsoft.com/ru-ru/previous-versions/visualstudio/visual-studio-2015/debugger/how-to-set-a-thread-name-in-native-code?view=vs-2015&redirectedfrom=MSDN
+	auto wname = string::toUtf16<memory::StandartInterface>(name);
+	SetThreadDescription(GetCurrentThread(), (wchar_t *)wname.data());
 }
 
 SP_LOCAL static void _workerThread(const ThreadCallbacks &cb, Thread *tm) {
 	ThreadCallbacks_init(cb, tm);
-    while (ThreadCallbacks_worker(cb, tm)) { }
-    ThreadCallbacks_dispose(cb, tm);
+	while (ThreadCallbacks_worker(cb, tm)) { }
+	ThreadCallbacks_dispose(cb, tm);
 }
 
-}
+} // namespace stappler::thread
 
 #endif

@@ -48,7 +48,7 @@ MODULE_STAPPLER_CORE_GENERAL_LDFLAGS += -framework CoreFoundation  -framework Fo
 endif
 
 ifdef WIN32
-MODULE_STAPPLER_CORE_LIBS += -ladvapi32 -lshlwapi -lshell32 -lole32
+MODULE_STAPPLER_CORE_LIBS += -ladvapi32 -lshlwapi -lshell32 -lole32 -luserenv
 endif
 
 # spec

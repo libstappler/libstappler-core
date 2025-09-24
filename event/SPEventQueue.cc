@@ -101,7 +101,7 @@ Rc<PollHandle> Queue::listenPollableHandle(NativeHandle handle, PollFlags flags,
 		mem_std::Function<Status(NativeHandle fd, PollFlags)> &&cb, Ref *ref) {
 	struct PollData : public Ref {
 		NativeHandle handle;
-		mem_std::Function<Status(int fd, PollFlags)> cb;
+		mem_std::Function<Status(NativeHandle fd, PollFlags)> cb;
 		Rc<Ref> ref;
 	};
 

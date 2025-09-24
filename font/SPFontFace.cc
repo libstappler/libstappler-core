@@ -42,21 +42,21 @@ static constexpr uint32_t getAxisTag(char c1, char c2, char c3, char c4) {
 
 static constexpr uint32_t getAxisTag(const char c[4]) { return getAxisTag(c[0], c[1], c[2], c[3]); }
 
-static CharGroupId getCharGroupForChar(char16_t c) {
+static CharGroupId getCharGroupForChar(char32_t c) {
 	using namespace chars;
-	if (CharGroup<char16_t, CharGroupId::Numbers>::match(c)) {
+	if (CharGroup<char32_t, CharGroupId::Numbers>::match(c)) {
 		return CharGroupId::Numbers;
-	} else if (CharGroup<char16_t, CharGroupId::Latin>::match(c)) {
+	} else if (CharGroup<char32_t, CharGroupId::Latin>::match(c)) {
 		return CharGroupId::Latin;
-	} else if (CharGroup<char16_t, CharGroupId::Cyrillic>::match(c)) {
+	} else if (CharGroup<char32_t, CharGroupId::Cyrillic>::match(c)) {
 		return CharGroupId::Cyrillic;
-	} else if (CharGroup<char16_t, CharGroupId::Currency>::match(c)) {
+	} else if (CharGroup<char32_t, CharGroupId::Currency>::match(c)) {
 		return CharGroupId::Currency;
-	} else if (CharGroup<char16_t, CharGroupId::GreekBasic>::match(c)) {
+	} else if (CharGroup<char32_t, CharGroupId::GreekBasic>::match(c)) {
 		return CharGroupId::GreekBasic;
-	} else if (CharGroup<char16_t, CharGroupId::Math>::match(c)) {
+	} else if (CharGroup<char32_t, CharGroupId::Math>::match(c)) {
 		return CharGroupId::Math;
-	} else if (CharGroup<char16_t, CharGroupId::TextPunctuation>::match(c)) {
+	} else if (CharGroup<char32_t, CharGroupId::TextPunctuation>::match(c)) {
 		return CharGroupId::TextPunctuation;
 	}
 	return CharGroupId::None;
@@ -233,10 +233,8 @@ FontSpecializationVector FontFaceData::getSpecialization(
 	return _variations.getSpecialization(vec);
 }
 
-FontFaceObject::~FontFaceObject() { }
-
 bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Library lib,
-		FT_Face face, const FontSpecializationVector &spec, uint16_t id) {
+		FT_Face face, const FontSpecializationVector &spec, uint16_t id, uint16_t plane) {
 	auto err = FT_Select_Charmap(face, FT_ENCODING_UNICODE);
 	if (err != FT_Err_Ok) {
 		return false;
@@ -313,8 +311,18 @@ bool FontFaceObject::init(StringView name, const Rc<FontFaceData> &data, FT_Libr
 	_id = id;
 	_data = data;
 	_face = face;
+	_plane = plane;
 
 	return true;
+}
+
+char16_t FontFaceObject::getCharId(char32_t theChar) const {
+	auto plane = ((theChar >> 16) & 0xFFFF);
+	if (plane != _plane) {
+		return 0;
+	}
+
+	return char16_t(theChar & 0xFFFF);
 }
 
 bool FontFaceObject::acquireTexture(char32_t theChar,
@@ -326,6 +334,11 @@ bool FontFaceObject::acquireTexture(char32_t theChar,
 
 bool FontFaceObject::acquireTextureUnsafe(char32_t theChar,
 		const Callback<void(const CharTexture &)> &cb) {
+	auto plane = ((theChar >> 16) & 0xFFFF);
+	if (plane != _plane) {
+		return false;
+	}
+
 	int glyph_index = FT_Get_Char_Index(_face, theChar);
 	if (!glyph_index) {
 		return false;
@@ -369,9 +382,15 @@ bool FontFaceObject::addChars(const Vector<char32_t> &chars, bool expand,
 		expand = false;
 	}
 
-	// for some chars, we add full group, not only requested char
 	for (auto &c : chars) {
+		auto plane = ((c >> 16) & 0xFFFF);
+		if (plane != _plane) {
+			mem_std::emplace_ordered(*failed, c);
+			continue;
+		}
+
 		if (expand) {
+			// for some chars, we add full group, not only requested char
 			auto g = getCharGroupForChar(c);
 			if (g != CharGroupId::None) {
 				if ((mask & toInt(g)) == 0) {
@@ -384,7 +403,7 @@ bool FontFaceObject::addChars(const Vector<char32_t> &chars, bool expand,
 			}
 		}
 
-		if (!addChar(c, updated) && failed) {
+		if (!addChar(char16_t(c & 0xFFFF), updated) && failed) {
 			mem_std::emplace_ordered(*failed, c);
 		}
 	}
@@ -395,7 +414,8 @@ bool FontFaceObject::addCharGroup(CharGroupId g, Vector<char32_t> *failed) {
 	bool updated = false;
 	using namespace chars;
 	auto f = [&, this](char32_t c) {
-		if (!addChar(c, updated) && failed) {
+		auto plane = ((c >> 16) & 0xFFFF);
+		if ((plane != _plane || !addChar(char16_t(c & 0xFFFF), updated)) && failed) {
 			mem_std::emplace_ordered(*failed, c);
 		}
 	};
@@ -430,18 +450,33 @@ size_t FontFaceObject::getRequiredCharsCount() const {
 	return _required.size();
 }
 
-CharShape FontFaceObject::getChar(char16_t c) const {
+CharShape FontFaceObject::getChar(char32_t c) const {
+	auto plane = ((c >> 16) & 0xFFFF);
+	if (plane != _plane) {
+		return CharShape{0};
+	}
+
+	auto ch = char16_t(c & 0xFFFF);
 	std::shared_lock lock(_charsMutex);
-	auto l = _chars.get(c);
-	if (l && l->charID == c) {
-		return *l;
+	auto l = _chars.get(ch);
+	if (l && l->charID == ch) {
+		return CharShape{char32_t(l->charID) | (char32_t(_plane) << 16), l->xAdvance};
 	}
 	return CharShape{0};
 }
 
-int16_t FontFaceObject::getKerningAmount(char16_t first, char16_t second) const {
+int16_t FontFaceObject::getKerningAmount(char32_t first, char32_t second) const {
+	auto planeA = ((first >> 16) & 0xFFFF);
+	auto planeB = ((second >> 16) & 0xFFFF);
+	if (planeA != _plane || planeB != _plane) {
+		return 0;
+	}
+
+	auto firstCh = first & 0xFFFF;
+	auto secondCh = second & 0xFFFF;
+
 	std::shared_lock lock(_charsMutex);
-	uint32_t key = (first << 16) | (second & 0xffff);
+	uint32_t key = (firstCh << 16) | (secondCh & 0xffff);
 	auto it = _kerning.find(key);
 	if (it != _kerning.end()) {
 		return it->second;
@@ -476,14 +511,14 @@ bool FontFaceObject::addChar(char16_t theChar, bool &updated) {
 	std::unique_lock faceLock(_faceMutex);
 	FT_UInt cIdx = FT_Get_Char_Index(_face, theChar);
 	if (!cIdx) {
-		_chars.emplace(theChar, CharShape{char16_t(0xFFFF)});
+		_chars.emplace(theChar, CharShape16{char16_t(0xFFFF)});
 		return false;
 	}
 
 	FT_Fixed advance;
 	auto err = FT_Get_Advance(_face, cIdx, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP, &advance);
 	if (err != FT_Err_Ok) {
-		_chars.emplace(theChar, CharShape{char16_t(0xFFFF)});
+		_chars.emplace(theChar, CharShape16{char16_t(0xFFFF)});
 		return false;
 	}
 
@@ -495,13 +530,9 @@ bool FontFaceObject::addChar(char16_t theChar, bool &updated) {
 
 	// store result in the passed rectangle
 	_chars.emplace(theChar,
-			CharShape{
-				theChar,
-				//static_cast<int16_t>(_face->glyph->metrics.horiBearingX >> 6),
-				//static_cast<int16_t>(- (_face->glyph->metrics.horiBearingY >> 6)),
+			CharShape16{
+				char16_t(theChar),
 				static_cast<uint16_t>(advance >> 16),
-				//static_cast<uint16_t>(_face->glyph->metrics.width >> 6),
-				//static_cast<uint16_t>(_face->glyph->metrics.height >> 6)
 			});
 
 	if (!chars::isspace(theChar)) {
@@ -509,7 +540,7 @@ bool FontFaceObject::addChar(char16_t theChar, bool &updated) {
 	}
 
 	if (FT_HAS_KERNING(_face)) {
-		_chars.foreach ([&, this](const CharShape &it) {
+		_chars.foreach ([&, this](const CharShape16 &it) {
 			if (it.charID == 0 || it.charID == char16_t(0xFFFF)) {
 				return;
 			}
@@ -654,7 +685,7 @@ bool FontFaceSet::addString(const CharVector &str, Vector<char32_t> &failed) {
 
 uint16_t FontFaceSet::getFontHeight() const { return _metrics.height; }
 
-int16_t FontFaceSet::getKerningAmount(char16_t first, char16_t second, uint16_t face) const {
+int16_t FontFaceSet::getKerningAmount(char32_t first, char32_t second, uint16_t face) const {
 	std::shared_lock lock(_mutex);
 	for (auto &it : _faces) {
 		if (it) {
@@ -670,7 +701,7 @@ int16_t FontFaceSet::getKerningAmount(char16_t first, char16_t second, uint16_t 
 
 Metrics FontFaceSet::getMetrics() const { return _metrics; }
 
-CharShape FontFaceSet::getChar(char16_t ch, uint16_t &face) const {
+CharShape FontFaceSet::getChar(char32_t ch, uint16_t &face) const {
 	std::shared_lock lock(_mutex);
 	for (auto &it : _faces) {
 		auto l = it->getChar(ch);

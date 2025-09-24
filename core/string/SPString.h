@@ -193,6 +193,7 @@ struct StringTraits final {
 	static String toUtf8(char32_t c);
 	static String toUtf8(char16_t c);
 	static String toUtf8(const WideStringView &str);
+	static String toUtf8(const StringViewBase<char32_t> &str);
 
 	static String toKoi8r(const WideStringView &str);
 
@@ -432,6 +433,26 @@ inline auto toUtf8(const WideStringView &data) -> typename Interface::StringType
 }
 
 template <typename Interface>
+inline auto toUtf8(const StringViewBase<char32_t> &data) -> typename Interface::StringType {
+	return StringTraits<Interface>::toUtf8(data);
+}
+
+template <typename Interface>
+inline auto toUtf8(const wchar_t *buf, size_t size) -> typename Interface::StringType {
+	if constexpr (sizeof(wchar_t) == 2) {
+		return StringTraits<Interface>::toUtf8(WideStringView((const char16_t *)buf, size));
+	} else if constexpr (sizeof(wchar_t) == 1) {
+		// assume already unicode
+		return StringView((const char *)buf, size).str<Interface>();
+	} else if constexpr (sizeof(wchar_t) == 4) {
+		return StringTraits<Interface>::toUtf8(
+				StringViewBase<char32_t>((const char32_t *)buf, size));
+	} else {
+		static_assert(false, "Unknown type for wchar_t");
+	}
+}
+
+template <typename Interface>
 inline auto toUtf8(char16_t c) -> typename Interface::StringType {
 	return StringTraits<Interface>::toUtf8(c);
 }
@@ -591,6 +612,17 @@ auto StringTraits<Interface>::toUtf8(const WideStringView &str) -> String {
 		unicode::utf8Encode(ret, c);
 		ptr += offset;
 	}
+
+	return ret;
+}
+
+template <typename Interface>
+auto StringTraits<Interface>::toUtf8(const StringViewBase<char32_t> &str) -> String {
+	const auto size = string::getUtf8Length(str);
+	String ret;
+	ret.reserve(size);
+
+	for (auto &c : str) { unicode::utf8Encode(ret, c); }
 
 	return ret;
 }

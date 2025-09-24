@@ -27,7 +27,7 @@
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 Status PerformEngine::perform(Rc<thread::Task> &&task) {
-	if (!_performEnabled) {
+	if (_performEnabled == 0) {
 		return Status::Declined;
 	}
 
@@ -62,7 +62,7 @@ Status PerformEngine::perform(Rc<thread::Task> &&task) {
 }
 
 Status PerformEngine::perform(mem_std::Function<void()> &&fn, Ref *ref, StringView tag) {
-	if (!_performEnabled) {
+	if (_performEnabled == 0) {
 		return Status::Declined;
 	}
 
@@ -244,7 +244,7 @@ void QueueData::cleanup() {
 void QueueData::notify(Handle *handle, const NotifyData &data) {
 	auto cl = handle->_class;
 
-	_performEnabled = true;
+	++_performEnabled;
 
 	auto tmpPool = memory::pool::create(_tmpPool);
 
@@ -258,7 +258,7 @@ void QueueData::notify(Handle *handle, const NotifyData &data) {
 
 	memory::pool::destroy(tmpPool);
 
-	_performEnabled = false;
+	--_performEnabled;
 }
 
 void QueueData::notifySuspendedAll() { _platformQueue->handleSuspendedAll(); }

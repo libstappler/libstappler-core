@@ -56,6 +56,6 @@ protected:
 	std::mutex _mutex;
 };
 
-}
+} // namespace stappler::event
 
 #endif /* CORE_EVENT_PLATFORM_WINDOWS_SPEVENTTHREADIOCP_H_ */

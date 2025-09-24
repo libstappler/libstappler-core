@@ -42,9 +42,7 @@ protected:
 	StringView _name;
 };
 
-bool ThreadPool::init(ThreadPoolInfo &&info) {
-	return _context.init(move(info), this);
-}
+bool ThreadPool::init(ThreadPoolInfo &&info) { return _context.init(move(info), this); }
 
 Status ThreadPool::perform(Rc<Task> &&task, bool first) {
 	if (!task) {
@@ -55,10 +53,12 @@ Status ThreadPool::perform(Rc<Task> &&task, bool first) {
 }
 
 Status ThreadPool::perform(mem_std::Function<void()> &&cb, Ref *ref, bool first, StringView tag) {
-	return perform(Rc<Task>::create([fn = sp::move(cb)] (const Task &) -> bool {
+	return perform(Rc<Task>::create(
+						   [fn = sp::move(cb)](const Task &) -> bool {
 		fn();
 		return true;
-	}, nullptr, ref, nullptr, tag), first);
+	}, nullptr, ref, nullptr, tag),
+			first);
 }
 
 Status ThreadPool::performCompleted(Rc<Task> &&task) {
@@ -69,39 +69,31 @@ Status ThreadPool::performCompleted(mem_std::Function<void()> &&func, Ref *targe
 	return _context.info.complete->perform(sp::move(func), target);
 }
 
-void ThreadPool::cancel() {
-	_context.cancel();
-}
+void ThreadPool::cancel() { _context.cancel(); }
 
 bool ThreadPool::isRunning() const {
-	return !_context.finalized.load() && (hasFlag(_context.info.flags, ThreadPoolFlags::LazyInit) || !_context.workers.empty());
+	return !_context.finalized.load()
+			&& (hasFlag(_context.info.flags, ThreadPoolFlags::LazyInit)
+					|| !_context.workers.empty());
 }
 
-const ThreadPoolInfo &ThreadPool::getInfo() const {
-	return _context.info;
-}
+const ThreadPoolInfo &ThreadPool::getInfo() const { return _context.info; }
 
-StringView ThreadPool::getName() const {
-	return _context.info.name;
-}
+StringView ThreadPool::getName() const { return _context.info.name; }
 
 ThreadPool::Worker::Worker(ThreadPool::WorkerContext *queue, StringView name, uint32_t workerId)
 : _queue(queue), _workerId(workerId), _name(name) {
 	_queueRefId = _queue->threadPool->retain();
 }
 
-ThreadPool::Worker::~Worker() {
-	_queue->threadPool->release(_queueRefId);
-}
+ThreadPool::Worker::~Worker() { _queue->threadPool->release(_queueRefId); }
 
 void ThreadPool::Worker::threadInit() {
 	ThreadInfo::setThreadInfo(_name, _workerId, true);
 	Thread::threadInit();
 }
 
-void ThreadPool::Worker::threadDispose() {
-	Thread::threadDispose();
-}
+void ThreadPool::Worker::threadDispose() { Thread::threadDispose(); }
 
 bool ThreadPool::Worker::worker() {
 	if (!_continueExecution.test_and_set()) {
@@ -133,9 +125,7 @@ bool ThreadPool::Worker::worker() {
 
 ThreadPool::WorkerContext::WorkerContext() { }
 
-ThreadPool::WorkerContext::~WorkerContext() {
-	cancel();
-}
+ThreadPool::WorkerContext::~WorkerContext() { cancel(); }
 
 bool ThreadPool::WorkerContext::init(ThreadPoolInfo &&i, ThreadPool *p) {
 	info = move(i);
@@ -175,9 +165,7 @@ void ThreadPool::WorkerContext::cancel() {
 	finalized = true;
 
 	if (!workers.empty()) {
-		for (auto &it : workers) {
-			it->stop();
-		}
+		for (auto &it : workers) { it->stop(); }
 
 		inputCondition.notify_all();
 
@@ -188,12 +176,15 @@ void ThreadPool::WorkerContext::cancel() {
 		workers.clear();
 	}
 
-	inputQueue.foreach([&] (memory::PriorityQueue<Rc<Task>>::PriorityType p, const Rc<Task> &t) {
+	inputQueue.foreach ([&](memory::PriorityQueue<Rc<Task>>::PriorityType p, const Rc<Task> &t) {
 		if (t) {
 			t->cancel();
 		}
 	});
 	inputQueue.clear();
+
+	info.complete = nullptr;
+	info.ref = nullptr;
 }
 
 Status ThreadPool::WorkerContext::perform(Rc<Task> &&task, bool first) {
@@ -216,16 +207,16 @@ Status ThreadPool::WorkerContext::perform(Rc<Task> &&task, bool first) {
 
 	task->addRef(threadPool);
 
-	++ tasksCounter;
+	++tasksCounter;
 	inputQueue.push(task->getPriority().get(), first, sp::move(task));
 	inputCondition.notify_one();
 	return Status::Ok;
 }
 
 void ThreadPool::WorkerContext::onMainThreadWorker(Rc<Task> &&task) {
-    if (!task) {
-        return;
-    }
+	if (!task) {
+		return;
+	}
 
 	info.complete->perform(move(task));
 	--tasksCounter;
@@ -233,10 +224,10 @@ void ThreadPool::WorkerContext::onMainThreadWorker(Rc<Task> &&task) {
 
 Rc<Task> ThreadPool::WorkerContext::popTask() {
 	Rc<Task> ret;
-	inputQueue.pop_direct([&] (memory::PriorityQueue<Rc<Task>>::PriorityType, Rc<Task> &&task) {
+	inputQueue.pop_direct([&](memory::PriorityQueue<Rc<Task>>::PriorityType, Rc<Task> &&task) {
 		ret = move(task);
 	});
 	return ret;
 }
 
-}
+} // namespace stappler::thread

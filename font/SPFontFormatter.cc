@@ -80,7 +80,7 @@ void Formatter::finalize() {
 		pushLine(false);
 	}
 
-	if (!_output.chars.empty() && _output.chars.back().charID == char16_t(0x0A)) {
+	if (!_output.chars.empty() && _output.chars.back().charID == char32_t(0x0A)) {
 		pushLine(false);
 	}
 
@@ -131,7 +131,7 @@ void Formatter::setMaxWidth(uint16_t value) { maxWidth = value; }
 void Formatter::setMaxLines(size_t value) { maxLines = value; }
 void Formatter::setOpticalAlignment(bool value) { opticalAlignment = value; }
 void Formatter::setEmplaceAllChars(bool value) { emplaceAllChars = value; }
-void Formatter::setFillerChar(char16_t value) { _fillerChar = value; }
+void Formatter::setFillerChar(char32_t value) { _fillerChar = value; }
 void Formatter::setHyphens(HyphenMap *map) { _hyphens = map; }
 void Formatter::setRequest(ContentRequest req) { request = req; }
 
@@ -246,12 +246,12 @@ inline uint16_t Formatter::getOriginPosition(uint16_t pos) const {
 	return (pos < _output.chars.size()) ? getOriginPosition(_output.chars.at(pos)) : uint16_t(0);
 }
 
-bool Formatter::isSpecial(char16_t ch) const {
+bool Formatter::isSpecial(char32_t ch) const {
 	// collapseSpaces can be disabled for manual optical alignment
 	if (!opticalAlignment || !collapseSpaces) {
 		return false;
 	}
-	return chars::CharGroup<char16_t, CharGroupId::OpticalAlignmentSpecial>::match(ch);
+	return chars::CharGroup<char32_t, CharGroupId::OpticalAlignmentSpecial>::match(ch);
 }
 
 uint16_t Formatter::checkBullet(uint16_t first, uint16_t len) const {
@@ -263,7 +263,7 @@ uint16_t Formatter::checkBullet(uint16_t first, uint16_t len) const {
 	uint16_t offset = 0;
 	for (uint16_t i = first; i < first + len - 1; i++) {
 		auto ch = _output.chars.at(i).charID;
-		if (chars::CharGroup<char16_t, CharGroupId::OpticalAlignmentBullet>::match(ch)) {
+		if (chars::CharGroup<char32_t, CharGroupId::OpticalAlignmentBullet>::match(ch)) {
 			offset++;
 		} else if (chars::isspace(ch) && offset >= 1) {
 			return offset + 1;
@@ -296,7 +296,7 @@ void Formatter::pushLineFiller(bool replaceLastChar) {
 	}
 }
 
-bool Formatter::pushChar(char16_t ch) {
+bool Formatter::pushChar(char32_t ch) {
 	if (_textStyle.textTransform == TextTransform::Uppercase) {
 		ch = string::detail::toupper(ch);
 	} else if (_textStyle.textTransform == TextTransform::Lowercase) {
@@ -306,7 +306,7 @@ bool Formatter::pushChar(char16_t ch) {
 	CharShape charDef = _primaryFontSet->getChar(ch, faceId);
 
 	if (charDef.charID == 0) {
-		if (ch == char16_t(0x00AD)) {
+		if (ch == char32_t(0x00AD)) {
 			charDef = _primaryFontSet->getChar('-', faceId);
 		} else {
 			log::format(log::Warn, "RichTextFormatter", SP_LOCATION,
@@ -322,9 +322,9 @@ bool Formatter::pushChar(char16_t ch) {
 
 	auto posX = lineX;
 
-	CharLayoutData spec{ch, posX, charDef.xAdvance, faceId};
+	CharLayoutData spec{charDef.charID, posX, charDef.xAdvance, faceId};
 
-	if (ch == static_cast<char16_t>(0x00AD)) {
+	if (ch == static_cast<char32_t>(0x00AD)) {
 		if (_textStyle.hyphens == Hyphens::Manual || _textStyle.hyphens == Hyphens::Auto) {
 			wordWrapPos = charNum + 1;
 		}
@@ -378,7 +378,7 @@ bool Formatter::pushTab() {
 
 	charNum++;
 	_output.chars.emplace_back(
-			CharLayoutData{char16_t('\t'), posX, uint16_t(lineX - posX), faceId});
+			CharLayoutData{char32_t('\t'), posX, uint16_t(lineX - posX), faceId});
 	if (wordWrap) {
 		wordWrapPos = charNum;
 	}
@@ -452,7 +452,8 @@ bool Formatter::pushLine(uint16_t first, uint16_t len, bool forceAlign) {
 			int16_t offset = 0;
 			for (uint16_t i = first; i < first + len; i++) {
 				auto ch = _output.chars.at(i).charID;
-				if (ch != char16_t(0xffff) && chars::isspace(ch) && ch != '\n' && spacesCount > 0) {
+				if (ch != CharLayoutData::InvalidChar && chars::isspace(ch) && ch != '\n'
+						&& spacesCount > 0) {
 					offset += joffset / spacesCount;
 					joffset -= joffset / spacesCount;
 					spacesCount--;
@@ -527,7 +528,7 @@ Formatter::Output::Output(TextLayoutData<memory::PoolInterface> *d)
 , lines(d->lines) { }
 
 bool Formatter::pushLineBreak() {
-	if (chars::CharGroup<char16_t, CharGroupId::WhiteSpace>::match(_output.chars.back().charID)) {
+	if (chars::CharGroup<char32_t, CharGroupId::WhiteSpace>::match(_output.chars.back().charID)) {
 		return true;
 	}
 
@@ -595,7 +596,7 @@ bool Formatter::pushLineBreak() {
 
 bool Formatter::pushLineBreakChar() {
 	charNum++;
-	_output.chars.emplace_back(CharLayoutData{char16_t(0x0A), lineX, 0, 0});
+	_output.chars.emplace_back(CharLayoutData{char32_t(0x0A), lineX, 0, 0});
 
 	if (!pushLine(false)) {
 		return false;
@@ -609,13 +610,27 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 	size_t wordPos = 0;
 	auto hIt = hyph.begin();
 	bool startWhitespace = _output.chars.empty();
-	for (c = r[0]; !r.empty(); ++_charPosition, ++wordPos, ++r, c = r[0]) {
+
+	auto tmpStr = r.data();
+	auto tmpLen = r.size();
+
+	while (tmpLen > 0) {
+		uint8_t offset;
+		auto c = unicode::utf16Decode32(tmpStr, offset);
+
+		if (offset <= tmpLen) {
+			tmpStr += offset;
+			tmpLen -= offset;
+		} else {
+			break;
+		}
+
 		if (hIt != hyph.end() && wordPos == *hIt) {
-			pushChar(char16_t(0x00AD));
+			pushChar(char32_t(0x00AD));
 			++hIt;
 		}
 
-		if (c == char16_t('\n')) {
+		if (c == char32_t('\n')) {
 			if (preserveLineBreaks) {
 				if (!pushLineBreakChar()) {
 					return false;
@@ -629,7 +644,7 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 			continue;
 		}
 
-		if (c == char16_t('\t') && !collapseSpaces) {
+		if (c == char32_t('\t') && !collapseSpaces) {
 			if (request == ContentRequest::Minimize) {
 				wordWrapPos = charNum;
 				if (!pushLineBreak()) {
@@ -641,15 +656,16 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 			continue;
 		}
 
-		if (c < char16_t(0x20)) {
+		if (c < char32_t(0x20)) {
 			if (emplaceAllChars) {
 				charNum++;
-				_output.chars.emplace_back(CharLayoutData{char16_t(0xFFFF), lineX, 0, 0});
+				_output.chars.emplace_back(
+						CharLayoutData{CharLayoutData::InvalidChar, lineX, 0, 0});
 			}
 			continue;
 		}
 
-		if (c != char16_t(0x00A0) && chars::isspace(c) && collapseSpaces) {
+		if (c != char32_t(0x00A0) && chars::isspace(c) && collapseSpaces) {
 			if (!startWhitespace) {
 				bufferedSpace = true;
 			}
@@ -657,7 +673,7 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 			continue;
 		}
 
-		if (c == char16_t(0x00A0)) {
+		if (c == char32_t(0x00A0)) {
 			if (!pushSpace(false)) {
 				return false;
 			}
@@ -665,7 +681,7 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 			continue;
 		}
 
-		if (bufferedSpace || (!collapseSpaces && c != 0x00A0 && chars::isspace(c))) {
+		if (bufferedSpace || (!collapseSpaces && c != char32_t(0x00A0) && chars::isspace(c))) {
 			if (request == ContentRequest::Minimize && charNum > 0) {
 				wordWrapPos = charNum;
 				auto b = bufferedSpace;
@@ -692,7 +708,7 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 
 		switch (request) {
 		case ContentRequest::Minimize:
-			if (charNum > 0 && wordWrapPos == charNum && c != char16_t(0x00AD)) {
+			if (charNum > 0 && wordWrapPos == charNum && c != char32_t(0x00AD)) {
 				if (!pushLineBreak()) {
 					return false;
 				}
@@ -709,9 +725,11 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 			break;
 		}
 
-		if (c != char16_t(0x00AD)) {
+		if (c != char32_t(0x00AD)) {
 			b = c;
 		}
+
+		++wordPos;
 	}
 	return true;
 }
@@ -737,8 +755,14 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 
 		CharVector primaryStr;
 		CharVector secondaryStr;
-		for (size_t i = 0; i < len; ++i) {
-			char16_t ch = str[i];
+
+		auto tmpStr = str;
+		auto tmpLen = len;
+
+		while (tmpLen > 0) {
+			uint8_t offset;
+			auto ch = unicode::utf16Decode32(tmpStr, offset);
+
 			if (s.textTransform == TextTransform::Uppercase) {
 				ch = string::detail::toupper(ch);
 			} else if (s.textTransform == TextTransform::Lowercase) {
@@ -749,14 +773,21 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 			} else {
 				primaryStr.addChar(ch);
 			}
+
+			if (offset <= tmpLen) {
+				tmpLen -= offset;
+				tmpStr += offset;
+			} else {
+				break;
+			}
 		}
+
 		if (_fillerChar) {
 			primaryStr.addChar(_fillerChar);
 		}
 		primaryStr.addChar('-');
 		primaryStr.addChar(' ');
-		primaryStr.addChar(char16_t(0xAD));
-
+		primaryStr.addChar(char32_t(0xAD));
 
 		primaryLayout = fontCallback(f);
 		if (primaryLayout) {
@@ -776,14 +807,26 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 		if (s.textTransform == TextTransform::None) {
 			primaryStr.addString(WideStringView(str, len));
 		} else {
-			for (size_t i = 0; i < len; ++i) {
-				char16_t ch = str[i];
+			auto tmpStr = str;
+			auto tmpLen = len;
+
+			while (tmpLen > 0) {
+				uint8_t offset;
+				auto ch = unicode::utf16Decode32(tmpStr, offset);
+
 				if (s.textTransform == TextTransform::Uppercase) {
 					ch = string::detail::toupper(ch);
 				} else if (s.textTransform == TextTransform::Lowercase) {
 					ch = string::detail::tolower(ch);
 				}
 				primaryStr.addChar(ch);
+
+				if (offset <= tmpLen) {
+					tmpLen -= offset;
+					tmpStr += offset;
+				} else {
+					break;
+				}
 			}
 		}
 		if (_fillerChar) {
@@ -791,7 +834,7 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 		}
 		primaryStr.addChar('-');
 		primaryStr.addChar(' ');
-		primaryStr.addChar(char16_t(0xAD));
+		primaryStr.addChar(char32_t(0xAD));
 
 		primaryLayout = fontCallback(f);
 		if (primaryLayout) {
@@ -811,10 +854,14 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 		bool caps = false;
 		TextParameters capsParams = s;
 		capsParams.textTransform = TextTransform::Uppercase;
-		for (size_t idx = 0; idx < len; ++idx) {
-			const char16_t c = (s.textTransform == TextTransform::None)
-					? str[idx]
-					: string::detail::tolower(str[idx]);
+
+		auto tmpStr = str;
+		auto tmpLen = len;
+
+		while (tmpLen > 0) {
+			uint8_t offset;
+			auto ch = unicode::utf16Decode32(tmpStr, offset);
+			auto c = (s.textTransform == TextTransform::None) ? ch : string::detail::tolower(ch);
 			if (string::detail::toupper(c) != c) { // char can be uppercased - use caps
 				if (caps != true) {
 					caps = true;
@@ -825,7 +872,7 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 										  primaryLayout->getMetrics(), primaryLayout},
 								s, str + blockStart, blockSize, frontOffset, backOffset);
 					}
-					blockStart = idx;
+					blockStart = tmpStr - str;
 					blockSize = 0;
 				}
 			} else {
@@ -838,11 +885,11 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 										  secondaryLayout->getMetrics(), secondaryLayout},
 								capsParams, str + blockStart, blockSize, frontOffset, backOffset);
 					}
-					blockStart = idx;
+					blockStart = tmpStr - str;
 					blockSize = 0;
 				}
 			}
-			++blockSize;
+			blockSize += offset;
 		}
 		if (blockSize > 0) {
 			if (caps) {
@@ -886,7 +933,6 @@ bool Formatter::readWithRange(RangeLayoutData &&range, const TextParameters &s, 
 	_primaryFontSet = range.layout;
 	rangeLineHeight = range.height;
 
-	_charPosition = 0;
 	if (bufferedSpace) {
 		pushSpace();
 		bufferedSpace = false;
@@ -910,7 +956,6 @@ bool Formatter::readWithRange(RangeLayoutData &&range, const TextParameters &s, 
 	b = 0;
 
 	lineX += frontOffset;
-	_charPosition = 0;
 	WideStringView r(str, len);
 	if (_textStyle.hyphens == Hyphens::Auto && _hyphens) {
 		while (!r.empty()) {
@@ -942,7 +987,6 @@ bool Formatter::readWithRange(RangeLayoutData &&range, const TextParameters &s, 
 	_primaryFontSet = range.layout;
 	rangeLineHeight = range.height;
 
-	_charPosition = 0;
 	if (bufferedSpace) {
 		pushSpace();
 		bufferedSpace = false;
@@ -979,7 +1023,7 @@ bool Formatter::readWithRange(RangeLayoutData &&range, const TextParameters &s, 
 		lineX += lineOffset;
 	}
 
-	CharLayoutData spec{char16_t(0xFFFF), lineX, blockWidth, 0};
+	CharLayoutData spec{CharLayoutData::InvalidChar, lineX, blockWidth, 0};
 	lineX += spec.advance;
 	charNum++;
 	_output.chars.emplace_back(sp::move(spec));

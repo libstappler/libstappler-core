@@ -39,7 +39,7 @@ public:
 	// If 'completion' is specified - userdata will be cleared
 	//
 	// Be careful, when resetting timers with Function callback
-	//  - this callback will become invalid then new 'completion' set
+	//  - this callback will become invalid when new 'completion' set
 	virtual bool reset(TimerInfo &&) = 0;
 };
 

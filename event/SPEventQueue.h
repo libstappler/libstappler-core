@@ -62,6 +62,7 @@ enum class WakeupFlags : uint32_t {
 	Graceful = 1 << 0,
 	SuspendThreads = 1 << 1, // Looper should suspend worker threads
 	ContextDefault = 1 << 2, // Use default wakeup flags, passed into 'run'
+	All = Graceful | SuspendThreads | ContextDefault
 };
 
 SP_DEFINE_ENUM_AS_MASK(WakeupFlags)

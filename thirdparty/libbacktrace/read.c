@@ -1,4 +1,4 @@
-/* mmapio.c -- File views using mmap.
+/* read.c -- File views without mmap.
    Copyright (C) 2012-2024 Free Software Foundation, Inc.
    Written by Ian Lance Taylor, Google.
 
@@ -32,75 +32,72 @@ POSSIBILITY OF SUCH DAMAGE.  */
 
 #include "config.h"
 
-#if HAVE_SYS_MMAN_H
-
 #include <errno.h>
+#include <stdlib.h>
 #include <sys/types.h>
-#include <sys/mman.h>
 #include <unistd.h>
 
 #include "backtrace.h"
 #include "internal.h"
 
-#ifndef HAVE_DECL_GETPAGESIZE
-extern int getpagesize(void);
+#if WIN32
+#define read _read
 #endif
 
-#ifndef MAP_FAILED
-#define MAP_FAILED ((void *)-1)
-#endif
-
-/* This file implements file views and memory allocation when mmap is
-   available.  */
+/* This file implements file views when mmap is not available.  */
 
 /* Create a view of SIZE bytes from DESCRIPTOR at OFFSET.  */
 
-int backtrace_get_view(struct backtrace_state *state ATTRIBUTE_UNUSED, int descriptor, off_t offset,
-		uint64_t size, backtrace_error_callback error_callback, void *data,
-		struct backtrace_view *view) {
-	size_t pagesize;
-	unsigned int inpage;
-	off_t pageoff;
-	void *map;
+int backtrace_get_view(struct backtrace_state *state, int descriptor, off_t offset, uint64_t size,
+		backtrace_error_callback error_callback, void *data, struct backtrace_view *view) {
+	uint64_t got;
+	ssize_t r;
 
 	if ((uint64_t)(size_t)size != size) {
 		error_callback(data, "file size too large", 0);
 		return 0;
 	}
 
-	pagesize = getpagesize();
-	inpage = offset % pagesize;
-	pageoff = offset - inpage;
-
-	size += inpage;
-	size = (size + (pagesize - 1)) & ~(pagesize - 1);
-
-	map = mmap(NULL, size, PROT_READ, MAP_PRIVATE, descriptor, pageoff);
-	if (map == MAP_FAILED) {
-		error_callback(data, "mmap", errno);
+	if (lseek(descriptor, offset, SEEK_SET) < 0) {
+		error_callback(data, "lseek", errno);
 		return 0;
 	}
 
-	view->data = (char *)map + inpage;
-	view->base = map;
+	view->base = backtrace_alloc(state, size, error_callback, data);
+	if (view->base == NULL) {
+		return 0;
+	}
+	view->data = view->base;
 	view->len = size;
+
+	got = 0;
+	while (got < size) {
+		r = read(descriptor, view->base, size - got);
+		if (r < 0) {
+			error_callback(data, "read", errno);
+			free(view->base);
+			return 0;
+		}
+		if (r == 0) {
+			break;
+		}
+		got += (uint64_t)r;
+	}
+
+	if (got < size) {
+		error_callback(data, "file too short", 0);
+		free(view->base);
+		return 0;
+	}
 
 	return 1;
 }
 
 /* Release a view read by backtrace_get_view.  */
 
-void backtrace_release_view(struct backtrace_state *state ATTRIBUTE_UNUSED,
-		struct backtrace_view *view, backtrace_error_callback error_callback, void *data) {
-	union {
-		const void *cv;
-		void *v;
-	} const_cast;
-
-	const_cast.cv = view->base;
-	if (munmap(const_cast.v, view->len) < 0) {
-		error_callback(data, "munmap", errno);
-	}
+void backtrace_release_view(struct backtrace_state *state, struct backtrace_view *view,
+		backtrace_error_callback error_callback, void *data) {
+	backtrace_free(state, view->base, view->len, error_callback, data);
+	view->data = NULL;
+	view->base = NULL;
 }
-
-#endif

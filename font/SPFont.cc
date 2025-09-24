@@ -24,15 +24,11 @@
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
-void CharVector::addChar(char32_t c) {
-	mem_std::emplace_ordered(chars, c);
-}
+void CharVector::addChar(char32_t c) { mem_std::emplace_ordered(chars, c); }
 
 void CharVector::addString(const StringView &str) {
 	StringViewUtf8 r(str);
-	r.foreach([&] (char32_t c) {
-		addChar(c);
-	});
+	r.foreach ([&](char32_t c) { addChar(c); });
 }
 
 void CharVector::addString(const WideStringView &str) {
@@ -51,24 +47,22 @@ void CharVector::addString(const WideStringView &str) {
 }
 
 void CharVector::addString(const CharVector &str) {
-	for (auto &c : str.chars) {
-		mem_std::emplace_ordered(chars, c);
-	}
+	for (auto &c : str.chars) { mem_std::emplace_ordered(chars, c); }
 }
 
-uint32_t CharId::getCharId(uint16_t sourceId, char16_t ch, CharAnchor a) {
-	uint32_t ret = ch;
+uint32_t CharId::getCharId(uint16_t sourceId, char32_t ch, CharAnchor a) {
+	uint32_t ret = ch & 0xFFFF;
 	ret |= (toInt(a) << (sizeof(char16_t) * 8));
 	ret |= (sourceId << ((sizeof(char16_t) * 8) + 2));
 	return ret;
 }
 
 uint32_t CharId::rebindCharId(uint32_t ret, CharAnchor a) {
-	return (ret & (~ (3 << (sizeof(char16_t) * 8)))) | (toInt(a) << (sizeof(char16_t) * 8));
+	return (ret & (~(3 << (sizeof(char16_t) * 8)))) | (toInt(a) << (sizeof(char16_t) * 8));
 }
 
 CharAnchor CharId::getAnchorForChar(uint32_t obj) {
 	return CharAnchor((obj >> sizeof(char16_t) * 8) & 0b11);
 }
 
-}
+} // namespace stappler::font

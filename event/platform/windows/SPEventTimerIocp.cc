@@ -35,6 +35,8 @@ static void timeToFileTime(LARGE_INTEGER &ftime, TimeInterval ival) {
 }
 
 bool TimerIocpSource::init(const TimerInfo &info) {
+	cancel();
+
 	handle = CreateWaitableTimerEx(0, 0, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
 	if (!handle) {
 		return false;
@@ -144,6 +146,16 @@ bool TimerIocpHandle::init(HandleClass *cl, TimerInfo &&info) {
 
 	auto source = new (_data) TimerIocpSource();
 	return source->init(info);
+}
+
+bool TimerIocpHandle::reset(TimerInfo &&info) {
+	if (info.completion) {
+		_completion = move(info.completion);
+		_userdata = nullptr;
+	}
+
+	auto source = reinterpret_cast<TimerIocpSource *>(_data);
+	return source->init(info) && Handle::reset();
 }
 
 Status TimerIocpHandle::rearm(IocpData *iocp, TimerIocpSource *source) {

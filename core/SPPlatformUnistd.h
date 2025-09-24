@@ -66,6 +66,30 @@
 #include <windowsx.h>
 #include <winioctl.h>
 #include <wincrypt.h>
+#include <shlwapi.h>
+#include <shlobj.h>
+#include <shobjidl.h>
+#include <shellscalingapi.h>
+#include <sddl.h>
+#include <userenv.h>
+#include <winnt.h>
+
+#include <knownfolders.h>
+#include <physicalmonitorenumerationapi.h>
+#include <processthreadsapi.h>
+
+#include <setupapi.h>
+#include <Ntddvdeo.h>
+
+#define WIL_SUPPRESS_EXCEPTIONS 1
+
+#include <winhttp.h>
+#include <netlistmgr.h>
+#include <wil/result_macros.h>
+#include <wil/stl.h>
+#include <wil/resource.h>
+#include <wil/com.h>
+#include <wrl.h>
 
 // suppress common macro leak
 #ifdef interface
@@ -74,6 +98,10 @@
 
 #ifdef DELETE
 #undef DELETE
+#endif
+
+#ifdef uuid_t
+#undef uuid_t
 #endif
 
 using pid_t = DWORD;

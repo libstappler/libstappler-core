@@ -21,8 +21,8 @@
  **/
 
 #include "SPStatus.h"
-
-#include "SPPlatformUnistd.h"
+#include "SPPlatformUnistd.h" // IWYU pragma: keep
+#include "SPStringView.h"
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -36,6 +36,7 @@ StringView getStatusName(Status status) {
 	case Status::Suspended: return "Status::Suspended"; break;
 	case Status::Pending: return "Status::Pending"; break;
 	case Status::Timeout: return "Status::Timeout"; break;
+	case Status::Propagate: return "Status::Propagate"; break;
 	case Status::EventSet: return "Status::EventSet"; break;
 	case Status::EventReset: return "Status::EventReset"; break;
 	case Status::Incomplete: return "Status::Incomplete"; break;
@@ -98,6 +99,9 @@ static StringView getInternalDescription(Status st) {
 	case Status::Done: return "Operation completed successfully"; break;
 	case Status::Declined: return "Operation was declined without an error"; break;
 	case Status::Suspended: return "Operation was suspended without an error"; break;
+	case Status::Pending: return "Execution in process"; break;
+	case Status::Timeout: return "Operation declined with timeout"; break;
+	case Status::Propagate: return "Operation should be propagated"; break;
 	case Status::ErrorUnknown: return "Unknown error"; break;
 	case Status::ErrorNotPermitted: return "Operation not permitted"; break;
 	case Status::ErrorTooManyObjects: return "Too many objects for the command"; break;
@@ -215,7 +219,7 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 			outCb << StringView(ptr, strlen(ptr));
 		}
 #else
-#ifdef __STDC_LIB_EXT1__
+#if __STDC_LIB_EXT1__ || WIN32
 		::strerror_s(target, STATUS_DESC_BUFFER_SIZE - len - 1, err);
 #else
 		auto ptr = strerror(err);

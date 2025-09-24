@@ -123,7 +123,7 @@ BOOL CancelEventCompletion(HANDLE hWait, BOOL cancel) {
 }
 
 void IocpData::pollMessages() {
-	_data->_performEnabled = true;
+	++_data->_performEnabled;
 
 	auto tmpPool = memory::pool::create(_data->_tmpPool);
 
@@ -143,7 +143,7 @@ void IocpData::pollMessages() {
 
 	memory::pool::destroy(tmpPool);
 
-	_data->_performEnabled = false;
+	--_data->_performEnabled;
 }
 
 Status IocpData::runPoll(TimeInterval ival, bool infinite) {
@@ -156,7 +156,10 @@ Status IocpData::runPoll(TimeInterval ival, bool infinite) {
 	MsgWaitForMultipleObjectsEx(1, &_port, infinite ? INFINITE : ival.toMillis(), QS_ALLINPUT,
 			MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
 
-	pollMessages();
+	// Prevent from recursive message polling
+	if (_data->_performEnabled == 0) {
+		pollMessages();
+	}
 
 	if (!GetQueuedCompletionStatusEx(_port, _events.data(), _events.size(), &nevents, 0, 1)) {
 		auto err = GetLastError();
@@ -178,7 +181,7 @@ Status IocpData::runPoll(TimeInterval ival, bool infinite) {
 	}
 }
 
-uint32_t IocpData::processEvents() {
+uint32_t IocpData::processEvents(RunContext *ctx) {
 	uint32_t count = 0;
 	NotifyData data;
 
@@ -187,7 +190,14 @@ uint32_t IocpData::processEvents() {
 
 		auto ptr = reinterpret_cast<void *>(ev.lpCompletionKey);
 		if (ptr == this) {
-			doWakeupInterrupt(WakeupFlags(ev.dwNumberOfBytesTransferred), true);
+			auto data = ev.dwNumberOfBytesTransferred;
+			auto flags = WakeupFlags(data & toInt(WakeupFlags::All));
+
+			if (hasFlag(data, CancelFlag)) {
+				stopRootContext(flags, !hasFlag(data, InternalFlag));
+			} else {
+				stopContext(ctx, flags, !hasFlag(data, InternalFlag));
+			}
 		} else {
 			auto h = (Handle *)ev.lpCompletionKey;
 
@@ -210,79 +220,77 @@ uint32_t IocpData::processEvents() {
 Status IocpData::submit() { return Status::Ok; }
 
 uint32_t IocpData::poll() {
+	uint32_t result = 0;
+
+	RunContext ctx;
+	pushContext(&ctx, RunContext::Poll);
+
 	auto status = runPoll(TimeInterval());
 	if (toInt(status) > 0) {
-		return processEvents();
+		result = processEvents(&ctx);
 	}
-	return 0;
+
+	popContext(&ctx);
+	return result;
 }
 
 uint32_t IocpData::wait(TimeInterval ival) {
+	uint32_t result = 0;
+
+	RunContext ctx;
+	pushContext(&ctx, RunContext::Wait);
+
 	auto status = runPoll(ival);
 	if (status == Status::Ok) {
-		return processEvents();
+		result = processEvents(&ctx);
 	}
-	return 0;
+
+	popContext(&ctx);
+	return result;
 }
 
 Status IocpData::run(TimeInterval ival, WakeupFlags wakeupFlags, TimeInterval wakeupTimeout) {
 	RunContext ctx;
-
 	ctx.wakeupStatus = Status::Suspended;
-	ctx.wakeupTimeout.store(wakeupTimeout.toMicros());
 	ctx.runWakeupFlags = wakeupFlags;
 
 	Rc<Handle> timerHandle;
-	if (ival) {
+	if (ival && ival != TimeInterval::Infinite) {
 		// set timeout
 		timerHandle =
 				_queue->get()->schedule(ival, [this, wakeupFlags](Handle *handle, bool success) {
 			if (success) {
-				doWakeupInterrupt(wakeupFlags, false);
+				PostQueuedCompletionStatus(_port, toInt(wakeupFlags) | InternalFlag,
+						reinterpret_cast<uintptr_t>(this), nullptr);
 			}
 		});
 	}
 
-	ctx.shouldWakeup.test_and_set();
+	pushContext(&ctx, RunContext::Run);
 
-	_runMutex.lock();
-	ctx.prev = _runContext;
-	_runContext = &ctx;
-	_runMutex.unlock();
-
-	while (ctx.shouldWakeup.test_and_set()) {
+	while (ctx.state == RunContext::Running) {
 		auto status = runPoll(ival, true);
 		if (status == Status::Ok) {
-			processEvents();
+			processEvents(&ctx);
 		} else {
-			log::source().error("event::EPollData", "epoll error: ", status);
+			log::source().error("event::IOCP", "GetQueuedCompletionStatusEx error: ", status);
 			ctx.wakeupStatus = status;
 			break;
 		}
 	}
 
-	if (ival) {
+	if (ival && ival != TimeInterval::Infinite && timerHandle) {
 		// remove timeout if set
 		timerHandle->cancel();
 	}
 
-	_runMutex.lock();
-	_runContext = ctx.prev;
-	_runMutex.unlock();
+	popContext(&ctx);
 
 	return ctx.wakeupStatus;
 }
 
-Status IocpData::wakeup(WakeupFlags flags, TimeInterval gracefulTimeout) {
-	_runMutex.lock();
-	if (auto v = _runContext) {
-		v->wakeupFlags |= toInt(flags);
-		v->wakeupTimeout = gracefulTimeout.toMicros();
-	}
-	_runMutex.unlock();
-
+Status IocpData::wakeup(WakeupFlags flags) {
 	PostQueuedCompletionStatus(_port, toInt(flags), reinterpret_cast<uintptr_t>(this), nullptr);
-
 	return Status::Ok;
 }
 
@@ -299,34 +307,13 @@ Status IocpData::suspendHandles() {
 	return Status::Done;
 }
 
-Status IocpData::doWakeupInterrupt(WakeupFlags flags, bool externalCall) {
-	if (!_runContext) {
-		return Status::ErrorInvalidArguemnt;
-	}
-
-	if (hasFlag(flags, WakeupFlags::Graceful)) {
-		if (suspendHandles() == Status::Done) {
-			_runContext->shouldWakeup.clear();
-			_runContext->wakeupStatus = Status::Ok; // graceful wakeup
-		}
-		return Status::Suspended; // do not rearm eventfd
-	} else {
-		_runContext->shouldWakeup.clear();
-		_runContext->wakeupStatus =
-				externalCall ? Status::Suspended : Status::Done; // forced wakeup
-		return Status::Ok; // rearm eventfd
-	}
+void IocpData::cancel() {
+	PostQueuedCompletionStatus(_port, toInt(WakeupFlags::ContextDefault) | CancelFlag,
+			reinterpret_cast<uintptr_t>(this), nullptr);
 }
-
-void IocpData::runInternalHandles() {
-	// run internal services
-}
-
-void IocpData::cancel() { doWakeupInterrupt(WakeupFlags::None, false); }
 
 IocpData::IocpData(QueueRef *q, Queue::Data *data, const QueueInfo &info)
-: _queue(q), _data(data), _flags(info.flags) {
-
+: PlatformQueueData(q, data, info.flags) {
 	_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
 	if (!_port) {
 		log::source().error("event::Queue",

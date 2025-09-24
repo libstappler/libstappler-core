@@ -55,7 +55,7 @@ bool FontFaceObjectHandle::init(const Rc<FontLibrary> &lib, Rc<FontFaceObject> &
 	return true;
 }
 
-bool FontFaceObjectHandle::acquireTexture(char16_t theChar,
+bool FontFaceObjectHandle::acquireTexture(char32_t theChar,
 		const Callback<void(const CharTexture &)> &cb) {
 	return _face->acquireTextureUnsafe(theChar, cb);
 }

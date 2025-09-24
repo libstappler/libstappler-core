@@ -37,7 +37,7 @@ MODULE_STAPPLER_FILESYSTEM_GENERAL_LDFLAGS += -framework UniformTypeIdentifiers
 endif
 
 ifdef WIN32
-MODULE_STAPPLER_FILESYSTEM_LIBS += -luserenv
+MODULE_STAPPLER_FILESYSTEM_LIBS +=
 endif
 
 # module name resolution

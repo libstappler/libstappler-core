@@ -22,26 +22,29 @@
 
 #include "config.h"
 
-#include "mmap.c"
-#include "mmapio.c"
+#ifndef WIN32
+
 #include "sort.c"
 
 #include "fileline.c"
-#include "backtrace.c"
 #include "state.c"
 #include "dwarf.c"
 
-#if LINUX
 #include "posix.c"
+#include "mmap.c"
+#include "mmapio.c"
+#include "backtrace.c"
+
+#if LINUX
 #include "elf.c"
 #endif
 
 #if ANDROID
-#include "posix.c"
 #include "elf.c"
 #endif
 
 #if MACOS
-#include "posix.c"
 #include "macho.c"
+#endif
+
 #endif

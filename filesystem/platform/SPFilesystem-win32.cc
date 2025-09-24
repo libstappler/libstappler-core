@@ -23,7 +23,6 @@
 #include "SPCore.h"
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
-#include "SPLog.h"
 
 #if WIN32
 
@@ -32,17 +31,11 @@
 #include "SPMemInterface.h"
 #include "SPSharedModule.h"
 #include "detail/SPFilesystemResourceData.h"
-#include <shlwapi.h>
-#include <Shobjidl.h>
-#include <userenv.h>
-#include <Shlobj.h>
-#include <sddl.h>
+
 #include <wil/result_macros.h>
 #include <wil/stl.h>
 #include <wil/resource.h>
-#include <wil/com.h>
 #include <wil\token_helpers.h>
-#include <winnt.h>
 
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
@@ -92,7 +85,7 @@ static void processKnownDir(FilesystemResourceData &data, const KnownFolderInfo 
 			| KF_FLAG_RETURN_FILTER_REDIRECTION_TARGET | KF_FLAG_CREATE;
 
 	dir->GetPath(dirFlagsAppWide, &pathAppWide);
-	std::cout << string::toUtf8<memory::StandartInterface>(
+	/*std::cout << string::toUtf8<memory::StandartInterface>(
 			WideStringView((const char16_t *)def.pszName))
 			  << " ";
 
@@ -120,15 +113,15 @@ static void processKnownDir(FilesystemResourceData &data, const KnownFolderInfo 
 	}
 	if (def.kfdFlags & KFDF_NO_REDIRECT_UI) {
 		std::cout << " KFDF_NO_REDIRECT_UI";
-	}
+	}*/
 
 	auto uPath = string::toUtf8<memory::StandartInterface>(
 			WideStringView((const char16_t *)pathAppWide));
 	auto posixPath = filesystem::native::nativeToPosix<memory::StandartInterface>(uPath);
 
-	std::cout << "\n";
+	//std::cout << "\n";
 	if (pathAppWide) {
-		std::cout << "\tApp: " << posixPath << "\n";
+		//std::cout << "\tApp: " << posixPath << "\n";
 		CoTaskMemFree(pathAppWide);
 	}
 
@@ -199,7 +192,8 @@ void _initSystemPaths(FilesystemResourceData &data) {
 	s_appPath = filesystem::native::nativeToPosix<memory::StandartInterface>(
 			string::toUtf8<memory::StandartInterface>((const char16_t *)fullpath));
 
-	auto manager = wil::CoCreateInstance<KnownFolderManager, IKnownFolderManager>();
+	auto manager = wil::CoCreateInstance<KnownFolderManager, IKnownFolderManager,
+			wil::err_returncode_policy>();
 	if (manager) {
 		HRESULT hr;
 		IKnownFolder *pKnownFolder = nullptr;

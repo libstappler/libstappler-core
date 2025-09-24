@@ -35,7 +35,7 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 	if (hasFlag(info.engineMask, QueueEngine::IOCP)) {
 		setupIocpHandleClass<TimerIocpHandle, TimerIocpSource>(&_info, &_iocpTimerClass, true);
 		setupIocpHandleClass<ThreadIocpHandle, ThreadIocpSource>(&_info, &_iocpThreadClass, true);
-		setupIocpHandleClass<PollHandle, PollSource>(&_info, &_iocpPollClass, true);
+		setupIocpHandleClass<PollIocpHandle, PollIocpSource>(&_info, &_iocpPollClass, true);
 
 		auto iocp = new (memory::pool::acquire()) IocpData(_info.queue, this, info);
 		if (iocp->_port) {
@@ -47,8 +47,8 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			_run = [](void *ptr, TimeInterval ival, QueueWakeupInfo &&info) {
 				return reinterpret_cast<IocpData *>(ptr)->run(ival, info.flags, info.timeout);
 			};
-			_wakeup = [](void *ptr, QueueWakeupInfo &&info) {
-				return reinterpret_cast<IocpData *>(ptr)->wakeup(info.flags, info.timeout);
+			_wakeup = [](void *ptr, WakeupFlags flags) {
+				return reinterpret_cast<IocpData *>(ptr)->wakeup(flags);
 			};
 			_cancel = [](void *ptr) { reinterpret_cast<IocpData *>(ptr)->cancel(); };
 			_destroy = [](void *ptr) { delete reinterpret_cast<IocpData *>(ptr); };
@@ -63,8 +63,14 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 				return Rc<ThreadIocpHandle>::create(&data->_iocpThreadClass);
 			};
 
+			_listenHandle = [](QueueData *d, void *ptr, NativeHandle handle, PollFlags flags,
+									CompletionHandle<PollHandle> &&cb) -> Rc<PollHandle> {
+				auto data = reinterpret_cast<Queue::Data *>(d);
+				return Rc<PollIocpHandle>::create(&data->_iocpPollClass, handle, flags,
+						sp::move(cb));
+			};
+
 			_platformQueue = iocp;
-			iocp->runInternalHandles();
 			_engine = QueueEngine::IOCP;
 		} else {
 			iocp->~IocpData();

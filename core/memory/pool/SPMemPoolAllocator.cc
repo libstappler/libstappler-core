@@ -26,9 +26,11 @@ THE SOFTWARE.
 #include "SPPlatformUnistd.h"
 #include "SPPlatform.h"
 
+#if SP_POSIX_MAPPED_FILES
 #include <limits.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
 

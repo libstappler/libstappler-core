@@ -48,6 +48,9 @@ template <typename Interface>
 auto toUtf8(const WideStringView &data) -> typename Interface::StringType;
 
 template <typename Interface>
+auto toUtf8(const wchar_t *, size_t) -> typename Interface::StringType;
+
+template <typename Interface>
 auto toUtf8(char16_t c) -> typename Interface::StringType;
 
 template <typename Interface>

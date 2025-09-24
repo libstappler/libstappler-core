@@ -29,15 +29,17 @@ namespace STAPPLER_VERSIONIZED stappler::font {
 
 class FontLibrary;
 
-class SP_PUBLIC FontFaceObjectHandle : public Ref, public InterfaceObject<memory::StandartInterface> {
+class SP_PUBLIC FontFaceObjectHandle : public Ref,
+									   public InterfaceObject<memory::StandartInterface> {
 public:
 	virtual ~FontFaceObjectHandle();
 
-	bool init(const Rc<FontLibrary> &, Rc<FontFaceObject> &&, Function<void(const FontFaceObjectHandle *)> &&onDestroy);
+	bool init(const Rc<FontLibrary> &, Rc<FontFaceObject> &&,
+			Function<void(const FontFaceObjectHandle *)> &&onDestroy);
 
 	FT_Face getFace() const { return _face->getFace(); }
 
-	bool acquireTexture(char16_t, const Callback<void(const CharTexture &)> &);
+	bool acquireTexture(char32_t, const Callback<void(const CharTexture &)> &);
 
 protected:
 	Rc<FontLibrary> _library;
@@ -69,9 +71,7 @@ public:
 				view = bytes;
 			}
 		}
-		FontData(Bytes &&b) : persistent(false), bytes(sp::move(b)) {
-			view = bytes;
-		}
+		FontData(Bytes &&b) : persistent(false), bytes(sp::move(b)) { view = bytes; }
 		FontData(Function<Bytes()> &&cb) : persistent(true), callback(sp::move(cb)) { }
 	};
 
@@ -81,9 +81,11 @@ public:
 	FontLibrary();
 	virtual ~FontLibrary();
 
-	Rc<FontFaceData> openFontData(StringView, FontLayoutParameters params, bool isParamsPreconfigured, const Callback<FontData()> & = nullptr);
+	Rc<FontFaceData> openFontData(StringView, FontLayoutParameters params,
+			bool isParamsPreconfigured, const Callback<FontData()> & = nullptr);
 
-	Rc<FontFaceObject> openFontFace(StringView, const FontSpecializationVector &, const Callback<FontData()> &);
+	Rc<FontFaceObject> openFontFace(StringView, const FontSpecializationVector &,
+			const Callback<FontData()> &);
 	Rc<FontFaceObject> openFontFace(const Rc<FontFaceData> &, const FontSpecializationVector &);
 
 	void invalidate();
@@ -106,9 +108,9 @@ protected:
 	Map<FontFaceObject *, Map<std::thread::id, Rc<FontFaceObjectHandle>>> _threads;
 	FT_Library _library = nullptr;
 
-	std::bitset<1024 * 16> _fontIds;
+	std::bitset<1'024 * 16> _fontIds;
 };
 
-}
+} // namespace stappler::font
 
 #endif /* CORE_FONT_SPFONTLIBRARY_H_ */
