@@ -27,14 +27,14 @@ THE SOFTWARE.
 
 #include "SPMemFunction.h"
 #include "SPMemInterface.h"
-#include "SPSpanView.h"
-#include "SPString.h"
+#include "SPSpanView.h" // IWYU pragma: keep
+#include "SPString.h" // IWYU pragma: keep
 #include "SPStringView.h"
 #include "SPTime.h"
 #include "SPRef.h"
 
 #ifdef MODULE_STAPPLER_DATA
-#include "SPData.h"
+#include "SPData.h" // IWYU pragma: keep
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler {

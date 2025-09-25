@@ -60,9 +60,7 @@ static char32_t Utf8DecodeHtml32(const char *ptr, uint32_t len) {
 char32_t utf8HtmlDecode32(const char *utf8, uint8_t &offset) {
 	if (utf8[0] == '&') {
 		uint32_t len = 0;
-		while (utf8[len] && utf8[len] != ';' && len < 10) {
-			len ++;
-		}
+		while (utf8[len] && utf8[len] != ';' && len < 10) { len++; }
 
 		char32_t c = 0;
 		if (utf8[len] == ';' && len > 2) {
@@ -80,13 +78,13 @@ char32_t utf8HtmlDecode32(const char *utf8, uint8_t &offset) {
 	}
 }
 
-}
+} // namespace stappler::unicode
 
 namespace STAPPLER_VERSIONIZED stappler::string {
 
 SPUNUSED inline size_t Utf8CharLength(const uint8_t *ptr, uint8_t &mask);
 
-static inline void sp_str_replace(const char *target, const char *str, char &b, char &c) {
+/*static inline void sp_str_replace(const char *target, const char *str, char &b, char &c) {
 	int i = 0;
 	while (str[1] != 0) {
 		if (str[0] == b && str[1] == c) {
@@ -96,51 +94,54 @@ static inline void sp_str_replace(const char *target, const char *str, char &b, 
 			}
 			return;
 		}
-		++ i; ++ str;
+		++i;
+		++str;
 	}
-}
+}*/
 
-template <class T> static inline T Utf8NextChar(T p) {
+template <class T>
+static inline T Utf8NextChar(T p) {
 	return (p + unicode::utf8_length_data[((const uint8_t *)p)[0]]);
 }
 
-template <class T> static inline T Utf8NextChar(T p, size_t &counter) {
-	auto l = unicode::utf8_length_data[ ((const uint8_t *)p)[0] ];
+template <class T>
+static inline T Utf8NextChar(T p, size_t &counter) {
+	auto l = unicode::utf8_length_data[((const uint8_t *)p)[0]];
 	counter += 1;
 	return (p + l);
 }
 
 bool isValidUtf8(StringView r) {
 	static const uint8_t utf8_valid_data[256] = {
-	//	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f
-		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-		3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 0, 0
-	};
+		//	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, b, c, d, e, f
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+		2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
+		5, 5, 5, 5, 6, 6, 0, 0};
 
 	auto ptr = r.data();
 	const auto end = ptr + r.size();
 	while (ptr < end && *ptr != 0) {
-		auto l = utf8_valid_data[ ((const uint8_t *)ptr)[0] ];
+		auto l = utf8_valid_data[((const uint8_t *)ptr)[0]];
 		if (l == 0) {
 			return false;
 		} else if (l == 1) {
-			++ ptr;
+			++ptr;
 		} else {
 			while (l > 1) {
-				-- l;
-				++ ptr;
+				--l;
+				++ptr;
 
 				if ((((const uint8_t *)ptr)[0] & 0b1100'0000) != 0b1000'0000) {
 					return false;
 				}
 			}
-			++ ptr;
+			++ptr;
 		}
 	};
 	return true;
@@ -151,8 +152,8 @@ size_t getUtf16Length(const StringView &input) {
 	auto ptr = input.data();
 	const auto end = ptr + input.size();
 	while (ptr < end && *ptr != 0) {
-		counter += unicode::utf16_length_data[ uint8_t(*ptr) ];
-		ptr += unicode::utf8_length_data[ uint8_t(*ptr) ];
+		counter += unicode::utf16_length_data[uint8_t(*ptr)];
+		ptr += unicode::utf8_length_data[uint8_t(*ptr)];
 	};
 	return counter;
 }
@@ -164,23 +165,21 @@ size_t getUtf16HtmlLength(const StringView &input) {
 	while (ptr < end && *ptr != 0) {
 		if (ptr[0] == '&') {
 			uint8_t len = 0;
-			while (ptr[len] && ptr[len] != ';' && len < 10) {
-				len ++;
-			}
+			while (ptr[len] && ptr[len] != ';' && len < 10) { len++; }
 
 
 			if (ptr[len] == ';' && len > 2) {
-				counter ++;
+				counter++;
 				ptr += len;
 			} else if (ptr[len] == 0) {
 				ptr += len;
 			} else {
-				counter += unicode::utf16_length_data[ uint8_t(*ptr) ];
-				ptr += unicode::utf8_length_data[ uint8_t(*ptr) ];
+				counter += unicode::utf16_length_data[uint8_t(*ptr)];
+				ptr += unicode::utf8_length_data[uint8_t(*ptr)];
 			}
 		} else {
-			counter += unicode::utf16_length_data[ uint8_t(*ptr) ];
-			ptr += unicode::utf8_length_data[ uint8_t(*ptr) ];
+			counter += unicode::utf16_length_data[uint8_t(*ptr)];
+			ptr += unicode::utf8_length_data[uint8_t(*ptr)];
 		}
 	};
 	return counter;
@@ -193,9 +192,7 @@ size_t getUtf8HtmlLength(const StringView &input) {
 	while (ptr < end && *ptr != 0) {
 		if (ptr[0] == '&') {
 			uint8_t len = 0;
-			while (ptr[len] && ptr[len] != ';' && len < 10) {
-				len ++;
-			}
+			while (ptr[len] && ptr[len] != ';' && len < 10) { len++; }
 
 			if (ptr[len] == ';' && len > 2) {
 				auto c = unicode::Utf8DecodeHtml32(ptr + 1, len - 2);
@@ -224,11 +221,17 @@ size_t getUtf8Length(const WideStringView &str) {
 		if (c >= 0xD800 && c <= 0xDFFF) {
 			// surrogates is 4-byte
 			ret += 4;
-			++ ptr;
+			++ptr;
 		} else {
 			ret += unicode::utf8EncodeLength(c);
 		}
 	}
+	return ret;
+}
+
+size_t getUtf8Length(const StringViewBase<char32_t> &str) {
+	size_t ret = 0;
+	for (auto &c : str) { ret += unicode::utf8EncodeLength(c); }
 	return ret;
 }
 
@@ -240,10 +243,70 @@ size_t getUtf8Length(const WideStringView &str) {
 //};
 
 static constexpr const uint8_t koi8r_small[64] = {
-	0xE1, 0xE2, 0xF7, 0xE7, 0xE4, 0xE5, 0xF6, 0xFA, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF, 0xF0,
-	0xF2, 0xF3, 0xF4, 0xF5, 0xE6, 0xE8, 0xE3, 0xFE, 0xFB, 0xFD, 0xFF, 0xF9, 0xF8, 0xFC, 0xE0, 0xF1,
-	0xC1, 0xC2, 0xD7, 0xC7, 0xC4, 0xC5, 0xD6, 0xDA, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0,
-	0xD2, 0xD3, 0xD4, 0xD5, 0xC6, 0xC8, 0xC3, 0xDE, 0xDB, 0xDD, 0xDF, 0xD9, 0xD8, 0xDC, 0xC0, 0xD1,
+	0xE1,
+	0xE2,
+	0xF7,
+	0xE7,
+	0xE4,
+	0xE5,
+	0xF6,
+	0xFA,
+	0xE9,
+	0xEA,
+	0xEB,
+	0xEC,
+	0xED,
+	0xEE,
+	0xEF,
+	0xF0,
+	0xF2,
+	0xF3,
+	0xF4,
+	0xF5,
+	0xE6,
+	0xE8,
+	0xE3,
+	0xFE,
+	0xFB,
+	0xFD,
+	0xFF,
+	0xF9,
+	0xF8,
+	0xFC,
+	0xE0,
+	0xF1,
+	0xC1,
+	0xC2,
+	0xD7,
+	0xC7,
+	0xC4,
+	0xC5,
+	0xD6,
+	0xDA,
+	0xC9,
+	0xCA,
+	0xCB,
+	0xCC,
+	0xCD,
+	0xCE,
+	0xCF,
+	0xD0,
+	0xD2,
+	0xD3,
+	0xD4,
+	0xD5,
+	0xC6,
+	0xC8,
+	0xC3,
+	0xDE,
+	0xDB,
+	0xDD,
+	0xDF,
+	0xD9,
+	0xD8,
+	0xDC,
+	0xC0,
+	0xD1,
 };
 
 char charToKoi8r(char16_t c) {
@@ -328,4 +391,4 @@ char charToKoi8r(char16_t c) {
 	return ' ';
 }
 
-}
+} // namespace stappler::string

@@ -67,6 +67,7 @@ inline size_t getUtf8Length(char32_t c) { return unicode::utf8EncodeLength(c); }
 inline size_t getUtf8Length(char16_t c) { return unicode::utf8EncodeLength(c); }
 SP_PUBLIC size_t getUtf8HtmlLength(const StringView &str);
 SP_PUBLIC size_t getUtf8Length(const WideStringView &str);
+SP_PUBLIC size_t getUtf8Length(const StringViewBase<char32_t> &str);
 
 SP_PUBLIC char charToKoi8r(char16_t c);
 
