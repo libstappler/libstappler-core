@@ -80,6 +80,7 @@
 
 #include <setupapi.h>
 #include <Ntddvdeo.h>
+#include <dwmapi.h>
 
 #define WIL_SUPPRESS_EXCEPTIONS 1
 

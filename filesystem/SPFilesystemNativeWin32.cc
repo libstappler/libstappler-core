@@ -498,6 +498,7 @@ Status write_fn(StringView ipath, const unsigned char *data, size_t len, ProtFla
 	if (fileToWrite != INVALID_HANDLE_VALUE) {
 		DWORD outLen = 0;
 		auto ret = WriteFile(fileToWrite, data, len, &outLen, nullptr);
+		CloseHandle(fileToWrite);
 		if (ret && outLen == len) {
 			return Status::Ok;
 		} else if (!ret) {

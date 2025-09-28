@@ -49,10 +49,10 @@ static BackendInterface::StorageType getStorageType(StringView type) {
 struct ColRec {
 	using Type = BackendInterface::StorageType;
 
-	enum Flags {
+	enum Flags : uint32_t {
 		None,
-		IsNotNull,
-		PrimaryKey
+		IsNotNull = 1 << 0,
+		PrimaryKey = 1 << 1
 	};
 
 	Type type = Type::Unknown;
@@ -62,7 +62,8 @@ struct ColRec {
 	bool isNotNull() const;
 
 	ColRec(Type t, Flags flags = Flags::None) : type(t), flags(flags) { }
-	ColRec(const StringView &t, Flags flags = Flags::None) : custom(t.str<Interface>()), flags(flags) {
+	ColRec(const StringView &t, Flags flags = Flags::None)
+	: custom(t.str<Interface>()), flags(flags) {
 		type = getStorageType(custom);
 	}
 };
@@ -73,8 +74,10 @@ struct IndexRec {
 	Vector<String> fields;
 	bool unique = false;
 
-	IndexRec(StringView str, bool unique = false) : fields(Vector<String>({str.str<Interface>()})), unique(unique) { }
-	IndexRec(Vector<String> &&fields, bool unique = false) : fields(sp::move(fields)), unique(unique) { }
+	IndexRec(StringView str, bool unique = false)
+	: fields(Vector<String>({str.str<Interface>()})), unique(unique) { }
+	IndexRec(Vector<String> &&fields, bool unique = false)
+	: fields(sp::move(fields)), unique(unique) { }
 };
 
 struct TriggerRec {
@@ -128,7 +131,7 @@ struct TriggerRec {
 			case 2: {
 				auto table = value.readUntil<StringView::Chars<'@'>>();
 				if (value.is('@')) {
-					++ value;
+					++value;
 					sourceTable = table.str<Interface>();
 					sourceField = value.str<Interface>();
 				} else {
@@ -139,7 +142,7 @@ struct TriggerRec {
 			case 3: {
 				auto table = value.readUntil<StringView::Chars<'@'>>();
 				if (value.is('@')) {
-					++ value;
+					++value;
 					targetTable = table.str<Interface>();
 					targetField = value.str<Interface>();
 				} else {
@@ -160,19 +163,20 @@ struct TriggerRec {
 					return;
 				}
 				break;
-			default:
-				break;
+			default: break;
 			}
 			if (def.is(':')) {
-				++ def;
-				++ valueIdx;
+				++def;
+				++valueIdx;
 			}
 		}
 	}
 
 	TriggerRec(Type t, Bind b, StringView sourceTable, StringView sourceField,
 			StringView targetTable, StringView targetField, const Field *f = nullptr)
-	: type(t), bind(b), rootField(f)
+	: type(t)
+	, bind(b)
+	, rootField(f)
 	, sourceTable(sourceTable.str<Interface>())
 	, sourceField(sourceField.str<Interface>())
 	, targetTable(targetTable.str<Interface>())
@@ -205,8 +209,8 @@ struct TriggerRec {
 struct TableRec {
 	using Scheme = db::Scheme;
 
-	static Map<StringView, TableRec> parse(const Driver *driver, const BackendInterface::Config &cfg,
-			const Map<StringView, const Scheme *> &s);
+	static Map<StringView, TableRec> parse(const Driver *driver,
+			const BackendInterface::Config &cfg, const Map<StringView, const Scheme *> &s);
 	static Map<StringView, TableRec> get(Handle &h, StringStream &stream);
 
 	static void writeCompareResult(Handle &h, StringStream &stream,
@@ -232,16 +236,16 @@ struct TableRec {
 static StringView getStorageTypeName(BackendInterface::StorageType type, StringView custom) {
 	switch (type) {
 	case ColRec::Type::Unknown: return custom; break;
-	case ColRec::Type::Bool:	return "BOOLEAN"; break;
-	case ColRec::Type::Float4:	return "DOUBLE"; break;
-	case ColRec::Type::Float8:	return "DOUBLE"; break;
-	case ColRec::Type::Int2:	return "INT"; break;
-	case ColRec::Type::Int4:	return "INT"; break;
-	case ColRec::Type::Int8:	return "BIGINT"; break;
-	case ColRec::Type::Text: 	return "TEXT"; break;
+	case ColRec::Type::Bool: return "BOOLEAN"; break;
+	case ColRec::Type::Float4: return "DOUBLE"; break;
+	case ColRec::Type::Float8: return "DOUBLE"; break;
+	case ColRec::Type::Int2: return "INT"; break;
+	case ColRec::Type::Int4: return "INT"; break;
+	case ColRec::Type::Int8: return "BIGINT"; break;
+	case ColRec::Type::Text: return "TEXT"; break;
 	case ColRec::Type::VarChar: return "TEXT"; break;
 	case ColRec::Type::Numeric: return "NUMERIC"; break;
-	case ColRec::Type::Bytes:	return "BLOB"; break;
+	case ColRec::Type::Bytes: return "BLOB"; break;
 	default: break;
 	}
 	return StringView();
@@ -253,7 +257,7 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 		Map<StringView, TableRec> &required, Map<StringView, TableRec> &existed,
 		const Map<StringView, const db::Scheme *> &s) {
 
-	auto writeTriggerHeader = [&] (StringView name, TriggerRec &t, StringView updateField) {
+	auto writeTriggerHeader = [&](StringView name, TriggerRec &t, StringView updateField) {
 		outstream << "CREATE TRIGGER IF NOT EXISTS \"" << name << "\"";
 		switch (t.bind) {
 		case TriggerRec::Before: outstream << " BEFORE"; break;
@@ -261,7 +265,8 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 		}
 		switch (t.type) {
 		case TriggerRec::Delete: outstream << " DELETE"; break;
-		case TriggerRec::Update: outstream << " UPDATE";
+		case TriggerRec::Update:
+			outstream << " UPDATE";
 			if (!updateField.empty()) {
 				outstream << " OF \"" << updateField << "\"";
 			}
@@ -271,17 +276,17 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 		outstream << " ON \"" << t.sourceTable << "\" FOR EACH ROW";
 	};
 
-	auto writeTrigger = [&] (StringView name, TriggerRec &t) {
+	auto writeTrigger = [&](StringView name, TriggerRec &t) {
 		if (t.rootField) {
 			switch (t.rootField->getType()) {
 			case Type::Array:
-				writeTriggerHeader(name, t,StringView());
-				outstream << " BEGIN\n\tDELETE FROM \"" << t.targetTable << "\""
-						" WHERE \"" << t.targetTable << "\".\"" << t.targetField << "\"=OLD.__oid;\nEND;\n";
+				writeTriggerHeader(name, t, StringView());
+				outstream << " BEGIN\n\tDELETE FROM \"" << t.targetTable << "\"" " WHERE \""
+						  << t.targetTable << "\".\"" << t.targetField << "\"=OLD.__oid;\nEND;\n";
 				break;
 			case Type::File:
 			case Type::Image:
-				writeTriggerHeader(name, t,StringView());
+				writeTriggerHeader(name, t, StringView());
 				switch (t.type) {
 				case TriggerRec::Delete:
 					outstream << " WHEN OLD.\"" << t.sourceField << "\" IS NOT NULL BEGIN"
@@ -291,61 +296,66 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 					outstream << " WHEN OLD.\"" << t.sourceField << "\" IS NOT NULL BEGIN"
 							"\n\tINSERT OR IGNORE INTO __removed (__oid) VALUES (OLD.\"" << t.sourceField << "\");\nEND;\n";
 					break;
-				default:
-					break;
+				default: break;
 				}
 				break;
 			case Type::Set:
 				switch (static_cast<const db::FieldObject *>(t.rootField->getSlot())->onRemove) {
 				case RemovePolicy::Reference:
 				case RemovePolicy::StrongReference:
-					writeTriggerHeader(name, t,StringView());
+					writeTriggerHeader(name, t, StringView());
 					outstream << " BEGIN\n\tDELETE FROM \"" << t.targetTable << "\" WHERE \""
-							<< t.targetTable << "\".\"" << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
+							  << t.targetTable << "\".\"" << t.targetField << "\"=OLD.\""
+							  << t.sourceField << "\";\nEND;\n";
 					break;
 				default: break;
 				}
 				break;
 			case Type::View:
-				writeTriggerHeader(name, t,StringView());
+				writeTriggerHeader(name, t, StringView());
 				outstream << " BEGIN\n\tDELETE FROM \"" << t.targetTable << "\" WHERE \""
-						<< t.targetTable << "\".\"" << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
+						  << t.targetTable << "\".\"" << t.targetField << "\"=OLD.\""
+						  << t.sourceField << "\";\nEND;\n";
 				break;
 			case Type::Object:
 				switch (t.onRemove) {
 				case RemovePolicy::Cascade:
-					writeTriggerHeader(name, t,StringView());
+					writeTriggerHeader(name, t, StringView());
 					outstream << " BEGIN\n\tDELETE FROM \"" << t.targetTable << "\" WHERE \""
-							<< t.targetTable << "\".\"" << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
+							  << t.targetTable << "\".\"" << t.targetField << "\"=OLD.\""
+							  << t.sourceField << "\";\nEND;\n";
 					break;
 				case RemovePolicy::Restrict:
-					writeTriggerHeader(name, t,StringView());
+					writeTriggerHeader(name, t, StringView());
 					outstream << " BEGIN\n\tSELECT RAISE(ABORT, 'Restrict constraint failed on "
-							<< t.targetTable << "." << t.targetField << "' FROM \""<< t.targetTable << "\" WHERE \""
-							<< t.targetTable << "\".\"" << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
+							  << t.targetTable << "." << t.targetField << "' FROM \""
+							  << t.targetTable << "\" WHERE \"" << t.targetTable << "\".\""
+							  << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
 					break;
 				case RemovePolicy::Null:
 				case RemovePolicy::Reference:
-					writeTriggerHeader(name, t,StringView());
-					outstream << " BEGIN\n\tUPDATE \"" << t.targetTable << "\" SET \"" << t.targetField << "\"=NULL WHERE \""
-							<< t.targetTable << "\".\"" << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
+					writeTriggerHeader(name, t, StringView());
+					outstream << " BEGIN\n\tUPDATE \"" << t.targetTable << "\" SET \""
+							  << t.targetField << "\"=NULL WHERE \"" << t.targetTable << "\".\""
+							  << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
 					break;
 				case RemovePolicy::StrongReference:
 					// Reverse trigger
 					switch (t.type) {
 					case TriggerRec::Delete:
-						writeTriggerHeader(name, t,StringView());
+						writeTriggerHeader(name, t, StringView());
 						outstream << " BEGIN\n\tDELETE FROM \"" << t.targetTable << "\" WHERE \""
-								<< t.targetTable << "\".\"" << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
+								  << t.targetTable << "\".\"" << t.targetField << "\"=OLD.\""
+								  << t.sourceField << "\";\nEND;\n";
 						break;
 					case TriggerRec::Update:
 						writeTriggerHeader(name, t, t.sourceField);
-						outstream << " WHEN OLD.\"" << t.sourceField << "\" IS NOT NULL BEGIN"
-								"\n\tDELETE FROM \"" << t.targetTable << "\" WHERE \""
-								<< t.targetTable << "\".\"" << t.targetField << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
+						outstream << " WHEN OLD.\"" << t.sourceField
+								  << "\" IS NOT NULL BEGIN" "\n\tDELETE FROM \"" << t.targetTable
+								  << "\" WHERE \"" << t.targetTable << "\".\"" << t.targetField
+								  << "\"=OLD.\"" << t.sourceField << "\";\nEND;\n";
 						break;
-					default:
-						break;
+					default: break;
 					}
 					break;
 				}
@@ -354,74 +364,72 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				writeTriggerHeader(name, t, t.sourceField);
 				switch (t.type) {
 				case TriggerRec::Delete:
-					outstream << " WHEN OLD.\"" << t.sourceField << "\" IS NOT NULL BEGIN\n"
-							"\tSELECT sp_ts_update(OLD.__oid, OLD.\"" << t.sourceField << "\", "
-									"'" << t.sourceTable << "', '" << t.sourceField << "', '" << t.targetTable << "', 2);"
-							"\nEND;\n";
+					outstream << " WHEN OLD.\"" << t.sourceField
+							  << "\" IS NOT NULL BEGIN\n" "\tSELECT sp_ts_update(OLD.__oid, OLD.\""
+							  << t.sourceField << "\", " "'" << t.sourceTable << "', '"
+							  << t.sourceField << "', '" << t.targetTable << "', 2);" "\nEND;\n";
 					break;
 				case TriggerRec::Update:
-					outstream << " BEGIN\n"
-							"\tSELECT sp_ts_update(OLD.__oid, NEW.\"" << t.sourceField << "\", "
-									"'" << t.sourceTable << "', '" << t.sourceField << "', '" << t.targetTable << "', 1);"
-							"\nEND;\n";
+					outstream << " BEGIN\n" "\tSELECT sp_ts_update(OLD.__oid, NEW.\""
+							  << t.sourceField << "\", " "'" << t.sourceTable << "', '"
+							  << t.sourceField << "', '" << t.targetTable << "', 1);" "\nEND;\n";
 					break;
 				case TriggerRec::Insert:
-					outstream << " WHEN NEW.\"" << t.sourceField << "\" IS NOT NULL BEGIN\n"
-							"\tSELECT sp_ts_update(NEW.__oid, NEW.\"" << t.sourceField << "\", "
-									"'" << t.sourceTable << "', '" << t.sourceField << "', '" << t.targetTable << "', 0);"
-							"\nEND;\n";
+					outstream << " WHEN NEW.\"" << t.sourceField
+							  << "\" IS NOT NULL BEGIN\n" "\tSELECT sp_ts_update(NEW.__oid, NEW.\""
+							  << t.sourceField << "\", " "'" << t.sourceTable << "', '"
+							  << t.sourceField << "', '" << t.targetTable << "', 0);" "\nEND;\n";
 					break;
 				}
 				break;
-			default:
-				break;
+			default: break;
 			}
 		} else if (t.rootScheme && t.rootScheme->hasDelta()) {
 			switch (t.type) {
 			case TriggerRec::Delete:
-				writeTriggerHeader(name, t,StringView());
-				outstream << " BEGIN"
-						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(OLD.__oid," << stappler::toInt(DeltaAction::Delete) << ",sp_sqlite_now(),sp_sqlite_user());"
-						"\nEND;\n";
+				writeTriggerHeader(name, t, StringView());
+				outstream << " BEGIN" "\n\tINSERT INTO " << t.targetTable
+						  << "(\"object\",\"action\",\"time\",\"user\") VALUES" "(OLD.__oid,"
+						  << stappler::toInt(DeltaAction::Delete)
+						  << ",sp_sqlite_now(),sp_sqlite_user());" "\nEND;\n";
 				break;
 			case TriggerRec::Update:
-				writeTriggerHeader(name, t,StringView());
-				outstream << " BEGIN"
-						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(NEW.__oid," << stappler::toInt(DeltaAction::Update) << ",sp_sqlite_now(),sp_sqlite_user());"
-						"\nEND;\n";
+				writeTriggerHeader(name, t, StringView());
+				outstream << " BEGIN" "\n\tINSERT INTO " << t.targetTable
+						  << "(\"object\",\"action\",\"time\",\"user\") VALUES" "(NEW.__oid,"
+						  << stappler::toInt(DeltaAction::Update)
+						  << ",sp_sqlite_now(),sp_sqlite_user());" "\nEND;\n";
 				break;
 			case TriggerRec::Insert:
-				writeTriggerHeader(name, t,StringView());
-				outstream << " BEGIN"
-						"\n\tINSERT INTO " << t.targetTable << "(\"object\",\"action\",\"time\",\"user\") VALUES"
-						"(NEW.__oid," << stappler::toInt(DeltaAction::Create) << ",sp_sqlite_now(),sp_sqlite_user());"
-						"\nEND;\n";
+				writeTriggerHeader(name, t, StringView());
+				outstream << " BEGIN" "\n\tINSERT INTO " << t.targetTable
+						  << "(\"object\",\"action\",\"time\",\"user\") VALUES" "(NEW.__oid,"
+						  << stappler::toInt(DeltaAction::Create)
+						  << ",sp_sqlite_now(),sp_sqlite_user());" "\nEND;\n";
 				break;
 			}
 		} else if (t.sourceField == "__delta") {
 			switch (t.type) {
 			case TriggerRec::Delete:
-				writeTriggerHeader(name, t,StringView());
-				outstream << " BEGIN"
-						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(OLD.\"" << t.tagField << "\",OLD.\"" << t.targetField  << "\",sp_sqlite_now(),sp_sqlite_user());"
-						"\nEND;\n";
+				writeTriggerHeader(name, t, StringView());
+				outstream << " BEGIN" "\n\tINSERT INTO " << t.targetTable
+						  << "(\"tag\",\"object\",\"time\",\"user\") VALUES" "(OLD.\"" << t.tagField
+						  << "\",OLD.\"" << t.targetField
+						  << "\",sp_sqlite_now(),sp_sqlite_user());" "\nEND;\n";
 				break;
 			case TriggerRec::Update:
-				writeTriggerHeader(name, t,StringView());
-				outstream << " BEGIN"
-						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",sp_sqlite_now(),sp_sqlite_user());"
-						"\nEND;\n";
+				writeTriggerHeader(name, t, StringView());
+				outstream << " BEGIN" "\n\tINSERT INTO " << t.targetTable
+						  << "(\"tag\",\"object\",\"time\",\"user\") VALUES" "(NEW.\"" << t.tagField
+						  << "\",NEW.\"" << t.targetField
+						  << "\",sp_sqlite_now(),sp_sqlite_user());" "\nEND;\n";
 				break;
 			case TriggerRec::Insert:
-				writeTriggerHeader(name, t,StringView());
-				outstream << " BEGIN"
-						"\n\tINSERT INTO " << t.targetTable << "(\"tag\",\"object\",\"time\",\"user\") VALUES"
-						"(NEW.\"" << t.tagField << "\",NEW.\"" << t.targetField  << "\",sp_sqlite_now(),sp_sqlite_user());"
-						"\nEND;\n";
+				writeTriggerHeader(name, t, StringView());
+				outstream << " BEGIN" "\n\tINSERT INTO " << t.targetTable
+						  << "(\"tag\",\"object\",\"time\",\"user\") VALUES" "(NEW.\"" << t.tagField
+						  << "\",NEW.\"" << t.targetField
+						  << "\",sp_sqlite_now(),sp_sqlite_user());" "\nEND;\n";
 				break;
 			}
 		}
@@ -458,7 +466,8 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				auto req_col_it = req_t.cols.find(ex_col_it.first);
 				if (req_col_it == req_t.cols.end()) {
 					updated = true;
-					outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \"" << ex_col_it.first << "\";\n";
+					outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \""
+							  << ex_col_it.first << "\";\n";
 				} else {
 					auto &req_col = req_col_it->second;
 					auto &ex_col = ex_col_it.second;
@@ -467,10 +476,14 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 
 					if (req_type != ex_col.type) {
 						updated = true;
-						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \"" << ex_col_it.first << "\";\n";
-					} else if (ex_col.type == ColRec::Type::Unknown && req_type == ColRec::Type::Unknown && ex_col.custom != req_col.custom) {
+						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \""
+								  << ex_col_it.first << "\";\n";
+					} else if (ex_col.type == ColRec::Type::Unknown
+							&& req_type == ColRec::Type::Unknown
+							&& ex_col.custom != req_col.custom) {
 						updated = true;
-						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \"" << ex_col_it.first << "\";\n";
+						outstream << "ALTER TABLE \"" << ex_it.first << "\" DROP COLUMN \""
+								  << ex_col_it.first << "\";\n";
 					} else {
 						req_t.cols.erase(req_col_it);
 					}
@@ -488,8 +501,9 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 			}
 
 			if (updated) {
-				outstream << "INSERT INTO __versions(name,version) VALUES('" << ex_it.first << "'," << ex_t.version << ")"
-						<< " ON CONFLICT(name) DO UPDATE SET version = EXCLUDED.version;\n";
+				outstream << "INSERT INTO __versions(name,version) VALUES('" << ex_it.first << "',"
+						  << ex_t.version << ")"
+						  << " ON CONFLICT(name) DO UPDATE SET version = EXCLUDED.version;\n";
 			}
 		}
 	}
@@ -510,16 +524,21 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 				}
 			}
 
-			for (auto cit = t.cols.begin(); cit != t.cols.end(); cit ++) {
-				if (first) { first = false; } else { outstream << ",\n"; }
+			for (auto cit = t.cols.begin(); cit != t.cols.end(); cit++) {
+				if (first) {
+					first = false;
+				} else {
+					outstream << ",\n";
+				}
 				outstream << "\t\"" << cit->first << "\" "
-						<< getStorageTypeName(cit->second.type, cit->second.custom);
+						  << getStorageTypeName(cit->second.type, cit->second.custom);
 
 				if ((cit->second.flags & ColRec::IsNotNull) != ColRec::None) {
 					outstream << " NOT NULL";
 				}
 
-				if (!it.second.withOids && (cit->second.flags & ColRec::PrimaryKey) != ColRec::Flags::None) {
+				if (!it.second.withOids
+						&& (cit->second.flags & ColRec::PrimaryKey) != ColRec::Flags::None) {
 					outstream << " PRIMARY KEY";
 				}
 			}
@@ -528,8 +547,8 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 		} else {
 			for (auto cit : t.cols) {
 				if (cit.first != "__oid") {
-					outstream << "ALTER TABLE \"" << it.first << "\" ADD COLUMN \"" << cit.first << "\" "
-							<< getStorageTypeName(cit.second.type, cit.second.custom);
+					outstream << "ALTER TABLE \"" << it.first << "\" ADD COLUMN \"" << cit.first
+							  << "\" " << getStorageTypeName(cit.second.type, cit.second.custom);
 					if ((cit.second.flags & ColRec::Flags::IsNotNull) != ColRec::Flags::None) {
 						outstream << " NOT NULL";
 					}
@@ -538,25 +557,30 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 			}
 		}
 
-		outstream << "INSERT INTO __versions(name,version) VALUES('" << it.first << "'," << it.second.version << ")"
-				<< " ON CONFLICT(name) DO UPDATE SET version = EXCLUDED.version;\n";
+		outstream << "INSERT INTO __versions(name,version) VALUES('" << it.first << "',"
+				  << it.second.version << ")"
+				  << " ON CONFLICT(name) DO UPDATE SET version = EXCLUDED.version;\n";
 	}
 
 	// indexes
 	for (auto &it : required) {
-		for (auto & cit : it.second.indexes) {
+		for (auto &cit : it.second.indexes) {
 			outstream << "CREATE";
 			if (cit.second.unique) {
 				outstream << " UNIQUE";
 			}
 			outstream << " INDEX IF NOT EXISTS \"" << cit.first << "\" ON \"" << it.first << "\"";
 			if (cit.second.fields.size() == 1 && cit.second.fields.front().back() == ')') {
-				outstream <<  " " << cit.second.fields.front() << ";\n";
+				outstream << " " << cit.second.fields.front() << ";\n";
 			} else {
 				outstream << " (";
 				bool first = true;
 				for (auto &field : cit.second.fields) {
-					if (first) { first = false; } else { outstream << ","; }
+					if (first) {
+						first = false;
+					} else {
+						outstream << ",";
+					}
 					outstream << "\"" << field << "\"";
 				}
 				outstream << ");\n";
@@ -564,9 +588,7 @@ void TableRec::writeCompareResult(Handle &h, StringStream &outstream,
 		}
 
 		if (!it.second.triggers.empty()) {
-			for (auto & tit : it.second.triggers) {
-				writeTrigger(tit.first, tit.second);
-			}
+			for (auto &tit : it.second.triggers) { writeTrigger(tit.first, tit.second); }
 
 			/*auto scheme_it = s.find(it.first);
 			if (scheme_it != s.end()) {
@@ -610,19 +632,23 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 			switch (type) {
 			case db::Type::Set: {
 				auto ref = static_cast<const db::FieldObject *>(f.getSlot());
-				if (ref->onRemove == db::RemovePolicy::Reference || ref->onRemove == db::RemovePolicy::StrongReference) {
+				if (ref->onRemove == db::RemovePolicy::Reference
+						|| ref->onRemove == db::RemovePolicy::StrongReference) {
 					// create many-to-many table link
 					String name = toString(it.first, "_f_", fit.first);
-					auto & source = it.first;
+					auto &source = it.first;
 					auto target = ref->scheme->getName();
 					TableRec table;
-					table.cols.emplace(toString(source, "_id"), ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
-					table.cols.emplace(toString(target, "_id"), ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
+					table.cols.emplace(toString(source, "_id"),
+							ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
+					table.cols.emplace(toString(target, "_id"),
+							ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
 
 					table.indexes.emplace(toString(name, "_idx_", source), toString(source, "_id"));
 					table.indexes.emplace(toString(name, "_idx_", target), toString(target, "_id"));
 
-					auto extraTable = &tables.emplace(StringView(name).pdup(), sp::move(table)).first->second;
+					auto extraTable =
+							&tables.emplace(StringView(name).pdup(), sp::move(table)).first->second;
 
 					do {
 						TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, source, "__oid",
@@ -635,17 +661,19 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					do {
 						auto targetIt = tables.find(target);
 						if (targetIt != tables.end()) {
-							TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, target, "__oid",
-									name, toString(target, "_id"));
+							TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, target,
+									"__oid", name, toString(target, "_id"));
 							trigger.rootField = &fit.second;
 							trigger.rootScheme = scheme;
 							auto triggerName = trigger.makeName();
-							targetIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
+							targetIt->second.triggers.emplace(sp::move(triggerName),
+									sp::move(trigger));
 						}
 
-						if (ref->onRemove == db::RemovePolicy::StrongReference && targetIt != tables.end()) {
-							TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, name, toString(target, "_id"),
-									target, "__oid");
+						if (ref->onRemove == db::RemovePolicy::StrongReference
+								&& targetIt != tables.end()) {
+							TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, name,
+									toString(target, "_id"), target, "__oid");
 							trigger.rootField = &fit.second;
 							trigger.rootScheme = scheme;
 							auto triggerName = trigger.makeName();
@@ -659,13 +687,15 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				auto ref = static_cast<const db::FieldObject *>(f.getSlot());
 				auto targetIt = tables.find(ref->scheme->getName());
 				if (targetIt != tables.end()) {
-					TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, ref->scheme->getName(), "__oid",
-							scheme->getName(), fit.second.getName());
+					TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before,
+							ref->scheme->getName(), "__oid", scheme->getName(),
+							fit.second.getName());
 					trigger.rootField = &fit.second;
 					trigger.rootScheme = scheme;
 					trigger.onRemove = ref->onRemove;
 					if (ref->onRemove == RemovePolicy::StrongReference) {
-						trigger.onRemove = RemovePolicy::Reference; // make trigger to remove just reference
+						trigger.onRemove =
+								RemovePolicy::Reference; // make trigger to remove just reference
 					}
 
 					auto triggerName = trigger.makeName();
@@ -674,8 +704,9 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					if (ref->onRemove == RemovePolicy::StrongReference) {
 						// make reverse-trigger to remove object with strong reference
 						do {
-							TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, scheme->getName(), fit.second.getName(),
-									ref->scheme->getName(), "__oid");
+							TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before,
+									scheme->getName(), fit.second.getName(), ref->scheme->getName(),
+									"__oid");
 							trigger.rootField = &fit.second;
 							trigger.rootScheme = scheme;
 							trigger.onRemove = ref->onRemove;
@@ -685,8 +716,9 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 						} while (0);
 
 						do {
-							TriggerRec trigger(TriggerRec::Update, TriggerRec::Before, scheme->getName(), fit.second.getName(),
-									ref->scheme->getName(), "__oid");
+							TriggerRec trigger(TriggerRec::Update, TriggerRec::Before,
+									scheme->getName(), fit.second.getName(), ref->scheme->getName(),
+									"__oid");
 							trigger.rootField = &fit.second;
 							trigger.rootScheme = scheme;
 							trigger.onRemove = ref->onRemove;
@@ -703,7 +735,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				if (slot->tfield && slot->tfield.isSimpleLayout()) {
 
 					String name = toString(it.first, "_f_", fit.first);
-					auto & source = it.first;
+					auto &source = it.first;
 
 					auto sourceFieldName = toString(source, "_id");
 
@@ -712,27 +744,36 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 
 					auto type = slot->tfield.getType();
 					switch (type) {
-					case db::Type::Float: table.cols.emplace("data", ColRec(ColRec::Type::Float8)); break;
-					case db::Type::Boolean: table.cols.emplace("data", ColRec(ColRec::Type::Bool)); break;
-					case db::Type::Text: table.cols.emplace("data", ColRec(ColRec::Type::Text)); break;
-					case db::Type::Integer: table.cols.emplace("data", ColRec(ColRec::Type::Int8)); break;
+					case db::Type::Float:
+						table.cols.emplace("data", ColRec(ColRec::Type::Float8));
+						break;
+					case db::Type::Boolean:
+						table.cols.emplace("data", ColRec(ColRec::Type::Bool));
+						break;
+					case db::Type::Text:
+						table.cols.emplace("data", ColRec(ColRec::Type::Text));
+						break;
+					case db::Type::Integer:
+						table.cols.emplace("data", ColRec(ColRec::Type::Int8));
+						break;
 					case db::Type::Data:
 					case db::Type::Bytes:
 					case db::Type::Extra:
 						table.cols.emplace("data", ColRec(ColRec::Type::Bytes));
 						break;
-					default:
-						break;
+					default: break;
 					}
 
 					table.indexes.emplace(toString(name, "_idx_", source), toString(source, "_id"));
 					if (f.hasFlag(db::Flags::Unique)) {
-						table.indexes.emplace(toString(name, "_uidx_data"), IndexRec(toString("data"), true));
+						table.indexes.emplace(toString(name, "_uidx_data"),
+								IndexRec(toString("data"), true));
 					}
 
 					tables.emplace(StringView(name).pdup(), sp::move(table));
 
-					TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, scheme->getName(), f.getName(), name, sourceFieldName);
+					TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, scheme->getName(),
+							f.getName(), name, sourceFieldName);
 					trigger.rootField = &f;
 					auto triggerName = trigger.makeName();
 
@@ -744,15 +785,17 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				auto slot = static_cast<const db::FieldView *>(f.getSlot());
 
 				String viewName = toString(it.first, "_f_", fit.first, "_view");
-				auto & source = it.first;
+				auto &source = it.first;
 				auto target = slot->scheme->getName();
 
 				TableRec table;
 				table.viewScheme = it.second;
 				table.viewField = slot;
 				table.cols.emplace("__vid", ColRec(ColRec::Type::Int8, ColRec::PrimaryKey));
-				table.cols.emplace(toString(source, "_id"), ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
-				table.cols.emplace(toString(target, "_id"), ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
+				table.cols.emplace(toString(source, "_id"),
+						ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
+				table.cols.emplace(toString(target, "_id"),
+						ColRec(ColRec::Type::Int8, ColRec::IsNotNull));
 
 				do {
 					TriggerRec trigger(TriggerRec::Delete, TriggerRec::Before, source, "__oid",
@@ -792,21 +835,24 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 					table.indexes.emplace(deltaName + "_idx_time", "time");
 
 					do {
-						TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
+						TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, deltaName,
+								"__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
 						tblIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
 					} while (0);
 
 					do {
-						TriggerRec trigger(TriggerRec::Update, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
+						TriggerRec trigger(TriggerRec::Update, TriggerRec::After, deltaName,
+								"__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
 						tblIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
 					} while (0);
 
 					do {
-						TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, deltaName, "__delta", deltaName, toString(target, "_id"));
+						TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, deltaName,
+								"__delta", deltaName, toString(target, "_id"));
 						trigger.tagField = toString(source, "_id");
 						auto triggerName = trigger.makeName();
 						tblIt->second.triggers.emplace(sp::move(triggerName), sp::move(trigger));
@@ -819,7 +865,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 			case db::Type::FullTextView: {
 				String name = toString(it.first, "_f_", fit.first);
 
-				auto & source = it.first;
+				auto &source = it.first;
 				auto sourceFieldName = toString(source, "_id");
 
 				TableRec table;
@@ -830,21 +876,24 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 				tables.emplace(StringView(name).pdup(), sp::move(table));
 
 				do {
-					TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
+					TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, it.first, fit.first,
+							name, sourceFieldName, &fit.second);
 					trigger.tagField = toString(source, "_id");
 					auto triggerName = trigger.makeName();
 					schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 				} while (0);
 
 				do {
-					TriggerRec trigger(TriggerRec::Update, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
+					TriggerRec trigger(TriggerRec::Update, TriggerRec::After, it.first, fit.first,
+							name, sourceFieldName, &fit.second);
 					trigger.tagField = toString(source, "_id");
 					auto triggerName = trigger.makeName();
 					schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
 				} while (0);
 
 				do {
-					TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, it.first, fit.first, name, sourceFieldName, &fit.second);
+					TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, it.first, fit.first,
+							name, sourceFieldName, &fit.second);
 					trigger.tagField = toString(source, "_id");
 					auto triggerName = trigger.makeName();
 					schemeTable->triggers.emplace(sp::move(triggerName), sp::move(trigger));
@@ -852,8 +901,7 @@ Map<StringView, TableRec> TableRec::parse(const Driver *driver, const BackendInt
 
 				break;
 			}
-			default:
-				break;
+			default: break;
 			}
 
 			if (scheme->hasDelta()) {
@@ -877,7 +925,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 	Map<StringView, TableRec> ret;
 
 	h.performSimpleSelect("SELECT name FROM sqlite_schema WHERE type='table';",
-			[&] (db::sql::Result &tables) {
+			[&](db::sql::Result &tables) {
 		for (auto it : tables) {
 			ret.emplace(it.at(0).pdup(), TableRec());
 			stream << "TABLE " << it.at(0) << "\n";
@@ -887,7 +935,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 	for (auto &it : ret) {
 		auto &table = it.second;
 		h.performSimpleSelect(toString("PRAGMA table_info('", it.first, "');"),
-					[&] (db::sql::Result &columns) {
+				[&](db::sql::Result &columns) {
 			for (auto col : columns) {
 				auto name = col.at(1);
 				auto t = getStorageType(col.at(2));
@@ -901,7 +949,8 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 				}
 
 				if (t == BackendInterface::StorageType::Unknown) {
-					table.cols.emplace(name.str<Interface>(), ColRec(col.at(2).str<Interface>(), flags));
+					table.cols.emplace(name.str<Interface>(),
+							ColRec(col.at(2).str<Interface>(), flags));
 				} else {
 					table.cols.emplace(name.str<Interface>(), ColRec(t, flags));
 				}
@@ -910,7 +959,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 	}
 
 	h.performSimpleSelect("SELECT tbl_name, name, sql FROM sqlite_schema WHERE type='index';",
-			[&] (db::sql::Result &indexes) {
+			[&](db::sql::Result &indexes) {
 		for (auto it : indexes) {
 			auto tname = it.at(0).str<Interface>();
 			auto f = ret.find(tname);
@@ -929,20 +978,21 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 					sql += stream.size();
 					sql.skipChars<StringView::WhiteSpace>();
 					if (sql.is("(")) {
-						++ sql;
+						++sql;
 						Vector<String> fields;
 						while (!sql.empty() && !sql.is(')')) {
 							sql.skipUntil<StringView::Chars<'"'>>();
 							if (sql.is('"')) {
-								++ sql;
+								++sql;
 								auto field = sql.readUntil<StringView::Chars<'"'>>();
 								if (sql.is('"')) {
 									fields.emplace_back(field.str<Interface>());
-									++ sql;
+									++sql;
 								}
 							}
 						}
-						table.indexes.emplace(it.at(1).str<Interface>(), IndexRec(sp::move(fields), unique));
+						table.indexes.emplace(it.at(1).str<Interface>(),
+								IndexRec(sp::move(fields), unique));
 					}
 				}
 			}
@@ -950,7 +1000,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 	});
 
 	h.performSimpleSelect("SELECT tbl_name, name, sql FROM sqlite_schema WHERE type='trigger';",
-			[&] (db::sql::Result &triggers) {
+			[&](db::sql::Result &triggers) {
 		for (auto it : triggers) {
 			auto tableName = it.at(0);
 			auto f = ret.find(tableName);
@@ -968,8 +1018,7 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 		}
 	});
 
-	h.performSimpleSelect("SELECT name, version FROM __versions;",
-			[&] (db::sql::Result &versions) {
+	h.performSimpleSelect("SELECT name, version FROM __versions;", [&](db::sql::Result &versions) {
 		for (auto it : versions) {
 			auto tIt = ret.find(it.toString(0));
 			if (tIt != ret.end()) {
@@ -982,7 +1031,8 @@ Map<StringView, TableRec> TableRec::get(Handle &h, StringStream &stream) {
 }
 
 TableRec::TableRec() { }
-TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, const db::Scheme *scheme) {
+TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg,
+		const db::Scheme *scheme) {
 	withOids = true;
 	version = scheme->getVersion();
 	if (scheme->isDetouched()) {
@@ -1005,8 +1055,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 		case db::Type::None:
 		case db::Type::Array:
 		case db::Type::View:
-		case db::Type::Virtual:
-			break;
+		case db::Type::Virtual: break;
 
 		case db::Type::Float:
 			cols.emplace(it.first, ColRec(ColRec::Type::Float8, flags));
@@ -1070,7 +1119,8 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 			if (type == db::Type::Object) {
 				auto ref = static_cast<const db::FieldObject *>(f.getSlot());
 				auto target = ref->scheme->getName();
-				StringStream cname; cname << name << "_ref_" << it.first << "_" << target;
+				StringStream cname;
+				cname << name << "_ref_" << it.first << "_" << target;
 
 				switch (ref->onRemove) {
 				case RemovePolicy::Cascade: cname << "_csc"; break;
@@ -1080,44 +1130,47 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 				case RemovePolicy::Null: break;
 				}
 
-				indexes.emplace(toString(name, (unique ? "_uidx_" : "_idx_"), it.first), IndexRec(it.first, unique));
+				indexes.emplace(toString(name, (unique ? "_uidx_" : "_idx_"), it.first),
+						IndexRec(it.first, unique));
 			} else if (type == db::Type::File || type == db::Type::Image) {
-				TriggerRec updateTrigger(TriggerRec::Update, TriggerRec::After, name, it.second.getName(),
-						cfg.fileScheme->getName(), "__oid", &it.second);
+				TriggerRec updateTrigger(TriggerRec::Update, TriggerRec::After, name,
+						it.second.getName(), cfg.fileScheme->getName(), "__oid", &it.second);
 				auto updateTriggerName = updateTrigger.makeName();
 				triggers.emplace(sp::move(updateTriggerName), sp::move(updateTrigger));
 
-				TriggerRec removeTrigger(TriggerRec::Delete, TriggerRec::After, name, it.second.getName(),
-						cfg.fileScheme->getName(), "__oid", &it.second);
+				TriggerRec removeTrigger(TriggerRec::Delete, TriggerRec::After, name,
+						it.second.getName(), cfg.fileScheme->getName(), "__oid", &it.second);
 				auto removeTriggerName = removeTrigger.makeName();
 				triggers.emplace(sp::move(removeTriggerName), sp::move(removeTrigger));
 			}
 
-			if ((type == db::Type::Text && f.getTransform() == db::Transform::Alias) || (f.hasFlag(db::Flags::Indexed))) {
+			if ((type == db::Type::Text && f.getTransform() == db::Transform::Alias)
+					|| (f.hasFlag(db::Flags::Indexed))) {
 				if (type == db::Type::Custom) {
 					auto c = f.getSlot<db::FieldCustom>();
 					if (auto info = driver->getCustomFieldInfo(c->getDriverTypeName())) {
 						if (info->isIndexable) {
-							indexes.emplace(toString(name, "_idx_", info->getIndexName(*c)), info->getIndexDefinition(*c));
+							indexes.emplace(toString(name, "_idx_", info->getIndexName(*c)),
+									info->getIndexDefinition(*c));
 						}
 					}
 				} else {
-					indexes.emplace(toString(name, (unique ? "_uidx_" : "_idx_"), it.first), IndexRec(it.first, unique));
+					indexes.emplace(toString(name, (unique ? "_uidx_" : "_idx_"), it.first),
+							IndexRec(it.first, unique));
 				}
 			}
 
 			if (type == db::Type::Text) {
 				if (f.hasFlag(db::Flags::PatternIndexed)) {
-					indexes.emplace(toString(name, "_idx_", it.first, "_pattern"), toString("( \"", it.first, "\" COLLATE NOCASE)"));
+					indexes.emplace(toString(name, "_idx_", it.first, "_pattern"),
+							toString("( \"", it.first, "\" COLLATE NOCASE)"));
 				}
 				/*if (f.hasFlag(db::Flags::TrigramIndexed)) {
 					indexes.emplace(toString(name, "_idx_", it.first, "_trgm"), toString("USING GIN ( \"", it.first, "\" gin_trgm_ops)"));
 				}*/
 			}
 
-			if (type == db::Type::FullTextView) {
-
-			}
+			if (type == db::Type::FullTextView) { }
 		}
 	}
 
@@ -1135,7 +1188,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 	if (scheme->hasDelta()) {
 		do {
 			TriggerRec trigger(TriggerRec::Insert, TriggerRec::After, name, "__delta",
-									Handle::getNameForDelta(*scheme), "object");
+					Handle::getNameForDelta(*scheme), "object");
 			trigger.rootScheme = scheme;
 			auto triggerName = trigger.makeName();
 			triggers.emplace(sp::move(triggerName), sp::move(trigger));
@@ -1143,7 +1196,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 
 		do {
 			TriggerRec trigger(TriggerRec::Update, TriggerRec::After, name, "__delta",
-									Handle::getNameForDelta(*scheme), "object");
+					Handle::getNameForDelta(*scheme), "object");
 			trigger.rootScheme = scheme;
 			auto triggerName = trigger.makeName();
 			triggers.emplace(sp::move(triggerName), sp::move(trigger));
@@ -1151,7 +1204,7 @@ TableRec::TableRec(const Driver *driver, const BackendInterface::Config &cfg, co
 
 		do {
 			TriggerRec trigger(TriggerRec::Delete, TriggerRec::After, name, "__delta",
-									Handle::getNameForDelta(*scheme), "object");
+					Handle::getNameForDelta(*scheme), "object");
 			trigger.rootScheme = scheme;
 			auto triggerName = trigger.makeName();
 			triggers.emplace(sp::move(triggerName), sp::move(trigger));
@@ -1182,7 +1235,7 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 
 	if (!stream.empty()) {
 		bool success = true;
-		if (!performSimpleQuery(stream.weak(), [&] (const Value &errInfo) {
+		if (!performSimpleQuery(stream.weak(), [&](const Value &errInfo) {
 			stream << "Server: " << cfg.name << "\n";
 			stream << "\nErrorInfo: " << EncodeFormat::Pretty << errInfo << "\n";
 		})) {
@@ -1200,13 +1253,16 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 	}
 
 	StringStream query;
-	query << "DELETE FROM __login WHERE \"date\" < " << Time::now().toSeconds() - config::STORAGE_DEFAULT_INTERNAL_INTERVAL.toSeconds() << ";";
+	query << "DELETE FROM __login WHERE \"date\" < "
+		  << Time::now().toSeconds() - config::STORAGE_DEFAULT_INTERNAL_INTERVAL.toSeconds() << ";";
 	performSimpleQuery(query.weak());
 	query.clear();
 
 	auto iit = existedTables.find(StringView("__error"));
 	if (iit != existedTables.end()) {
-		query << "DELETE FROM __error WHERE \"time\" < " << Time::now().toMicros() - config::STORAGE_DEFAULT_INTERNAL_INTERVAL.toMicros() << ";";
+		query << "DELETE FROM __error WHERE \"time\" < "
+			  << Time::now().toMicros() - config::STORAGE_DEFAULT_INTERNAL_INTERVAL.toMicros()
+			  << ";";
 		performSimpleQuery(query.weak());
 		query.clear();
 	}
@@ -1215,4 +1271,4 @@ bool Handle::init(const BackendInterface::Config &cfg, const Map<StringView, con
 	return true;
 }
 
-}
+} // namespace stappler::db::sqlite

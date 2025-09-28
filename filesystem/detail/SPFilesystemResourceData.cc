@@ -29,6 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
+StringView _readEnvExt(memory::pool_t *pool, StringView key);
 void _initSystemPaths(FilesystemResourceData &data);
 
 void _enumerateObjects(const FilesystemResourceData &data, FileCategory, StringView path, FileFlags,
@@ -76,6 +77,96 @@ StringView FilesystemResourceData::getResourcePrefix(FileCategory cat) {
 	case FileCategory::Max: break;
 	}
 	return StringView();
+}
+
+static void readSingleQuoted(StringView &str, const Callback<void(StringView)> &writeCb) {
+	++str;
+	while (!str.empty()) {
+		auto v = str.readUntil<StringView::Chars<'\'', '\\'>>();
+		if (!v.empty()) {
+			writeCb << v;
+		}
+		if (str.is('\\')) {
+			++str;
+			writeCb << str[0];
+			++str;
+		} else if (str.is<'\''>()) {
+			++str;
+			return;
+		}
+	}
+}
+
+static void readDoubleQuoted(memory::pool_t *pool, StringView &str,
+		const Callback<void(StringView)> &writeCb) {
+	++str;
+	while (!str.empty()) {
+		auto v = str.readUntil<StringView::Chars<'"', '\\', '$', '\''>>();
+		if (!v.empty()) {
+			writeCb << v;
+		}
+		if (str.is('\\')) {
+			++str;
+			writeCb << str[0];
+			++str;
+		} else if (str.is('$')) {
+			++str;
+			auto v =
+					str.readUntil<StringView::Chars<'"', '\'', '$', '/'>, StringView::WhiteSpace>();
+			if (!v.empty()) {
+				// we need null-terminated string
+				auto env = platform::_readEnvExt(pool, v.str<memory::StandartInterface>().data());
+				if (!env.empty()) {
+					writeCb << env;
+				}
+			}
+		} else if (str.is('\'')) {
+			readSingleQuoted(str, writeCb);
+		} else if (str.is<'"'>()) {
+			++str;
+			return;
+		}
+	}
+}
+
+StringView FilesystemResourceData::readVariable(memory::pool_t *pool, StringView str) {
+	return memory::pool::perform_temporary([&](memory::pool_t *tmpPool) {
+		memory::PoolInterface::StringType out;
+
+		auto writer = [&](StringView s) { out.append(s.data(), s.size()); };
+
+		Callback<void(StringView)> writeCb(writer);
+
+		str.trimChars<StringView::WhiteSpace>();
+		while (!str.empty()) {
+			if (str.is('"')) {
+				readDoubleQuoted(tmpPool, str, writeCb);
+			} else if (str.is('\'')) {
+				readSingleQuoted(str, writeCb);
+			} else if (str.is('$')) {
+				++str;
+				auto v = str.readUntil<StringView::Chars<'"', '\'', '$', '/'>,
+						StringView::WhiteSpace>();
+				if (!v.empty()) {
+					// we need null-terminated string
+					auto env =
+							platform::_readEnvExt(tmpPool, v.str<memory::PoolInterface>().data());
+					if (!env.empty()) {
+						writeCb << env;
+					}
+				}
+			} else {
+				auto v = str.readUntil<StringView::Chars<'"', '\'', '$'>>();
+				if (!v.empty()) {
+					writeCb << v;
+				}
+			}
+		}
+
+		auto ret = StringView(out);
+		ret.backwardSkipChars<StringView::Chars<'/'>>();
+		return ret.pdup(pool);
+	}, pool);
 }
 
 FilesystemResourceData::FilesystemResourceData() { addInitializer(this, &initialize, &terminate); }

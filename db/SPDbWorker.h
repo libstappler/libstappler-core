@@ -42,10 +42,10 @@ enum class UpdateFlags : uint32_t {
 SP_DEFINE_ENUM_AS_MASK(UpdateFlags)
 
 struct SP_PUBLIC Conflict {
-	enum Flags {
+	enum Flags : uint32_t {
 		None,
-		DoNothing,
-		WithoutCondition,
+		DoNothing = 1 << 0,
+		WithoutCondition = 1 << 2,
 	};
 
 	static Conflict update(StringView);

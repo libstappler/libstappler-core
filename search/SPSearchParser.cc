@@ -228,20 +228,20 @@ bool isComplexWord(ParserToken tok) {
 }
 
 struct UsedCharGroup
-: chars::Compose<char16_t, chars::CharGroup<char16_t, CharGroupId::Alphanumeric>,
-		  chars::CharGroup<char16_t, CharGroupId::Cyrillic>,
-		  chars::CharGroup<char16_t, CharGroupId::LatinSuppl1>,
-		  chars::CharGroup<char16_t, CharGroupId::GreekBasic>,
-		  chars::CharGroup<char16_t, CharGroupId::GreekAdvanced>,
-		  chars::Chars<char16_t, u'-', u'_', u'&', u'/'> > { };
+: chars::Compose<char32_t, chars::CharGroup<char32_t, CharGroupId::Alphanumeric>,
+		  chars::CharGroup<char32_t, CharGroupId::Cyrillic>,
+		  chars::CharGroup<char32_t, CharGroupId::LatinSuppl1>,
+		  chars::CharGroup<char32_t, CharGroupId::GreekBasic>,
+		  chars::CharGroup<char32_t, CharGroupId::GreekAdvanced>,
+		  chars::Chars<char32_t, U'-', U'_', U'&', U'/'> > { };
 
 struct WordCharGroup
-: chars::Compose<char16_t, chars::CharGroup<char16_t, CharGroupId::Alphanumeric>,
-		  chars::CharGroup<char16_t, CharGroupId::Cyrillic>,
-		  chars::CharGroup<char16_t, CharGroupId::LatinSuppl1>,
-		  chars::CharGroup<char16_t, CharGroupId::GreekBasic>,
-		  chars::CharGroup<char16_t, CharGroupId::GreekAdvanced>,
-		  chars::Chars<char16_t, char16_t(0xAD)> > { };
+: chars::Compose<char32_t, chars::CharGroup<char32_t, CharGroupId::Alphanumeric>,
+		  chars::CharGroup<char32_t, CharGroupId::Cyrillic>,
+		  chars::CharGroup<char32_t, CharGroupId::LatinSuppl1>,
+		  chars::CharGroup<char32_t, CharGroupId::GreekBasic>,
+		  chars::CharGroup<char32_t, CharGroupId::GreekAdvanced>,
+		  chars::Chars<char32_t, char32_t(0xAD)> > { };
 
 static ParserStatus parseUrlToken(StringView &r,
 		const Callback<ParserStatus(StringView, ParserToken)> &cb) {
@@ -290,12 +290,12 @@ static ParserStatus tryParseUrl(StringViewUtf8 &tmp2, StringView r,
 
 static ParserStatus parseDotNumber(StringViewUtf8 &r, StringView tmp,
 		const Callback<ParserStatus(StringView, ParserToken)> &cb, bool allowVersion) {
-	if (r.is<chars::CharGroup<char16_t, CharGroupId::Numbers>>()) {
-		auto num = r.readChars<chars::CharGroup<char16_t, CharGroupId::Numbers>>();
+	if (r.is<chars::CharGroup<char32_t, CharGroupId::Numbers>>()) {
+		auto num = r.readChars<chars::CharGroup<char32_t, CharGroupId::Numbers>>();
 		if (r.is('.') && allowVersion) {
 			while (r.is('.')) {
 				++r;
-				num = r.readChars<chars::CharGroup<char16_t, CharGroupId::Alphanumeric>>();
+				num = r.readChars<chars::CharGroup<char32_t, CharGroupId::Alphanumeric>>();
 				if (num.empty()) {
 					return ParserStatus::PreventSubdivide;
 				}
@@ -325,7 +325,7 @@ static ParserStatus parseDotNumber(StringViewUtf8 &r, StringView tmp,
 			}
 		} else if (r.is('e') || r.is('E')) {
 			++r;
-			num = r.readChars<chars::CharGroup<char16_t, CharGroupId::Numbers>>();
+			num = r.readChars<chars::CharGroup<char32_t, CharGroupId::Numbers>>();
 			if (!num.empty()) {
 				if (!r.is<WordCharGroup>()) {
 					if (cb(StringView(tmp.data(), r.data() - tmp.data()),
@@ -450,7 +450,7 @@ static bool parseHyphenatedWord(StringViewUtf8 &tmp, StringView r,
 	};
 
 	if (tmp2.is('-')) {
-		tmp2.skipChars<StringViewUtf8::Chars<u'-'>>();
+		tmp2.skipChars<StringViewUtf8::Chars<U'-'>>();
 		if (!parseHyphenatedWord(tmp2, StringView(r.data(), tmp.data() - r.data()), cb,
 					depth + 1)) {
 			return false;
@@ -483,10 +483,10 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp,
 		const Callback<ParserStatus(StringView, ParserToken)> &cb) {
 	using Numbers = StringViewUtf8::MatchCharGroup<CharGroupId::Numbers>;
 
-	using WhiteSpace = chars::Compose<char16_t, chars::Range<char16_t, u'\u2000', u'\u200D'>,
-			chars::Chars<char16_t, u'\u0009', u'\u000B', u'\u000C', u'\u0020', u'\u0085', u'\u00A0',
-					u'\u1680', u'\u2028', u'\u2029', u'\u202F', u'\u205F', u'\u2060', u'\u3000',
-					u'\uFEFF', u'\uFFFF'> >;
+	using WhiteSpace = chars::Compose<char32_t, chars::Range<char32_t, U'\u2000', U'\u200D'>,
+			chars::Chars<char32_t, U'\u0009', U'\u000B', U'\u000C', U'\u0020', U'\u0085', U'\u00A0',
+					U'\u1680', U'\u2028', U'\u2029', U'\u202F', U'\u205F', U'\u2060', U'\u3000',
+					U'\uFEFF', U'\uFFFF'> >;
 
 	if (tmp.size() != 2) {
 		return ParserStatus::PreventSubdivide;
@@ -512,7 +512,7 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp,
 					auto tmp = rv;
 					tmp.skipChars<WhiteSpace>();
 					nums = rv.readChars<Numbers>();
-					if ((nums.size() == 2 && (tmp.is(':') || tmp.is('-') || tmp.is(u'–')))
+					if ((nums.size() == 2 && (tmp.is(':') || tmp.is('-') || tmp.is(U'–')))
 							|| nums.empty()) {
 						r = rv;
 						break;
@@ -543,15 +543,15 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp,
 					(r.data() - code.data() - code.size()) + r.size());
 			return ParserStatus::Continue;
 		}
-	} else if (r.is('-') || r.is(u'–')) {
+	} else if (r.is('-') || r.is(U'–')) {
 		StringViewUtf8 rv = r;
 		size_t segments = 1;
 		size_t nonWsSegments = 0;
 		if (!r.is<WhiteSpace>()) {
 			++nonWsSegments;
 		}
-		while (rv.is('-') || rv.is(u'–') || rv.is<WhiteSpace>() || rv.is('/') || rv.is(':')) {
-			rv.skipChars<StringViewUtf8::Chars<'-', u'–', '/', ':'>, WhiteSpace>();
+		while (rv.is('-') || rv.is(U'–') || rv.is<WhiteSpace>() || rv.is('/') || rv.is(':')) {
+			rv.skipChars<StringViewUtf8::Chars<'-', U'–', '/', ':'>, WhiteSpace>();
 			auto nums = rv.readChars<Numbers>();
 			if (nums.empty()) {
 				if (segments >= 5) {
@@ -560,7 +560,7 @@ static ParserStatus readCadasterString(StringViewUtf8 &r, StringView tmp,
 				} else {
 					return ParserStatus::PreventSubdivide;
 				}
-			} else if (rv.is('-') || rv.is(u'–')) {
+			} else if (rv.is('-') || rv.is(U'–')) {
 				++segments;
 				++nonWsSegments;
 			} else if (rv.is('/') && segments > 1) {
@@ -612,8 +612,8 @@ static bool parseToken(StringViewUtf8 &r,
 	if (r.is('-')) {
 		auto tmp = r;
 		++tmp;
-		if (tmp.is<chars::CharGroup<char16_t, CharGroupId::Numbers>>()) {
-			tmp.readChars<chars::CharGroup<char16_t, CharGroupId::Numbers>>();
+		if (tmp.is<chars::CharGroup<char32_t, CharGroupId::Numbers>>()) {
+			tmp.readChars<chars::CharGroup<char32_t, CharGroupId::Numbers>>();
 			if (tmp.is('.')) {
 				auto tmp2 = tmp;
 				++tmp2;
@@ -690,9 +690,9 @@ static bool parseToken(StringViewUtf8 &r,
 		case ParserStatus::Stop: return false; break;
 		default: break;
 		}
-	} else if (r.is<chars::CharGroup<char16_t, CharGroupId::Numbers>>()) {
+	} else if (r.is<chars::CharGroup<char32_t, CharGroupId::Numbers>>()) {
 		auto tmp = r;
-		auto num = tmp.readChars<chars::CharGroup<char16_t, CharGroupId::Numbers>>();
+		auto num = tmp.readChars<chars::CharGroup<char32_t, CharGroupId::Numbers>>();
 		if (tmp.is('.')) {
 			auto tmp2 = tmp;
 			++tmp2;
@@ -711,7 +711,7 @@ static bool parseToken(StringViewUtf8 &r,
 				break;
 			case ParserStatus::Stop: return false; break;
 			}
-		} else if ((tmp.is(':') || tmp.is('-') || tmp.is(u'–')) && num.size() == 2) {
+		} else if ((tmp.is(':') || tmp.is('-') || tmp.is(U'–')) && num.size() == 2) {
 			switch (readCadasterString(tmp, num, cb)) {
 			case ParserStatus::Continue: r = tmp; break;
 			case ParserStatus::Stop: return false; break;

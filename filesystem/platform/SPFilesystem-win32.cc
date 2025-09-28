@@ -74,6 +74,21 @@ static KnownFolderInfo s_defaultKnownFolders[] = {
 	KnownFolderInfo{&FOLDERID_ProgramData, FileCategory::CommonData, FileFlags::Shared},
 };
 
+StringView _readEnvExt(memory::pool_t *pool, StringView key) {
+	if (key == "EXEC_DIR") {
+		return filepath::root(StringView(s_appPath)).pdup(pool);
+	} else if (key == "CWD") {
+		return StringView(currentDir<memory::PoolInterface>()).pdup(pool);
+	} else {
+		char *buf = nullptr;
+		size_t size = 0;
+		if (_dupenv_s(&buf, &size, key.data()) == 0) {
+			return StringView(buf, size).pdup(pool);
+		}
+	}
+	return StringView();
+}
+
 static void processKnownDir(FilesystemResourceData &data, const KnownFolderInfo &info,
 		IKnownFolder *dir) {
 	KNOWNFOLDER_DEFINITION def;
@@ -213,6 +228,23 @@ void _initSystemPaths(FilesystemResourceData &data) {
 	if (auto v = SharedModule::acquireTypedSymbol<int *>(buildconfig::MODULE_APPCONFIG_NAME,
 				"APPCONFIG_APP_PATH_COMMON")) {
 		appPathCommon = *v;
+	}
+
+	auto bundlePath = SharedModule::acquireTypedSymbol<const char *>(
+			buildconfig::MODULE_APPCONFIG_NAME, "APPCONFIG_BUNDLE_PATH");
+
+	if (bundlePath) {
+		auto &bundledLoc = data._resourceLocations[toInt(FileCategory::Bundled)];
+
+		bundledLoc.init = true;
+		bundledLoc.flags |= CategoryFlags::Locateable;
+
+		StringView(bundlePath).split<StringView::Chars<':'>>([&](StringView str) {
+			auto value = FilesystemResourceData::readVariable(data._pool, str);
+			if (!value.empty()) {
+				bundledLoc.paths.emplace_back(value, FileFlags::Private);
+			}
+		});
 	}
 
 	if (appPathCommon == 0) {

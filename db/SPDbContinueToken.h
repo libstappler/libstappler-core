@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::db {
 
 class SP_PUBLIC ContinueToken {
 public:
-	enum Flags {
+	enum Flags : uint32_t {
 		None = 0,
 		Initial = 1,
 		Reverse = 2,
@@ -47,7 +47,7 @@ public:
 	ContinueToken &operator=(const ContinueToken &) = default;
 	ContinueToken &operator=(ContinueToken &&) = default;
 
-	explicit operator bool () const { return !field.empty() && count > 0; }
+	explicit operator bool() const { return !field.empty() && count > 0; }
 
 	bool hasPrev() const;
 	bool hasNext() const;
@@ -105,6 +105,6 @@ protected:
 
 SP_DEFINE_ENUM_AS_MASK(ContinueToken::Flags)
 
-}
+} // namespace stappler::db
 
 #endif /* STAPPLER_DB_SPDBCONTINUETOKEN_H_ */

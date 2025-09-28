@@ -43,6 +43,10 @@ struct FilesystemResourceData : InterfaceObject<memory::StandartInterface> {
 
 	static StringView getResourcePrefix(FileCategory);
 
+	// Read extended environment variable
+	// Allow to read CWD, EXEC_DIR and some others custom platform-dependent variables for appconfig paths
+	static StringView readVariable(memory::pool_t *pool, StringView key);
+
 	static FilesystemResourceData &get();
 
 	FilesystemResourceData();
