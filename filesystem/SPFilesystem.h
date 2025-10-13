@@ -32,10 +32,6 @@
 #include "SPFilepath.h"
 #include "SPLog.h" // IWYU pragma: keep
 
-#if ANDROID
-#include "SPJni.h" // IWYU pragma: keep
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
 enum class CategoryFlags : uint32_t {
@@ -448,13 +444,6 @@ SP_PUBLIC std::ostream &operator<<(std::ostream &, const Stat &);
 // *::platform::* functions handles some FS actions in platform-specific way
 // (like inside Android apk or MacOS app bundle)
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
-
-#if ANDROID
-SP_PUBLIC void Android_initializeFilesystem(void *assetManager, const jni::Ref &ctx,
-		StringView apkPath);
-SP_PUBLIC void Android_terminateFilesystem();
-SP_PUBLIC StringView Android_getApkPath();
-#endif
 
 template <typename Interface>
 SP_PUBLIC auto _getApplicationPath() -> typename Interface::StringType;

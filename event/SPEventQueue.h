@@ -172,6 +172,8 @@ public:
 	Status performNext(mem_std::Function<void()> &&, Ref * = nullptr,
 			StringView tag = StringView());
 
+	NativeHandle getHandle() const;
+
 	using PoolObject::PoolObject;
 
 protected:

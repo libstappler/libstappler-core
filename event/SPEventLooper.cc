@@ -235,8 +235,10 @@ Status Looper::run(TimeInterval ival, QueueWakeupInfo &&info) {
 	if (_data->suspendThreadsOnWakeup) {
 		_data->suspendThreadsOnWakeup = false;
 
-		_data->threadPool->cancel();
-		_data->threadPool = nullptr;
+		if (_data->threadPool) {
+			_data->threadPool->cancel();
+			_data->threadPool = nullptr;
+		}
 	}
 
 	return ret;

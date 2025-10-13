@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -213,6 +214,8 @@ void Queue::cancel() {
 QueueFlags Queue::getFlags() const { return _data->_flags; }
 
 QueueEngine Queue::getEngine() const { return _data->_engine; }
+
+NativeHandle Queue::getHandle() const { return _data->_handle; }
 
 Status Queue::performNext(Rc<thread::Task> &&task) { return _data->perform(move(task)); }
 

@@ -240,6 +240,8 @@ KQueueData::KQueueData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Sp
 	for (auto &it : sigs) { EV_SET(&ev.emplace_back(), it, EV_ADD, EVFILT_SIGNAL, 0, 0, this); }
 
 	update(ev);
+
+	_data->_handle = _kqueueFd;
 }
 
 KQueueData::~KQueueData() {

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -103,6 +104,8 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	ListenHandleCallback _listenHandle = nullptr;
 
 	std::thread::id _threadId;
+
+	NativeHandle _handle = NativeHandle(0);
 
 	bool isValid() const { return _platformQueue != nullptr; }
 

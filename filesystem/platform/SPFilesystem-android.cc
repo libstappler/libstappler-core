@@ -1,5 +1,6 @@
 /**
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,13 +29,11 @@ THE SOFTWARE.
 
 #include "detail/SPFilesystemResourceData.h"
 
-#include "SPLog.h"
 #include "SPZip.h"
 #include "SPJni.h"
+#include "SPPlatformUnistd.h" // IWYU pragma: keep
 #include <android/asset_manager.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <android/native_activity.h>
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
@@ -58,7 +57,7 @@ struct ArchiveHierarchy {
 	using Vector = memory::StandartInterface::VectorType<T>;
 
 	ArchiveHierarchy() = default;
-	ArchiveHierarchy(String &&path) : originPath(move(path)) { }
+	ArchiveHierarchy(String &&path) : originPath(sp::move(path)) { }
 
 	void add(StringView path, size_t size, Time time) {
 		if (path.empty()) {
@@ -237,10 +236,6 @@ struct PathSource {
 
 	ArchiveHierarchy _archive;
 
-	jni::Global _context = nullptr;
-	jmethodID _externalFilesDirMethod = nullptr;
-	jmethodID _getAbsolutePathMethod = nullptr;
-
 	std::mutex _mutex;
 
 	AAssetManager *_assetManager = nullptr;
@@ -296,55 +291,38 @@ struct PathSource {
 		return Access::None;
 	}
 
-	bool initialize(AAssetManager *assetManager, const jni::Ref &ctx, StringView apkPath) {
-		jni::Env env(ctx.getEnv());
-		_context = ctx.getGlobal();
+	bool initialize(jni::App *app, const jni::Ref &ctx, StringView apkPath) {
 
 		auto contextClass = ctx.getClass();
 
-		auto fileClass = env.findClass("java/io/File");
-		_getAbsolutePathMethod = fileClass.getMethodID("getAbsolutePath", "()Ljava/lang/String;");
+		auto filesDir = app->Application.getFilesDir(ctx);
+		auto cacheDir = app->Application.getCacheDir(ctx);
 
-		auto filesDirMethod = contextClass.getMethodID("getFilesDir", "()Ljava/io/File;");
-		auto cacheDirMethod = contextClass.getMethodID("getCacheDir", "()Ljava/io/File;");
-		auto externalFilesDirMethod = contextClass.getMethodID("getExternalFilesDir",
-				"(Ljava/lang/String;)Ljava/io/File;");
-		auto externalCacheDirMethod =
-				contextClass.getMethodID("getExternalCacheDir", "()Ljava/io/File;");
-
-		auto filesDir = _context.callMethod<jobject>(filesDirMethod);
-		auto cacheDir = _context.callMethod<jobject>(cacheDirMethod);
-		auto externalFilesDir = _context.callMethod<jobject>(externalFilesDirMethod, nullptr);
-		auto externalCacheDir = _context.callMethod<jobject>(externalCacheDirMethod);
-
-		_externalFilesDirMethod = externalFilesDirMethod;
+		auto externalFilesDir = app->Application.getExternalFilesDir(ctx, nullptr);
+		auto externalCacheDir = app->Application.getExternalCacheDir(ctx);
 
 		if (filesDir) {
-			auto str = filesDir.callMethod<jstring>(_getAbsolutePathMethod);
-			if (str) {
-				_filesDir = str.getString().str<memory::StandartInterface>();
-			}
+			_filesDir = app->File.getAbsolutePath(filesDir)
+								.getString()
+								.str<memory::StandartInterface>();
 		}
 
 		if (cacheDir) {
-			auto str = cacheDir.callMethod<jstring>(_getAbsolutePathMethod);
-			if (str) {
-				_cacheDir = str.getString().str<memory::StandartInterface>();
-			}
+			_cacheDir = app->File.getAbsolutePath(cacheDir)
+								.getString()
+								.str<memory::StandartInterface>();
 		}
 
 		if (externalFilesDir) {
-			auto str = externalFilesDir.callMethod<jstring>(_getAbsolutePathMethod);
-			if (str) {
-				_externalFilesDir = str.getString().str<memory::StandartInterface>();
-			}
+			_externalFilesDir = app->File.getAbsolutePath(externalFilesDir)
+										.getString()
+										.str<memory::StandartInterface>();
 		}
 
 		if (externalCacheDir) {
-			auto str = externalCacheDir.callMethod<jstring>(_getAbsolutePathMethod);
-			if (str) {
-				_externalCacheDir = str.getString().str<memory::StandartInterface>();
-			}
+			_externalCacheDir = app->File.getAbsolutePath(externalCacheDir)
+										.getString()
+										.str<memory::StandartInterface>();
 		}
 
 		_apkPath.clear();
@@ -357,11 +335,13 @@ struct PathSource {
 			while ((dp = readdir(dir)) != NULL) {
 				if (dp->d_name[0] != '.') {
 					memcpy(fullpath + "/proc/self/fd/"_len, dp->d_name, strlen(dp->d_name) + 1);
-					readlink(fullpath, refpath, PATH_MAX);
-					StringView path(refpath);
-					if (path.ends_with(".apk") && path.starts_with("/data/")) {
-						if (checkApkFile(refpath)) {
-							break;
+					auto nbytes = readlink(fullpath, refpath, PATH_MAX);
+					if (nbytes > 0) {
+						StringView path(refpath, nbytes);
+						if (path.ends_with(".apk") && path.starts_with("/data/")) {
+							if (checkApkFile(refpath)) {
+								break;
+							}
 						}
 					}
 				}
@@ -382,19 +362,20 @@ struct PathSource {
 			}
 		}
 
-		_assetManager = assetManager;
+		_assetManager = app->nAssetManager;
 		_documentsInit = false;
 		_cacheInit = false;
 		return true;
 	}
 
-	void terminate() {
-		std::unique_lock lock(_mutex);
-		_context = nullptr;
-		_assetManager = nullptr;
-	}
-
 	void initSystemPaths(FilesystemResourceData &data) {
+		auto app = jni::Env::getApp();
+		auto env = jni::Env::getEnv();
+
+		auto thiz = jni::Ref(app->jApplication, env);
+
+		initialize(app, thiz, app->classLoader.getApkPath());
+
 		auto &resBundled = data._resourceLocations[toInt(FileCategory::Bundled)];
 		resBundled.paths.emplace_back(_apkPath, FileFlags::None);
 		resBundled.init = false;
@@ -501,66 +482,65 @@ struct PathSource {
 		if (!hasFlag(externalState, Access::Read)) {
 			return;
 		}
-		auto env = jni::Env::getEnv();
-		auto envClass = env.findClass("android/os/Environment");
-		if (envClass) {
-			auto getExternalStorageDirectoryMethod =
-					envClass.getStaticMethodID("getExternalStorageDirectory", "()Ljava/io/File;");
-			auto getExternalStoragePublicDirectoryMethod = envClass.getStaticMethodID(
-					"getExternalStoragePublicDirectory", "(Ljava/lang/String;)Ljava/io/File;");
-			auto storageDir = envClass.callStaticMethod<jobject>(getExternalStorageDirectoryMethod);
-			if (storageDir) {
-				auto path = storageDir.callMethod<jstring>(_getAbsolutePathMethod);
+
+		auto envClass = app->Environment.getClass().ref(env);
+
+		auto storageDir = app->Environment.getExternalStorageDirectory(envClass);
+		if (storageDir) {
+			auto path = app->File.getAbsolutePath(storageDir);
+			if (path) {
+				auto &res = data._resourceLocations[toInt(FileCategory::UserHome)];
+				res.paths.emplace_back(path.getString().pdup(data._pool), FileFlags::Shared);
+				res.init = false;
+				res.flags = externalFlags;
+			}
+		}
+
+		auto DIRECTORY_DOWNLOADS = envClass.getStaticField<jstring>("DIRECTORY_DOWNLOADS");
+		auto DIRECTORY_DOCUMENTS = envClass.getStaticField<jstring>("DIRECTORY_DOCUMENTS");
+		auto DIRECTORY_MUSIC = envClass.getStaticField<jstring>("DIRECTORY_MUSIC");
+		auto DIRECTORY_PICTURES = envClass.getStaticField<jstring>("DIRECTORY_PICTURES");
+		auto DIRECTORY_MOVIES = envClass.getStaticField<jstring>("DIRECTORY_MOVIES");
+
+		auto context = app->jApplication.ref(env);
+
+		auto updatePath = [&](jni::LocalString &str, FileCategory cat) {
+			auto &res = data._resourceLocations[toInt(cat)];
+			auto _public = app->Application.getExternalFilesDir(context, str);
+			if (_public) {
+				auto path = app->File.getAbsolutePath(_public);
 				if (path) {
-					auto &res = data._resourceLocations[toInt(FileCategory::UserHome)];
-					res.paths.emplace_back(path.getString().pdup(data._pool), FileFlags::Shared);
-					res.init = false;
-					res.flags = externalFlags;
+					res.paths.emplace_back(path.getString().pdup(data._pool), FileFlags::Public);
 				}
 			}
 
-			auto DIRECTORY_DOWNLOADS = envClass.getStaticField<jstring>("DIRECTORY_DOWNLOADS");
-			auto DIRECTORY_DOCUMENTS = envClass.getStaticField<jstring>("DIRECTORY_DOCUMENTS");
-			auto DIRECTORY_MUSIC = envClass.getStaticField<jstring>("DIRECTORY_MUSIC");
-			auto DIRECTORY_PICTURES = envClass.getStaticField<jstring>("DIRECTORY_PICTURES");
-			auto DIRECTORY_MOVIES = envClass.getStaticField<jstring>("DIRECTORY_MOVIES");
-
-			auto context = jni::Ref(_context.get(), env);
-
-			auto updatePath = [&](jni::LocalString &str, FileCategory cat) {
-				auto &res = data._resourceLocations[toInt(cat)];
-				auto _public = context.callMethod<jobject>(_externalFilesDirMethod, str);
-				if (_public) {
-					auto path = _public.callMethod<jstring>(_getAbsolutePathMethod);
-					if (path) {
-						res.paths.emplace_back(path.getString().pdup(data._pool),
-								FileFlags::Public);
-					}
+			auto shared = app->Environment.getExternalStoragePublicDirectory(envClass, str);
+			if (shared) {
+				auto path = app->File.getAbsolutePath(shared);
+				if (path) {
+					res.paths.emplace_back(path.getString().pdup(data._pool), FileFlags::Shared);
 				}
+			}
 
-				auto shared = envClass.callStaticMethod<jobject>(
-						getExternalStoragePublicDirectoryMethod, str);
-				if (shared) {
-					auto path = shared.callMethod<jstring>(_getAbsolutePathMethod);
-					if (path) {
-						res.paths.emplace_back(path.getString().pdup(data._pool),
-								FileFlags::Shared);
-					}
-				}
+			if (!res.paths.empty()) {
+				res.init = false;
+				res.flags = externalFlags;
+			}
+		};
 
-				if (!res.paths.empty()) {
-					res.init = false;
-					res.flags = externalFlags;
-				}
-			};
-
-			updatePath(DIRECTORY_PICTURES, FileCategory::UserPictures);
-			updatePath(DIRECTORY_MUSIC, FileCategory::UserMusic);
-			updatePath(DIRECTORY_DOCUMENTS, FileCategory::UserDocuments);
-			updatePath(DIRECTORY_DOWNLOADS, FileCategory::UserDownload);
-			updatePath(DIRECTORY_MOVIES, FileCategory::UserVideos);
-		}
+		updatePath(DIRECTORY_PICTURES, FileCategory::UserPictures);
+		updatePath(DIRECTORY_MUSIC, FileCategory::UserMusic);
+		updatePath(DIRECTORY_DOCUMENTS, FileCategory::UserDocuments);
+		updatePath(DIRECTORY_DOWNLOADS, FileCategory::UserDownload);
+		updatePath(DIRECTORY_MOVIES, FileCategory::UserVideos);
 	}
+
+	void terminate() {
+		std::unique_lock lock(_mutex);
+		_assetManager = nullptr;
+	}
+
+	void termSystemPaths(FilesystemResourceData &data) { terminate(); }
 
 	StringView getApplicationPath() const { return _apkPath; }
 
@@ -650,13 +630,13 @@ struct PathSource {
 	}
 };
 
-void Android_initializeFilesystem(void *assetManager, const jni::Ref &ref, StringView apkPath) {
-	PathSource::getInstance()->initialize((AAssetManager *)assetManager, ref, apkPath);
+StringView _readEnvExt(memory::pool_t *pool, StringView key) {
+	auto e = ::getenv(key.data());
+	if (e) {
+		return StringView(e).pdup(pool);
+	}
+	return StringView();
 }
-
-void Android_terminateFilesystem() { PathSource::getInstance()->terminate(); }
-
-StringView Android_getApkPath() { return PathSource::getInstance()->_apkPath; }
 
 template <>
 auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
@@ -671,6 +651,10 @@ auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::Stri
 
 void _initSystemPaths(FilesystemResourceData &data) {
 	PathSource::getInstance()->initSystemPaths(data);
+}
+
+void _termSystemPaths(FilesystemResourceData &data) {
+	PathSource::getInstance()->termSystemPaths(data);
 }
 
 void _enumerateObjects(const FilesystemResourceData &data, FileCategory cat, StringView path,

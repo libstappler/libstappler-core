@@ -119,7 +119,7 @@ uint32_t EPollData::poll() {
 	pushContext(&ctx, RunContext::Poll);
 
 	auto status = runPoll(TimeInterval());
-	if (toInt(status) > 0) {
+	if (status == Status::Ok) {
 		result = processEvents();
 	}
 
@@ -263,6 +263,8 @@ EPollData::EPollData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 		size = info.submitQueueSize;
 	}
 	_events.resize(size);
+
+	_data->_handle = _epollFd;
 }
 
 EPollData::~EPollData() {

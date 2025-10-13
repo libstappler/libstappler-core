@@ -567,6 +567,12 @@ static void checkLogFeaturesSupport(LogFeatures &ret) {
 
 #endif
 
+#if ANDROID
+
+static void checkLogFeaturesSupport(LogFeatures &ret) { }
+
+#endif
+
 void CustomLogManager::init() { checkLogFeaturesSupport(features); }
 
 void CustomLogManager::term() { }

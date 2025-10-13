@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +32,7 @@ namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 
 StringView _readEnvExt(memory::pool_t *pool, StringView key);
 void _initSystemPaths(FilesystemResourceData &data);
+void _termSystemPaths(FilesystemResourceData &data);
 
 void _enumerateObjects(const FilesystemResourceData &data, FileCategory, StringView path, FileFlags,
 		Access, const Callback<bool(StringView, FileFlags)> &);
@@ -329,6 +331,8 @@ void FilesystemResourceData::init() {
 
 void FilesystemResourceData::term() {
 	for (auto it : each<FileCategory>()) { _resourceLocations[toInt(it)].paths.clear(); }
+
+	platform::_termSystemPaths(*this);
 }
 
 FileCategory FilesystemResourceData::detectResourceCategory(StringView path,

@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#include "SPFilepath.h"
+#include "SPFilepath.h" // IWYU pragma: keep
 
 #if LINUX
 
@@ -37,134 +38,53 @@ namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 static char s_execPath[PATH_MAX] = {0};
 static char s_homePath[PATH_MAX] = {0};
 
-static memory::StandartInterface::StringType getEnvExt(StringView key) {
+StringView _readEnvExt(memory::pool_t *pool, StringView key) {
 	if (key == "EXEC_DIR") {
-		return filepath::root(StringView((char *)s_execPath)).str<memory::StandartInterface>();
+		return filepath::root(StringView((char *)s_execPath)).pdup(pool);
 	} else if (key == "CWD") {
-		return currentDir<memory::StandartInterface>();
+		return StringView(currentDir<memory::PoolInterface>()).pdup(pool);
 	} else if (key == "XDG_DATA_HOME") {
 		auto var = ::getenv("XDG_DATA_HOME");
 		if (!var || var[0] == 0) {
-			return filepath::merge<memory::StandartInterface>(s_homePath, ".local/share");
+			return StringView(filepath::merge<memory::PoolInterface>(s_homePath, ".local/share"))
+					.pdup(pool);
 		}
-		return var;
+		return StringView(var).pdup(pool);
 	} else if (key == "XDG_CONFIG_HOME") {
 		auto var = ::getenv("XDG_CONFIG_HOME");
 		if (!var || var[0] == 0) {
-			return filepath::merge<memory::StandartInterface>(s_homePath, ".config");
+			return StringView(filepath::merge<memory::PoolInterface>(s_homePath, ".config"))
+					.pdup(pool);
 		}
-		return var;
+		return StringView(var).pdup(pool);
 	} else if (key == "XDG_STATE_HOME") {
 		auto var = ::getenv("XDG_STATE_HOME");
 		if (!var || var[0] == 0) {
-			return filepath::merge<memory::StandartInterface>(s_homePath, ".local/state");
+			return StringView(filepath::merge<memory::PoolInterface>(s_homePath, ".local/state"))
+					.pdup(pool);
 		}
-		return var;
+		return StringView(var).pdup(pool);
 	} else if (key == "XDG_CACHE_HOME") {
 		auto var = ::getenv("XDG_CACHE_HOME");
 		if (!var || var[0] == 0) {
-			return filepath::merge<memory::StandartInterface>(s_homePath, ".cache");
+			return StringView(filepath::merge<memory::PoolInterface>(s_homePath, ".cache"))
+					.pdup(pool);
 		}
-		return var;
+		return StringView(var).pdup(pool);
 	} else if (key == "XDG_RUNTIME_DIR") {
 		auto var = ::getenv("XDG_RUNTIME_DIR");
 		if (!var || var[0] == 0) {
-			return string::toString<memory::StandartInterface>("/run/user/", geteuid());
+			return StringView(string::toString<memory::PoolInterface>("/run/user/", geteuid()))
+					.pdup(pool);
 		}
-		return var;
+		return StringView(var).pdup(pool);
 	} else {
-		auto e = ::getenv(key.str<memory::StandartInterface>().data());
+		auto e = ::getenv(key.data());
 		if (e) {
-			return memory::StandartInterface::StringType(e);
+			return StringView(e).pdup(pool);
 		}
 	}
-	return memory::StandartInterface::StringType();
-}
-
-static void readSingleQuoted(StringView &str, const Callback<void(StringView)> &writeCb) {
-	++str;
-	while (!str.empty()) {
-		auto v = str.readUntil<StringView::Chars<'\'', '\\'>>();
-		if (!v.empty()) {
-			writeCb << v;
-		}
-		if (str.is('\\')) {
-			++str;
-			writeCb << str[0];
-			++str;
-		} else if (str.is<'\''>()) {
-			++str;
-			return;
-		}
-	}
-}
-
-static void readDoubleQuoted(StringView &str, const Callback<void(StringView)> &writeCb) {
-	++str;
-	while (!str.empty()) {
-		auto v = str.readUntil<StringView::Chars<'"', '\\', '$', '\''>>();
-		if (!v.empty()) {
-			writeCb << v;
-		}
-		if (str.is('\\')) {
-			++str;
-			writeCb << str[0];
-			++str;
-		} else if (str.is('$')) {
-			++str;
-			auto v =
-					str.readUntil<StringView::Chars<'"', '\'', '$', '/'>, StringView::WhiteSpace>();
-			if (!v.empty()) {
-				// we need null-terminated string
-				auto env = getEnvExt(v.str<memory::StandartInterface>().data());
-				if (!env.empty()) {
-					writeCb << env;
-				}
-			}
-		} else if (str.is('\'')) {
-			readSingleQuoted(str, writeCb);
-		} else if (str.is<'"'>()) {
-			++str;
-			return;
-		}
-	}
-}
-
-static StringView readVariable(memory::pool_t *pool, StringView str) {
-	memory::StandartInterface::StringType out;
-
-	auto writer = [&](StringView s) { out.append(s.data(), s.size()); };
-
-	Callback<void(StringView)> writeCb(writer);
-
-	str.trimChars<StringView::WhiteSpace>();
-	while (!str.empty()) {
-		if (str.is('"')) {
-			readDoubleQuoted(str, writeCb);
-		} else if (str.is('\'')) {
-			readSingleQuoted(str, writeCb);
-		} else if (str.is('$')) {
-			++str;
-			auto v =
-					str.readUntil<StringView::Chars<'"', '\'', '$', '/'>, StringView::WhiteSpace>();
-			if (!v.empty()) {
-				// we need null-terminated string
-				auto env = getEnvExt(v.str<memory::StandartInterface>().data());
-				if (!env.empty()) {
-					writeCb << env;
-				}
-			}
-		} else {
-			auto v = str.readUntil<StringView::Chars<'"', '\'', '$'>>();
-			if (!v.empty()) {
-				writeCb << v;
-			}
-		}
-	}
-
-	auto ret = StringView(out);
-	ret.backwardSkipChars<StringView::Chars<'/'>>();
-	return ret.pdup(pool);
+	return StringView();
 }
 
 void _initSystemPaths(FilesystemResourceData &data) {
@@ -196,7 +116,7 @@ void _initSystemPaths(FilesystemResourceData &data) {
 
 	if (bundlePath) {
 		StringView(bundlePath).split<StringView::Chars<':'>>([&](StringView str) {
-			auto value = readVariable(data._pool, str);
+			auto value = FilesystemResourceData::readVariable(data._pool, str);
 			if (!value.empty()) {
 				bundledLoc.paths.emplace_back(value, FileFlags::Private);
 			}
@@ -213,10 +133,10 @@ void _initSystemPaths(FilesystemResourceData &data) {
 	}
 
 	// search for XDG envvars
-	auto dataHome = getEnvExt("XDG_DATA_HOME");
+	auto dataHome = _readEnvExt(data._pool, "XDG_DATA_HOME");
 	if (!dataHome.empty()) {
 		auto &res = data._resourceLocations[toInt(FileCategory::CommonData)];
-		res.paths.emplace_back(StringView(dataHome).pdup(data._pool), FileFlags::Shared);
+		res.paths.emplace_back(dataHome, FileFlags::Shared);
 
 		auto dataDirs = ::getenv("XDG_DATA_DIRS");
 		if (dataDirs && dataDirs[0] == 0) {
@@ -232,10 +152,10 @@ void _initSystemPaths(FilesystemResourceData &data) {
 		res.flags |= CategoryFlags::Locateable;
 	}
 
-	auto configHome = getEnvExt("XDG_CONFIG_HOME");
+	auto configHome = _readEnvExt(data._pool, "XDG_CONFIG_HOME");
 	if (!configHome.empty()) {
 		auto &res = data._resourceLocations[toInt(FileCategory::CommonConfig)];
-		res.paths.emplace_back(StringView(configHome).pdup(data._pool), FileFlags::Shared);
+		res.paths.emplace_back(configHome, FileFlags::Shared);
 
 		auto configDirs = ::getenv("XDG_CONFIG_DIRS");
 		if (configDirs) {
@@ -250,26 +170,26 @@ void _initSystemPaths(FilesystemResourceData &data) {
 		res.flags |= CategoryFlags::Locateable;
 	}
 
-	auto stateHome = getEnvExt("XDG_STATE_HOME");
+	auto stateHome = _readEnvExt(data._pool, "XDG_STATE_HOME");
 	if (!stateHome.empty()) {
 		auto &res = data._resourceLocations[toInt(FileCategory::CommonState)];
-		res.paths.emplace_back(StringView(stateHome).pdup(data._pool), FileFlags::Shared);
+		res.paths.emplace_back(stateHome, FileFlags::Shared);
 		res.init = true;
 		res.flags |= CategoryFlags::Locateable;
 	}
 
-	auto cacheHome = getEnvExt("XDG_CACHE_HOME");
+	auto cacheHome = _readEnvExt(data._pool, "XDG_CACHE_HOME");
 	if (!cacheHome.empty()) {
 		auto &res = data._resourceLocations[toInt(FileCategory::CommonCache)];
-		res.paths.emplace_back(StringView(cacheHome).pdup(data._pool), FileFlags::Shared);
+		res.paths.emplace_back(cacheHome, FileFlags::Shared);
 		res.init = true;
 		res.flags |= CategoryFlags::Locateable;
 	}
 
-	auto runtimeDir = getEnvExt("XDG_RUNTIME_DIR");
+	auto runtimeDir = _readEnvExt(data._pool, "XDG_RUNTIME_DIR");
 	if (!runtimeDir.empty()) {
 		auto &res = data._resourceLocations[toInt(FileCategory::CommonRuntime)];
-		res.paths.emplace_back(StringView(runtimeDir).pdup(data._pool), FileFlags::Shared);
+		res.paths.emplace_back(runtimeDir, FileFlags::Shared);
 		res.init = true;
 		res.flags |= CategoryFlags::Locateable;
 	}
@@ -315,17 +235,23 @@ void _initSystemPaths(FilesystemResourceData &data) {
 					++str;
 					var.trimChars<StringView::WhiteSpace>();
 					if (var == "XDG_DESKTOP_DIR") {
-						writeLocation(FileCategory::UserDesktop, readVariable(data._pool, str));
+						writeLocation(FileCategory::UserDesktop,
+								FilesystemResourceData::readVariable(data._pool, str));
 					} else if (var == "XDG_DOWNLOAD_DIR") {
-						writeLocation(FileCategory::UserDownload, readVariable(data._pool, str));
+						writeLocation(FileCategory::UserDownload,
+								FilesystemResourceData::readVariable(data._pool, str));
 					} else if (var == "XDG_DOCUMENTS_DIR") {
-						writeLocation(FileCategory::UserDocuments, readVariable(data._pool, str));
+						writeLocation(FileCategory::UserDocuments,
+								FilesystemResourceData::readVariable(data._pool, str));
 					} else if (var == "XDG_MUSIC_DIR") {
-						writeLocation(FileCategory::UserMusic, readVariable(data._pool, str));
+						writeLocation(FileCategory::UserMusic,
+								FilesystemResourceData::readVariable(data._pool, str));
 					} else if (var == "XDG_PICTURES_DIR") {
-						writeLocation(FileCategory::UserPictures, readVariable(data._pool, str));
+						writeLocation(FileCategory::UserPictures,
+								FilesystemResourceData::readVariable(data._pool, str));
 					} else if (var == "XDG_VIDEOS_DIR") {
-						writeLocation(FileCategory::UserVideos, readVariable(data._pool, str));
+						writeLocation(FileCategory::UserVideos,
+								FilesystemResourceData::readVariable(data._pool, str));
 					}
 				}
 			}
@@ -364,6 +290,8 @@ void _initSystemPaths(FilesystemResourceData &data) {
 		data.initAppPaths(bundlePath);
 	}
 }
+
+void _termSystemPaths(FilesystemResourceData &data) { }
 
 // No PlatformSpecific categories defined for now
 void _enumerateObjects(const FilesystemResourceData &data, FileCategory, StringView path, FileFlags,

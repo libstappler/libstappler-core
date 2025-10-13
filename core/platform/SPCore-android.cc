@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +21,7 @@
  THE SOFTWARE.
  **/
 
-#include "SPStringView.h"
+#include "SPString.h"
 
 #if ANDROID
 
@@ -32,175 +33,113 @@
 #include <unicode/ustring.h>
 
 #include <sys/random.h>
+#include <android/configuration.h>
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
 static std::mutex s_collatorMutex;
 
-struct IcuJave {
-	jni::Env env;
-	jni::GlobalClass charClass = nullptr;
-	jni::GlobalClass collatorClass = nullptr;
 
-	jmethodID toLowerChar = nullptr;
-	jmethodID toUpperChar = nullptr;
-	jmethodID toTitleChar = nullptr;
+struct IcuJava : Ref {
+	struct UCharacterProxy : jni::ClassProxy {
+		jni::StaticMethod<"toLowerCase", jint(jint)> toLowerChar = this;
+		jni::StaticMethod<"toUpperCase", jint(jint)> toUpperChar = this;
+		jni::StaticMethod<"toTitleCase", jint(jint)> toTitleChar = this;
 
-	jmethodID toLowerString = nullptr;
-	jmethodID toUpperString = nullptr;
-	jmethodID toTitleString = nullptr;
+		jni::StaticMethod<"toLowerCase", jstring(jstring)> toLowerString = this;
+		jni::StaticMethod<"toUpperCase", jstring(jstring)> toUpperString = this;
+		jni::StaticMethod<"toTitleCase", jstring(jstring)> toTitleString = this;
 
-	jmethodID getInstance = nullptr;
-	jmethodID setStrength = nullptr;
-	jmethodID _compare = nullptr;
+		using jni::ClassProxy::ClassProxy;
+	} UCharacter = "android/icu/lang/UCharacter";
 
-	int PRIMARY;
-	int SECONDARY;
-	int TERTIARY;
-	int QUATERNARY;
+	struct CollatorProxy : jni::ClassProxy {
+		jni::StaticField<"PRIMARY", jint> PRIMARY = this;
+		jni::StaticField<"SECONDARY", jint> SECONDARY = this;
+		jni::StaticField<"TERTIARY", jint> TERTIARY = this;
+		jni::StaticField<"QUATERNARY", jint> QUATERNARY = this;
 
-	~IcuJave() {
-		if (env) {
-			collatorClass = nullptr;
-			charClass = nullptr;
-		}
-	}
+		jni::StaticMethod<"getInstance", jni::L<"android/icu/text/Collator;">()> getInstance = this;
+		jni::Method<"setStrength", void(jint)> setStrength = this;
+		jni::Method<"compare", jint(jstring, jstring)> _compare = this;
 
-	void init(jni::Env &&e) {
-		env = move(e);
+		using jni::ClassProxy::ClassProxy;
+	} Collator = "android/icu/text/Collator";
 
-		charClass = env.findClass("android/icu/lang/UCharacter").getGlobal();
-
-		auto tmpClass = jni::RefClass(charClass, env);
-
-		toLowerChar = tmpClass.getStaticMethodID("toLowerCase", "(I)I");
-		toUpperChar = tmpClass.getStaticMethodID("toUpperCase", "(I)I");
-		toTitleChar = tmpClass.getStaticMethodID("toTitleCase", "(I)I");
-
-		toLowerString =
-				tmpClass.getStaticMethodID("toLowerCase", "(Ljava/lang/String;)Ljava/lang/String;");
-		toUpperString =
-				tmpClass.getStaticMethodID("toUpperCase", "(Ljava/lang/String;)Ljava/lang/String;");
-		toTitleString = tmpClass.getStaticMethodID("toTitleCase",
-				"(Ljava/lang/String;Landroid/icu/text/BreakIterator;)Ljava/lang/String;");
-
-		auto tmpCollatorClass = env.findClass("android/icu/text/Collator");
-		collatorClass = tmpCollatorClass;
-		getInstance =
-				tmpCollatorClass.getStaticMethodID("getInstance", "()Landroid/icu/text/Collator;");
-		setStrength = tmpCollatorClass.getMethodID("setStrength", "(I)V");
-		_compare =
-				tmpCollatorClass.getMethodID("compare", "(Ljava/lang/String;Ljava/lang/String;)I");
-
-		PRIMARY = tmpCollatorClass.getStaticField<jint>("PRIMARY");
-		SECONDARY = tmpCollatorClass.getStaticField<jint>("SECONDARY");
-		TERTIARY = tmpCollatorClass.getStaticField<jint>("TERTIARY");
-		QUATERNARY = tmpCollatorClass.getStaticField<jint>("QUATERNARY");
-	}
+	virtual ~IcuJava() = default;
 
 	char32_t tolower(char32_t c) {
-		if (!env) {
-			return c;
-		}
-
-		return char32_t(jni::RefClass(charClass, env).callStaticMethod<jint>(toLowerChar, jint(c)));
+		return UCharacter.toLowerChar(UCharacter.getClass().ref(), jint(c));
 	}
 
 	char32_t toupper(char32_t c) {
-		if (!env) {
-			return c;
-		}
-
-		return char32_t(jni::RefClass(charClass, env).callStaticMethod<jint>(toUpperChar, jint(c)));
+		return UCharacter.toUpperChar(UCharacter.getClass().ref(), jint(c));
 	}
 
 	char32_t totitle(char32_t c) {
-		if (!env) {
-			return c;
-		}
-
-		return char32_t(jni::RefClass(charClass, env).callStaticMethod<jint>(toTitleChar, jint(c)));
+		return UCharacter.toTitleChar(UCharacter.getClass().ref(), jint(c));
 	}
 
 	template <typename Interface>
 	auto tolower(WideStringView data) {
-		if (!env) {
-			return data.str<Interface>();
-		}
-
-		auto ret = jni::RefClass(charClass, env)
-						   .callStaticMethod<jstring>(toLowerString, env.newString(data));
-		return ret.getWideString().str<Interface>();
+		auto env = jni::Env::getEnv();
+		return UCharacter.toLowerString(UCharacter.getClass().ref(env), env.newString(data))
+				.getWideString()
+				.str<Interface>();
 	}
 
 	template <typename Interface>
 	auto tolower(StringView data) {
-		if (!env) {
-			return data.str<Interface>();
-		}
-
-		auto ret = jni::RefClass(charClass, env)
-						   .callStaticMethod<jstring>(toLowerString, env.newString(data));
-		return ret.getString().str<Interface>();
+		auto env = jni::Env::getEnv();
+		return UCharacter.toLowerString(UCharacter.getClass().ref(env), env.newString(data))
+				.getString()
+				.str<Interface>();
 	}
 
 	template <typename Interface>
 	auto toupper(WideStringView data) {
-		if (!env) {
-			return data.str<Interface>();
-		}
-
-		auto ret = jni::RefClass(charClass, env)
-						   .callStaticMethod<jstring>(toUpperString, env.newString(data));
-		return ret.getWideString().str<Interface>();
+		auto env = jni::Env::getEnv();
+		return UCharacter.toUpperString(UCharacter.getClass().ref(env), env.newString(data))
+				.getWideString()
+				.str<Interface>();
 	}
 
 	template <typename Interface>
 	auto toupper(StringView data) {
-		if (!env) {
-			return data.str<Interface>();
-		}
-
-		auto ret = jni::RefClass(charClass, env)
-						   .callStaticMethod<jstring>(toUpperString, env.newString(data));
-		return ret.getString().str<Interface>();
+		auto env = jni::Env::getEnv();
+		return UCharacter.toUpperString(UCharacter.getClass().ref(env), env.newString(data))
+				.getString()
+				.str<Interface>();
 	}
 
 	template <typename Interface>
 	auto totitle(WideStringView data) {
-		if (!env) {
-			return data.str<Interface>();
-		}
-
-		auto ret = jni::RefClass(charClass, env)
-						   .callStaticMethod<jstring>(toTitleString, env.newString(data));
-		return ret.getWideString().str<Interface>();
+		auto env = jni::Env::getEnv();
+		return UCharacter.toTitleString(UCharacter.getClass().ref(env), env.newString(data))
+				.getWideString()
+				.str<Interface>();
 	}
 
 	template <typename Interface>
 	auto totitle(StringView data) {
-		if (!env) {
-			return data.str<Interface>();
-		}
-
-		auto ret = jni::RefClass(charClass, env)
-						   .callStaticMethod<jstring>(toTitleString, env.newString(data));
-		return ret.getString().str<Interface>();
+		auto env = jni::Env::getEnv();
+		return UCharacter.toTitleString(UCharacter.getClass().ref(env), env.newString(data))
+				.getString()
+				.str<Interface>();
 	}
 
 	int compare(StringView l, StringView r, bool caseInsensetive) {
-		if (!env) {
-			return string::detail::compare_c(l, r);
-		}
+		auto env = jni::Env::getEnv();
 
 		int ret = 0;
 		auto strL = env.newString(l);
 		auto strR = env.newString(r);
 
-		auto coll = jni::RefClass(collatorClass, env).callStaticMethod<jobject>(getInstance);
+		auto coll = Collator.getInstance(Collator.getClass().ref(env));
 		if (coll) {
-			coll.callMethod<void>(setStrength, caseInsensetive ? SECONDARY : TERTIARY);
-			ret = coll.callMethod<jint>(_compare, strL, strR);
+			Collator.setStrength(coll,
+					jint(caseInsensetive ? Collator.SECONDARY() : Collator.TERTIARY()));
+			ret = Collator._compare(coll, strL, strR);
 		} else {
 			ret = string::detail::compare_c(l, r);
 		}
@@ -208,18 +147,17 @@ struct IcuJave {
 	}
 
 	int compare(WideStringView l, WideStringView r, bool caseInsensetive) {
-		if (!env) {
-			return string::detail::compare_c(l, r);
-		}
+		auto env = jni::Env::getEnv();
 
 		int ret = 0;
 		auto strL = env.newString(l);
 		auto strR = env.newString(r);
 
-		auto coll = jni::RefClass(collatorClass, env).callStaticMethod<jobject>(getInstance);
+		auto coll = Collator.getInstance(Collator.getClass().ref(env));
 		if (coll) {
-			coll.callMethod<void>(setStrength, caseInsensetive ? SECONDARY : TERTIARY);
-			ret = coll.callMethod<jint>(_compare, strL, strR);
+			Collator.setStrength(coll,
+					jint(caseInsensetive ? Collator.SECONDARY() : Collator.TERTIARY()));
+			ret = Collator._compare(coll, strL, strR);
 		} else {
 			ret = string::detail::compare_c(l, r);
 		}
@@ -228,13 +166,14 @@ struct IcuJave {
 };
 
 namespace i18n {
+
 using cmp_fn = int32_t (*)(const char16_t *s1, int32_t length1, const char16_t *s2, int32_t length2,
 		int8_t codePointOrder);
 using case_cmp_fn = int32_t (*)(const char16_t *s1, int32_t length1, const char16_t *s2,
 		int32_t length2, uint32_t options, int *pErrorCode);
 
-static thread_local IcuJave tl_interface;
-static Dso s_icu;
+static Dso s_icuNative;
+static Rc<IcuJava> s_icuJava;
 
 static int32_t (*tolower_fn)(int32_t) = nullptr;
 static int32_t (*toupper_fn)(int32_t) = nullptr;
@@ -252,54 +191,30 @@ static int32_t (*strToTitle_fn)(char16_t *dest, int32_t destCapacity, const char
 static cmp_fn u_strCompare = nullptr;
 static case_cmp_fn u_strCaseCompare = nullptr;
 
-static IcuJave *getInerface() {
-	if (!tl_interface.env) {
-		tl_interface.init(jni::Env::getEnv());
-	}
-	return &tl_interface;
-};
-
-void load(JavaVM *vm, int32_t sdk) {
-	s_icu = Dso("libicu.so");
-	if (s_icu) {
-		tolower_fn = s_icu.sym<decltype(tolower_fn)>("u_tolower");
-		toupper_fn = s_icu.sym<decltype(toupper_fn)>("u_toupper");
-		totitle_fn = s_icu.sym<decltype(totitle_fn)>("u_totitle");
-		strToLower_fn = s_icu.sym<decltype(strToLower_fn)>("u_strToLower");
-		strToUpper_fn = s_icu.sym<decltype(strToUpper_fn)>("u_strToUpper");
-		strToTitle_fn = s_icu.sym<decltype(strToTitle_fn)>("u_strToTitle");
-
-		u_strCompare = s_icu.sym<decltype(u_strCompare)>("u_strCompare");
-		u_strCaseCompare = s_icu.sym<decltype(u_strCaseCompare)>("u_strCaseCompare");
-	}
-}
-
-void finalize() { s_icu.close(); }
-
 static char32_t tolower(char32_t c) {
-	if (s_icu) {
+	if (s_icuNative) {
 		return char32_t(tolower_fn(int32_t(c)));
 	}
-	return getInerface()->tolower(c);
+	return s_icuJava->tolower(c);
 }
 
 static char32_t toupper(char32_t c) {
-	if (s_icu) {
+	if (s_icuNative) {
 		return char32_t(toupper_fn(int32_t(c)));
 	}
-	return getInerface()->toupper(c);
+	return s_icuJava->toupper(c);
 }
 
 static char32_t totitle(char32_t c) {
-	if (s_icu) {
+	if (s_icuNative) {
 		return char32_t(totitle_fn(int32_t(c)));
 	}
-	return getInerface()->totitle(c);
+	return s_icuJava->totitle(c);
 }
 
 template <typename Interface>
 static auto tolower(WideStringView data) {
-	if (s_icu) {
+	if (s_icuNative) {
 		typename Interface::WideStringType ret;
 		ret.resize(data.size());
 
@@ -313,20 +228,20 @@ static auto tolower(WideStringView data) {
 		}
 		return ret;
 	}
-	return getInerface()->tolower<Interface>(data);
+	return s_icuJava->tolower<Interface>(data);
 }
 
 template <typename Interface>
 static auto tolower(StringView data) {
-	if (s_icu) {
+	if (s_icuNative) {
 		return string::toUtf8<Interface>(tolower<Interface>(string::toUtf16<Interface>(data)));
 	}
-	return getInerface()->tolower<Interface>(data);
+	return s_icuJava->tolower<Interface>(data);
 }
 
 template <typename Interface>
 static auto toupper(WideStringView data) {
-	if (s_icu) {
+	if (s_icuNative) {
 		typename Interface::WideStringType ret;
 		ret.resize(data.size());
 
@@ -340,20 +255,20 @@ static auto toupper(WideStringView data) {
 		}
 		return ret;
 	}
-	return getInerface()->toupper<Interface>(data);
+	return s_icuJava->toupper<Interface>(data);
 }
 
 template <typename Interface>
 static auto toupper(StringView data) {
-	if (s_icu) {
+	if (s_icuNative) {
 		return string::toUtf8<Interface>(toupper<Interface>(string::toUtf16<Interface>(data)));
 	}
-	return getInerface()->toupper<Interface>(data);
+	return s_icuJava->toupper<Interface>(data);
 }
 
 template <typename Interface>
 static auto totitle(WideStringView data) {
-	if (s_icu) {
+	if (s_icuNative) {
 		typename Interface::WideStringType ret;
 		ret.resize(data.size());
 
@@ -368,15 +283,15 @@ static auto totitle(WideStringView data) {
 		}
 		return ret;
 	}
-	return getInerface()->totitle<Interface>(data);
+	return s_icuJava->totitle<Interface>(data);
 }
 
 template <typename Interface>
 static auto totitle(StringView data) {
-	if (s_icu) {
+	if (s_icuNative) {
 		return string::toUtf8<Interface>(totitle<Interface>(string::toUtf16<Interface>(data)));
 	}
-	return getInerface()->totitle<Interface>(data);
+	return s_icuJava->totitle<Interface>(data);
 }
 } // namespace i18n
 
@@ -455,14 +370,14 @@ int compare_u(StringView l, StringView r) {
 		auto rStr = string::toUtf16<memory::StandartInterface>(r);
 		return i18n::u_strCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(), 1);
 	}
-	return i18n::getInerface()->compare(l, r, false);
+	return i18n::s_icuJava->compare(l, r, false);
 }
 
 int compare_u(WideStringView l, WideStringView r) {
 	if (i18n::u_strCompare) {
 		return i18n::u_strCompare(l.data(), l.size(), r.data(), r.size(), 1);
 	}
-	return i18n::getInerface()->compare(l, r, false);
+	return i18n::s_icuJava->compare(l, r, false);
 }
 int caseCompare_u(StringView l, StringView r) {
 	if (i18n::u_strCaseCompare) {
@@ -472,7 +387,7 @@ int caseCompare_u(StringView l, StringView r) {
 		return i18n::u_strCaseCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(),
 				U_COMPARE_CODE_POINT_ORDER, &status);
 	}
-	return i18n::getInerface()->compare(l, r, true);
+	return i18n::s_icuJava->compare(l, r, true);
 }
 
 int caseCompare_u(WideStringView l, WideStringView r) {
@@ -481,7 +396,7 @@ int caseCompare_u(WideStringView l, WideStringView r) {
 		return i18n::u_strCaseCompare(l.data(), l.size(), r.data(), r.size(),
 				U_COMPARE_CODE_POINT_ORDER, &status);
 	}
-	return i18n::getInerface()->compare(l, r, true);
+	return i18n::s_icuJava->compare(l, r, true);
 }
 
 size_t makeRandomBytes(uint8_t *buf, size_t count) {
@@ -489,9 +404,42 @@ size_t makeRandomBytes(uint8_t *buf, size_t count) {
 	return count;
 }
 
-bool initialize(int &resultCode) { return true; }
+static char s_locale[6] = "en-us";
 
-void terminate() { }
+bool initialize(int &resultCode) {
+	// init locale
+	auto cfg = jni::Env::getApp()->config;
+	if (cfg) {
+		AConfiguration_getLanguage(cfg, s_locale);
+		AConfiguration_getCountry(cfg, s_locale + 3);
+	}
+
+	i18n::s_icuNative = Dso("libicu.so");
+	if (i18n::s_icuNative) {
+		i18n::tolower_fn = i18n::s_icuNative.sym<decltype(i18n::tolower_fn)>("u_tolower");
+		i18n::toupper_fn = i18n::s_icuNative.sym<decltype(i18n::toupper_fn)>("u_toupper");
+		i18n::totitle_fn = i18n::s_icuNative.sym<decltype(i18n::totitle_fn)>("u_totitle");
+		i18n::strToLower_fn = i18n::s_icuNative.sym<decltype(i18n::strToLower_fn)>("u_strToLower");
+		i18n::strToUpper_fn = i18n::s_icuNative.sym<decltype(i18n::strToUpper_fn)>("u_strToUpper");
+		i18n::strToTitle_fn = i18n::s_icuNative.sym<decltype(i18n::strToTitle_fn)>("u_strToTitle");
+
+		i18n::u_strCompare = i18n::s_icuNative.sym<decltype(i18n::u_strCompare)>("u_strCompare");
+		i18n::u_strCaseCompare =
+				i18n::s_icuNative.sym<decltype(i18n::u_strCaseCompare)>("u_strCaseCompare");
+	} else {
+		// init with Java
+		i18n::s_icuJava = Rc<IcuJava>::create();
+	}
+
+	return true;
+}
+
+void terminate() {
+	i18n::s_icuNative.close();
+	i18n::s_icuJava = nullptr;
+}
+
+StringView getOsLocale() { return StringView(s_locale); }
 
 } // namespace stappler::platform
 
