@@ -102,6 +102,7 @@ struct ApplicationProxy : ClassProxy {
 	StaticField<"DISPLAY_SERVICE", jstring> DISPLAY_SERVICE = this;
 
 	Method<"getAssets", L<"android.content.res.AssetManager">()> getAssets = this;
+	Method<"getContentResolver", L<"android.content.ContentResolver">()> getContentResolver = this;
 	Method<"getCodeCacheDir", L<"java.io.File">()> getCodeCacheDir = this;
 	Method<"getPackageName", jstring()> getPackageName = this;
 	Method<"getPackageManager", L<"android/content/pm/PackageManager">()> getPackageManager = this;
@@ -123,6 +124,19 @@ struct ApplicationProxy : ClassProxy {
 	using ClassProxy::ClassProxy;
 };
 
+struct ContentResolverProxy : ClassProxy {
+	Method<"openAssetFileDescriptor",
+			L<"android.content.res.AssetFileDescriptor">(L<"android.net.Uri">, jstring)>
+			openAssetFileDescriptor = this;
+	Method<"openInputStream", L<"java.io.InputStream">(L<"android.net.Uri">)> openInputStream =
+			this;
+	Method<"openFileDescriptor",
+			L<"android.os.ParcelFileDescriptor">(L<"android.net.Uri">, jstring)>
+			openFileDescriptor = this;
+
+	using ClassProxy::ClassProxy;
+};
+
 struct EnvironmentProxy : ClassProxy {
 	StaticMethod<"getExternalStorageDirectory", L<"java/io/File">()> getExternalStorageDirectory =
 			this;
@@ -134,6 +148,14 @@ struct EnvironmentProxy : ClassProxy {
 
 struct FileProxy : ClassProxy {
 	Method<"getAbsolutePath", jstring()> getAbsolutePath = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct CharSequenceProxy : ClassProxy {
+	Method<"isEmpty", jboolean()> isEmpty = this;
+	Method<"length", jint()> length = this;
+	Method<"toString", jstring()> toString = this;
 
 	using ClassProxy::ClassProxy;
 };
@@ -201,9 +223,6 @@ struct PackageManagerProxy : ClassProxy {
 };
 
 struct ApplicationInfoProxy : ClassProxy {
-	Field<"versionCode", jint> versionCode = this;
-	Field<"versionName", jstring> versionName = this;
-
 	Field<"labelRes", jint> labelRes = this;
 	Field<"nonLocalizedLabel", L<"java/lang/CharSequence">> nonLocalizedLabel = this;
 
@@ -250,6 +269,25 @@ struct IntentProxy : ClassProxy {
 
 struct UriProxy : ClassProxy {
 	StaticMethod<"parse", L<"android/net/Uri">(jstring)> parse = this;
+	Method<"toString", jstring()> toString = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct InputStreamProxy : ClassProxy {
+	Method<"available", jint()> available = this;
+	Method<"close", void()> close = this;
+	Method<"mark", void(jint)> mark = this;
+	Method<"markSupported", jboolean()> markSupported = this;
+	Method<"read", jint(A<jbyte>)> readBuffer = this;
+	Method<"read", jint()> read = this;
+	Method<"read", jint(A<jbyte>, jint, jint)> readBufferOffset = this;
+	Method<"readAllBytes", A<jbyte>()> readAllBytes = this;
+	Method<"readNBytes", jint(A<jbyte>, jint, jint)> readNBytesBuffer = this;
+	Method<"readNBytes", A<jbyte>(jint)> readNBytes = this;
+	Method<"close", void()> reset = this;
+	Method<"skip", jlong(jlong)> skip = this;
+	Method<"skipNBytes", void(jlong)> skipNBytes = this;
 
 	using ClassProxy::ClassProxy;
 };
@@ -280,6 +318,41 @@ struct WindowMetricsProxy : ClassProxy {
 	Method<"getBounds", L<"android/graphics/Rect">()> getBounds = this;
 	Method<"getDensity", jfloat()> getDensity = this;
 	Method<"getWindowInsets", L<"android/view/WindowInsets">()> getWindowInsets = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct WindowInsetTypeProxy : ClassProxy {
+	StaticMethod<"captionBar", jint()> captionBar = this;
+	StaticMethod<"displayCutout", jint()> displayCutout = this;
+	StaticMethod<"ime", jint()> ime = this;
+	StaticMethod<"mandatorySystemGestures", jint()> mandatorySystemGestures = this;
+	StaticMethod<"navigationBars", jint()> navigationBars = this;
+	StaticMethod<"statusBars", jint()> statusBars = this;
+	StaticMethod<"systemBars", jint()> systemBars = this;
+	StaticMethod<"systemGestures", jint()> systemGestures = this;
+	StaticMethod<"systemOverlays", jint()> systemOverlays = this;
+	StaticMethod<"tappableElement", jint()> tappableElement = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct WindowInsetsControllerProxy : ClassProxy {
+	StaticField<"APPEARANCE_LIGHT_CAPTION_BARS", jint> APPEARANCE_LIGHT_CAPTION_BARS = this;
+	StaticField<"APPEARANCE_LIGHT_NAVIGATION_BARS", jint> APPEARANCE_LIGHT_NAVIGATION_BARS = this;
+	StaticField<"APPEARANCE_LIGHT_STATUS_BARS", jint> APPEARANCE_LIGHT_STATUS_BARS = this;
+	StaticField<"APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND", jint>
+			APPEARANCE_TRANSPARENT_CAPTION_BAR_BACKGROUND = this;
+	StaticField<"BEHAVIOR_DEFAULT", jint> BEHAVIOR_DEFAULT = this;
+	StaticField<"BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE", jint>
+			BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE = this;
+
+	Method<"show", void(jint)> show = this;
+	Method<"hide", void(jint)> hide = this;
+	Method<"getSystemBarsAppearance", jint()> getSystemBarsAppearance = this;
+	Method<"getSystemBarsBehavior", jint()> getSystemBarsBehavior = this;
+	Method<"setSystemBarsAppearance", void(jint, jint)> setSystemBarsAppearance = this;
+	Method<"setSystemBarsBehavior", void(jint)> setSystemBarsBehavior = this;
 
 	using ClassProxy::ClassProxy;
 };
@@ -388,6 +461,106 @@ struct ViewProxy : ClassProxy {
 struct ClipboardManagerProxy : ClassProxy {
 	Global service = nullptr;
 
+	Method<"clearPrimaryClip", void()> clearPrimaryClip = this;
+	Method<"setPrimaryClip", void(L<"android/content/ClipData">)> setPrimaryClip = this;
+
+	Method<"getPrimaryClipDescription", L<"android/content/ClipDescription">()>
+			getPrimaryClipDescription = this;
+	Method<"getPrimaryClip", L<"android/content/ClipData">()> getPrimaryClip = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct ClipDescriptionProxy : ClassProxy {
+	Method<"getMimeType", jstring(jint)> getMimeType = this;
+	Method<"getMimeTypeCount", jint()> getMimeTypeCount = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct ClipDataProxy : ClassProxy {
+	Constructor<void(L<"java/lang/CharSequence">, A<jstring>, L<"android/content/ClipData$Item">)>
+			constructor = this;
+
+	Method<"getDescription", L<"android/content/ClipDescription">()> getDescription = this;
+	Method<"getItemAt", L<"android/content/ClipData$Item">(jint)> getItemAt = this;
+	Method<"getItemCount", jint()> getItemCount = this;
+
+	Method<"addItem", void(L<"android/content/ClipData$Item">)> addItem = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct ClipDataItemProxy : ClassProxy {
+	Constructor<void(L<"java/lang/CharSequence">)> constructorWithText = this;
+	Constructor<void(L<"android/content/Intent">)> constructorWithIntent = this;
+	Constructor<void(L<"android/net/Uri">)> constructorWithUri = this;
+
+	Method<"coerceToHtmlText", jstring(L<"android/content/Context">)> coerceToHtmlText = this;
+	Method<"coerceToStyledText", L<"java/lang/CharSequence">(L<"android/content/Context">)>
+			coerceToStyledText = this;
+	Method<"coerceToText", L<"java/lang/CharSequence">(L<"android/content/Context">)> coerceToText =
+			this;
+	Method<"getHtmlText", jstring()> getHtmlText = this;
+	Method<"getIntent", L<"android/content/Intent">()> getIntent = this;
+	Method<"getText", L<"java/lang/CharSequence">()> getText = this;
+	Method<"getUri", L<"android/net/Uri">()> getUri = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct NetworkCapabilitiesProxy : ClassProxy {
+	StaticField<"NET_CAPABILITY_CAPTIVE_PORTAL", jint> NET_CAPABILITY_CAPTIVE_PORTAL = this;
+	StaticField<"NET_CAPABILITY_CBS", jint> NET_CAPABILITY_CBS = this;
+	StaticField<"NET_CAPABILITY_DUN", jint> NET_CAPABILITY_DUN = this;
+	StaticField<"NET_CAPABILITY_EIMS", jint> NET_CAPABILITY_EIMS = this;
+	StaticField<"NET_CAPABILITY_ENTERPRISE", jint> NET_CAPABILITY_ENTERPRISE = this;
+	StaticField<"NET_CAPABILITY_FOREGROUND", jint> NET_CAPABILITY_FOREGROUND = this;
+	StaticField<"NET_CAPABILITY_FOTA", jint> NET_CAPABILITY_FOTA = this;
+	StaticField<"NET_CAPABILITY_HEAD_UNIT", jint> NET_CAPABILITY_HEAD_UNIT = this;
+	StaticField<"NET_CAPABILITY_IA", jint> NET_CAPABILITY_IA = this;
+	StaticField<"NET_CAPABILITY_IMS", jint> NET_CAPABILITY_IMS = this;
+	StaticField<"NET_CAPABILITY_INTERNET", jint> NET_CAPABILITY_INTERNET = this;
+	StaticField<"NET_CAPABILITY_LOCAL_NETWORK", jint> NET_CAPABILITY_LOCAL_NETWORK = this;
+	StaticField<"NET_CAPABILITY_MCX", jint> NET_CAPABILITY_MCX = this;
+	StaticField<"NET_CAPABILITY_MMS", jint> NET_CAPABILITY_MMS = this;
+	StaticField<"NET_CAPABILITY_MMTEL", jint> NET_CAPABILITY_MMTEL = this;
+	StaticField<"NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED", jint>
+			NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED = this;
+	StaticField<"NET_CAPABILITY_NOT_CONGESTED", jint> NET_CAPABILITY_NOT_CONGESTED = this;
+	StaticField<"NET_CAPABILITY_NOT_METERED", jint> NET_CAPABILITY_NOT_METERED = this;
+	StaticField<"NET_CAPABILITY_NOT_RESTRICTED", jint> NET_CAPABILITY_NOT_RESTRICTED = this;
+	StaticField<"NET_CAPABILITY_NOT_ROAMING", jint> NET_CAPABILITY_NOT_ROAMING = this;
+	StaticField<"NET_CAPABILITY_NOT_SUSPENDED", jint> NET_CAPABILITY_NOT_SUSPENDED = this;
+	StaticField<"NET_CAPABILITY_NOT_VPN", jint> NET_CAPABILITY_NOT_VPN = this;
+	StaticField<"NET_CAPABILITY_PRIORITIZE_BANDWIDTH", jint> NET_CAPABILITY_PRIORITIZE_BANDWIDTH =
+			this;
+	StaticField<"NET_CAPABILITY_PRIORITIZE_LATENCY", jint> NET_CAPABILITY_PRIORITIZE_LATENCY = this;
+	StaticField<"NET_CAPABILITY_RCS", jint> NET_CAPABILITY_RCS = this;
+	StaticField<"NET_CAPABILITY_SUPL", jint> NET_CAPABILITY_SUPL = this;
+	StaticField<"NET_CAPABILITY_TEMPORARILY_NOT_METERED", jint>
+			NET_CAPABILITY_TEMPORARILY_NOT_METERED = this;
+	StaticField<"NET_CAPABILITY_TRUSTED", jint> NET_CAPABILITY_TRUSTED = this;
+	StaticField<"NET_CAPABILITY_VALIDATED", jint> NET_CAPABILITY_VALIDATED = this;
+	StaticField<"NET_CAPABILITY_WIFI_P2P", jint> NET_CAPABILITY_WIFI_P2P = this;
+	StaticField<"NET_CAPABILITY_XCAP", jint> NET_CAPABILITY_XCAP = this;
+
+	StaticField<"TRANSPORT_BLUETOOTH", jint> TRANSPORT_BLUETOOTH = this;
+	StaticField<"TRANSPORT_CELLULAR", jint> TRANSPORT_CELLULAR = this;
+	StaticField<"TRANSPORT_ETHERNET", jint> TRANSPORT_ETHERNET = this;
+	StaticField<"TRANSPORT_LOWPAN", jint> TRANSPORT_LOWPAN = this;
+	StaticField<"TRANSPORT_SATELLITE", jint> TRANSPORT_SATELLITE = this;
+	StaticField<"TRANSPORT_THREAD", jint> TRANSPORT_THREAD = this;
+	StaticField<"TRANSPORT_USB", jint> TRANSPORT_USB = this;
+	StaticField<"TRANSPORT_VPN", jint> TRANSPORT_VPN = this;
+	StaticField<"TRANSPORT_WIFI", jint> TRANSPORT_WIFI = this;
+	StaticField<"TRANSPORT_WIFI_AWARE", jint> TRANSPORT_WIFI_AWARE = this;
+
+	Method<"hasCapability", jboolean(jint)> hasCapability = this;
+	Method<"hasTransport", jboolean(jint)> hasTransport = this;
+	Method<"getCapabilities", A<jint>()> getCapabilities = this;
+	Method<"getTransportInfo", L<"android.net.TransportInfo">()> getTransportInfo = this;
+
 	using ClassProxy::ClassProxy;
 };
 
@@ -438,8 +611,10 @@ struct SP_PUBLIC App : public sp::Ref {
 	ClassLoader classLoader;
 
 	ApplicationProxy Application = SP_JAVA_APPLICATION_CLASS;
+	ContentResolverProxy ContentResolver = "android/content/ContentResolver";
 	ClassClassProxy Class = "java/lang/Class";
 	FileProxy File = "java/io/File";
+	CharSequenceProxy CharSequence = "java/lang/CharSequence";
 	ClassMethodProxy Method = "java/lang/reflect/Method";
 	ClassFieldProxy Field = "java/lang/reflect/Field";
 	SystemProxy System = "java/lang/System";
@@ -453,8 +628,11 @@ struct SP_PUBLIC App : public sp::Ref {
 	DisplayMetricsProxy DisplayMetrics = "android/util/DisplayMetrics";
 	IntentProxy Intent = "android/content/Intent";
 	UriProxy Uri = "android/net/Uri";
+	InputStreamProxy InputStream = "java/io/InputStream";
 	WindowLayoutParamsProxy WindowLayoutParams = "android/view/WindowManager$LayoutParams";
 	WindowManagerProxy WindowManager = "android/view/WindowManager";
+	WindowInsetTypeProxy WindowInsetType = "android/view/WindowInsets$Type";
+	WindowInsetsControllerProxy WindowInsetsController = "android/view/WindowInsetsController";
 	WindowProxy Window = "android/view/Window";
 	WindowMetricsProxy WindowMetrics = "android/view/WindowMetrics";
 	DisplayManagerProxy DisplayManager = "android/hardware/display/DisplayManager";
@@ -467,6 +645,10 @@ struct SP_PUBLIC App : public sp::Ref {
 	RectProxy Rect = "android/graphics/Rect";
 	ViewProxy View = "android/view/View";
 	ClipboardManagerProxy ClipboardManager = "android/content/ClipboardManager";
+	ClipDescriptionProxy ClipDescription = "android/content/ClipDescription";
+	ClipDataProxy ClipData = "android/content/ClipData";
+	ClipDataItemProxy ClipDataItem = "android/content/ClipData$Item";
+	NetworkCapabilitiesProxy NetworkCapabilities = "android/net/NetworkCapabilities";
 
 	mem_std::Map<mem_std::String, int> drawables;
 	mem_std::Function<bool(ANativeActivity *, BytesView)> activityLoader;
@@ -550,6 +732,14 @@ public:
 		return ret;
 	}
 
+	RefString newStringRef(WideStringView data) const {
+		auto ret = RefString(_env->NewString((jchar *)data.data(), data.size()), _env);
+#if DEBUG
+		checkErrors();
+#endif
+		return ret;
+	}
+
 	LocalString newString(StringView data) const {
 		auto ret = LocalString(data.terminated()
 						? _env->NewStringUTF(data.data())
@@ -561,11 +751,34 @@ public:
 		return ret;
 	}
 
+	RefString newStringRef(StringView data) const {
+		auto ret = RefString(data.terminated()
+						? _env->NewStringUTF(data.data())
+						: _env->NewStringUTF(data.str<memory::StandartInterface>().data()),
+				_env);
+#if DEBUG
+		checkErrors();
+#endif
+		return ret;
+	}
+
+	template <typename Type>
+	LocalArray<Type> newArray(jsize size) const {
+		return LocalArray<Type>((_env->*detail::TypeInfo<Type>::NewArray)(size), _env);
+	};
+
+	template <typename Type>
+	LocalArray<Type> newArray(jsize size, const RefClass &ref) const {
+		return LocalArray<Type>(_env->NewObjectArray(size, ref, nullptr), _env);
+	};
+
 	jobject newGlobalRef(jobject obj) const { return _env->NewGlobalRef(obj); }
 
 	void deleteGlobalRef(jobject obj) const { _env->DeleteGlobalRef(obj); }
 
 	void checkErrors() const;
+
+	bool isSame(jobject a, jobject b) const { return _env->IsSameObject(a, b); }
 
 protected:
 	JNIEnv *_env = nullptr;

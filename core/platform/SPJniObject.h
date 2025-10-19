@@ -825,7 +825,7 @@ template <typename Origin, typename ElementType>
 SpanView<ElementType> BasicArrayInterface<Origin, ElementType>::getArray() {
 	if (!_arrayBuffer) {
 		auto env = getArrayEnv();
-		(env->*TypeInfo<ElementType>::GetArray)(getInterfaceArray(), _arrayBuffer, &_arrayIsCopy);
+		_arrayBuffer = (env->*TypeInfo<ElementType>::GetArray)(getInterfaceArray(), &_arrayIsCopy);
 		_arrayBufferSize = env->GetArrayLength(getInterfaceArray());
 	}
 
@@ -878,7 +878,7 @@ void BasicArrayInterface<Origin, ElementType>::swap(BasicArrayInterface &other) 
 	bool tmp_dirty = _dirty;
 	jboolean tmp_arrayIsCopy = _arrayIsCopy;
 	size_t tmp_arrayBufferSize = _arrayBufferSize;
-	const ElementType *tmp_arrayBuffer = _arrayBuffer;
+	auto tmp_arrayBuffer = _arrayBuffer;
 
 	_dirty = other._dirty;
 	_arrayIsCopy = other._arrayIsCopy;

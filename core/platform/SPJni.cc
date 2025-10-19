@@ -418,8 +418,6 @@ void App::handleLowMemory(const jni::Ref &ref) {
 }
 
 static StringView getApplicationName(App *proxy, const jni::Ref &ctx, memory::pool_t *pool) {
-	static jmethodID j_toString = nullptr;
-
 	auto jAppInfo = proxy->Application.getApplicationInfo(ctx);
 	if (!jAppInfo) {
 		return StringView();
@@ -428,12 +426,7 @@ static StringView getApplicationName(App *proxy, const jni::Ref &ctx, memory::po
 	auto labelRes = proxy->ApplicationInfo.labelRes(jAppInfo);
 	if (labelRes == 0) {
 		auto jNonLocalizedLabel = proxy->ApplicationInfo.nonLocalizedLabel(jAppInfo);
-		auto clzCharSequence = jNonLocalizedLabel.getClass();
-		if (!j_toString) {
-			j_toString = clzCharSequence.getMethodID("toString", "()Ljava/lang/String;");
-		}
-		auto s = jNonLocalizedLabel.callMethod<jstring>(j_toString);
-		return s.getString().pdup(pool);
+		return proxy->CharSequence.toString(jNonLocalizedLabel).getString().pdup(pool);
 	} else {
 		auto jAppName = proxy->Application.getString(ctx, jint(labelRes));
 		return jAppName.getString().pdup(pool);
@@ -644,6 +637,7 @@ void Env::loadJava(JavaVM *vm) {
 
 	if (applicationClass) {
 		s_app = Rc<App>::create(RefClass(applicationClass));
+		s_app->vm = vm;
 	}
 
 	SPASSERT(s_app,

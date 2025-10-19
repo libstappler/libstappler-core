@@ -428,8 +428,7 @@ inline const CallbackStream &operator<<(const CallbackStream &stream, const Vec2
 }
 
 inline std::basic_ostream<char> &operator<<(std::basic_ostream<char> &os, const Vec2 &vec) {
-	os << "(x: " << std::setprecision(std::numeric_limits<float>::digits10 + 3) << vec.x
-	   << "; y: " << vec.y << ")";
+	memory::makeCallback(os) << vec;
 	return os;
 }
 

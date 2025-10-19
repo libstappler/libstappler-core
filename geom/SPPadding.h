@@ -176,6 +176,17 @@ struct SP_PUBLIC Padding {
 
 using Margin = Padding;
 
+inline const CallbackStream &operator<<(const CallbackStream &stream, const Padding &p) {
+	stream << "(top: " << p.top << "; right: " << p.right << "; bottom: " << p.bottom
+		   << "; left: " << p.left << ")";
+	return stream;
+}
+
+inline std::basic_ostream<char> &operator<<(std::basic_ostream<char> &os, const Padding &p) {
+	memory::makeCallback(os) << p;
+	return os;
+}
+
 } // namespace stappler::geom
 
 #endif /* STAPPLER_GEOM_SPPADDING_H_ */
