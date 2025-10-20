@@ -83,7 +83,7 @@ enum class FileFlags : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(FileFlags)
 
-struct FileInfo {
+struct SP_PUBLIC FileInfo {
 	// From most common to most concrete
 	enum FileCategory {
 		Exec, // user or system executable from PATH

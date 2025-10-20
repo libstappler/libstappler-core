@@ -314,13 +314,23 @@ Status _ftw(FileCategory cat, StringView path,
 	return Status::Declined;
 }
 
+// this function should return valid value if called before core::initialize()
 template <>
 auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
+	if (s_execPath[0] == 0) {
+		(void)::readlink("/proc/self/exe", s_execPath, sizeof(s_execPath) - 1);
+	}
+
 	return s_execPath;
 }
 
+// this function should return valid value if called before core::initialize()
 template <>
 auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::StringType {
+	if (s_execPath[0] == 0) {
+		(void)::readlink("/proc/self/exe", s_execPath, sizeof(s_execPath) - 1);
+	}
+
 	using Interface = memory::PoolInterface;
 	return StringView(s_execPath).str<Interface>();
 }

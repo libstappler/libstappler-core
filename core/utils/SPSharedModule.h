@@ -54,33 +54,54 @@ struct SharedSymbol {
 
 class SP_PUBLIC SharedModule final {
 public:
-	static const void *acquireSymbol(const char *module, const char *symbol);
-	static const void *acquireSymbol(const char *module, const char *symbol,
-			const std::type_info &);
+	static constexpr uint32_t VersionLatest = maxOf<uint32_t>();
+
+	static const void *acquireSymbol(const char *module, uint32_t version, const char *symbol,
+			const SourceLocation & = SP_LOCATION);
+	static const void *acquireSymbol(const char *module, uint32_t version, const char *symbol,
+			const std::type_info &, const SourceLocation & = SP_LOCATION);
 
 	template <typename T = const void *>
-	static auto acquireTypedSymbol(const char *module, const char *symbol) {
+	static auto acquireTypedSymbol(const char *module, uint32_t version, const char *symbol,
+			const SourceLocation &loc = SP_LOCATION) {
+		return reinterpret_cast<T>(const_cast<void *>(acquireSymbol(module, version, symbol,
+				typeid(std::remove_pointer_t<typename std::remove_cv<T>::type>), loc)));
+	}
+
+	static const void *acquireSymbol(const char *module, const char *symbol,
+			const SourceLocation & = SP_LOCATION);
+	static const void *acquireSymbol(const char *module, const char *symbol, const std::type_info &,
+			const SourceLocation & = SP_LOCATION);
+
+	template <typename T = const void *>
+	static auto acquireTypedSymbol(const char *module, const char *symbol,
+			const SourceLocation &loc = SP_LOCATION) {
 		return reinterpret_cast<T>(const_cast<void *>(acquireSymbol(module, symbol,
-				typeid(std::remove_pointer_t<typename std::remove_cv<T>::type>))));
+				typeid(std::remove_pointer_t<typename std::remove_cv<T>::type>), loc)));
 	}
 
 	static void enumerateModules(void *userdata, void (*)(void *userdata, const char *name));
 
 	static bool enumerateSymbols(const char *module, void *userdata,
 			void (*)(void *userdata, const char *name, const void *symbol));
+	static bool enumerateSymbols(const char *module, uint32_t version, void *userdata,
+			void (*)(void *userdata, const char *name, const void *symbol));
 
 	SharedModule(const char *, SharedSymbol *, size_t count,
 			SharedModuleFlags = SharedModuleFlags::None);
 	~SharedModule();
 
+	uint32_t getVersion() const { return _version; }
+
 private:
 	friend struct SharedModuleManager;
 
-	const char *name = nullptr;
-	SharedSymbol *symbols = nullptr;
-	size_t symbolsCount = 0;
-	SharedModuleFlags flags = SharedModuleFlags::None;
-	SharedModule *next = nullptr;
+	const char *_name = nullptr;
+	SharedSymbol *_symbols = nullptr;
+	size_t _symbolsCount = 0;
+	SharedModuleFlags _flags = SharedModuleFlags::None;
+	SharedModule *_next = nullptr;
+	uint32_t _version = 0;
 };
 
 // shortcut for single-symbol extension
@@ -88,11 +109,11 @@ class SP_PUBLIC SharedExtension final {
 public:
 	template <typename T>
 	SharedExtension(const char *moduleName, const char *symbolName, T *s)
-	: symbol(symbolName, s), module(moduleName, &symbol, 1, SharedModuleFlags::Extensible) { }
+	: _symbol(symbolName, s), _module(moduleName, &_symbol, 1, SharedModuleFlags::Extensible) { }
 
 protected:
-	SharedSymbol symbol;
-	SharedModule module;
+	SharedSymbol _symbol;
+	SharedModule _module;
 };
 
 } // namespace STAPPLER_VERSIONIZED stappler

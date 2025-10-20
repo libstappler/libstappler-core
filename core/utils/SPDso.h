@@ -29,7 +29,8 @@ namespace STAPPLER_VERSIONIZED stappler {
 
 enum class DsoFlags : uint32_t {
 	None = 0,
-	Self = 1 << 0, // open caller app itself instead of target library ( Dso(StringView(), DsoFlags::Self) )
+	Self = 1
+			<< 0, // open caller app itself instead of target library ( Dso(StringView(), DsoFlags::Self) )
 	Lazy = 1 << 1, // use lazy binding if available (default)
 	Global = 1 << 2,
 };
@@ -38,17 +39,21 @@ SP_DEFINE_ENUM_AS_MASK(DsoFlags)
 
 class SP_PUBLIC Dso {
 public:
+	// Version number for shared modules, defined, when DSO loaded
+	// This is actual when called within some DSO operation (open/close/sym)
+	static uint32_t GetCurrentVersion();
+
 	~Dso();
 
 	Dso();
-	Dso(StringView); // Lazy | Local by default
-	Dso(StringView, DsoFlags);
+	Dso(StringView, uint32_t v = 0); // Lazy | Local by default
+	Dso(StringView, DsoFlags, uint32_t v = 0);
 
 	Dso(const Dso &) = delete;
-	Dso & operator=(const Dso &) = delete;
+	Dso &operator=(const Dso &) = delete;
 
 	Dso(Dso &&);
-	Dso & operator=(Dso &&);
+	Dso &operator=(Dso &&);
 
 	template <typename T = void *>
 	T sym(StringView name) {
@@ -59,8 +64,8 @@ public:
 	explicit operator bool() const { return _handle != nullptr; }
 
 	DsoFlags getFlags() const { return _flags; }
-
 	StringView getError() const { return _error; }
+	uint32_t getVersion() const { return _version; }
 
 	void close();
 
@@ -73,8 +78,9 @@ protected:
 	DsoFlags _flags = DsoFlags::None;
 	void *_handle = nullptr;
 	const char *_error = nullptr;
+	uint32_t _version = 0;
 };
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* CORE_CORE_UTILS_SPDSO_H_ */

@@ -284,7 +284,7 @@ void _initSystemPaths(FilesystemResourceData &data) {
 
 	memcpy(s_homePath, home, strlen(home));
 
-	uint32_t bufsize = PATH_MAX;
+	uint32_t bufsize = PATH_MAX - 1;
 
 	if (_NSGetExecutablePath(s_execPath, &bufsize) != 0) {
 		log::source().error("filesystem", "Fail to detect app path");
@@ -544,11 +544,19 @@ Status _ftw(FileCategory cat, StringView path,
 
 template <>
 auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
+	if (s_execPath[0] == 0) {
+		uint32_t bufsize = PATH_MAX - 1;
+		_NSGetExecutablePath(s_execPath, &bufsize);
+	}
 	return s_execPath;
 }
 
 template <>
 auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::StringType {
+	if (s_execPath[0] == 0) {
+		uint32_t bufsize = PATH_MAX - 1;
+		_NSGetExecutablePath(s_execPath, &bufsize);
+	}
 	using Interface = memory::PoolInterface;
 	return StringView(s_execPath).str<Interface>();
 }

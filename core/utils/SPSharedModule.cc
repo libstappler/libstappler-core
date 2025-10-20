@@ -23,7 +23,7 @@
 #include "SPSharedModule.h"
 #include "SPLog.h"
 #include "SPMemInterface.h"
-#include "SPStringView.h"
+#include "SPDso.h"
 #include <typeinfo>
 
 #if LINUX || ANDROID || MACOS
@@ -33,21 +33,26 @@
 namespace STAPPLER_VERSIONIZED stappler {
 
 struct SharedModuleManager {
+	using ModuleVersionMap = std::map<uint32_t, SharedModule *>;
+
 	static SharedModuleManager *getInstance();
 
 	void addModule(SharedModule *);
 	void removeModule(SharedModule *);
 
-	const void *acquireSymbol(const char *module, const char *symbol) const;
-	const void *acquireSymbol(const char *module, const char *symbol, const std::type_info *) const;
+	SharedModule *openModule(StringView, uint32_t version) const;
+
+	const void *acquireSymbol(const char *module, uint32_t version, const char *symbol,
+			const SourceLocation &loc) const;
+	const void *acquireSymbol(const char *module, uint32_t version, const char *symbol,
+			const std::type_info *, const SourceLocation &loc) const;
 
 	void enumerateModules(void *userdata, void (*)(void *userdata, const char *name));
 
-	bool enumerateSymbols(const char *module, void *userdata,
+	bool enumerateSymbols(const char *module, uint32_t version, void *userdata,
 			void (*)(void *userdata, const char *name, const void *symbol));
 
-
-	std::unordered_map<StringView, SharedModule *> _modules;
+	std::unordered_map<StringView, ModuleVersionMap> _modules;
 	mutable std::mutex _mutex;
 };
 
@@ -79,125 +84,169 @@ SharedModuleManager *SharedModuleManager::getInstance() {
 
 void SharedModuleManager::addModule(SharedModule *module) {
 	std::unique_lock lock(_mutex);
-	auto it = _modules.find(module->name);
+	auto it = _modules.find(module->_name);
 	if (it != _modules.end()) {
-		if (hasFlag(it->second->flags, SharedModuleFlags::Extensible)) {
-			module->next = it->second;
-			it->second = module;
-			return;
+		auto vIt = it->second.find(module->_version);
+		if (vIt != it->second.end()) {
+			if (hasFlag(vIt->second->_flags, SharedModuleFlags::Extensible)) {
+				module->_next = vIt->second;
+				vIt->second = module;
+			} else {
+				log::source().error("SharedModule", "Module '", module->_name, "' redefined");
+				abort();
+			}
 		} else {
-			log::source().error("SharedModule", "Module '", module->name, "' redefined");
-			abort();
-			return;
+			// add new version
+			it->second.emplace(module->_version, module);
 		}
+	} else {
+		auto it = _modules.emplace(module->_name, ModuleVersionMap()).first;
+		it->second.emplace(module->_version, module);
 	}
-	_modules.emplace(module->name, module);
 }
 
 void SharedModuleManager::removeModule(SharedModule *module) {
 	std::unique_lock lock(_mutex);
-	auto it = _modules.find(module->name);
-	if (!hasFlag(it->second->flags, SharedModuleFlags::Extensible)) {
-		_modules.erase(it);
+	auto it = _modules.find(module->_name);
+	if (it == _modules.end()) {
+		return;
+	}
+
+	auto vIt = it->second.find(module->_version);
+	if (vIt == it->second.end()) {
+		return;
+	}
+
+	bool erased = false;
+	if (!hasFlag(vIt->second->_flags, SharedModuleFlags::Extensible)) {
+		it->second.erase(vIt);
+		erased = true;
 	} else {
-		auto target = &it->second;
-		auto mod = it->second;
+		auto target = &vIt->second;
+		auto mod = vIt->second;
 		while (mod && mod != module) {
-			target = &mod->next;
-			mod = mod->next;
+			target = &mod->_next;
+			mod = mod->_next;
 		}
 
 		if (mod == module) {
-			*target = mod->next;
+			*target = mod->_next;
 		}
 
-		if (!it->second) {
+		if (!vIt->second) {
+			it->second.erase(vIt);
+			erased = true;
+		}
+	}
+
+	if (erased) {
+		if (it->second.empty()) {
 			_modules.erase(it);
 		}
 	}
 }
 
-const void *SharedModuleManager::acquireSymbol(const char *module, const char *symbol) const {
-	std::unique_lock lock(_mutex);
-	auto it = _modules.find(StringView(module));
+SharedModule *SharedModuleManager::openModule(StringView module, uint32_t version) const {
+	auto it = _modules.find(module);
 	if (it != _modules.end()) {
-		StringView symbolView(symbol);
-
-		SharedSymbol *s = nullptr;
-		size_t c = 0;
-
-		auto mod = it->second;
-		while (mod) {
-			s = mod->symbols;
-			c = mod->symbolsCount;
-			while (c) {
-				if (s->name == symbolView) {
-					return s->ptr;
+		if (!it->second.empty()) {
+			if (version == SharedModule::VersionLatest) {
+				auto v = std::prev(it->second.end());
+				return v->second;
+			} else {
+				auto vIt = it->second.find(version);
+				if (vIt != it->second.end()) {
+					return vIt->second;
 				}
-				++s;
-				--c;
 			}
-			mod = mod->next;
 		}
-	} else {
-		log::source().error("SharedModule", "Module \"", module, "\" is not defined");
 	}
 	return nullptr;
 }
 
-const void *SharedModuleManager::acquireSymbol(const char *module, const char *symbol,
-		const std::type_info *t) const {
+const void *SharedModuleManager::acquireSymbol(const char *module, uint32_t version,
+		const char *symbol, const SourceLocation &loc) const {
 	std::unique_lock lock(_mutex);
-	auto it = _modules.find(StringView(module));
-	if (it != _modules.end()) {
-		StringView symbolView(symbol);
-		bool found = false;
+	auto mod = openModule(module, version);
+	if (!mod) {
+		log::source(loc).error("SharedModule", "Module \"", module, "\" is not defined");
+		return nullptr;
+	}
 
-		SharedSymbol *s = nullptr;
-		size_t c = 0;
+	StringView symbolView(symbol);
 
-		auto mod = it->second;
+	SharedSymbol *s = nullptr;
+	size_t c = 0;
+
+	while (mod) {
+		s = mod->_symbols;
+		c = mod->_symbolsCount;
+		while (c) {
+			if (s->name == symbolView) {
+				return s->ptr;
+			}
+			++s;
+			--c;
+		}
+		mod = mod->_next;
+	}
+	return nullptr;
+}
+
+const void *SharedModuleManager::acquireSymbol(const char *module, uint32_t version,
+		const char *symbol, const std::type_info *t, const SourceLocation &loc) const {
+	std::unique_lock lock(_mutex);
+	auto fmod = openModule(module, version);
+	if (!fmod) {
+		log::source(loc).error("SharedModule", "Module \"", module, "\" is not defined");
+		return nullptr;
+	}
+
+	StringView symbolView(symbol);
+	bool found = false;
+
+	SharedSymbol *s = nullptr;
+	size_t c = 0;
+
+	auto mod = fmod;
+	while (mod) {
+		s = mod->_symbols;
+		c = mod->_symbolsCount;
+		while (c) {
+			if (s->name == symbolView) {
+				if (*s->type == *t) {
+					return s->ptr;
+				}
+				found = true;
+			}
+			++s;
+			--c;
+		}
+		mod = mod->_next;
+	}
+
+	if (found) {
+		memory::StandartInterface::StringStreamType err;
+		err << "Module \"" << module << "\": Symbol \"" << symbol << "\" not found for: '";
+		printDemangled(err, t);
+		err << "'\n";
+
+		mod = fmod;
 		while (mod) {
-			s = mod->symbols;
-			c = mod->symbolsCount;
+			s = mod->_symbols;
+			c = mod->_symbolsCount;
 			while (c) {
 				if (s->name == symbolView) {
-					if (*s->type == *t) {
-						return s->ptr;
-					}
-					found = true;
+					err << "\tFound: '";
+					printDemangled(err, s->type);
+					err << "'\n";
 				}
 				++s;
 				--c;
 			}
-			mod = mod->next;
+			mod = mod->_next;
 		}
-
-		if (found) {
-			memory::StandartInterface::StringStreamType err;
-			err << "Module \"" << module << "\": Symbol \"" << symbol << "\" not found for: '";
-			printDemangled(err, t);
-			err << "'\n";
-
-			mod = it->second;
-			while (mod) {
-				s = mod->symbols;
-				c = mod->symbolsCount;
-				while (c) {
-					if (s->name == symbolView) {
-						err << "\tFound: '";
-						printDemangled(err, s->type);
-						err << "'\n";
-					}
-					++s;
-					--c;
-				}
-				mod = mod->next;
-			}
-			log::source().error("SharedModule", err.str());
-		}
-	} else {
-		log::source().error("SharedModule", "Module \"", module, "\" is not defined");
+		log::source(loc).error("SharedModule", err.str());
 	}
 	return nullptr;
 }
@@ -207,47 +256,61 @@ void SharedModuleManager::enumerateModules(void *userdata,
 	if (!cb) {
 		return;
 	}
-	for (auto &it : _modules) { cb(userdata, it.second->name); }
+	for (auto &it : _modules) { cb(userdata, it.first.data()); }
 }
 
-bool SharedModuleManager::enumerateSymbols(const char *module, void *userdata,
+bool SharedModuleManager::enumerateSymbols(const char *module, uint32_t version, void *userdata,
 		void (*cb)(void *userdata, const char *name, const void *symbol)) {
 	if (!cb) {
 		return false;
 	}
 
-	auto it = _modules.find(StringView(module));
-	if (it == _modules.end()) {
+	auto mod = openModule(module, version);
+	if (!mod) {
 		return false;
 	}
 
 	SharedSymbol *s = nullptr;
 	size_t c = 0;
 
-	auto mod = it->second;
 	while (mod) {
-		s = mod->symbols;
-		c = mod->symbolsCount;
+		s = mod->_symbols;
+		c = mod->_symbolsCount;
 		while (c) {
 			cb(userdata, s->name, s->ptr);
 			++s;
 			--c;
 		}
-		mod = mod->next;
+		mod = mod->_next;
 	}
 
 	return true;
 }
 
-const void *SharedModule::acquireSymbol(const char *module, const char *symbol) {
+const void *SharedModule::acquireSymbol(const char *module, uint32_t version, const char *symbol,
+		const SourceLocation &loc) {
 	auto manager = SharedModuleManager::getInstance();
-	return manager->acquireSymbol(module, symbol);
+	return manager->acquireSymbol(module, version, symbol, loc);
 }
+
+const void *SharedModule::acquireSymbol(const char *module, uint32_t version, const char *symbol,
+		const std::type_info &info, const SourceLocation &loc) {
+	auto manager = SharedModuleManager::getInstance();
+	return manager->acquireSymbol(module, version, symbol, &info, loc);
+}
+
 const void *SharedModule::acquireSymbol(const char *module, const char *symbol,
-		const std::type_info &info) {
+		const SourceLocation &loc) {
 	auto manager = SharedModuleManager::getInstance();
-	return manager->acquireSymbol(module, symbol, &info);
+	return manager->acquireSymbol(module, VersionLatest, symbol, loc);
 }
+
+const void *SharedModule::acquireSymbol(const char *module, const char *symbol,
+		const std::type_info &info, const SourceLocation &loc) {
+	auto manager = SharedModuleManager::getInstance();
+	return manager->acquireSymbol(module, VersionLatest, symbol, &info, loc);
+}
+
 void SharedModule::enumerateModules(void *userdata, void (*cb)(void *userdata, const char *name)) {
 	auto manager = SharedModuleManager::getInstance();
 	manager->enumerateModules(userdata, cb);
@@ -256,11 +319,17 @@ void SharedModule::enumerateModules(void *userdata, void (*cb)(void *userdata, c
 bool SharedModule::enumerateSymbols(const char *module, void *userdata,
 		void (*cb)(void *userdata, const char *name, const void *symbol)) {
 	auto manager = SharedModuleManager::getInstance();
-	return manager->enumerateSymbols(module, userdata, cb);
+	return manager->enumerateSymbols(module, VersionLatest, userdata, cb);
+}
+
+bool SharedModule::enumerateSymbols(const char *module, uint32_t version, void *userdata,
+		void (*cb)(void *userdata, const char *name, const void *symbol)) {
+	auto manager = SharedModuleManager::getInstance();
+	return manager->enumerateSymbols(module, version, userdata, cb);
 }
 
 SharedModule::SharedModule(const char *n, SharedSymbol *s, size_t count, SharedModuleFlags f)
-: name(n), symbols(s), symbolsCount(count), flags(f) {
+: _name(n), _symbols(s), _symbolsCount(count), _flags(f), _version(Dso::GetCurrentVersion()) {
 	SharedModuleManager::getInstance()->addModule(this);
 }
 

@@ -322,11 +322,25 @@ Status _ftw(FileCategory cat, StringView path,
 
 template <>
 auto _getApplicationPath<memory::StandartInterface>() -> memory::StandartInterface::StringType {
+	if (s_appPath.empty()) {
+		wchar_t fullpath[NTFS_MAX_PATH] = {0};
+		GetModuleFileNameW(NULL, fullpath, NTFS_MAX_PATH - 1);
+
+		s_appPath = filesystem::native::nativeToPosix<memory::StandartInterface>(
+				string::toUtf8<memory::StandartInterface>((const char16_t *)fullpath));
+	}
 	return s_appPath;
 }
 
 template <>
 auto _getApplicationPath<memory::PoolInterface>() -> memory::PoolInterface::StringType {
+	if (s_appPath.empty()) {
+		wchar_t fullpath[NTFS_MAX_PATH] = {0};
+		GetModuleFileNameW(NULL, fullpath, NTFS_MAX_PATH - 1);
+
+		s_appPath = filesystem::native::nativeToPosix<memory::StandartInterface>(
+				string::toUtf8<memory::StandartInterface>((const char16_t *)fullpath));
+	}
 	using Interface = memory::PoolInterface;
 	return StringView(s_appPath).str<Interface>();
 }

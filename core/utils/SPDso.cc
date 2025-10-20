@@ -29,7 +29,7 @@
 
 namespace STAPPLER_VERSIONIZED stappler::dso {
 
-static void * dso_open(StringView name, DsoFlags flags, const char **err) {
+static void *dso_open(StringView name, DsoFlags flags, const char **err) {
 	void *h = nullptr;
 	int f = 0;
 	if ((flags & DsoFlags::Lazy) != DsoFlags::None) {
@@ -55,7 +55,7 @@ static void dso_close(DsoFlags flags, void *handle) {
 	}
 }
 
-static void * dso_sym(void *h, StringView name, const char **err) {
+static void *dso_sym(void *h, StringView name, const char **err) {
 	auto s = ::dlsym(h, name.terminated() ? name.data() : name.str<mem_std::Interface>().data());
 	if (!s) {
 		*err = ::dlerror();
@@ -63,7 +63,7 @@ static void * dso_sym(void *h, StringView name, const char **err) {
 	return s;
 }
 
-}
+} // namespace stappler::dso
 
 #endif
 
@@ -77,12 +77,13 @@ namespace STAPPLER_VERSIONIZED stappler::dso {
 static constexpr const char *WIN_FAIL_TO_LOAD = "Fail to load dynamic object";
 static constexpr const char *WIN_SYMBOL_NOT_FOUND = "Fail to find symbol in dynamic object";
 
-static void * dso_open(StringView name, DsoFlags flags, const char **err) {
+static void *dso_open(StringView name, DsoFlags flags, const char **err) {
 	HMODULE h = NULL;
 	if ((flags & DsoFlags::Self) != DsoFlags::None) {
 		h = GetModuleHandleA(nullptr);
 	} else {
-		h = LoadLibraryA(LPCSTR(name.terminated() ? name.data() : name.str<mem_std::Interface>().data()));
+		h = LoadLibraryA(
+				LPCSTR(name.terminated() ? name.data() : name.str<mem_std::Interface>().data()));
 	}
 
 	if (!h) {
@@ -99,15 +100,16 @@ static void dso_close(DsoFlags flags, void *handle) {
 	}
 }
 
-static void * dso_sym(void *h, StringView name, const char **err) {
-	auto s = GetProcAddress(HMODULE(h), name.terminated() ? name.data() : name.str<mem_std::Interface>().data());
+static void *dso_sym(void *h, StringView name, const char **err) {
+	auto s = GetProcAddress(HMODULE(h),
+			name.terminated() ? name.data() : name.str<mem_std::Interface>().data());
 	if (!s) {
 		*err = WIN_SYMBOL_NOT_FOUND;
 	}
 	return (void *)s;
 }
 
-}
+} // namespace stappler::dso
 
 #endif
 
@@ -115,6 +117,10 @@ namespace STAPPLER_VERSIONIZED stappler {
 
 static constexpr const char *ERROR_MOVED_OUT = "Object was moved out";
 static constexpr const char *ERROR_NOT_LOADED = "Object was not loaded";
+
+static thread_local uint32_t tl_dsoVersion = 0;
+
+uint32_t Dso::GetCurrentVersion() { return tl_dsoVersion; }
 
 Dso::~Dso() {
 	if (_handle) {
@@ -124,23 +130,28 @@ Dso::~Dso() {
 
 Dso::Dso() { }
 
-Dso::Dso(StringView name) : Dso(name, DsoFlags::Lazy) { }
+Dso::Dso(StringView name, uint32_t v) : Dso(name, DsoFlags::Lazy, v) { }
 
-Dso::Dso(StringView name, DsoFlags flags) {
+Dso::Dso(StringView name, DsoFlags flags, uint32_t v) : _version(v) {
+	auto tmp = tl_dsoVersion;
+	tl_dsoVersion = _version;
 	_handle = dso::dso_open(name, flags, &_error);
+	tl_dsoVersion = tmp;
 }
 
 Dso::Dso(Dso &&other) {
 	_flags = other._flags;
 	_handle = other._handle;
 	_error = other._error;
+	_version = other._version;
 
 	other._flags = DsoFlags::None;
 	other._handle = nullptr;
 	other._error = ERROR_MOVED_OUT;
+	other._version = 0;
 }
 
-Dso & Dso::operator=(Dso &&other) {
+Dso &Dso::operator=(Dso &&other) {
 	if (_handle) {
 		close();
 	}
@@ -148,16 +159,21 @@ Dso & Dso::operator=(Dso &&other) {
 	_flags = other._flags;
 	_handle = other._handle;
 	_error = other._error;
+	_version = other._version;
 
 	other._flags = DsoFlags::None;
 	other._handle = nullptr;
 	other._error = ERROR_MOVED_OUT;
+	other._version = 0;
 	return *this;
 }
 
 void Dso::close() {
 	if (_handle) {
+		auto tmp = tl_dsoVersion;
+		tl_dsoVersion = _version;
 		dso::dso_close(_flags, _handle);
+		tl_dsoVersion = tmp;
 		_handle = nullptr;
 		_flags = DsoFlags::None;
 	} else {
@@ -167,7 +183,11 @@ void Dso::close() {
 
 void *Dso::loadSym(StringView name) {
 	if (_handle) {
-		if (auto s = dso::dso_sym(_handle, name, &_error)) {
+		auto tmp = tl_dsoVersion;
+		tl_dsoVersion = _version;
+		auto s = dso::dso_sym(_handle, name, &_error);
+		tl_dsoVersion = tmp;
+		if (s) {
 			_error = nullptr;
 			return s;
 		}
@@ -177,4 +197,4 @@ void *Dso::loadSym(StringView name) {
 	return nullptr;
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler

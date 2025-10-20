@@ -189,7 +189,7 @@ protected:
 	};
 };
 
-class MemoryMappedRegion final {
+class SP_PUBLIC MemoryMappedRegion final {
 public:
 	using PlatformStorage = std::array<uint8_t, 16>;
 
