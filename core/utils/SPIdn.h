@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +22,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#include "SPCommon.h"
-#include "SPIdnPunycode.cc"
-#include "SPIdn.cc"
-#include "SPIdnTld.cc"
+#ifndef STAPPLER_CORE_UTILS_SPIDN_H_
+#define STAPPLER_CORE_UTILS_SPIDN_H_
+
+#include "SPStringView.h" // IWYU pragma: keep
+
+namespace STAPPLER_VERSIONIZED stappler::idn {
+
+template <typename Interface>
+SP_PUBLIC auto toAscii(StringView, bool validate = true) -> typename Interface::StringType;
+
+template <typename Interface>
+SP_PUBLIC auto toUnicode(StringView, bool validate = false) -> typename Interface::StringType;
+
+template <typename Interface>
+SP_PUBLIC auto encodePunycode(StringView) -> typename Interface::StringType;
+
+template <typename Interface>
+SP_PUBLIC auto decodePunycode(StringView) -> typename Interface::StringType;
+
+SP_PUBLIC bool isKnownTld(StringView);
+
+} // namespace stappler::idn
+
+#endif /* STAPPLER_CORE_UTILS_SPIDN_H_ */

@@ -25,6 +25,11 @@
 #include "SPMemPoolInterface.h"
 #include "SPThreadTaskQueue.h"
 
+#ifdef MODULE_STAPPLER_ABI
+#include "SPSharedModule.h"
+#include "SPAbi.h"
+#endif
+
 namespace STAPPLER_VERSIONIZED stappler::thread {
 
 struct ThreadCallbacks {
@@ -46,6 +51,15 @@ static void ThreadCallbacks_init(const ThreadCallbacks &cb, Thread *tm) {
 
 	tl_threadInfo.threadAlloc = memory::allocator::create();
 	tl_threadInfo.threadPool = memory::pool::create(tl_threadInfo.threadAlloc);
+
+#ifdef MODULE_STAPPLER_ABI
+	auto init = SharedModule::acquireTypedSymbol<decltype(&abi::initThread)>(
+			buildconfig::MODULE_STAPPLER_ABI_NAME, "initThread");
+	if (init) {
+		init(tl_threadInfo.threadPool, tm);
+	}
+#endif
+
 	tl_threadInfo.workerPool = memory::pool::create(tl_threadInfo.threadPool);
 
 	memory::pool::perform([&] {
@@ -70,6 +84,15 @@ static void ThreadCallbacks_dispose(const ThreadCallbacks &cb, Thread *tm) {
 	}, tl_threadInfo.threadPool);
 
 	memory::pool::destroy(tl_threadInfo.workerPool);
+
+#ifdef MODULE_STAPPLER_ABI
+	auto dispose = SharedModule::acquireTypedSymbol<decltype(&abi::disposeThread)>(
+			buildconfig::MODULE_STAPPLER_ABI_NAME, "disposeThread");
+	if (dispose) {
+		dispose(tl_threadInfo.threadPool, tm);
+	}
+#endif
+
 	memory::pool::destroy(tl_threadInfo.threadPool);
 	memory::allocator::destroy(tl_threadInfo.threadAlloc);
 

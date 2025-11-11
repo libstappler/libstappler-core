@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +23,10 @@
 
 #include "SPDso.h"
 #include "SPMemory.h"
+
+#ifdef MODULE_STAPPLER_ABI
+#include "SPAbi.h"
+#endif
 
 #if LINUX || ANDROID || MACOS
 
@@ -55,7 +60,7 @@ static void dso_close(DsoFlags flags, void *handle) {
 	}
 }
 
-static void *dso_sym(void *h, StringView name, const char **err) {
+static void *dso_sym(void *h, StringView name, DsoSymFlags flags, const char **err) {
 	auto s = ::dlsym(h, name.terminated() ? name.data() : name.str<mem_std::Interface>().data());
 	if (!s) {
 		*err = ::dlerror();
@@ -100,7 +105,7 @@ static void dso_close(DsoFlags flags, void *handle) {
 	}
 }
 
-static void *dso_sym(void *h, StringView name, const char **err) {
+static void *dso_sym(void *h, StringView name, DsoSymFlags flags, const char **err) {
 	auto s = GetProcAddress(HMODULE(h),
 			name.terminated() ? name.data() : name.str<mem_std::Interface>().data());
 	if (!s) {
@@ -133,9 +138,25 @@ Dso::Dso() { }
 Dso::Dso(StringView name, uint32_t v) : Dso(name, DsoFlags::Lazy, v) { }
 
 Dso::Dso(StringView name, DsoFlags flags, uint32_t v) : _version(v) {
+	flags &= DsoFlags::UserFlags;
+
 	auto tmp = tl_dsoVersion;
 	tl_dsoVersion = _version;
+#ifdef MODULE_STAPPLER_ABI
+	// stappler-abi should work transparently for Dso invokation, so
+	// try API first, if failed - try system DSO
+	_handle = abi::open(name, flags, &_error);
+	if (_handle) {
+		flags |= DsoFlags::StapplerAbi;
+	} else {
+		_handle = dso::dso_open(name, flags, &_error);
+	}
+#else
 	_handle = dso::dso_open(name, flags, &_error);
+#endif
+	if (_handle) {
+		_flags = flags;
+	}
 	tl_dsoVersion = tmp;
 }
 
@@ -172,7 +193,15 @@ void Dso::close() {
 	if (_handle) {
 		auto tmp = tl_dsoVersion;
 		tl_dsoVersion = _version;
+#ifdef MODULE_STAPPLER_ABI
+		if (hasFlag(_flags, DsoFlags::StapplerAbi)) {
+			abi::close(_flags, _handle);
+		} else {
+			dso::dso_close(_flags, _handle);
+		}
+#else
 		dso::dso_close(_flags, _handle);
+#endif
 		tl_dsoVersion = tmp;
 		_handle = nullptr;
 		_flags = DsoFlags::None;
@@ -181,11 +210,20 @@ void Dso::close() {
 	}
 }
 
-void *Dso::loadSym(StringView name) {
+void *Dso::loadSym(StringView name, DsoSymFlags flags) {
 	if (_handle) {
 		auto tmp = tl_dsoVersion;
 		tl_dsoVersion = _version;
-		auto s = dso::dso_sym(_handle, name, &_error);
+		void *s = nullptr;
+#ifdef MODULE_STAPPLER_ABI
+		if (hasFlag(_flags, DsoFlags::StapplerAbi)) {
+			s = abi::sym(_handle, name, flags, &_error);
+		} else {
+			s = dso::dso_sym(_handle, name, flags, &_error);
+		}
+#else
+		s = dso::dso_sym(_handle, name, &_error);
+#endif
 		tl_dsoVersion = tmp;
 		if (s) {
 			_error = nullptr;

@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024-2025 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +29,7 @@ namespace STAPPLER_VERSIONIZED stappler::idn {
 
 // from https://data.iana.org/TLD/tlds-alpha-by-domain.txt
 static constexpr StringView s_IdnTld =
-		R"(# Version 2024083000, Last Updated Fri Aug 30 07:07:01 2024 UTC
+		R"(# Version 2025110700, Last Updated Fri Nov  7 07:07:01 2025 UTC
 AAA
 AARP
 ABB
@@ -148,7 +149,6 @@ BE
 BEATS
 BEAUTY
 BEER
-BENTLEY
 BERLIN
 BEST
 BESTBUY
@@ -327,7 +327,6 @@ CY
 CYMRU
 CYOU
 CZ
-DABUR
 DAD
 DANCE
 DATA
@@ -376,7 +375,6 @@ DOWNLOAD
 DRIVE
 DTV
 DUBAI
-DUNLOP
 DUPONT
 DURBAN
 DVAG
@@ -658,7 +656,6 @@ KAUFEN
 KDDI
 KE
 KERRYHOTELS
-KERRYLOGISTICS
 KERRYPROPERTIES
 KFH
 KG
@@ -690,7 +687,6 @@ LA
 LACAIXA
 LAMBORGHINI
 LAMER
-LANCASTER
 LAND
 LANDROVER
 LANXESS
@@ -722,7 +718,6 @@ LIMITED
 LIMO
 LINCOLN
 LINK
-LIPSY
 LIVE
 LIVING
 LK
@@ -947,7 +942,6 @@ POLITIE
 PORN
 POST
 PR
-PRAMERICA
 PRAXI
 PRESS
 PRIME
@@ -981,7 +975,6 @@ REALTOR
 REALTY
 RECIPES
 RED
-REDSTONE
 REDUMBRELLA
 REHAB
 REISE
@@ -1524,12 +1517,5 @@ bool isKnownTld(StringView data) {
 		return s_tldList.has(d);
 	}
 }
-
-static SharedSymbol s_idnSharedSymbols[] = {
-	SharedSymbol{"isKnownTld", static_cast<bool (*)(StringView)>(isKnownTld)},
-};
-
-SP_USED static SharedModule s_idnSharedModule(buildconfig::MODULE_STAPPLER_IDN_NAME,
-		s_idnSharedSymbols, sizeof(s_idnSharedSymbols) / sizeof(SharedSymbol));
 
 } // namespace stappler::idn

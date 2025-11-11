@@ -40,7 +40,15 @@ enum class SharedModuleFlags : uint32_t {
 
 SP_DEFINE_ENUM_AS_MASK(SharedModuleFlags)
 
-struct SharedSymbol {
+// Used by stappler-abi to detect actual shared object type
+// Stappler API only defines SharedModule with _typeId = 1,
+// but ABI can define other types, that accessable with
+// abi::open in runtime
+struct SharedVirtualObject {
+	uintptr_t _typeId = 0;
+};
+
+struct SP_PUBLIC SharedSymbol final {
 	const char *name = nullptr;
 	const void *ptr = nullptr;
 	const std::type_info *type = nullptr;
@@ -52,9 +60,15 @@ struct SharedSymbol {
 	SharedSymbol(const char *n, const void *p) : name(n), ptr(p) { }
 };
 
-class SP_PUBLIC SharedModule final {
+class SP_PUBLIC SharedModule final : public SharedVirtualObject {
 public:
+	static constexpr uintptr_t TypeId = 1;
 	static constexpr uint32_t VersionLatest = maxOf<uint32_t>();
+
+	// Enumarate all defined module names
+	static void enumerateModules(void *userdata, void (*)(void *userdata, const char *name));
+
+	static const SharedModule *openModule(const char *module, uint32_t version);
 
 	static const void *acquireSymbol(const char *module, uint32_t version, const char *symbol,
 			const SourceLocation & = SP_LOCATION);
@@ -68,6 +82,12 @@ public:
 				typeid(std::remove_pointer_t<typename std::remove_cv<T>::type>), loc)));
 	}
 
+	static bool enumerateSymbols(const char *module, uint32_t version, void *userdata,
+			void (*)(void *userdata, const char *name, const void *symbol));
+
+
+	static const SharedModule *openModule(const char *module);
+
 	static const void *acquireSymbol(const char *module, const char *symbol,
 			const SourceLocation & = SP_LOCATION);
 	static const void *acquireSymbol(const char *module, const char *symbol, const std::type_info &,
@@ -80,11 +100,7 @@ public:
 				typeid(std::remove_pointer_t<typename std::remove_cv<T>::type>), loc)));
 	}
 
-	static void enumerateModules(void *userdata, void (*)(void *userdata, const char *name));
-
 	static bool enumerateSymbols(const char *module, void *userdata,
-			void (*)(void *userdata, const char *name, const void *symbol));
-	static bool enumerateSymbols(const char *module, uint32_t version, void *userdata,
 			void (*)(void *userdata, const char *name, const void *symbol));
 
 	SharedModule(const char *, SharedSymbol *, size_t count,
@@ -92,6 +108,16 @@ public:
 	~SharedModule();
 
 	uint32_t getVersion() const { return _version; }
+
+	const void *acquireSymbol(const char *symbol, const SourceLocation & = SP_LOCATION) const;
+	const void *acquireSymbol(const char *symbol, const std::type_info &,
+			const SourceLocation & = SP_LOCATION) const;
+
+	template <typename T = const void *>
+	auto acquireTypedSymbol(const char *symbol, const SourceLocation &loc = SP_LOCATION) const {
+		return reinterpret_cast<T>(const_cast<void *>(acquireSymbol(symbol,
+				typeid(std::remove_pointer_t<typename std::remove_cv<T>::type>), loc)));
+	}
 
 private:
 	friend struct SharedModuleManager;

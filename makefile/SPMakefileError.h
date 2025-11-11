@@ -23,8 +23,7 @@
 #ifndef CORE_MAKEFILE_SPMAKEFILEERROR_H_
 #define CORE_MAKEFILE_SPMAKEFILEERROR_H_
 
-#include "SPLogInit.h"
-#include "SPMemory.h"
+#include "SPMemory.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::makefile {
 

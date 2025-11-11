@@ -25,7 +25,6 @@ THE SOFTWARE.
 #define STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLINTERFACE_H_
 
 #include "SPMemPoolConfig.h"
-#include "SPPlatformInit.h"
 #include "SPStatus.h"
 
 namespace STAPPLER_VERSIONIZED stappler::mempool::base {

@@ -23,6 +23,7 @@
 
 #include "SPString.h" // IWYU pragma: keep
 #include "SPDso.h" // IWYU pragma: keep
+#include "SPIdn.h"
 
 #if LINUX
 
@@ -51,7 +52,6 @@ struct unistring_iface {
 	int (*u8_cmp2)(const uint8_t *s1, size_t n1, const uint8_t *s2, size_t n2) = nullptr;
 	int (*u8_casecoll)(const uint8_t *s1, size_t n1, const uint8_t *s2, size_t n2,
 			const char *iso639_language, void *nf, int *resultp) = nullptr;
-
 
 	u16_case_fn u16_toupper = nullptr;
 	u16_case_fn u16_tolower = nullptr;
@@ -112,7 +112,56 @@ struct unistring_iface {
 	}
 };
 
+struct idn2_iface {
+	enum flags {
+		IDN2_NFC_INPUT = 1,
+		IDN2_ALABEL_ROUNDTRIP = 2,
+		IDN2_TRANSITIONAL = 4,
+		IDN2_NONTRANSITIONAL = 8,
+		IDN2_ALLOW_UNASSIGNED = 16,
+		IDN2_USE_STD3_ASCII_RULES = 32,
+		IDN2_NO_TR46 = 64,
+		IDN2_NO_ALABEL_ROUNDTRIP = 128
+	};
+
+	int (*lookup_u8)(const uint8_t *src, uint8_t **lookupname, int flags) = nullptr;
+	int (*lookup_ul)(const char *src, char **lookupname, int flags) = nullptr;
+	int (*to_unicode_8z8z)(const char *src, char **lookupname, int flags) = nullptr;
+
+	void load(Dso &handle) {
+		lookup_u8 = handle.sym<decltype(lookup_u8)>("idn2_lookup_u8");
+		lookup_ul = handle.sym<decltype(lookup_ul)>("idn2_lookup_ul");
+		to_unicode_8z8z = handle.sym<decltype(to_unicode_8z8z)>("idn2_to_unicode_8z8z");
+	}
+
+	explicit operator bool() const { return lookup_u8 && lookup_ul && to_unicode_8z8z; }
+
+	void clear() {
+		lookup_u8 = nullptr;
+		lookup_ul = nullptr;
+		to_unicode_8z8z = nullptr;
+	}
+};
+
 struct icu_iface {
+	using UIDNA = void;
+	using UErrorCode = int;
+
+	enum {
+		UIDNA_DEFAULT = 0x30,
+		UIDNA_USE_STD3_RULES = 2,
+		UIDNA_CHECK_BIDI = 4,
+		UIDNA_CHECK_CONTEXTJ = 8,
+		UIDNA_NONTRANSITIONAL_TO_ASCII = 0x10,
+		UIDNA_NONTRANSITIONAL_TO_UNICODE = 0x20,
+		UIDNA_CHECK_CONTEXTO = 0x40
+	};
+
+	struct UIDNAInfo {
+		int8_t isTransitionalDifferent;
+		uint32_t errors;
+	};
+
 	using case_fn = int32_t (*)(char16_t *dest, int32_t destCapacity, const char16_t *src,
 			int32_t srcLength, const char *locale, int *pErrorCode);
 	using case_iter_fn = int32_t (*)(char16_t *dest, int32_t destCapacity, const char16_t *src,
@@ -133,6 +182,24 @@ struct icu_iface {
 
 	cmp_fn u_strCompare = nullptr;
 	case_cmp_fn u_strCaseCompare = nullptr;
+
+	const char *(*u_errorName)(int code) = nullptr;
+
+	UIDNA *(*uidna_openUTS46)(uint32_t options, UErrorCode *pErrorCode) = nullptr;
+	void (*uidna_close)(UIDNA *idna) = nullptr;
+
+	int32_t (*uidna_labelToASCII_UTF8)(const UIDNA *idna, const char *label, int32_t length,
+			char *dest, int32_t capacity, UIDNAInfo *pInfo, UErrorCode *pErrorCode) = nullptr;
+
+	int32_t (*uidna_labelToUnicodeUTF8)(const UIDNA *idna, const char *label, int32_t length,
+			char *dest, int32_t capacity, UIDNAInfo *pInfo, UErrorCode *pErrorCode) = nullptr;
+
+	int32_t (*uidna_nameToASCII_UTF8)(const UIDNA *idna, const char *name, int32_t length,
+			char *dest, int32_t capacity, UIDNAInfo *pInfo, UErrorCode *pErrorCode) = nullptr;
+
+	int32_t (*uidna_nameToUnicodeUTF8)(const UIDNA *idna, const char *name, int32_t length,
+			char *dest, int32_t capacity, UIDNAInfo *pInfo, UErrorCode *pErrorCode) = nullptr;
+
 
 	static void *loadIcu(Dso &h, const char *name, StringView ver) {
 		char buf[256] = {0};
@@ -164,11 +231,29 @@ struct icu_iface {
 				loadIcu(handle, "u_strCompare", verSuffix));
 		u_strCaseCompare = reinterpret_cast<decltype(u_strCaseCompare)>(
 				loadIcu(handle, "u_strCaseCompare", verSuffix));
+
+		u_errorName =
+				reinterpret_cast<decltype(u_errorName)>(loadIcu(handle, "u_errorName", verSuffix));
+		uidna_openUTS46 = reinterpret_cast<decltype(uidna_openUTS46)>(
+				loadIcu(handle, "uidna_openUTS46", verSuffix));
+		uidna_close =
+				reinterpret_cast<decltype(uidna_close)>(loadIcu(handle, "uidna_close", verSuffix));
+
+		uidna_labelToASCII_UTF8 = reinterpret_cast<decltype(uidna_labelToASCII_UTF8)>(
+				loadIcu(handle, "uidna_labelToASCII_UTF8", verSuffix));
+		uidna_labelToUnicodeUTF8 = reinterpret_cast<decltype(uidna_labelToUnicodeUTF8)>(
+				loadIcu(handle, "uidna_labelToUnicodeUTF8", verSuffix));
+		uidna_nameToASCII_UTF8 = reinterpret_cast<decltype(uidna_nameToASCII_UTF8)>(
+				loadIcu(handle, "uidna_nameToASCII_UTF8", verSuffix));
+		uidna_nameToUnicodeUTF8 = reinterpret_cast<decltype(uidna_nameToUnicodeUTF8)>(
+				loadIcu(handle, "uidna_nameToUnicodeUTF8", verSuffix));
 	}
 
 	explicit operator bool() const {
 		return tolower_fn && toupper_fn && totitle_fn && u_strToLower && u_strToUpper
-				&& u_strToTitle && u_strCompare && u_strCaseCompare;
+				&& u_strToTitle && u_strCompare && u_strCaseCompare && u_errorName
+				&& uidna_openUTS46 && uidna_close && uidna_labelToASCII_UTF8
+				&& uidna_labelToUnicodeUTF8 && uidna_nameToASCII_UTF8 && uidna_nameToUnicodeUTF8;
 	}
 
 	void clear() {
@@ -180,6 +265,13 @@ struct icu_iface {
 		u_strToTitle = nullptr;
 		u_strCompare = nullptr;
 		u_strCaseCompare = nullptr;
+		u_errorName = nullptr;
+		uidna_openUTS46 = nullptr;
+		uidna_close = nullptr;
+		uidna_labelToASCII_UTF8 = nullptr;
+		uidna_labelToUnicodeUTF8 = nullptr;
+		uidna_nameToASCII_UTF8 = nullptr;
+		uidna_nameToUnicodeUTF8 = nullptr;
 	}
 };
 
@@ -244,6 +336,17 @@ struct i18n {
 			if (!icu) {
 				icu.clear();
 				_handle.close();
+			}
+		}
+
+		if (!icu) {
+			_idnHandle = Dso("libidn2.so");
+			if (_idnHandle) {
+				idn2.load(_idnHandle);
+				if (!idn2) {
+					idn2.clear();
+					_idnHandle.close();
+				}
 			}
 		}
 	}
@@ -466,11 +569,17 @@ struct i18n {
 
 	icu_iface icu;
 	unistring_iface unistring;
+	idn2_iface idn2;
 
 	Dso _handle;
+	Dso _idnHandle;
 };
 
+#ifdef MODULE_STAPPLER_ABI
+static i18n *s_instance = nullptr;
+#else
 static i18n *s_instance = i18n::getInstance();
+#endif
 
 char32_t tolower(char32_t c) { return s_instance->tolower(c); }
 
@@ -580,5 +689,128 @@ bool initialize(int &resultCode) { return true; }
 void terminate() { }
 
 } // namespace stappler::platform
+
+namespace STAPPLER_VERSIONIZED stappler::idn {
+
+using HostUnicodeChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+		chars::Chars<char, '.', '-'>, chars::Range<char, char(128), char(255)>>;
+
+using HostAsciiChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+		chars::Chars<char, '.', '-'>>;
+
+template <typename Interface>
+auto _idnToAscii(StringView source, bool validate) -> typename Interface::StringType {
+	if (source.empty()) {
+		return typename Interface::StringType();
+	}
+
+	if (validate) {
+		StringView r(source);
+		r.skipChars<HostUnicodeChars>();
+		if (!r.empty()) {
+			return typename Interface::StringType();
+		}
+	}
+
+	uint8_t *out = nullptr;
+	if (platform::s_instance->idn2) {
+		int flags =
+				platform::idn2_iface::IDN2_NFC_INPUT | platform::idn2_iface::IDN2_NONTRANSITIONAL;
+		int rc = platform::s_instance->idn2.lookup_u8((const uint8_t *)source.data(), &out, flags);
+		if (rc != 0) {
+			rc = platform::s_instance->idn2.lookup_u8((const uint8_t *)source.data(), &out,
+					platform::idn2_iface::IDN2_TRANSITIONAL);
+		}
+
+		if (rc == 0) {
+			typename Interface::StringType ret((const char *)out);
+			free(out);
+			return ret;
+		}
+	} else if (platform::s_instance->icu) {
+		platform::icu_iface::UErrorCode err = 0;
+		auto idna = platform::s_instance->icu.uidna_openUTS46(platform::icu_iface::UIDNA_CHECK_BIDI
+						| platform::icu_iface::UIDNA_NONTRANSITIONAL_TO_ASCII,
+				&err);
+		if (err == 0) {
+			platform::icu_iface::UIDNAInfo info = {0, 0};
+			char buffer[1_KiB] = {0};
+			auto retLen = platform::s_instance->icu.uidna_nameToASCII_UTF8(idna, source.data(),
+					(int)source.size(), buffer, 1_KiB - 1, &info, &err);
+			platform::s_instance->icu.uidna_close(idna);
+			if (retLen > 0 && err == 0 && !info.errors) {
+				return typename Interface::StringType(buffer, retLen);
+			}
+		}
+	}
+	return typename Interface::StringType();
+}
+
+template <typename Interface>
+auto _idnToUnicode(StringView source, bool validate) -> typename Interface::StringType {
+	if (source.empty()) {
+		return typename Interface::StringType();
+	}
+
+	if (validate) {
+		StringView r(source);
+		r.skipChars<HostAsciiChars>();
+		if (!r.empty()) {
+			return typename Interface::StringType();
+		}
+	}
+
+	if (platform::s_instance->idn2) {
+		char *out = nullptr;
+		auto err = platform::s_instance->idn2.to_unicode_8z8z(source.data(), &out, 0);
+		if (err == 0) {
+			typename Interface::StringType ret(out);
+			free(out);
+			return ret;
+		}
+	} else if (platform::s_instance->icu) {
+		platform::icu_iface::UErrorCode err = 0;
+		auto idna = platform::s_instance->icu.uidna_openUTS46(platform::icu_iface::UIDNA_CHECK_BIDI
+						| platform::icu_iface::UIDNA_NONTRANSITIONAL_TO_UNICODE,
+				&err);
+		if (err == 0) {
+			char buffer[1_KiB] = {0};
+			platform::icu_iface::UIDNAInfo info = {0, 0};
+			auto retLen = platform::s_instance->icu.uidna_nameToUnicodeUTF8(idna, source.data(),
+					(int)source.size(), buffer, 1_KiB - 1, &info, &err);
+			platform::s_instance->icu.uidna_close(idna);
+			if (retLen > 0 && err == 0 && !info.errors) {
+				return typename Interface::StringType(buffer, retLen);
+			}
+		}
+	}
+	return typename Interface::StringType();
+}
+
+template <>
+auto toAscii<memory::PoolInterface>(StringView source, bool validate)
+		-> memory::PoolInterface::StringType {
+	return _idnToAscii<memory::PoolInterface>(source, validate);
+}
+
+template <>
+auto toAscii<memory::StandartInterface>(StringView source, bool validate)
+		-> memory::StandartInterface::StringType {
+	return _idnToAscii<memory::StandartInterface>(source, validate);
+}
+
+template <>
+auto toUnicode<memory::PoolInterface>(StringView source, bool validate)
+		-> memory::PoolInterface::StringType {
+	return _idnToUnicode<memory::PoolInterface>(source, validate);
+}
+
+template <>
+auto toUnicode<memory::StandartInterface>(StringView source, bool validate)
+		-> memory::StandartInterface::StringType {
+	return _idnToUnicode<memory::StandartInterface>(source, validate);
+}
+
+} // namespace stappler::idn
 
 #endif

@@ -29,7 +29,7 @@
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 bool TimerFdSource::init(const TimerInfo &info) {
-	__clockid_t clockid = CLOCK_MONOTONIC;
+	int clockid = CLOCK_MONOTONIC;
 
 	switch (info.type) {
 	case ClockType::Default:

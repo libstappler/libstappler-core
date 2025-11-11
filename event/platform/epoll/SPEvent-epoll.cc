@@ -59,7 +59,7 @@ Status EPollData::runPoll(TimeInterval ival) {
 	}
 
 	int nevents = 0;
-#if LINUX
+#if LINUX && __USE_GNU
 	if (hasFlag(_eflags, EPollFlags::HaveEPollPWait2) && ival && ival != TimeInterval::Infinite) {
 		struct timespec timeout;
 

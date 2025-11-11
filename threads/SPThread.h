@@ -25,7 +25,6 @@
 #ifndef STAPPLER_THREADS_SPTHREAD_H_
 #define STAPPLER_THREADS_SPTHREAD_H_
 
-#include "SPNotNull.h"
 #include "SPRef.h"
 
 namespace STAPPLER_VERSIONIZED stappler::thread {

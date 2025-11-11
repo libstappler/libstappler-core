@@ -24,7 +24,6 @@ THE SOFTWARE.
 #ifndef CORE_CORE_STRING_SPSTRINGDETAIL_H_
 #define CORE_CORE_STRING_SPSTRINGDETAIL_H_
 
-#include "SPHash.h"
 #include "SPHalfFloat.h"
 #include "SPUnicode.h"
 #include "SPBytesReader.h"

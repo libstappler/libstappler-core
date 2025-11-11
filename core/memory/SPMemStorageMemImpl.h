@@ -24,7 +24,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEMIMPL_H_
 #define STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEMIMPL_H_
 
-#include "SPLogInit.h"
+#include "detail/SPLogInit.h"
 #include "SPMemAlloc.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory::impl {

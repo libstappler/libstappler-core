@@ -33,8 +33,6 @@
 
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
-#include <linux/stat.h>
-#include <linux/time_types.h>
 
 #if LINUX
 #define SP_EVENT_URING

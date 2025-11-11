@@ -41,7 +41,6 @@ THE SOFTWARE.
 #include "SPGost3411-2012.cc"
 #include "SPString.cc"
 #include "SPUnicode.cc"
-#include "SPCommon.h"
 #include "SPHtmlParser.cc"
 #include "SPLog.cc"
 #include "SPRef.cc"
@@ -62,7 +61,16 @@ THE SOFTWARE.
 #include "SPStatus.cc"
 #include "SPLocaleInfo.cc"
 
+#include "SPIdn.cc"
+#include "SPIdnTld.cc"
+
 #include "SPMetastring.h"
+
+#if LINUX
+#ifdef MODULE_STAPPLER_ABI
+#include "linux/SPAbiLinuxElf.h"
+#endif
+#endif
 
 #include <list>
 
@@ -99,7 +107,14 @@ InitializerManager &InitializerManager::get() {
 	return im;
 }
 
-bool initialize(int &resultCode) {
+bool initialize(int argc, const char *argv[], int &resultCode) {
+#if LINUX
+#ifdef MODULE_STAPPLER_ABI
+	abi::initialize(argc, argv);
+	platform::s_instance = platform::i18n::getInstance();
+#endif
+#endif
+
 	memory::pool::initialize();
 
 	auto pool = memory::pool::create(memory::app_root_pool);

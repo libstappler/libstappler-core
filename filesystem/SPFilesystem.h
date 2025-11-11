@@ -22,11 +22,9 @@
  THE SOFTWARE.
  **/
 
-
 #ifndef STAPPLER_FILESYSTEM_SPFILESYSTEM_H_
 #define STAPPLER_FILESYSTEM_SPFILESYSTEM_H_
 
-#include "SPEnum.h"
 #include "SPIO.h" // IWYU pragma: keep
 #include "SPTime.h"
 #include "SPFilepath.h"
@@ -208,6 +206,9 @@ public:
 	ProtFlags getProtectionFlags() const { return _prot; }
 
 	uint8_t *getRegion() const { return _region; }
+	size_t getSize() const { return _size; }
+
+	BytesView getView() const { return BytesView(_region, _size); }
 
 	operator bool() const { return _region != nullptr; }
 
@@ -215,10 +216,11 @@ public:
 
 protected:
 	MemoryMappedRegion();
-	MemoryMappedRegion(PlatformStorage &&, uint8_t *, MappingType, ProtFlags);
+	MemoryMappedRegion(PlatformStorage &&, uint8_t *, MappingType, ProtFlags, size_t);
 
 	PlatformStorage _storage;
-	uint8_t *_region;
+	uint8_t *_region = nullptr;
+	size_t _size = 0;
 	MappingType _type;
 	ProtFlags _prot;
 };

@@ -25,7 +25,6 @@
 
 #include "SPEventLooper.h"
 #include "SPMemory.h"
-#include "SPValueWrapper.h"
 
 namespace stappler::event {
 

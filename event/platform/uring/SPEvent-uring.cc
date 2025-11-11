@@ -300,7 +300,7 @@ Status URingData::pushSqe(std::initializer_list<uint8_t> ops,
 }
 
 Status URingData::pushSqe(uint8_t op, const Callback<void(io_uring_sqe *)> &cb,
-		const __kernel_timespec *ts) {
+		const _linux_timespec *ts) {
 	if (ts) {
 		return pushSqe({op, uint8_t(IORING_OP_LINK_TIMEOUT)}, [&](io_uring_sqe *sqe, uint32_t n) {
 			switch (n) {
@@ -608,7 +608,7 @@ uint32_t URingData::wait(TimeInterval ival) {
 	auto events = doPoll();
 	if (events == 0 && ival) {
 		while (true) {
-			__kernel_timespec ts;
+			_linux_timespec ts;
 			setNanoTimespec(ts, ival);
 
 			int err = enter(0, 1, IORING_ENTER_GETEVENTS, ival ? &ts : nullptr);
@@ -635,7 +635,7 @@ Status URingData::run(TimeInterval ival, WakeupFlags flags, TimeInterval wakeupT
 	ctx.wakeupTimeout = wakeupTimeout;
 	ctx.runWakeupFlags = flags;
 
-	__kernel_timespec ts;
+	_linux_timespec ts;
 
 	if (ival && ival != TimeInterval::Infinite) {
 		// set timeout
@@ -679,7 +679,7 @@ Status URingData::wakeup(WakeupFlags flags) {
 	return Status::Ok;
 }
 
-int URingData::enter(unsigned sub, unsigned wait, unsigned flags, __kernel_timespec *ts) {
+int URingData::enter(unsigned sub, unsigned wait, unsigned flags, _linux_timespec *ts) {
 	const sigset_t *sigset = nullptr;
 
 	if (hasFlag(_flags, QueueFlags::Protected)) {
@@ -1004,9 +1004,9 @@ URingData::URingData(QueueRef *q, Queue::Data *data, const QueueInfo &info, Span
 
 		if (info.internalHandles > 0 && hasFlag(_uflags, URingFlags::InternalFdsSupported)) {
 			struct io_uring_file_index_range {
-				__u32 off;
-				__u32 len;
-				__u64 resv;
+				_ring_u32 off;
+				_ring_u32 len;
+				_ring_u64 resv;
 			};
 
 			io_uring_file_index_range range;

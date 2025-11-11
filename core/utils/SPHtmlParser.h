@@ -25,7 +25,6 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_UTILS_SPHTMLPARSER_H_
 #define STAPPLER_CORE_UTILS_SPHTMLPARSER_H_
 
-#include "SPEnum.h"
 #include "SPString.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler::html {

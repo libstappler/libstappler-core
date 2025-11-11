@@ -50,8 +50,10 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 		setupUringHandleClass<TimerURingHandle, TimerUringSource>(&_info, &_uringTimerClass, true);
 		setupUringHandleClass<ThreadEventFdHandle, EventFdSource>(&_info, &_uringThreadEventFdClass,
 				true);
+#ifdef SP_URING_THREAD_FENCE_HANDLE
 		setupUringHandleClass<ThreadUringHandle, ThreadUringSource>(&_info, &_uringThreadFenceClass,
 				true);
+#endif
 		setupUringHandleClass<EventFdURingHandle, EventFdSource>(&_info, &_uringEventFdClass, true);
 		setupUringHandleClass<SignalFdURingHandle, SignalFdSource>(&_info, &_uringSignalFdClass,
 				true);
@@ -88,14 +90,18 @@ Queue::Data::Data(QueueRef *q, const QueueInfo &info) : QueueData(q, info.flags)
 			};
 
 			_thread = [](QueueData *d, void *ptr) -> Rc<ThreadHandle> {
-				auto uring = reinterpret_cast<URingData *>(ptr);
 				auto data = reinterpret_cast<Queue::Data *>(d);
 				if constexpr (URING_THREAD_USE_FUTEX_HANDLE) {
+#ifdef SP_URING_THREAD_FENCE_HANDLE
+					auto uring = reinterpret_cast<URingData *>(ptr);
 					if (hasFlag(uring->_uflags, URingFlags::FutexSupported)) {
 						return Rc<ThreadUringHandle>::create(&data->_uringThreadFenceClass);
 					} else {
 						return Rc<ThreadEventFdHandle>::create(&data->_uringThreadEventFdClass);
 					}
+#else
+					return Rc<ThreadEventFdHandle>::create(&data->_uringThreadEventFdClass);
+#endif
 				} else {
 					return Rc<ThreadEventFdHandle>::create(&data->_uringThreadEventFdClass);
 				}

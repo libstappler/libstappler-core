@@ -35,6 +35,8 @@ LOCAL_MODULES := \
 LOCAL_SRCS_DIRS := src
 LOCAL_INCLUDES_DIRS := src
 
+LOCAL_USE_INTERNAL_TOOLCHAIN := 1
+
 LOCAL_MAIN := main.cpp
 
 APPCONFIG_BUNDLE_NAME := org.stappler.stappler-build

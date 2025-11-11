@@ -1,5 +1,6 @@
 /**
  Copyright (c) 2024 Stappler LLC <admin@stappler.dev>
+ Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +32,7 @@ static constexpr auto TMIN = 1;
 static constexpr auto TMAX = 26;
 static constexpr auto SKEW = 38;
 static constexpr auto DAMP = 700;
-static constexpr uint32_t MAXINT = 0xFFFFFFFF;
+static constexpr uint32_t MAXINT = 0xFFFF'FFFF;
 static constexpr auto INITIAL_N = 128;
 static constexpr auto INITIAL_BIAS = 72;
 
@@ -42,9 +43,7 @@ static uint32_t adapt_bias(uint32_t delta, unsigned n_points, int is_first) {
 	delta += delta / n_points;
 
 	/* while delta > 455: delta /= 35 */
-	for (k = 0; delta > ((BASE - TMIN) * TMAX) / 2; k += BASE) {
-		delta /= (BASE - TMIN);
-	}
+	for (k = 0; delta > ((BASE - TMIN) * TMAX) / 2; k += BASE) { delta /= (BASE - TMIN); }
 
 	return k + (((BASE - TMIN + 1) * delta) / (delta + SKEW));
 }
@@ -59,7 +58,8 @@ static char encode_digit(size_t c) {
 }
 
 /* Encode as a generalized variable-length integer. Returns number of bytes written. */
-static size_t encode_var_int(const size_t bias, const size_t delta, const Callback<void(char)> &cb) {
+static size_t encode_var_int(const size_t bias, const size_t delta,
+		const Callback<void(char)> &cb) {
 	size_t i, k, q, t;
 
 	i = 0;
@@ -90,7 +90,8 @@ static size_t encode_var_int(const size_t bias, const size_t delta, const Callba
 	return i;
 }
 
-static size_t punycode_encode(const char32_t *const src, const size_t srclen, const Callback<void(char)> &cb) {
+static size_t punycode_encode(const char32_t *const src, const size_t srclen,
+		const Callback<void(char)> &cb) {
 	uint32_t b, h;
 	uint32_t delta, bias;
 	uint32_t m, n;
@@ -98,7 +99,7 @@ static size_t punycode_encode(const char32_t *const src, const size_t srclen, co
 
 	for (si = 0, di = 0; si < srclen; si++) {
 		if (src[si] < 128) {
-			++ di;
+			++di;
 			cb(char(src[si]));
 		}
 	}
@@ -146,9 +147,7 @@ static size_t punycode_encode(const char32_t *const src, const size_t srclen, co
 	return true;
 }
 
-static int is_basic(unsigned int a) {
-	return (a < 0x80) ? 1 : 0;
-}
+static int is_basic(unsigned int a) { return (a < 0x80) ? 1 : 0; }
 
 static int digit_decoded(const unsigned char a) {
 	if (a >= 0x41 && a <= 0x5A) {
@@ -180,7 +179,8 @@ static int adapt(uint32_t delta, uint32_t numpoints, uint32_t firsttime) {
 	return k + (((BASE - TMIN + 1) * delta) / (delta + SKEW));
 }
 
-static bool punycode_decode(const char *const pEncoded, const size_t enc_len, char32_t *const pDecoded, size_t *pout_length) {
+static bool punycode_decode(const char *const pEncoded, const size_t enc_len,
+		char32_t *const pDecoded, size_t *pout_length) {
 	uint32_t n = INITIAL_N;
 	uint32_t i = 0;
 	uint32_t bias = INITIAL_BIAS;
@@ -231,14 +231,14 @@ static bool punycode_decode(const char *const pEncoded, const size_t enc_len, ch
 				return false;
 			}
 
-			if ((uint32_t) digit > (MAXINT - i) / w) {
+			if ((uint32_t)digit > (MAXINT - i) / w) {
 				return false;
 			}
 
 			i = i + digit * w;
 			t = (k <= bias) ? TMIN : (k >= bias + TMAX) ? TMAX : k - bias;
 
-			if ((uint32_t) digit < t) {
+			if ((uint32_t)digit < t) {
 				break;
 			}
 
@@ -273,17 +273,14 @@ static bool punycode_decode(const char *const pEncoded, const size_t enc_len, ch
 
 template <>
 auto encodePunycode<memory::PoolInterface>(StringView source) -> memory::PoolInterface::StringType {
-	memory::PoolInterface::StringType ret; ret.reserve(source.size());
+	memory::PoolInterface::StringType ret;
+	ret.reserve(source.size());
 	memory::PoolInterface::VectorType<char32_t> tmp;
 
 	StringViewUtf8 utfSource(source);
-	utfSource.foreach([&] (char32_t ch) {
-		tmp.emplace_back(ch);
-	});
+	utfSource.foreach ([&](char32_t ch) { tmp.emplace_back(ch); });
 
-	if (punycode_encode(tmp.data(), tmp.size(), [&] (char ch) {
-		ret.push_back(ch);
-	})) {
+	if (punycode_encode(tmp.data(), tmp.size(), [&](char ch) { ret.push_back(ch); })) {
 		return ret;
 	}
 
@@ -291,18 +288,16 @@ auto encodePunycode<memory::PoolInterface>(StringView source) -> memory::PoolInt
 }
 
 template <>
-auto encodePunycode<memory::StandartInterface>(StringView source) -> memory::StandartInterface::StringType {
-	memory::StandartInterface::StringType ret; ret.reserve(source.size());
+auto encodePunycode<memory::StandartInterface>(StringView source)
+		-> memory::StandartInterface::StringType {
+	memory::StandartInterface::StringType ret;
+	ret.reserve(source.size());
 	memory::StandartInterface::VectorType<char32_t> tmp;
 
 	StringViewUtf8 utfSource(source);
-	utfSource.foreach([&] (char32_t ch) {
-		tmp.emplace_back(ch);
-	});
+	utfSource.foreach ([&](char32_t ch) { tmp.emplace_back(ch); });
 
-	if (punycode_encode(tmp.data(), tmp.size(), [&] (char ch) {
-		ret.push_back(ch);
-	})) {
+	if (punycode_encode(tmp.data(), tmp.size(), [&](char ch) { ret.push_back(ch); })) {
 		return ret;
 	}
 
@@ -316,13 +311,12 @@ auto decodePunycode<memory::PoolInterface>(StringView source) -> memory::PoolInt
 		return memory::PoolInterface::StringType();
 	}
 
-	memory::PoolInterface::VectorType<char32_t> ret; ret.resize(retSize);
+	memory::PoolInterface::VectorType<char32_t> ret;
+	ret.resize(retSize);
 	if (punycode_decode(source.data(), source.size(), ret.data(), &retSize)) {
 		ret.resize(retSize);
 		memory::PoolInterface::StringType str;
-		for (auto &it : ret) {
-			unicode::utf8Encode(str, char32_t(it));
-		}
+		for (auto &it : ret) { unicode::utf8Encode(str, char32_t(it)); }
 		return str;
 	}
 
@@ -330,23 +324,23 @@ auto decodePunycode<memory::PoolInterface>(StringView source) -> memory::PoolInt
 }
 
 template <>
-auto decodePunycode<memory::StandartInterface>(StringView source) -> memory::StandartInterface::StringType {
+auto decodePunycode<memory::StandartInterface>(StringView source)
+		-> memory::StandartInterface::StringType {
 	size_t retSize = 0;
 	if (!punycode_decode(source.data(), source.size(), nullptr, &retSize)) {
 		return memory::StandartInterface::StringType();
 	}
 
-	memory::StandartInterface::VectorType<char32_t> ret; ret.resize(retSize);
+	memory::StandartInterface::VectorType<char32_t> ret;
+	ret.resize(retSize);
 	if (punycode_decode(source.data(), source.size(), ret.data(), &retSize)) {
 		ret.resize(retSize);
 		memory::StandartInterface::StringType str;
-		for (auto &it : ret) {
-			unicode::utf8Encode(str, char32_t(it));
-		}
+		for (auto &it : ret) { unicode::utf8Encode(str, char32_t(it)); }
 		return str;
 	}
 
 	return memory::StandartInterface::StringType();
 }
 
-}
+} // namespace stappler::idn

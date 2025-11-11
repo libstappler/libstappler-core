@@ -29,7 +29,15 @@
 #include "SPTime.h"
 
 #if LINUX
-#include <linux/time_types.h>
+struct _linux_timespec {
+	int64_t tv_sec; /* seconds */
+	int64_t tv_nsec; /* nanoseconds */
+};
+
+struct _linux_itimerspec {
+	_linux_timespec it_interval; /* timer period */
+	_linux_timespec it_value; /* timer expiration */
+};
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler::event {
@@ -177,7 +185,7 @@ struct alignas(32) PlatformQueueData : public mem_pool::AllocBase {
 		uint32_t nevents = 0;
 
 #if LINUX
-		__kernel_timespec wakeupTimespec;
+		_linux_timespec wakeupTimespec;
 #endif
 	};
 

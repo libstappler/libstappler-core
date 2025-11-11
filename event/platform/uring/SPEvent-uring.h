@@ -42,13 +42,15 @@
 #include <sys/mman.h>
 #include <sys/uio.h>
 #include <sys/utsname.h>
-#include <linux/fs.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 
-#include <linux/io_uring.h>
-#include <linux/time_types.h>
+#include "linux-uring.h"
+
+#ifdef __USE_GNU
+#define SP_URING_THREAD_FENCE_HANDLE 1
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
@@ -199,7 +201,7 @@ struct alignas(32) URingData : public PlatformQueueData {
 
 	// owner should keep ts buffer available until operation is consumed
 	// In case of SQPOLL - it's undefined, when data will be consumed, so, keep until the end
-	Status pushSqe(uint8_t op, const Callback<void(io_uring_sqe *)> &, const __kernel_timespec *ts);
+	Status pushSqe(uint8_t op, const Callback<void(io_uring_sqe *)> &, const _linux_timespec *ts);
 
 	int submitSqe(unsigned sub, unsigned wait, bool waitAvailable, bool force = false);
 	int submitPending(bool force = false);
@@ -224,7 +226,7 @@ struct alignas(32) URingData : public PlatformQueueData {
 
 	Status wakeup(WakeupFlags);
 
-	int enter(unsigned sub, unsigned wait, unsigned flags, __kernel_timespec *);
+	int enter(unsigned sub, unsigned wait, unsigned flags, _linux_timespec *);
 
 	Status suspendHandles();
 

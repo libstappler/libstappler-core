@@ -26,17 +26,7 @@ THE SOFTWARE.
 #include "SPStringView.h"
 #include "SPSharedModule.h"
 
-#if MODULE_STAPPLER_IDN
 #include "SPIdn.h"
-#else
-
-namespace STAPPLER_VERSIONIZED stappler::idn {
-
-bool isKnownTld(StringView) { return true; }
-
-} // namespace stappler::idn
-
-#endif
 
 namespace STAPPLER_VERSIONIZED stappler {
 

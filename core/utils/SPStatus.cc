@@ -214,10 +214,19 @@ void getStatusDescription(Status st, const Callback<void(StringView)> &cb) {
 		auto target = &strerrBuffer[len];
 
 #ifdef _GNU_SOURCE
+#ifndef __USE_GNU
+		//POSIX strerror_r
+		auto buflen = ::strerror_r(err, target, STATUS_DESC_BUFFER_SIZE - len - 1);
+		if (buflen > 0) {
+			outCb << StringView(target, buflen);
+		}
+#else
+		//GNU-specific strerror_r
 		auto ptr = ::strerror_r(err, target, STATUS_DESC_BUFFER_SIZE - len - 1);
 		if (strlen(strerrBuffer) == len) {
 			outCb << StringView(ptr, strlen(ptr));
 		}
+#endif
 #else
 #if __STDC_LIB_EXT1__ || WIN32
 		::strerror_s(target, STATUS_DESC_BUFFER_SIZE - len - 1, err);

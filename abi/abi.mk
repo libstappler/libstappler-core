@@ -1,5 +1,4 @@
-# Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-# Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+# Copyright (c) 2025 Stappler Team <admin@stappler.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,26 +18,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-MODULE_STAPPLER_IDN_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
-MODULE_STAPPLER_IDN_LIBS :=
-MODULE_STAPPLER_IDN_SRCS_DIRS := $(STAPPLER_MODULE_DIR)/idn
-MODULE_STAPPLER_IDN_SRCS_OBJS :=
-MODULE_STAPPLER_IDN_INCLUDES_DIRS :=
-MODULE_STAPPLER_IDN_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/idn
-MODULE_STAPPLER_IDN_DEPENDS_ON := stappler_core
-MODULE_STAPPLER_IDN_GENERAL_LDFLAGS :=
+MODULE_STAPPLER_ABI_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
+MODULE_STAPPLER_ABI_LIBS :=
+MODULE_STAPPLER_ABI_LIBS_SHARED :=
+MODULE_STAPPLER_ABI_SRCS_DIRS := 
+MODULE_STAPPLER_ABI_SRCS_OBJS := \
+	$(STAPPLER_MODULE_DIR)/abi/SPAbi.scu.cpp
+
+
+MODULE_STAPPLER_ABI_INCLUDES_DIRS :=
+MODULE_STAPPLER_ABI_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/abi 
+MODULE_STAPPLER_ABI_DEPENDS_ON := stappler_core stappler_filesystem
+MODULE_STAPPLER_ABI_GENERAL_LDFLAGS :=
 
 ifdef LINUX
-MODULE_STAPPLER_IDN_LIBS += -l:libidn2.a
+MODULE_STAPPLER_ABI_LIBS += -licuuc -licudata
 endif
 
-ifdef ANDROID
-MODULE_STAPPLER_IDN_LIBS += -l:libidn2.a
-endif
+# spec
 
-ifdef MACOS
-MODULE_STAPPLER_IDN_GENERAL_LDFLAGS += -licucore
-endif
+MODULE_STAPPLER_ABI_SHARED_SPEC_SUMMARY := libstappler ABI support
+
+define MODULE_STAPPLER_ABI_SHARED_SPEC_DESCRIPTION
+Module libstappler-abi provides fixed ABI (Application Binary Interface) for some OS/platform-dependent functions
+
+It can be effectively used to hide OS/platform interface from end-user and toolchain to exclude direct OS SDK dependencies
+endef
 
 # module name resolution
-MODULE_stappler_idn := MODULE_STAPPLER_IDN
+MODULE_stappler_abi := MODULE_STAPPLER_ABI

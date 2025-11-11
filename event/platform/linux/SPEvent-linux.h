@@ -38,7 +38,9 @@ struct SP_PUBLIC Queue::Data : public QueueData {
 	HandleClass _uringTimerFdClass;
 	HandleClass _uringTimerClass;
 	HandleClass _uringThreadEventFdClass;
+#ifdef SP_URING_THREAD_FENCE_HANDLE
 	HandleClass _uringThreadFenceClass;
+#endif
 	HandleClass _uringSignalFdClass;
 	HandleClass _uringEventFdClass;
 	HandleClass _uringPollFdClass;

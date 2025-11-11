@@ -37,7 +37,7 @@ namespace STAPPLER_VERSIONIZED stappler::event {
  */
 
 struct TimerUringSource {
-	__kernel_itimerspec timer;
+	_linux_itimerspec timer;
 	uint32_t count = 0;
 	uint32_t value = 0;
 

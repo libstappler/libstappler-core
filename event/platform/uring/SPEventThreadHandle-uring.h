@@ -47,6 +47,8 @@ static constexpr bool URING_THREAD_DEBUG_SWITCH_TIMER = false;
 // For now, classic implementation gives more stable context switch time, so, ThreadUringHandle is disabled
 static constexpr bool URING_THREAD_USE_FUTEX_HANDLE = false;
 
+#ifdef SP_URING_THREAD_FENCE_HANDLE
+
 // Thread dispatch control with a single futex (requires FUTEX2 syscalls)
 // On client side - works normally, but always calls futex_wake on unlock, to signal server thread
 // Server thread uses uring instead of syscalls to do async lockless processing
@@ -79,7 +81,7 @@ struct ThreadUringSource {
 	FutexImpl futex;
 	std::thread::id thisThread;
 
-	struct __kernel_timespec interval;
+	_linux_timespec interval;
 
 	bool init(TimeInterval);
 	void cancel();
@@ -111,6 +113,8 @@ protected:
 	void rearmFailsafe(URingData *, ThreadUringSource *);
 };
 
+#endif // __USE_GNU
+
 // eventfd - based handler
 class SP_PUBLIC ThreadEventFdHandle : public ThreadHandle {
 public:
@@ -133,7 +137,7 @@ protected:
 	std::mutex _mutex;
 };
 
-}
+} // namespace stappler::event
 
 #endif
 

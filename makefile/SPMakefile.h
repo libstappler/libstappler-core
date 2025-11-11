@@ -23,7 +23,6 @@
 #ifndef CORE_MAKEFILE_SPMAKEFILE_H_
 #define CORE_MAKEFILE_SPMAKEFILE_H_
 
-#include "SPLogInit.h"
 #include "SPMakefileError.h"
 #include "SPMakefileRule.h"
 #include "SPMakefileVariable.h"

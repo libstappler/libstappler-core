@@ -239,12 +239,14 @@ bool hasFlagAll(T mask, T flag) {
  * initialize returns false when application should not try to run,
  * and set appropriate resultCode to return from application's main
  *
+ * argc and argv should be original vaules from 'main' or (0, nullptr)
+ *
  * if initialize return true - app can be run as usual
  *
  * or use perform_main from SPMemory.h when possible
 */
 
-SP_PUBLIC bool initialize(int &resultCode);
+SP_PUBLIC bool initialize(int argc, const char *argv[], int &resultCode);
 SP_PUBLIC void terminate();
 
 // `init` will be called in FIFO order, `term` - in reverse (LIFO) order

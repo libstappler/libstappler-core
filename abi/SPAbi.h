@@ -1,6 +1,5 @@
 /**
-Copyright (c) 2022 Roman Katuntsev <sbkarr@stappler.org>
-Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,27 +20,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_IDN_SPIDN_H_
-#define STAPPLER_IDN_SPIDN_H_
+#ifndef STAPPLER_ABI_SPABI_H_
+#define STAPPLER_ABI_SPABI_H_
 
-#include "SPStringView.h"
+#include "SPDso.h"
+#include "SPStringView.h" // IWYU pragma: keep
 
-namespace STAPPLER_VERSIONIZED stappler::idn {
 
-template <typename Interface>
-SP_PUBLIC auto toAscii(StringView, bool validate = true) -> typename Interface::StringType;
+namespace STAPPLER_VERSIONIZED stappler::thread {
 
-template <typename Interface>
-SP_PUBLIC auto toUnicode(StringView, bool validate = false) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto encodePunycode(StringView) -> typename Interface::StringType;
-
-template <typename Interface>
-SP_PUBLIC auto decodePunycode(StringView) -> typename Interface::StringType;
-
-SP_PUBLIC bool isKnownTld(StringView);
+class Thread;
 
 }
 
-#endif /* MODULES_IDN_SPIDN_H_ */
+namespace STAPPLER_VERSIONIZED stappler::abi {
+
+SP_PUBLIC void initialize(int argc, const char *argv[]);
+
+SP_PUBLIC void *open(StringView name, DsoFlags flags, const char **err);
+SP_PUBLIC void close(DsoFlags flags, void *handle);
+SP_PUBLIC void *sym(void *h, StringView name, DsoSymFlags flags, const char **err);
+
+SP_PUBLIC void initThread(memory::pool_t *, NotNull<thread::Thread>);
+SP_PUBLIC void disposeThread(memory::pool_t *, NotNull<thread::Thread>);
+
+} // namespace stappler::abi
+
+#endif // STAPPLER_ABI_SPABI_H_

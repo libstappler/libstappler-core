@@ -23,7 +23,6 @@
 #ifndef CORE_MAKEFILE_SPMAKEFILEVARIABLE_H_
 #define CORE_MAKEFILE_SPMAKEFILEVARIABLE_H_
 
-#include "SPEnum.h"
 #include "SPMakefileError.h"
 #include "SPMakefileStmt.h"
 #include "SPMakefileBlock.h"
@@ -35,7 +34,7 @@ class VariableEngine;
 
 struct Variable;
 
-enum class EngineFlags {
+enum class EngineFlags : uint32_t {
 	None,
 	Pedantic = 1 << 0,
 };

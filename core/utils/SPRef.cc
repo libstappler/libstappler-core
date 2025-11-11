@@ -23,10 +23,9 @@ THE SOFTWARE.
 
 #include "SPRef.h"
 #include "SPLog.h"
-#include "SPPlatformInit.h"
 #include "SPSubscription.h"
 #include "SPTime.h"
-#include "SPDso.h"
+#include "SPDso.h" // IWYU pragma: keep
 
 #ifdef __cpp_lib_stacktrace
 #warning Has stacktrace

@@ -132,6 +132,17 @@ void _initSystemPaths(FilesystemResourceData &data) {
 		res.flags |= CategoryFlags::Locateable;
 	}
 
+	do {
+		auto &res = data._resourceLocations[toInt(FileCategory::Library)];
+		auto ldPathEnv = ::getenv("LD_LIBRARY_PATH");
+		if (ldPathEnv) {
+			StringView(pathEnv).split<StringView::Chars<':'>>([&](StringView value) {
+				res.paths.emplace_back(value.pdup(data._pool), FileFlags::Shared);
+			});
+		}
+		res.flags |= CategoryFlags::Locateable | CategoryFlags::PlatformSpecific;
+	} while (0);
+
 	// search for XDG envvars
 	auto dataHome = _readEnvExt(data._pool, "XDG_DATA_HOME");
 	if (!dataHome.empty()) {

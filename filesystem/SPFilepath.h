@@ -26,9 +26,8 @@
 #ifndef STAPPLER_FILESYSTEM_SPFILEPATH_H_
 #define STAPPLER_FILESYSTEM_SPFILEPATH_H_
 
-#include "SPEnum.h"
 #include "SPStringView.h" // IWYU pragma: keep
-#include "SPSpanView.h"
+#include "SPSpanView.h" // IWYU pragma: keep
 
 namespace STAPPLER_VERSIONIZED stappler {
 

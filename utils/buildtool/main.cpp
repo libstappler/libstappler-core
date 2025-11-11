@@ -36,6 +36,8 @@
 
 #include "stappler-appconfig.h"
 
+#include "SPAbi.h"
+
 namespace stappler::buildtool {
 
 // Выбираем стандартную подсистему памяти для текущего пространства имён
@@ -261,6 +263,8 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 		return -1;
 	}
 
+	//abi::initialize(argc, argv);
+
 	int nextArg = 1;
 
 	auto action = StringView(argv[nextArg++]);
@@ -271,7 +275,7 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 		return 0;
 	}
 
-	return perform_main([&]() -> int {
+	return perform_main(argc, argv, [&]() -> int {
 		if (action == "localeinfo") {
 			if (nextArg < argc) {
 				auto filePath = StringView(argv[nextArg++]).str<memory::StandartInterface>();

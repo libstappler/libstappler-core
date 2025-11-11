@@ -22,62 +22,12 @@ THE SOFTWARE.
 **/
 
 #include "SPValid.h"
-
 #include "SPUrl.h"
-
-#if MODULE_STAPPLER_IDN
 #include "SPIdn.h"
-#else
-
-namespace STAPPLER_VERSIONIZED stappler::idn {
-
-using HostUnicodeChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
-		chars::Chars<char, '.', '-'>, chars::Range<char, char(128), char(255)>>;
-
-using HostAsciiChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
-		chars::Chars<char, '.', '-'>>;
-
-template <typename Interface>
-auto toAscii(StringView source, bool validate = true) -> typename Interface::StringType {
-	if (source.empty()) {
-		return typename Interface::StringType();
-	}
-
-	if (validate) {
-		StringView r(source);
-		r.skipChars<HostUnicodeChars>();
-		if (!r.empty()) {
-			return typename Interface::StringType();
-		}
-	}
-
-	return source.str<Interface>();
-}
-
-template <typename Interface>
-auto toUnicode(StringView source, bool validate = false) -> typename Interface::StringType {
-	if (source.empty()) {
-		return typename Interface::StringType();
-	}
-
-	if (validate) {
-		StringView r(source);
-		r.skipChars<HostUnicodeChars>();
-		if (!r.empty()) {
-			return typename Interface::StringType();
-		}
-	}
-
-	return source.str<Interface>();
-}
-
-}
-
-#endif
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
-size_t makeRandomBytes(uint8_t * buf, size_t count);
+size_t makeRandomBytes(uint8_t *buf, size_t count);
 
 }
 
@@ -92,11 +42,13 @@ bool validateIdentifier(StringView str) {
 	}
 
 	StringView r(str);
-	if (!r.is<chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>, chars::Chars<char, '_'>>>()) {
+	if (!r.is<chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+					chars::Chars<char, '_'>>>()) {
 		return false;
 	}
 
-	r.skipChars<chars::CharGroup<char, CharGroupId::Alphanumeric>, chars::Chars<char, '_', '-', '.', '@'>>();
+	r.skipChars<chars::CharGroup<char, CharGroupId::Alphanumeric>,
+			chars::Chars<char, '_', '-', '.', '@'>>();
 	if (!r.empty()) {
 		return false;
 	}
@@ -122,28 +74,38 @@ bool validateText(StringView str) {
 
 template <typename Interface>
 static bool _validateEmailQuotation(StringView &r, typename Interface::StringType *target) {
-	++ r;
-	if (target) { target->push_back('"'); }
+	++r;
+	if (target) {
+		target->push_back('"');
+	}
 	while (!r.empty() && !r.is('"')) {
 		auto pos = r.readUntil<StringView::Chars<'"', '\\'>>();
 		if (!pos.empty()) {
-			if (target) { target->append(pos.data(), pos.size()); }
+			if (target) {
+				target->append(pos.data(), pos.size());
+			}
 		}
 
 		if (r.is('\\')) {
-			if (target) { target->push_back(r[0]); }
-			++ r;
+			if (target) {
+				target->push_back(r[0]);
+			}
+			++r;
 			if (!r.empty()) {
-				if (target) { target->push_back(r[0]); }
-				++ r;
+				if (target) {
+					target->push_back(r[0]);
+				}
+				++r;
 			}
 		}
 	}
 	if (r.empty()) {
 		return false;
 	} else {
-		if (target) { target->push_back('"'); }
-		++ r;
+		if (target) {
+			target->push_back('"');
+		}
+		++r;
 		return true;
 	}
 }
@@ -152,10 +114,11 @@ template <typename Interface>
 static bool _validateEmailData(StringView r, typename Interface::StringType *target) {
 	using namespace chars;
 	using LocalChars = StringView::Compose<StringView::CharGroup<CharGroupId::Alphanumeric>,
-			StringView::Chars<'_', '-', '+', '#', '!', '$', '%', '&', '\'', '*', '/', '=', '?', '^', '`', '{', '}', '|', '~' >,
+			StringView::Chars<'_', '-', '+', '#', '!', '$', '%', '&', '\'', '*', '/', '=', '?', '^',
+					'`', '{', '}', '|', '~' >,
 			StringView::Range<char(128), char(255)>>;
 
-	using Whitespace =  CharGroup<char, CharGroupId::WhiteSpace>;
+	using Whitespace = CharGroup<char, CharGroupId::WhiteSpace>;
 
 	r.trimChars<Whitespace>();
 
@@ -164,7 +127,7 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 		if (!r.is(')')) {
 			return false;
 		}
-		r ++;
+		r++;
 		r.skipChars<Whitespace>();
 	}
 	if (r.is('"')) {
@@ -176,12 +139,16 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 	while (!r.empty() && !r.is('@')) {
 		auto pos = r.readChars<LocalChars>();
 		if (!pos.empty()) {
-			if (target) { target->append(pos.data(), pos.size()); }
+			if (target) {
+				target->append(pos.data(), pos.size());
+			}
 		}
 
 		if (r.is('.')) {
-			if (target) { target->push_back('.'); }
-			++ r;
+			if (target) {
+				target->push_back('.');
+			}
+			++r;
 			if (r.is('"')) {
 				if (!_validateEmailQuotation<Interface>(r, target)) {
 					return false;
@@ -189,8 +156,10 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 				if (!r.is('.') && !r.is('@')) {
 					return false;
 				} else if (r.is('.')) {
-					if (target) { target->push_back('.'); }
-					++ r;
+					if (target) {
+						target->push_back('.');
+					}
+					++r;
 				}
 			} else if (!r.is<LocalChars>()) {
 				return false;
@@ -201,7 +170,7 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 			if (!r.is(')')) {
 				return false;
 			}
-			r ++;
+			r++;
 			r.skipChars<Whitespace>();
 			break;
 		}
@@ -214,25 +183,33 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 		return false;
 	}
 
-	if (target) { target->push_back('@'); }
-	++ r;
+	if (target) {
+		target->push_back('@');
+	}
+	++r;
 	if (r.is('(')) {
 		r.skipUntil<StringView::Chars<')'>>();
 		if (!r.is(')')) {
 			return false;
 		}
-		r ++;
+		r++;
 		r.skipChars<Whitespace>();
 	}
 
 	if (r.is('[')) {
-		if (target) { target->push_back('['); }
+		if (target) {
+			target->push_back('[');
+		}
 		auto pos = r.readUntil<StringView::Chars<']'>>();
 		if (r.is(']')) {
-			r ++;
+			r++;
 			if (r.empty()) {
-				if (target) { target->append(pos.data(), pos.size()); }
-				if (target) { target->push_back(']'); }
+				if (target) {
+					target->append(pos.data(), pos.size());
+				}
+				if (target) {
+					target->push_back(']');
+				}
 			}
 		}
 	} else {
@@ -245,7 +222,9 @@ static bool _validateEmailData(StringView r, typename Interface::StringType *tar
 			return false;
 		}
 
-		if (target) { target->append(host); }
+		if (target) {
+			target->append(host);
+		}
 	}
 
 	return true;
@@ -277,7 +256,8 @@ static bool _validateEmail(typename Interface::StringType &istr) {
 		return false;
 	}
 
-	typename Interface::StringType ret; ret.reserve(str.size());
+	typename Interface::StringType ret;
+	ret.reserve(str.size());
 	if (_validateEmailData<Interface>(str, &ret)) {
 		istr = sp::move(ret);
 		return true;
@@ -342,7 +322,9 @@ bool validateNumber(const StringView &str) {
 	}
 
 	StringView r(str);
-	if (r.is('-')) { ++ r; }
+	if (r.is('-')) {
+		++r;
+	}
 	r.skipChars<chars::Range<char, '0', '9'>>();
 	if (!r.empty()) {
 		return false;
@@ -379,7 +361,7 @@ bool validateBase64(const StringView &str) {
 	return true;
 }
 
-void makeRandomBytes_buf(uint8_t * buf, size_t count) {
+void makeRandomBytes_buf(uint8_t *buf, size_t count) {
 	auto offset = platform::makeRandomBytes(buf, count);
 
 	buf += offset;
@@ -392,7 +374,7 @@ void makeRandomBytes_buf(uint8_t * buf, size_t count) {
 	auto bytesInRand = 0;
 	size_t tmp = RAND_MAX;
 	while (tmp > 255) {
-		++ bytesInRand;
+		++bytesInRand;
 		tmp /= 256;
 	}
 
@@ -401,7 +383,7 @@ void makeRandomBytes_buf(uint8_t * buf, size_t count) {
 	for (size_t i = 0; i < count; i++) {
 		buf[i] = (uint8_t)(r % 256);
 		r /= 256;
-		-- b;
+		--b;
 		if (b == 0) {
 			b = bytesInRand;
 			r = rand();
@@ -409,20 +391,21 @@ void makeRandomBytes_buf(uint8_t * buf, size_t count) {
 	}
 }
 
-void makeRandomBytes(uint8_t *buf, size_t count) {
-	makeRandomBytes_buf(buf, count);
-}
+void makeRandomBytes(uint8_t *buf, size_t count) { makeRandomBytes_buf(buf, count); }
 
 template <>
-auto makeRandomBytes<memory::PoolInterface>(size_t count) -> memory::PoolInterface::BytesType  {
-	memory::PoolInterface::BytesType ret; ret.resize(count);
+auto makeRandomBytes<memory::PoolInterface>(size_t count) -> memory::PoolInterface::BytesType {
+	memory::PoolInterface::BytesType ret;
+	ret.resize(count);
 	makeRandomBytes_buf(ret.data(), count);
 	return ret;
 }
 
 template <>
-auto makeRandomBytes<memory::StandartInterface>(size_t count) -> memory::StandartInterface::BytesType  {
-	memory::StandartInterface::BytesType ret; ret.resize(count);
+auto makeRandomBytes<memory::StandartInterface>(size_t count)
+		-> memory::StandartInterface::BytesType {
+	memory::StandartInterface::BytesType ret;
+	ret.resize(count);
 	makeRandomBytes_buf(ret.data(), count);
 	return ret;
 }
@@ -430,7 +413,8 @@ auto makeRandomBytes<memory::StandartInterface>(size_t count) -> memory::Standar
 static void makePassword_buf(uint8_t *passwdKey, const StringView &str, const StringView &key) {
 	string::Sha512::Buf source = string::Sha512::make(str, Config_getInternalPasswordKey());
 
-	passwdKey[0] = 0; passwdKey[1] = 1; // version code
+	passwdKey[0] = 0;
+	passwdKey[1] = 1; // version code
 	makeRandomBytes_buf(passwdKey + 2, 14);
 
 	string::Sha512 hash_ctx;
@@ -443,23 +427,27 @@ static void makePassword_buf(uint8_t *passwdKey, const StringView &str, const St
 }
 
 template <>
-auto makePassword<memory::PoolInterface>(const StringView &str, const StringView &key) -> memory::PoolInterface::BytesType {
+auto makePassword<memory::PoolInterface>(const StringView &str, const StringView &key)
+		-> memory::PoolInterface::BytesType {
 	if (str.empty() || key.empty()) {
 		return memory::PoolInterface::BytesType();
 	}
 
-	memory::PoolInterface::BytesType passwdKey; passwdKey.resize(16 + string::Sha512::Length);
+	memory::PoolInterface::BytesType passwdKey;
+	passwdKey.resize(16 + string::Sha512::Length);
 	makePassword_buf(passwdKey.data(), str, key);
 	return passwdKey;
 }
 
 template <>
-auto makePassword<memory::StandartInterface>(const StringView &str, const StringView &key) -> memory::StandartInterface::BytesType {
+auto makePassword<memory::StandartInterface>(const StringView &str, const StringView &key)
+		-> memory::StandartInterface::BytesType {
 	if (str.empty() || key.empty()) {
 		return memory::StandartInterface::BytesType();
 	}
 
-	memory::StandartInterface::BytesType passwdKey; passwdKey.resize(16 + string::Sha512::Length);
+	memory::StandartInterface::BytesType passwdKey;
+	passwdKey.resize(16 + string::Sha512::Length);
 	makePassword_buf(passwdKey.data(), str, key);
 	return passwdKey;
 }
@@ -475,7 +463,7 @@ bool validatePassord(const StringView &str, const BytesView &passwd, const Strin
 	}
 
 	string::Sha512::Buf source = string::Sha512::make(str, Config_getInternalPasswordKey());
-	uint8_t controlKey [16 + string::Sha512::Length] = { 0 };
+	uint8_t controlKey[16 + string::Sha512::Length] = {0};
 	memcpy(controlKey, passwd.data(), 16);
 
 	string::Sha512 hash_ctx;
@@ -497,10 +485,10 @@ bool validatePassord(const StringView &str, const BytesView &passwd, const Strin
 #define PSWD_LOWER "abcdefghijkmnopqrstuvwxyz"
 #define PSWD_UPPER "ABCDEFGHJKLMNPQRSTUVWXYZ"
 
-static const char * const pswd_numbers = PSWD_NUMBERS;
-static const char * const pswd_lower = PSWD_LOWER;
-static const char * const pswd_upper = PSWD_UPPER;
-static const char * const pswd_all = PSWD_NUMBERS PSWD_LOWER PSWD_UPPER;
+static const char *const pswd_numbers = PSWD_NUMBERS;
+static const char *const pswd_lower = PSWD_LOWER;
+static const char *const pswd_upper = PSWD_UPPER;
+static const char *const pswd_all = PSWD_NUMBERS PSWD_LOWER PSWD_UPPER;
 
 static uint8_t pswd_numbersCount = uint8_t(strlen(PSWD_NUMBERS));
 static uint8_t pswd_lowerCount = uint8_t(strlen(PSWD_LOWER));
@@ -513,8 +501,8 @@ static void generatePassword_buf(size_t len, const uint8_t *bytes, const Callbac
 	uint16_t meta = 0;
 	memcpy(&meta, bytes, sizeof(uint16_t));
 
-	bool extraChars[3] = { false, false, false };
-	for (size_t i = 0; i < len - 3; ++ i) {
+	bool extraChars[3] = {false, false, false};
+	for (size_t i = 0; i < len - 3; ++i) {
 		cb(pswd_all[bytes[i + 5] % pswd_allCount]);
 		if (!extraChars[0] && i == bytes[2] % (len - 3)) {
 			cb(pswd_numbers[meta % pswd_numbersCount]);
@@ -541,24 +529,23 @@ auto generatePassword<memory::PoolInterface>(size_t len) -> memory::PoolInterfac
 	}
 
 	auto bytes = makeRandomBytes<memory::PoolInterface>(len + 2);
-	memory::PoolInterface::StringType ret; ret.reserve(len);
-	generatePassword_buf(len, bytes.data(), [&] (char c) {
-		ret.push_back(c);
-	});
+	memory::PoolInterface::StringType ret;
+	ret.reserve(len);
+	generatePassword_buf(len, bytes.data(), [&](char c) { ret.push_back(c); });
 	return ret;
 }
 
 template <>
-auto generatePassword<memory::StandartInterface>(size_t len) -> memory::StandartInterface::StringType {
+auto generatePassword<memory::StandartInterface>(size_t len)
+		-> memory::StandartInterface::StringType {
 	if (len < MIN_GENPASSWORD_LENGTH) {
 		return memory::StandartInterface::StringType();
 	}
 
 	auto bytes = makeRandomBytes<memory::StandartInterface>(len + 2);
-	memory::StandartInterface::StringType ret; ret.reserve(len);
-	generatePassword_buf(len, bytes.data(), [&] (char c) {
-		ret.push_back(c);
-	});
+	memory::StandartInterface::StringType ret;
+	ret.reserve(len);
+	generatePassword_buf(len, bytes.data(), [&](char c) { ret.push_back(c); });
 	return ret;
 }
 
@@ -582,8 +569,8 @@ uint32_t readIp(StringView r, bool &err) {
 			}
 		}
 		if (r.is('.') && octets < 3) {
-			++ r;
-			++ octets;
+			++r;
+			++octets;
 		} else if (octets == 3 && r.empty()) {
 			return ret;
 		} else {
@@ -600,7 +587,7 @@ Pair<uint32_t, uint32_t> readIpRange(StringView r) {
 	uint32_t end = 0;
 	uint32_t mask = 0;
 
-	auto fnReadIp = [] (StringView &r, bool &err) -> uint32_t {
+	auto fnReadIp = [](StringView &r, bool &err) -> uint32_t {
 		uint32_t octets = 0;
 		uint32_t ret = 0;
 		while (!r.empty() && octets < 4) {
@@ -615,8 +602,8 @@ Pair<uint32_t, uint32_t> readIpRange(StringView r) {
 				}
 			}
 			if (r.is('.') && octets < 3) {
-				++ r;
-				++ octets;
+				++r;
+				++octets;
 			} else if (octets == 3) {
 				if (r.empty()) {
 					return ret;
@@ -640,7 +627,7 @@ Pair<uint32_t, uint32_t> readIpRange(StringView r) {
 	if (r.empty()) {
 		return pair(start, start);
 	} else if (r.is('-')) {
-		++ r;
+		++r;
 		end = fnReadIp(r, err);
 		if (err || !r.empty()) {
 			return pair(0, 0);
@@ -648,7 +635,7 @@ Pair<uint32_t, uint32_t> readIpRange(StringView r) {
 			return pair(start, end);
 		}
 	} else if (r.is('/')) {
-		++ r;
+		++r;
 		auto tmp = r;
 		auto n = tmp.readChars<StringView::CharGroup<CharGroupId::Numbers>>();
 		auto num = n.readInteger(10).get(256);
@@ -659,13 +646,9 @@ Pair<uint32_t, uint32_t> readIpRange(StringView r) {
 			}
 
 			uint32_t i = 0;
-			while ((mask & (1 << i)) == 0) {
-				++ i;
-			}
+			while ((mask & (1 << i)) == 0) { ++i; }
 
-			while ((mask & (1 << i)) != 0 && i < 32) {
-				++ i;
-			}
+			while ((mask & (1 << i)) != 0 && i < 32) { ++i; }
 
 			if (i != 32) {
 				return pair(0, 0);
@@ -689,4 +672,4 @@ Pair<uint32_t, uint32_t> readIpRange(StringView r) {
 	return pair(0, 0);
 }
 
-}
+} // namespace stappler::valid

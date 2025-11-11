@@ -325,7 +325,7 @@ MemoryMappedRegion MemoryMappedRegion::mapFile(const FileInfo &info, MappingType
 	PlatformStorage storage;
 	auto region = platform::_mapFile(storage.data(), path, type, prot, offset, len);
 	if (region) {
-		return MemoryMappedRegion(move(storage), region, type, prot);
+		return MemoryMappedRegion(move(storage), region, type, prot, len);
 	}
 
 	return MemoryMappedRegion();
@@ -365,8 +365,8 @@ MemoryMappedRegion::MemoryMappedRegion()
 : _region(nullptr), _type(MappingType::Private), _prot(ProtFlags::None) { }
 
 MemoryMappedRegion::MemoryMappedRegion(PlatformStorage &&storage, uint8_t *ptr, MappingType t,
-		ProtFlags p)
-: _storage(move(storage)), _region(ptr), _type(t), _prot(p) { }
+		ProtFlags p, size_t s)
+: _storage(sp::move(storage)), _region(ptr), _size(s), _type(t), _prot(p) { }
 
 bool exists(const FileInfo &info) {
 	if (info.path.empty()) {

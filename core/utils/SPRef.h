@@ -25,7 +25,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_UTILS_SPREF_H_
 #define STAPPLER_CORE_UTILS_SPREF_H_
 
-#include "SPLogInit.h"
+#include "SPCore.h"
 #include "SPTime.h"
 
 // enable Ref debug mode to track retain/release sources

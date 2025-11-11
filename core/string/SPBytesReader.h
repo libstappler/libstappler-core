@@ -78,7 +78,7 @@ public:
 	}
 
 	bool prefix(const CharType *d, size_t l) const {
-		return (l <= len && memcmp(ptr, d, l * sizeof(CharType)) == 0);
+		return (l <= len && ::memcmp(ptr, d, l * sizeof(CharType)) == 0);
 	}
 
 	bool starts_with(const BytesReader<CharType> &str) const {
@@ -90,6 +90,11 @@ public:
 	}
 	bool starts_with(CharType c) const { return is(c); }
 
+	template <size_t Size>
+	bool starts_with(const CharType (&array)[Size]) {
+		return prefix(array, array[Size - 1] == 0 ? Size - 1 : Size);
+	}
+
 	bool ends_with(const BytesReader<CharType> &str) const {
 		return ends_with(str.data(), str.size());
 	}
@@ -100,6 +105,11 @@ public:
 		return ends_with(d, std::char_traits<CharType>::length(d));
 	}
 	bool ends_with(CharType c) const { return len > 0 && ptr[len - 1] == c; }
+
+	template <size_t Size>
+	bool ends_with(const CharType (&array)[Size]) {
+		return prefix(array, array[Size - 1] == 0 ? Size - 1 : Size);
+	}
 
 	constexpr const CharType *data() const { return ptr; }
 

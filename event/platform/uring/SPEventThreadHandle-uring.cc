@@ -24,20 +24,24 @@
 
 #if LINUX
 
-#include <linux/futex.h>
 #include <sys/syscall.h>
 #include <sys/eventfd.h>
+
+#ifdef SP_URING_THREAD_FENCE_HANDLE
+#include <linux/futex.h>
+#endif
 
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 // futex implementation based on https://github.com/eliben/code-for-blog/blob/main/2018/futex-basics/mutex-using-futex.cpp
 
+#ifdef SP_URING_THREAD_FENCE_HANDLE
 static long futex_wake(volatile uint32_t *uaddr, uint32_t bitset, int nr_wake, uint32_t flags) {
 	return syscall(SYS_futex_wake, uaddr, bitset, nr_wake, flags);
 }
 
 static long futex_wait(volatile uint32_t *uaddr, uint32_t val, uint32_t mask, uint32_t flags,
-		__kernel_timespec *timespec, clockid_t clockid) {
+		_linux_timespec *timespec, clockid_t clockid) {
 	return syscall(SYS_futex_wait, uaddr, val, mask, flags, timespec, clockid);
 }
 
@@ -115,7 +119,6 @@ bool FutexImpl::server_unlock() {
 }
 
 uint32_t FutexImpl::load() { return atomicLoadSeq(&_futex); }
-
 
 bool ThreadUringSource::init(TimeInterval ival) {
 	setNanoTimespec(interval, ival);
@@ -303,6 +306,8 @@ void ThreadUringHandle::rearmFailsafe(URingData *uring, ThreadUringSource *sourc
 	}, URingPushFlags::Submit);
 	source->failsafe = true;
 }
+
+#endif
 
 bool ThreadEventFdHandle::init(HandleClass *cl) {
 	if (!ThreadHandle::init(cl)) {

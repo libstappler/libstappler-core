@@ -28,6 +28,7 @@ STAPPLER_VERSION_BUILD := $(firstword $(call sp_detect_build_number,$(STAPPLER_M
 STAPPLER_CRYPTO_DEFAULT ?= openssl
 
 TOOLKIT_MODULE_LIST += \
+	$(STAPPLER_MODULE_DIR)/abi/abi.mk \
 	$(STAPPLER_MODULE_DIR)/core/core.mk \
 	$(STAPPLER_MODULE_DIR)/bitmap/bitmap.mk \
 	$(STAPPLER_MODULE_DIR)/data/data.mk \
@@ -35,7 +36,6 @@ TOOLKIT_MODULE_LIST += \
 	$(STAPPLER_MODULE_DIR)/event/event.mk \
 	$(STAPPLER_MODULE_DIR)/filesystem/filesystem.mk \
 	$(STAPPLER_MODULE_DIR)/threads/threads.mk \
-	$(STAPPLER_MODULE_DIR)/idn/idn.mk \
 	$(STAPPLER_MODULE_DIR)/crypto/crypto.mk \
 	$(STAPPLER_MODULE_DIR)/network/network.mk \
 	$(STAPPLER_MODULE_DIR)/search/search.mk \

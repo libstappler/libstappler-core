@@ -25,7 +25,6 @@
 #define CORE_GEOM_SPGEOM_H_
 
 #include "SPCommon.h"
-#include "SPMath.h"
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 

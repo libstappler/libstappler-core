@@ -51,7 +51,7 @@ bool TimerURingHandle::init(HandleClass *cl, TimerInfo &&info) {
 	return source->init(info);
 }
 
-static bool timespecIsEqual(const __kernel_timespec &l, const __kernel_timespec &r) {
+static bool timespecIsEqual(const _linux_timespec &l, const _linux_timespec &r) {
 	return l.tv_nsec == r.tv_nsec && l.tv_sec == r.tv_sec;
 }
 

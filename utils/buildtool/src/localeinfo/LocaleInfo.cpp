@@ -302,8 +302,8 @@ bool buildLocaleInfo(FileInfo inputFile) {
 }
 
 bool buildLocaleInfoFromNetwork() {
-	auto l1 = LocaleInfo::get("ru-ru");
-	auto l2 = LocaleInfo::get("ru_RU.UTF_8");
+	//auto l1 = LocaleInfo::get("ru-ru");
+	//auto l2 = LocaleInfo::get("ru_RU.UTF_8");
 
 	network::Handle<memory::StandartInterface> handle;
 	handle.init(network::Method::Get, "https://cdn.simplelocalize.io/public/v1/locales");

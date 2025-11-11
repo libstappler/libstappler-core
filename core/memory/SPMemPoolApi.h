@@ -26,7 +26,6 @@ THE SOFTWARE.
 
 #include "SPCore.h"
 #include "SPMemPoolInterface.h"
-#include "SPPlatformInit.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
@@ -115,7 +114,7 @@ inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t ta
 		void *userdata = nullptr, const char * = SP_FUNC);
 
 template <typename Callback>
-inline int perform_main(const Callback &cb);
+inline int perform_main(int argc, const char *argv[], const Callback &cb);
 
 } // namespace pool
 
@@ -325,9 +324,9 @@ inline auto perform_temporary(const Callback &cb, memory::pool_t *p, uint32_t ta
 }
 
 template <typename Callback>
-inline int perform_main(const Callback &cb) {
+inline int perform_main(int argc, const char *argv[], const Callback &cb) {
 	int resultCode = 0;
-	if (sp::initialize(resultCode)) {
+	if (sp::initialize(argc, argv, resultCode)) {
 		auto ret = cb();
 
 		sp::terminate();
