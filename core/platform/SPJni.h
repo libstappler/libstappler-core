@@ -121,6 +121,8 @@ struct ApplicationProxy : ClassProxy {
 	Method<"isEmulator", jboolean()> isEmulator = this;
 	Method<"setNative", void(jlong)> setNative = this;
 
+	Method<"startActivity", void(L<"android/content/Intent">)> startActivity = this;
+
 	using ClassProxy::ClassProxy;
 };
 
@@ -142,6 +144,16 @@ struct EnvironmentProxy : ClassProxy {
 			this;
 	StaticMethod<"getExternalStoragePublicDirectory", L<"java/io/File">(jstring)>
 			getExternalStoragePublicDirectory = this;
+
+	using ClassProxy::ClassProxy;
+};
+
+struct IdnProxy : ClassProxy {
+	StaticField<"ALLOW_UNASSIGNED", jint> ALLOW_UNASSIGNED = this;
+	StaticField<"USE_STD3_ASCII_RULES", jint> USE_STD3_ASCII_RULES = this;
+
+	StaticMethod<"toASCII", jstring(jstring, jint)> toASCII = this;
+	StaticMethod<"toUnicode", jstring(jstring, jint)> toUnicode = this;
 
 	using ClassProxy::ClassProxy;
 };
@@ -623,6 +635,7 @@ struct SP_PUBLIC App : public sp::Ref {
 	PackageManagerProxy PackageManager = "android/content/pm/PackageManager";
 	ApplicationInfoProxy ApplicationInfo = "android/content/pm/ApplicationInfo";
 	EnvironmentProxy Environment = "android/os/Environment";
+	IdnProxy IDN = "java/net/IDN";
 	PackageInfoProxy PackageInfo = "android/content/pm/PackageInfo";
 	ResourcesProxy Resources = "android/content/res/Resources";
 	DisplayMetricsProxy DisplayMetrics = "android/util/DisplayMetrics";
@@ -702,7 +715,7 @@ public:
 	Local newObject(jclass clazz, jmethodID methodID, Args &&...args) const {
 		auto ret =
 				Local(_env->NewObject(clazz, methodID, Forward(std::forward<Args>(args))...), _env);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors();
 #endif
 		return ret;
@@ -710,7 +723,7 @@ public:
 
 	LocalClass getClass(jobject obj) const {
 		auto ret = LocalClass(_env->GetObjectClass(obj), _env);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors();
 #endif
 		return ret;
@@ -718,7 +731,7 @@ public:
 
 	LocalClass findClass(const char *name) const {
 		auto ret = LocalClass(_env->FindClass(name), _env);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors();
 #endif
 		return ret;
@@ -726,7 +739,7 @@ public:
 
 	LocalString newString(WideStringView data) const {
 		auto ret = LocalString(_env->NewString((jchar *)data.data(), data.size()), _env);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors();
 #endif
 		return ret;
@@ -734,7 +747,7 @@ public:
 
 	RefString newStringRef(WideStringView data) const {
 		auto ret = RefString(_env->NewString((jchar *)data.data(), data.size()), _env);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors();
 #endif
 		return ret;
@@ -745,7 +758,7 @@ public:
 						? _env->NewStringUTF(data.data())
 						: _env->NewStringUTF(data.str<memory::StandartInterface>().data()),
 				_env);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors();
 #endif
 		return ret;
@@ -756,7 +769,7 @@ public:
 						? _env->NewStringUTF(data.data())
 						: _env->NewStringUTF(data.str<memory::StandartInterface>().data()),
 				_env);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors();
 #endif
 		return ret;

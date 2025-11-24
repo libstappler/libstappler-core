@@ -48,7 +48,6 @@ public:
 	using reverse_iterator = typename mem_type::reverse_iterator;
 	using const_reverse_iterator = typename mem_type::const_reverse_iterator;
 
-public:
 	vector() noexcept { }
 	explicit vector(const allocator_type &alloc) noexcept : _mem(alloc) { }
 	explicit vector(size_type count, const Type &value,

@@ -35,10 +35,31 @@ namespace STAPPLER_VERSIONIZED stappler {
 template <typename _Type>
 class SpanView;
 
+// Compares data blocks byte by byte
+struct BytesComparator {
+	template <typename CharT>
+	static int compare(const CharT *l, const CharT *r, size_t size) {
+		return ::memcmp(l, r, size * sizeof(CharT));
+	}
+};
+
+// Compares strings based on C locale
+struct StringComparator;
+
+// Compares strings based on C locale and is case insensitive
+struct StringCaseComparator;
+
+// Compares strings as UTF8 or UTF16
+struct StringUnicodeComparator;
+
+// Compares strings as UTF8 or UTF16, case insensitive
+struct StringUnicodeCaseComparator;
+
 template <typename _CharType>
 class BytesReader {
 public:
 	using CharType = _CharType;
+	using value_type = CharType;
 
 	template <CharType... Args>
 	using Chars = chars::Chars<CharType, Args...>;
@@ -70,46 +91,47 @@ public:
 		}
 	}
 
-	bool equals(const CharType *d, size_t l) const {
-		return (l == len && memcmp(ptr, d, l * sizeof(CharType)) == 0);
-	}
-	bool equals(const CharType *d) const {
-		return equals(d, std::char_traits<CharType>::length(d));
+	template <typename Comparator = BytesComparator>
+	bool equals(const CharType *d, size_t l) const;
+
+	template <typename Comparator = BytesComparator>
+	bool equals(const CharType *d) const;
+
+	template <typename Comparator = BytesComparator>
+	bool equals(const BytesReader<CharType> &str) const {
+		return equals<Comparator>(str.data(), str.size());
 	}
 
-	bool prefix(const CharType *d, size_t l) const {
-		return (l <= len && ::memcmp(ptr, d, l * sizeof(CharType)) == 0);
-	}
+	template <typename Comparator = BytesComparator>
+	bool prefix(const CharType *d, size_t l) const;
 
+	template <typename Comparator = BytesComparator>
 	bool starts_with(const BytesReader<CharType> &str) const {
-		return prefix(str.data(), str.size());
+		return prefix<Comparator>(str.data(), str.size());
 	}
-	bool starts_with(const CharType *d, size_t l) const { return prefix(d, l); }
-	bool starts_with(const CharType *d) const {
-		return prefix(d, std::char_traits<CharType>::length(d));
+
+	template <typename Comparator = BytesComparator>
+	bool starts_with(const CharType *d, size_t l) const {
+		return prefix<Comparator>(d, l);
 	}
+
+	template <typename Comparator = BytesComparator>
+	bool starts_with(const CharType *d) const;
+
 	bool starts_with(CharType c) const { return is(c); }
 
-	template <size_t Size>
-	bool starts_with(const CharType (&array)[Size]) {
-		return prefix(array, array[Size - 1] == 0 ? Size - 1 : Size);
-	}
-
+	template <typename Comparator = BytesComparator>
 	bool ends_with(const BytesReader<CharType> &str) const {
-		return ends_with(str.data(), str.size());
+		return ends_with<Comparator>(str.data(), str.size());
 	}
-	bool ends_with(const CharType *d, size_t l) const {
-		return (l <= len && memcmp(ptr + (len - l), d, l * sizeof(CharType)) == 0);
-	}
-	bool ends_with(const CharType *d) const {
-		return ends_with(d, std::char_traits<CharType>::length(d));
-	}
-	bool ends_with(CharType c) const { return len > 0 && ptr[len - 1] == c; }
 
-	template <size_t Size>
-	bool ends_with(const CharType (&array)[Size]) {
-		return prefix(array, array[Size - 1] == 0 ? Size - 1 : Size);
-	}
+	template <typename Comparator = BytesComparator>
+	bool ends_with(const CharType *d, size_t l) const;
+
+	template <typename Comparator = BytesComparator>
+	bool ends_with(const CharType *d) const;
+
+	bool ends_with(CharType c) const { return len > 0 && ptr[len - 1] == c; }
 
 	constexpr const CharType *data() const { return ptr; }
 

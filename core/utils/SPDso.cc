@@ -222,7 +222,7 @@ void *Dso::loadSym(StringView name, DsoSymFlags flags) {
 			s = dso::dso_sym(_handle, name, flags, &_error);
 		}
 #else
-		s = dso::dso_sym(_handle, name, &_error);
+		s = dso::dso_sym(_handle, name, flags, &_error);
 #endif
 		tl_dsoVersion = tmp;
 		if (s) {

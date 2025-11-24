@@ -24,6 +24,7 @@
 #include "SPString.h" // IWYU pragma: keep
 #include "SPDso.h" // IWYU pragma: keep
 #include "SPIdn.h"
+#include "SPLog.h"
 
 #if LINUX
 
@@ -294,6 +295,14 @@ struct i18n {
 		if (_handle) {
 			unistring.load(_handle);
 			if (unistring) {
+				_idnHandle = Dso("libidn2.so");
+				if (_idnHandle) {
+					idn2.load(_idnHandle);
+					if (!idn2) {
+						idn2.clear();
+						_idnHandle.close();
+					}
+				}
 				return;
 			} else {
 				unistring.clear();
@@ -743,6 +752,7 @@ auto _idnToAscii(StringView source, bool validate) -> typename Interface::String
 			}
 		}
 	}
+	slog().warn("core", "_idnToAscii: fail to call platform-based idnToAscii");
 	return typename Interface::StringType();
 }
 
@@ -784,6 +794,7 @@ auto _idnToUnicode(StringView source, bool validate) -> typename Interface::Stri
 			}
 		}
 	}
+	slog().warn("core", "_idnToUnicode: fail to call platform-based idnToUnicode");
 	return typename Interface::StringType();
 }
 

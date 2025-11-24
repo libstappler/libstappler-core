@@ -521,7 +521,7 @@ bool ftw(const FileInfo &info, const Callback<bool(const FileInfo &, FileType)> 
 				== Status::Ok;
 	} else {
 		bool found = false;
-		enumeratePaths(info, Access::None, [&](StringView str, FileFlags) {
+		enumeratePaths(info, Access::Exists, [&](StringView str, FileFlags) {
 			found = filesystem::native::ftw_fn(str, fn, depth, dirFirst) == Status::Ok;
 			return false;
 		});

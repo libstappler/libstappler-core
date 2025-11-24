@@ -26,6 +26,7 @@
 #if ANDROID
 
 #include "SPDso.h"
+#include "SPIdn.h"
 #include "platform/SPJni.h"
 
 #include <unicode/uchar.h>
@@ -38,7 +39,6 @@
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
 static std::mutex s_collatorMutex;
-
 
 struct IcuJava : Ref {
 	struct UCharacterProxy : jni::ClassProxy {
@@ -442,5 +442,263 @@ void terminate() {
 StringView getOsLocale() { return StringView(s_locale); }
 
 } // namespace stappler::platform
+
+// Mimic IDN2 API for CURL
+namespace STAPPLER_VERSIONIZED stappler::idn {
+
+static constexpr auto IDN2_VERSION = "2.3.2-lisbstappler";
+
+static constexpr auto IDN2_OK = 0;
+
+static constexpr auto IDN2_JNI = -1'000;
+static constexpr auto IDN2_JNI_STR = "Fail to acquire JNI context";
+
+static constexpr auto IDN2_CONV_TOASCII = -1'001;
+static constexpr auto IDN2_CONV_TOASCII_STR = "Fail to call java.net.IDN.toASCII";
+
+static constexpr auto IDN2_CONV_TOUNICODE = -1'002;
+static constexpr auto IDN2_CONV_TOUNICODE_STR = "Fail to call java.net.IDN.toUnicode";
+
+static constexpr auto IDN2_ALLOW_UNASSIGNED = 16;
+static constexpr auto IDN2_USE_STD3_ASCII_RULES = 32;
+
+using HostUnicodeChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+		chars::Chars<char, '.', '-'>, chars::Range<char, char(128), char(255)>>;
+
+using HostAsciiChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+		chars::Chars<char, '.', '-'>>;
+
+template <typename Interface>
+auto _idnToAscii(StringView source, bool validate) -> typename Interface::StringType {
+	if (source.empty()) {
+		return typename Interface::StringType();
+	}
+
+	if (validate) {
+		StringView r(source);
+		r.skipChars<HostUnicodeChars>();
+		if (!r.empty()) {
+			return typename Interface::StringType();
+		}
+	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+
+	if (app && env) {
+		auto str = app->IDN.toASCII(app->IDN.getClass().ref(env), env.newString(source), 0);
+		if (str) {
+			return str.getString().str<Interface>();
+		}
+	}
+
+	return typename Interface::StringType();
+}
+
+template <typename Interface>
+auto _idnToUnicode(StringView source, bool validate) -> typename Interface::StringType {
+	if (source.empty()) {
+		return typename Interface::StringType();
+	}
+
+	if (validate) {
+		StringView r(source);
+		r.skipChars<HostAsciiChars>();
+		if (!r.empty()) {
+			return typename Interface::StringType();
+		}
+	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+
+	if (app && env) {
+		auto str = app->IDN.toUnicode(app->IDN.getClass().ref(env), env.newString(source), 0);
+		if (str) {
+			return str.getString().str<Interface>();
+		}
+	}
+
+	return typename Interface::StringType();
+}
+
+template <>
+auto toAscii<memory::PoolInterface>(StringView source, bool validate)
+		-> memory::PoolInterface::StringType {
+	return _idnToAscii<memory::PoolInterface>(source, validate);
+}
+
+template <>
+auto toAscii<memory::StandartInterface>(StringView source, bool validate)
+		-> memory::StandartInterface::StringType {
+	return _idnToAscii<memory::StandartInterface>(source, validate);
+}
+
+template <>
+auto toUnicode<memory::PoolInterface>(StringView source, bool validate)
+		-> memory::PoolInterface::StringType {
+	return _idnToUnicode<memory::PoolInterface>(source, validate);
+}
+
+template <>
+auto toUnicode<memory::StandartInterface>(StringView source, bool validate)
+		-> memory::StandartInterface::StringType {
+	return _idnToUnicode<memory::StandartInterface>(source, validate);
+}
+extern "C" SP_PUBLIC int idn2_lookup_u8(const uint8_t *src, uint8_t **lookupname, int flags) {
+	if (!src) {
+		if (lookupname) {
+			*lookupname = nullptr;
+		}
+		return IDN2_OK;
+	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+	if (!app || !env) {
+		return IDN2_JNI;
+	}
+
+	jint options = 0;
+
+	if (flags & IDN2_USE_STD3_ASCII_RULES) {
+		options |= app->IDN.USE_STD3_ASCII_RULES();
+	}
+
+	if (flags & IDN2_ALLOW_UNASSIGNED) {
+		options |= app->IDN.ALLOW_UNASSIGNED();
+	}
+
+	auto str = app->IDN.toASCII(app->IDN.getClass().ref(env),
+			env.newString(StringView((const char *)src)), jint(options));
+	if (str) {
+		auto out = str.getString();
+
+		auto buf = new char[out.size() + 1];
+		::memcpy(buf, out.data(), out.size());
+		buf[out.size()] = 0;
+
+		*lookupname = (uint8_t *)buf;
+		return IDN2_JNI;
+	} else {
+		return IDN2_CONV_TOASCII;
+	}
+}
+
+extern "C" SP_PUBLIC int idn2_lookup_ul(const char *src, char **lookupname, int flags) {
+	if (!src) {
+		if (lookupname) {
+			*lookupname = nullptr;
+		}
+		return IDN2_OK;
+	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+	if (!app || !env) {
+		return IDN2_JNI;
+	}
+
+	jint options = 0;
+
+	if (flags & IDN2_USE_STD3_ASCII_RULES) {
+		options |= app->IDN.USE_STD3_ASCII_RULES();
+	}
+
+	if (flags & IDN2_ALLOW_UNASSIGNED) {
+		options |= app->IDN.ALLOW_UNASSIGNED();
+	}
+
+	auto str = app->IDN.toASCII(app->IDN.getClass().ref(env), env.newString(StringView(src)),
+			jint(options));
+	if (str) {
+		auto out = str.getString();
+
+		auto buf = new char[out.size() + 1];
+		::memcpy(buf, out.data(), out.size());
+		buf[out.size()] = 0;
+
+		*lookupname = buf;
+		return IDN2_JNI;
+	} else {
+		return IDN2_CONV_TOASCII;
+	}
+}
+
+extern "C" SP_PUBLIC int idn2_to_unicode_8z8z(const char *src, char **lookupname, int flags) {
+	if (!src) {
+		if (lookupname) {
+			*lookupname = nullptr;
+		}
+		return IDN2_OK;
+	}
+
+	auto app = jni::Env::getApp();
+	auto env = jni::Env::getEnv();
+	if (!app || !env) {
+		return IDN2_JNI;
+	}
+
+	jint options = 0;
+
+	if (flags & IDN2_USE_STD3_ASCII_RULES) {
+		options |= app->IDN.USE_STD3_ASCII_RULES();
+	}
+
+	if (flags & IDN2_ALLOW_UNASSIGNED) {
+		options |= app->IDN.ALLOW_UNASSIGNED();
+	}
+
+	auto str = app->IDN.toUnicode(app->IDN.getClass().ref(env), env.newString(StringView(src)),
+			jint(options));
+	if (str) {
+		auto out = str.getString();
+
+		auto buf = new char[out.size() + 1];
+		::memcpy(buf, out.data(), out.size());
+		buf[out.size()] = 0;
+
+		*lookupname = buf;
+		return IDN2_JNI;
+	} else {
+		return IDN2_CONV_TOUNICODE;
+	}
+}
+
+extern "C" SP_PUBLIC const char *idn2_strerror(int rc) {
+	switch (rc) {
+	case IDN2_OK: return "Success"; break;
+	case IDN2_JNI: return IDN2_JNI_STR; break;
+	case IDN2_CONV_TOASCII: return IDN2_CONV_TOASCII_STR; break;
+	case IDN2_CONV_TOUNICODE: return IDN2_CONV_TOUNICODE_STR; break;
+	}
+	return nullptr;
+}
+
+extern "C" SP_PUBLIC const char *idn2_strerror_name(int rc) {
+	switch (rc) {
+	case IDN2_OK: return "IDN2_OK"; break;
+	case IDN2_JNI: return "IDN2_JNI"; break;
+	case IDN2_CONV_TOASCII: return "IDN2_CONV_TOASCII"; break;
+	case IDN2_CONV_TOUNICODE: return "IDN2_CONV_TOUNICODE"; break;
+	}
+	return nullptr;
+}
+
+extern "C" SP_PUBLIC void idn2_free(void *ptr) {
+	if (ptr) {
+		delete[] (char *)ptr;
+	}
+}
+
+extern "C" SP_PUBLIC const char *idn2_check_version(const char *req_version) {
+	if (!req_version || strcmp(req_version, IDN2_VERSION) <= 0) {
+		return IDN2_VERSION;
+	}
+
+	return NULL;
+}
+
+} // namespace stappler::idn
 
 #endif

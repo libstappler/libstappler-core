@@ -230,7 +230,7 @@ struct JpegWriteStruct {
 	BitmapWriter *vec = nullptr;
 
 	unsigned char *mem = nullptr;
-	size_t memSize = 0;
+	unsigned long memSize = 0;
 
 	~JpegWriteStruct() {
 		jpeg_destroy_compress(&cinfo);

@@ -20,23 +20,17 @@
  THE SOFTWARE.
  **/
 
-#include "SPCommon.h" // << Prefix header
-#include "SPBytesView.h"
+#include "SPCommon.h" // IWYU pragma: keep
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
 #include "SPMemInterface.h"
 #include "SPMemPoolInterface.h"
 #include "SPMemory.h"
-#include "SPData.h"
+#include "SPDocument.h"
 
 #include "SPMakefile.h"
-#include "SPPlatformUnistd.h"
 #include "XCodeProject.h"
 #include "LocaleInfo.h"
-
-#include "stappler-appconfig.h"
-
-#include "SPAbi.h"
 
 namespace stappler::buildtool {
 
@@ -255,6 +249,31 @@ static String getBuildRoot() {
 	});
 	return ret;
 }
+
+static void printDocumentTableOfContents(const document::DocumentContentRecord &rec,
+		uint32_t depth) {
+	for (size_t i = 0; i < depth; ++i) { std::cout << "\t"; }
+
+	std::cout << rec.label << " (" << rec.href << ")\n";
+
+	for (auto &it : rec.childs) { printDocumentTableOfContents(it, depth + 1); }
+}
+
+static int printDocumentInfo(StringView path) {
+	auto doc = document::Document::open(FileInfo(path));
+
+	if (doc) {
+		std::cout << "Document: " << doc->getName() << "\n";
+
+		std::cout << "Spine:\n";
+		for (auto &it : doc->getSpine()) { std::cout << "\t" << it << "\n"; }
+
+		std::cout << "Table of contents:\n";
+		printDocumentTableOfContents(doc->getTableOfContents(), 1);
+	}
+	return 0;
+}
+
 
 SP_EXTERN_C int main(int argc, const char *argv[]) {
 	if (argc < 2) {
@@ -490,6 +509,17 @@ SP_EXTERN_C int main(int argc, const char *argv[]) {
 			}
 
 			return 0;
+		} else if (action == "docinfo") {
+			auto path = StringView(argv[nextArg++]).str<memory::StandartInterface>();
+
+			if (!filepath::isAbsolute(path)) {
+				// note that filesystem::currentDir argument can not point above current dir's root
+				path = filepath::reconstructPath<Interface>(
+						filepath::merge<memory::StandartInterface>(
+								filesystem::currentDir<memory::StandartInterface>(), path));
+			}
+
+			return printDocumentInfo(path);
 		} else {
 			std::cerr << "Unknown action: \"" << action << "\"\n";
 		}

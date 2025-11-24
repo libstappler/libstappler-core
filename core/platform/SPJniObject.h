@@ -501,7 +501,7 @@ auto ObjectInterface<Origin>::getField(jfieldID id) const -> typename TypeInfo<T
 	auto result = static_cast<typename TypeInfo<Type>::Intermediate>(
 			(getObjectEnv()->*TypeInfo<Type>::GetField)(getObject(), id));
 	auto ret = TypeInfo<Type>::wrap(std::move(result), getObjectEnv());
-#if DEBUG
+#if JNIDEBUG
 	checkErrors(getObjectEnv());
 #endif
 	return ret;
@@ -514,7 +514,7 @@ auto ObjectInterface<Origin>::callMethod(jmethodID methodID, Args &&...args) con
 	if constexpr (std::is_same_v<Type, void>) {
 		(getObjectEnv()->*TypeInfo<Type>::Call)(getObject(), methodID,
 				Forward(std::forward<Args>(args))...);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors(getObjectEnv());
 #endif
 	} else {
@@ -522,7 +522,7 @@ auto ObjectInterface<Origin>::callMethod(jmethodID methodID, Args &&...args) con
 				(getObjectEnv()->*TypeInfo<Type>::Call)(getObject(), methodID,
 						Forward(std::forward<Args>(args))...));
 		auto ret = TypeInfo<Type>::wrap(std::move(result), getObjectEnv());
-#if DEBUG
+#if JNIDEBUG
 		checkErrors(getObjectEnv());
 #endif
 		return ret;
@@ -554,7 +554,7 @@ jobject ObjectInterface<Origin>::getObject() const {
 template <typename Origin>
 jmethodID ClassInterface<Origin>::getMethodID(const char *name, const char *sig) const {
 	auto ret = getClassEnv()->GetMethodID(getInterfaceClass(), name, sig);
-#if DEBUG
+#if JNIDEBUG
 	checkErrors(getClassEnv());
 #endif
 	return ret;
@@ -563,7 +563,7 @@ jmethodID ClassInterface<Origin>::getMethodID(const char *name, const char *sig)
 template <typename Origin>
 jmethodID ClassInterface<Origin>::getStaticMethodID(const char *name, const char *sig) const {
 	auto ret = getClassEnv()->GetStaticMethodID(getInterfaceClass(), name, sig);
-#if DEBUG
+#if JNIDEBUG
 	checkErrors(getClassEnv());
 #endif
 	return ret;
@@ -572,7 +572,7 @@ jmethodID ClassInterface<Origin>::getStaticMethodID(const char *name, const char
 template <typename Origin>
 jfieldID ClassInterface<Origin>::getFieldID(const char *name, const char *sig) const {
 	auto ret = getClassEnv()->GetFieldID(getInterfaceClass(), name, sig);
-#if DEBUG
+#if JNIDEBUG
 	checkErrors(getClassEnv());
 #endif
 	return ret;
@@ -581,7 +581,7 @@ jfieldID ClassInterface<Origin>::getFieldID(const char *name, const char *sig) c
 template <typename Origin>
 jfieldID ClassInterface<Origin>::getStaticFieldID(const char *name, const char *sig) const {
 	auto ret = getClassEnv()->GetStaticFieldID(getInterfaceClass(), name, sig);
-#if DEBUG
+#if JNIDEBUG
 	checkErrors(getClassEnv());
 #endif
 	return ret;
@@ -594,7 +594,7 @@ auto ClassInterface<Origin>::getStaticField(jfieldID id) const ->
 	auto result = static_cast<typename TypeInfo<Type>::Intermediate>(
 			(getClassEnv()->*TypeInfo<Type>::GetStaticField)(getInterfaceClass(), id));
 	auto ret = TypeInfo<Type>::wrap(std::move(result), getClassEnv());
-#if DEBUG
+#if JNIDEBUG
 	checkErrors(getClassEnv());
 #endif
 	return ret;
@@ -621,7 +621,7 @@ auto ClassInterface<Origin>::callStaticMethod(jmethodID methodID, Args &&...args
 	if constexpr (std::is_same_v<Type, void>) {
 		(getClassEnv()->*TypeInfo<Type>::CallStatic)(getInterfaceClass(), methodID,
 				Forward(std::forward<Args>(args))...);
-#if DEBUG
+#if JNIDEBUG
 		checkErrors(getClassEnv());
 #endif
 	} else {
@@ -629,7 +629,7 @@ auto ClassInterface<Origin>::callStaticMethod(jmethodID methodID, Args &&...args
 				(getClassEnv()->*TypeInfo<Type>::CallStatic)(getInterfaceClass(), methodID,
 						Forward(std::forward<Args>(args))...));
 		auto ret = TypeInfo<Type>::wrap(std::move(result), getClassEnv());
-#if DEBUG
+#if JNIDEBUG
 		checkErrors(getClassEnv());
 #endif
 		return ret;

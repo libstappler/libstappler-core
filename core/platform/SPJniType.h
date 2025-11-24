@@ -28,6 +28,8 @@
 
 #if ANDROID
 
+#define JNIDEBUG 1
+
 #include "SPStringView.h" // IWYU pragma: keep
 
 #include <jni.h>

@@ -142,6 +142,9 @@ constexpr size_t length(const _CharT *__p) {
 	return std::char_traits<_CharT>::length(__p);
 }
 
+// Limited length function
+// This function can be used to safely obtain the length of a string when its potential maximum length is known
+// For such a case, this function will not perform the comparison of infinity but will limit it to the maximum number of characters transmitted
 template <typename _CharT>
 constexpr size_t length(const _CharT *__p, size_t max) {
 	if (!__p) {
@@ -189,23 +192,25 @@ inline auto readNumber(const Char *ptr, size_t len, int base, uint8_t &offset) -
 	return Result<T>(val);
 }
 
-
-template <typename L, typename R, typename CharType>
-inline int compare_c(const L &l, const R &r) {
-	auto __lsize = l.size();
-	auto __rsize = r.size();
-	auto __len = std::min(__lsize, __rsize);
-	auto ret = std::char_traits<CharType>::compare(l.data(), r.data(), __len);
+template <typename CharType>
+inline int compare_c(const CharType *lPtr, size_t lSize, const CharType *rPtr, size_t rSize) {
+	auto __len = std::min(lSize, rSize);
+	auto ret = std::char_traits<CharType>::compare(lPtr, rPtr, __len);
 	if (!ret) {
-		if (__lsize < __rsize) {
+		if (lSize < rSize) {
 			return -1;
-		} else if (__lsize == __rsize) {
+		} else if (lSize == rSize) {
 			return 0;
 		} else {
 			return 1;
 		}
 	}
 	return ret;
+}
+
+template <typename L, typename R, typename CharType>
+inline int compare_c(const L &l, const R &r) {
+	return compare_c(l.data(), l.size(), r.data(), r.size());
 }
 
 template <typename L, typename R, typename CharType>
@@ -213,28 +218,22 @@ inline int compare_u(const L &l, const R &r) {
 	return platform::compare_u(l, r);
 }
 
-template <typename CharType>
-inline int compare(const CharType *l, const CharType *r, size_t len) {
-	return std::use_facet<std::collate<CharType>>(std::locale::classic())
-			.compare(l, l + len, r, r + len);
-}
-
 template <typename L, typename R, typename CharType>
 inline int caseCompare_c(const L &l, const R &r) {
-	auto __lsize = l.size();
-	auto __rsize = r.size();
-	auto __len = std::min(__lsize, __rsize);
-	auto ret = compare(l.data(), r.data(), __len);
-	if (!ret) {
-		if (__lsize < __rsize) {
-			return -1;
-		} else if (__lsize == __rsize) {
-			return 0;
-		} else {
-			return 1;
-		}
+	auto &locale = std::locale::classic();
+
+	auto ret = std::lexicographical_compare_three_way(l.data(), l.data() + l.size(), r.data(),
+			r.data() + r.size(), [&](const CharType &l, const CharType &r) -> std::strong_ordering {
+		return std::toupper(l, locale) <=> std::toupper(r, locale);
+	});
+
+	if (std::is_eq(ret)) {
+		return 0;
+	} else if (std::is_lt(ret)) {
+		return -1;
+	} else {
+		return 1;
 	}
-	return ret;
 }
 
 template <typename L, typename R, typename CharType>
@@ -457,6 +456,36 @@ inline void streamWrite(const Callback<void(BytesView)> &cb, const uint8_t &val)
 
 namespace STAPPLER_VERSIONIZED stappler {
 
+struct StringComparator {
+	template <typename CharT>
+	static int compare(const CharT *l, const CharT *r, size_t len) {
+		return string::detail::compare_c(BytesReader<CharT>(l, len), BytesReader<CharT>(r, len));
+	}
+};
+
+struct StringCaseComparator {
+	template <typename CharT>
+	static int compare(const CharT *l, const CharT *r, size_t len) {
+		return string::detail::caseCompare_c(BytesReader<CharT>(l, len),
+				BytesReader<CharT>(r, len));
+	}
+};
+
+struct StringUnicodeComparator {
+	template <typename CharT>
+	static int compare(const CharT *l, const CharT *r, size_t len) {
+		return string::detail::compare_u(BytesReader<CharT>(l, len), BytesReader<CharT>(r, len));
+	}
+};
+
+struct StringUnicodeCaseComparator {
+	template <typename CharT>
+	static int compare(const CharT *l, const CharT *r, size_t len) {
+		return string::detail::caseCompare_u(BytesReader<CharT>(l, len),
+				BytesReader<CharT>(r, len));
+	}
+};
+
 template <typename C>
 inline std::basic_ostream<C> &operator<<(std::basic_ostream<C> &os, const StringViewBase<C> &str) {
 	return os.write(str.data(), str.size());
@@ -557,6 +586,57 @@ inline bool operator!=(const char *l, const StringViewUtf8 &r) {
 
 #undef SP_STRINGVIEW_COMPARE_OP
 #undef SP_STRINGVIEW_COMPARE_OP_UTF8
+
+template <typename CharT>
+template <typename Comparator>
+inline bool BytesReader<CharT>::equals(const CharType *d, size_t l) const {
+	return (l == len && Comparator::compare(ptr, d, l) == 0);
+}
+
+template <typename CharT>
+template <typename Comparator>
+inline bool BytesReader<CharT>::equals(const CharType *d) const {
+	// Use limited-length for safety
+	auto l = string::detail::length(d, len + 1);
+	if (l != len) {
+		return false;
+	}
+	return equals<Comparator>(d, len);
+}
+
+template <typename CharT>
+template <typename Comparator>
+inline bool BytesReader<CharT>::prefix(const CharType *d, size_t l) const {
+	return (l <= len && Comparator::compare(ptr, d, l) == 0);
+}
+
+template <typename CharT>
+template <typename Comparator>
+inline bool BytesReader<CharT>::starts_with(const CharType *d) const {
+	// Use limited-length for safety
+	auto l = string::detail::length(d, len + 1);
+	if (l > len) {
+		return false;
+	}
+	return prefix<Comparator>(d, l);
+}
+
+
+template <typename CharT>
+template <typename Comparator>
+inline bool BytesReader<CharT>::ends_with(const CharType *d, size_t l) const {
+	return (l <= len && Comparator::compare(ptr + (len - l), d, l) == 0);
+}
+
+template <typename CharT>
+template <typename Comparator>
+inline bool BytesReader<CharT>::ends_with(const CharType *d) const {
+	auto l = string::detail::length(d, len + 1);
+	if (l > len) {
+		return false;
+	}
+	return ends_with<Comparator>(d, l);
+}
 
 template <typename _CharType>
 template <typename Interface, typename... Args>
@@ -767,7 +847,7 @@ auto StringViewBase<_CharType>::pdup(memory::pool_t *p) const -> Self {
 		buf[this->size()] = 0;
 		return Self(buf, this->size());
 	}
-	return StringView();
+	return Self();
 }
 
 template <typename _CharType>
@@ -782,7 +862,7 @@ auto StringViewBase<_CharType>::ptolower_c(memory::pool_t *p) const -> Self {
 		buf[this->size()] = 0;
 		return Self(buf, this->size());
 	}
-	return StringView();
+	return Self();
 }
 
 template <typename _CharType>
@@ -797,7 +877,7 @@ auto StringViewBase<_CharType>::ptoupper_c(memory::pool_t *p) const -> Self {
 		buf[this->size()] = 0;
 		return Self(buf, this->size());
 	}
-	return StringView();
+	return Self();
 }
 
 template <typename _CharType>

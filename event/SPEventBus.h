@@ -32,7 +32,7 @@ class Bus;
 
 using BusEventCategory = ValueWrapper<uint32_t, class BusEventCategoryFlag>;
 
-class BusEvent : public Ref {
+class SP_PUBLIC BusEvent : public Ref {
 public:
 	virtual ~BusEvent() = default;
 
@@ -44,7 +44,7 @@ protected:
 	BusEventCategory _category = BusEventCategory::zero();
 };
 
-class BusDelegate : public Ref {
+class SP_PUBLIC BusDelegate : public Ref {
 public:
 	using BusEventCallback = mem_std::Function<void(Bus &, const BusEvent &, BusDelegate &)>;
 
@@ -94,7 +94,7 @@ protected:
 	Rc<Bus> _bus;
 };
 
-class Bus : public Ref {
+class SP_PUBLIC Bus : public Ref {
 public:
 	virtual ~Bus();
 

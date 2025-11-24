@@ -85,22 +85,21 @@ SP_PUBLIC bool readColor(const StringView &str, Color3B &color);
 struct SP_PUBLIC Color3B {
 	static Color3B getColorByName(StringView, const Color3B & = Color3B::BLACK);
 
-	constexpr Color3B() : r(0), g(0) , b(0) {}
+	constexpr Color3B() : r(0), g(0), b(0) { }
 	constexpr Color3B(uint8_t _r, uint8_t _g, uint8_t _b) : r(_r), g(_g), b(_b) { }
-	constexpr Color3B(uint32_t value) : Color3B((value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF) { }
-	explicit Color3B(const Color4B& color);
-	explicit Color3B(const Color4F& color);
+	constexpr Color3B(uint32_t value)
+	: Color3B((value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF) { }
+	explicit Color3B(const Color4B &color);
+	explicit Color3B(const Color4F &color);
 
-	bool operator==(const Color3B& right) const;
-	bool operator==(const Color4B& right) const;
-	bool operator==(const Color4F& right) const;
-	bool operator!=(const Color3B& right) const;
-	bool operator!=(const Color4B& right) const;
-	bool operator!=(const Color4F& right) const;
+	bool operator==(const Color3B &right) const;
+	bool operator==(const Color4B &right) const;
+	bool operator==(const Color4F &right) const;
+	bool operator!=(const Color3B &right) const;
+	bool operator!=(const Color4B &right) const;
+	bool operator!=(const Color4F &right) const;
 
-	bool equals(const Color3B& other) {
-		return (*this == other);
-	}
+	bool equals(const Color3B &other) { return (*this == other); }
 
 	template <typename Interface>
 	auto name() const -> typename Interface::StringType;
@@ -125,18 +124,20 @@ struct SP_PUBLIC Color4B {
 	static Color4B progress(const Color4B &a, const Color4B &b, float p);
 	static Color4B getColorByName(StringView, const Color4B & = Color4B::BLACK);
 
-	constexpr Color4B() : r(0), g(0), b(0), a(0) {}
-	constexpr Color4B(uint8_t _r, uint8_t _g, uint8_t _b, uint8_t _a) : r(_r), g(_g), b(_b), a(_a) { }
-	constexpr Color4B(const Color3B& color, uint8_t _a) : r(color.r), g(color.g), b(color.b), a(_a) { }
-	explicit Color4B(const Color3B& color);
-	explicit Color4B(const Color4F& color);
+	constexpr Color4B() : r(0), g(0), b(0), a(0) { }
+	constexpr Color4B(uint8_t _r, uint8_t _g, uint8_t _b, uint8_t _a)
+	: r(_r), g(_g), b(_b), a(_a) { }
+	constexpr Color4B(const Color3B &color, uint8_t _a)
+	: r(color.r), g(color.g), b(color.b), a(_a) { }
+	explicit Color4B(const Color3B &color);
+	explicit Color4B(const Color4F &color);
 
-	bool operator==(const Color4B& right) const;
-	bool operator==(const Color3B& right) const;
-	bool operator==(const Color4F& right) const;
-	bool operator!=(const Color4B& right) const;
-	bool operator!=(const Color3B& right) const;
-	bool operator!=(const Color4F& right) const;
+	bool operator==(const Color4B &right) const;
+	bool operator==(const Color3B &right) const;
+	bool operator==(const Color4F &right) const;
+	bool operator!=(const Color4B &right) const;
+	bool operator!=(const Color3B &right) const;
+	bool operator!=(const Color4F &right) const;
 
 	uint8_t r;
 	uint8_t g;
@@ -163,25 +164,23 @@ struct alignas(16) Color4F {
 	constexpr Color4F() : r(0.0f), g(0.0f), b(0.0f), a(0.0f) { }
 	constexpr Color4F(float _r, float _g, float _b, float _a) : r(_r), g(_g), b(_b), a(_a) { }
 
-	constexpr Color4F(const Color3B& color, uint8_t alpha)
+	constexpr Color4F(const Color3B &color, uint8_t alpha)
 	: r(color.r / 255.0f), g(color.g / 255.0f), b(color.b / 255.0f), a(alpha / 255.0f) { }
 
-	constexpr explicit Color4F(const Color3B& color)
+	constexpr explicit Color4F(const Color3B &color)
 	: r(color.r / 255.0f), g(color.g / 255.0f), b(color.b / 255.0f), a(1.0f) { }
 
-	constexpr explicit Color4F(const Color4B& color)
+	constexpr explicit Color4F(const Color4B &color)
 	: r(color.r / 255.0f), g(color.g / 255.0f), b(color.b / 255.0f), a(color.a / 255.0f) { }
 
-	bool operator==(const Color4F& right) const;
-	bool operator==(const Color3B& right) const;
-	bool operator==(const Color4B& right) const;
-	bool operator!=(const Color4F& right) const;
-	bool operator!=(const Color3B& right) const;
-	bool operator!=(const Color4B& right) const;
+	bool operator==(const Color4F &right) const;
+	bool operator==(const Color3B &right) const;
+	bool operator==(const Color4B &right) const;
+	bool operator!=(const Color4F &right) const;
+	bool operator!=(const Color3B &right) const;
+	bool operator!=(const Color4B &right) const;
 
-	bool equals(const Color4F &other) {
-		return (*this == other);
-	}
+	bool equals(const Color4F &other) { return (*this == other); }
 
 	constexpr operator Vec4() const { return Vec4(r, g, b, a); }
 
@@ -269,47 +268,39 @@ public:
 		return Color3B((_value >> 16) & 0xFF, (_value >> 8) & 0xFF, _value & 0xFF);
 	}
 
-	inline Color4B asColor4B() const {
-		return Color4B((_value >> 16) & 0xFF, (_value >> 8) & 0xFF, _value & 0xFF, 255);
+	inline Color4B asColor4B(uint8_t alpha = 255) const {
+		return Color4B((_value >> 16) & 0xFF, (_value >> 8) & 0xFF, _value & 0xFF, alpha);
 	}
 
-	inline Color4F asColor4F() const {
-		return Color4F(
-				float((_value >> 16) & 0xFF) / float(0xFF),
-				float((_value >> 8) & 0xFF) / float(0xFF),
-				float(_value & 0xFF) / float(0xFF),
-				1.0f);
+	inline Color4F asColor4F(float alpha = 1.0f) const {
+		return Color4F(float((_value >> 16) & 0xFF) / float(0xFF),
+				float((_value >> 8) & 0xFF) / float(0xFF), float(_value & 0xFF) / float(0xFF),
+				alpha);
 	}
 
-	inline operator Color3B () const {
-		return asColor3B();
-	}
-	inline operator Color4B () const {
-		return asColor4B();
-	}
-	inline operator Color4F () const {
-		return asColor4F();
-	}
+	inline operator Color3B() const { return asColor3B(); }
+	inline operator Color4B() const { return asColor4B(); }
+	inline operator Color4F() const { return asColor4F(); }
 
-	inline bool operator == (const Color &other) const {
-		return _value == other._value;
-	}
+	inline bool operator==(const Color &other) const { return _value == other._value; }
 
-	inline bool operator != (const Color &other) const {
-		return _value != other._value;
-	}
+	inline bool operator!=(const Color &other) const { return _value != other._value; }
 
 	inline uint8_t r() const { return (_value >> 16) & 0xFF; }
 	inline uint8_t g() const { return (_value >> 8) & 0xFF; }
-	inline uint8_t b() const { return _value  & 0xFF; }
+	inline uint8_t b() const { return _value & 0xFF; }
 
 	inline uint32_t value() const { return _value; }
 	inline uint32_t index() const { return _index; }
 
 	Color text() const;
 
-	inline Level level() const { return (_index == maxOf<uint16_t>())?Level::Unknown:((Level)(_index & 0x0F)); }
-	inline Tone tone() const { return (_index == maxOf<uint16_t>())?Tone::Unknown:((Tone)((_index & 0xFFF0) / 16)); }
+	inline Level level() const {
+		return (_index == maxOf<uint16_t>()) ? Level::Unknown : ((Level)(_index & 0x0F));
+	}
+	inline Tone tone() const {
+		return (_index == maxOf<uint16_t>()) ? Tone::Unknown : ((Tone)((_index & 0xFFF0) / 16));
+	}
 
 	Color previous() const;
 	Color next() const;
@@ -331,8 +322,8 @@ public:
 
 	Color(const Color &) = default;
 	Color(Color &&) = default;
-	Color & operator=(const Color &) = default;
-	Color & operator=(Color &&) = default;
+	Color &operator=(const Color &) = default;
+	Color &operator=(Color &&) = default;
 
 	template <typename Interface>
 	auto name() const -> typename Interface::StringType;
@@ -348,17 +339,16 @@ private:
 	uint16_t _index = uint16_t(19 * 16 + 1);
 };
 
-SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const Color & obj);
-SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const Color3B & obj);
-SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const Color4B & obj);
-SP_PUBLIC std::ostream & operator<<(std::ostream & stream, const Color4F & obj);
+SP_PUBLIC std::ostream &operator<<(std::ostream &stream, const Color &obj);
+SP_PUBLIC std::ostream &operator<<(std::ostream &stream, const Color3B &obj);
+SP_PUBLIC std::ostream &operator<<(std::ostream &stream, const Color4B &obj);
+SP_PUBLIC std::ostream &operator<<(std::ostream &stream, const Color4F &obj);
 
 inline Color4F Color4F::progress(const Color4F &a, const Color4F &b, float p) {
 	Color4F dst;
-	simd::store(&dst.r, simd::add(
-			simd::mul(simd::load(&a.r), simd::load(1.0f - p)),
-			simd::mul(simd::load(&b.r), simd::load(p))
-	));
+	simd::store(&dst.r,
+			simd::add(simd::mul(simd::load(&a.r), simd::load(1.0f - p)),
+					simd::mul(simd::load(&b.r), simd::load(p))));
 	return dst;
 }
 
@@ -398,21 +388,13 @@ inline Color4F operator-(const Color4F &l, const Color4F &r) {
 	return dst;
 }
 
-inline Color4F operator*(const Color4F &l, const Color4B &r) {
-	return l * Color4F(r);
-}
+inline Color4F operator*(const Color4F &l, const Color4B &r) { return l * Color4F(r); }
 
-inline Color4F operator*(const Color4B &l, const Color4F &r) {
-	return Color4F(l) * r;
-}
+inline Color4F operator*(const Color4B &l, const Color4F &r) { return Color4F(l) * r; }
 
-inline Color4F operator/(const Color4F &l, const Color4B &r) {
-	return l / Color4F(r);
-}
+inline Color4F operator/(const Color4F &l, const Color4B &r) { return l / Color4F(r); }
 
-inline Color4F operator/(const Color4B &l, const Color4F &r) {
-	return Color4F(l) / r;
-}
+inline Color4F operator/(const Color4B &l, const Color4F &r) { return Color4F(l) / r; }
 
 #ifndef __LCC__
 
@@ -429,30 +411,33 @@ constexpr const Color4F Color4F::ONE(1, 1, 1, 1);
 
 #endif
 
-}
+} // namespace stappler::geom
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-template <> inline
-geom::Color progress<geom::Color>(const geom::Color &a, const geom::Color &b, float p) {
+template <>
+inline geom::Color progress<geom::Color>(const geom::Color &a, const geom::Color &b, float p) {
 	return geom::Color::progress(a, b, p);
 }
 
-template <> inline
-geom::Color3B progress<geom::Color3B>(const geom::Color3B &a, const geom::Color3B &b, float p) {
+template <>
+inline geom::Color3B progress<geom::Color3B>(const geom::Color3B &a, const geom::Color3B &b,
+		float p) {
 	return geom::Color3B::progress(a, b, p);
 }
 
-template <> inline
-geom::Color4B progress<geom::Color4B>(const geom::Color4B &a, const geom::Color4B &b, float p) {
+template <>
+inline geom::Color4B progress<geom::Color4B>(const geom::Color4B &a, const geom::Color4B &b,
+		float p) {
 	return geom::Color4B::progress(a, b, p);
 }
 
-template <> inline
-geom::Color4F progress<geom::Color4F>(const geom::Color4F &a, const geom::Color4F &b, float p) {
+template <>
+inline geom::Color4F progress<geom::Color4F>(const geom::Color4F &a, const geom::Color4F &b,
+		float p) {
 	return geom::Color4F::progress(a, b, p);
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* CORE_GEOM_SPCOLOR_H_ */

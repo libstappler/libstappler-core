@@ -344,6 +344,7 @@ protected:
 	allocator _allocator;
 };
 
+
 template <typename Type, size_t Extra>
 class mem_soo_iface<Type, Extra, true> {
 public:

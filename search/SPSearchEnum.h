@@ -23,7 +23,8 @@
 #ifndef CORE_SEARCH_SPSEARCHENUM_H_
 #define CORE_SEARCH_SPSEARCHENUM_H_
 
-#include "SPPlatformInit.h"
+// This file can be used from C, do not include stappler header directly here
+#include "detail/SPPlatformInit.h"
 
 enum SnowballLanguage {
 	Unknown = 0,

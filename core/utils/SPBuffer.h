@@ -41,12 +41,12 @@ public:
 		_ptr = (byte_type *)_buffer.data();
 		_end = _ptr + sz;
 	}
-	BufferTemplate(const BufferTemplate & rhs) : _buffer(rhs._buffer) {
+	BufferTemplate(const BufferTemplate &rhs) : _buffer(rhs._buffer) {
 		_ptr = (byte_type *)(_buffer.data() + (rhs._ptr - rhs._buffer.data()));
 		_end = (byte_type *)(_buffer.data() + _buffer.size());
 		_input = rhs._input;
 	}
-	BufferTemplate(BufferTemplate && rhs) {
+	BufferTemplate(BufferTemplate &&rhs) {
 		auto size = rhs._ptr - rhs._buffer.data();
 		_buffer = sp::move(rhs._buffer);
 		_ptr = (byte_type *)(_buffer.data() + size);
@@ -54,7 +54,7 @@ public:
 		_input = rhs._input;
 	}
 
-	BufferTemplate & operator=(const BufferTemplate & rhs) {
+	BufferTemplate &operator=(const BufferTemplate &rhs) {
 		auto size = rhs._ptr - rhs._buffer.data();
 		_buffer = rhs._buffer;
 		_ptr = (byte_type *)(_buffer.data() + size);
@@ -62,7 +62,7 @@ public:
 		_input = rhs._input;
 		return *this;
 	}
-	BufferTemplate & operator=(BufferTemplate && rhs) {
+	BufferTemplate &operator=(BufferTemplate &&rhs) {
 		auto size = rhs._ptr - rhs._buffer.data();
 		_buffer = sp::move(rhs._buffer);
 		_ptr = (byte_type *)(_buffer.data() + size);
@@ -114,7 +114,7 @@ public:
 			overflow();
 		}
 		*_ptr = *((byte_type *)&c);
-		++ _ptr;
+		++_ptr;
 
 		if (_ptr > _buffer.data() + _input) {
 			_input = _ptr - _buffer.data();
@@ -123,8 +123,9 @@ public:
 	}
 
 	// toString interface adapter
-	template <typename ... Args, std::enable_if_t<string::detail::IsFastToStringAvailable<Args...>::value> * = nullptr>
-	StringView putStrings(Args && ... args) {
+	template <typename... Args,
+			std::enable_if_t<string::detail::IsFastToStringAvailable<Args...>::value> * = nullptr>
+	StringView putStrings(Args &&...args) {
 		auto size = string::detail::getBufferSize(std::forward<Args>(args)...);
 		size_t emptyBytes = capacity() - (_ptr - _buffer.data());
 		if (emptyBytes < size) {
@@ -145,8 +146,9 @@ public:
 		return StringView(start, s);
 	}
 
-	template <typename ... Args, std::enable_if_t<string::detail::IsFastToStringAvailable<Args...>::value> * = nullptr>
-	StringView resetWithStrings(Args && ... args) {
+	template <typename... Args,
+			std::enable_if_t<string::detail::IsFastToStringAvailable<Args...>::value> * = nullptr>
+	StringView resetWithStrings(Args &&...args) {
 		clear();
 		return putStrings(std::forward<Args>(args)...);
 	}
@@ -171,6 +173,7 @@ public:
 		size_t sz = size();
 		len = min(len, input - sz);
 		Reader r((const typename Reader::CharType *)(_buffer.data() + sz), len);
+		_ptr += len;
 		return r;
 	}
 
@@ -190,31 +193,21 @@ public:
 		return true;
 	}
 
-	size_t capacity() const {
-		return _buffer.size();
-	}
+	size_t capacity() const { return _buffer.size(); }
 
-	size_t size() const {
-		return _ptr - _buffer.data();
-	}
+	size_t size() const { return _ptr - _buffer.data(); }
 
-	size_t input() const {
-		return _input;
-	}
+	size_t input() const { return _input; }
 
-	bool empty() const {
-		return _ptr == _buffer.data();
-	}
+	bool empty() const { return _ptr == _buffer.data(); }
 
 	auto str() const -> typename Interface::StringType {
 		return typename Interface::StringType((char *)_buffer.data(), _ptr - _buffer.data());
 	}
 
-	uint8_t * data() {
-		return _buffer.data();
-	}
+	uint8_t *data() { return _buffer.data(); }
 
-	uint8_t * prepare(size_t & size) {
+	uint8_t *prepare(size_t &size) {
 		clear();
 		auto c = capacity();
 		if (size > c) {
@@ -259,25 +252,25 @@ template <size_t Size>
 class StackBuffer {
 public:
 	StackBuffer() { }
-	StackBuffer(const StackBuffer & rhs) : _size(rhs._size), _buf(rhs._buf) { }
-	StackBuffer(StackBuffer && rhs) : _size(rhs._size), _buf(rhs._buf) { }
+	StackBuffer(const StackBuffer &rhs) : _size(rhs._size), _buf(rhs._buf) { }
+	StackBuffer(StackBuffer &&rhs) : _size(rhs._size), _buf(rhs._buf) { }
 
-	StackBuffer & operator=(const StackBuffer & rhs) {
+	StackBuffer &operator=(const StackBuffer &rhs) {
 		_buf = rhs._buf;
 		_size = rhs._size;
 		return *this;
 	}
-	StackBuffer & operator=(StackBuffer && rhs) {
+	StackBuffer &operator=(StackBuffer &&rhs) {
 		_buf = rhs._buf;
 		_size = rhs._size;
 		return *this;
 	}
 
-	uint8_t & operator[] (size_t n) { return _buf[n]; }
-	const uint8_t & operator[] (size_t n) const { return _buf[n]; }
+	uint8_t &operator[](size_t n) { return _buf[n]; }
+	const uint8_t &operator[](size_t n) const { return _buf[n]; }
 
-	uint8_t & at(size_t n) { return _buf.at(n); }
-	const uint8_t & at(size_t n) const { return _buf.at(n); }
+	uint8_t &at(size_t n) { return _buf.at(n); }
+	const uint8_t &at(size_t n) const { return _buf.at(n); }
 
 	size_t size() const { return _size; }
 	size_t capacity() const { return Size; }
@@ -286,9 +279,7 @@ public:
 	bool empty() const { return _size == 0; }
 	bool full() const { return _size == Size; }
 
-	void soft_clear() {
-		_size = 0;
-	}
+	void soft_clear() { _size = 0; }
 
 	void clear() {
 		memset(_buf.data(), 0, Size);
@@ -308,21 +299,19 @@ public:
 		return s;
 	}
 
-	size_t putc(uint8_t c) {
-		return put(&c, 1);
-	}
+	size_t putc(uint8_t c) { return put(&c, 1); }
 
 	template <typename Reader = StringView>
 	Reader get() const {
 		return Reader((const typename Reader::CharType *)_buf.data(), _size);
 	}
 
-	uint8_t * prepare(size_t & size) {
+	uint8_t *prepare(size_t &size) {
 		clear();
 		return prepare_preserve(size);
 	}
 
-	uint8_t * prepare_preserve(size_t & size) {
+	uint8_t *prepare_preserve(size_t &size) {
 		auto r = remains();
 		if (r < size) {
 			size = r;
@@ -330,16 +319,14 @@ public:
 		return _buf.data() + _size;
 	}
 
-	void save(uint8_t *data, size_t nbytes) {
-		_size += nbytes;
-	}
+	void save(uint8_t *data, size_t nbytes) { _size += nbytes; }
 
 protected:
 	size_t _size = 0;
 	std::array<uint8_t, Size> _buf;
 };
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace STAPPLER_VERSIONIZED stappler::io {
 
@@ -347,9 +334,7 @@ template <typename Interface>
 struct BufferTraits<stappler::BufferTemplate<Interface>> {
 	using type = stappler::BufferTemplate<Interface>;
 
-	static uint8_t * PrepareFn(void *ptr, size_t & size) {
-		return ((type *)ptr)->prepare(size);
-	}
+	static uint8_t *PrepareFn(void *ptr, size_t &size) { return ((type *)ptr)->prepare(size); }
 
 	// save written bytes in buffer
 	static void SaveFn(void *ptr, uint8_t *buf, size_t prepared, size_t nbytes) {
@@ -366,9 +351,7 @@ template <size_t Size>
 struct BufferTraits<StackBuffer<Size>> {
 	using type = StackBuffer<Size>;
 
-	static uint8_t * PrepareFn(void *ptr, size_t & size) {
-		return ((type *)ptr)->prepare(size);
-	}
+	static uint8_t *PrepareFn(void *ptr, size_t &size) { return ((type *)ptr)->prepare(size); }
 
 	// save written bytes in buffer
 	static void SaveFn(void *ptr, uint8_t *buf, size_t source, size_t nbytes) {
@@ -381,6 +364,6 @@ struct BufferTraits<StackBuffer<Size>> {
 	static void ClearFn(void *ptr) { ((type *)ptr)->clear(); }
 };
 
-}
+} // namespace stappler::io
 
 #endif /* STAPPLER_CORE_UTILS_SPBUFFER_H_ */

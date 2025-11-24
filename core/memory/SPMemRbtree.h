@@ -40,10 +40,10 @@ using Storage = memory::Storage<Value>;
 
 struct SP_PUBLIC NodeBase : public AllocPool {
 	struct Flag {
-		uintptr_t color : 1;
+		uintptr_t color	   : 1;
 		uintptr_t prealloc : 1;
-		uintptr_t index : (sizeof(uintptr_t) / 2) * 8 - 2;
-		uintptr_t size : (sizeof(uintptr_t) / 2) * 8;
+		uintptr_t index	   : (sizeof(uintptr_t) / 2) * 8 - 2;
+		uintptr_t size	   : (sizeof(uintptr_t) / 2) * 8;
 	};
 
 	NodeBase *parent = nullptr;
@@ -66,37 +66,37 @@ struct SP_PUBLIC NodeBase : public AllocPool {
 	inline void setIndex(uintptr_t s) { flag.index = s; }
 	inline uintptr_t getIndex() const { return flag.index; }
 
-	static inline NodeBase * min (NodeBase * x) {
-		while (x->left != 0) x = x->left;
+	static inline NodeBase *min(NodeBase *x) {
+		while (x->left != 0) { x = x->left; }
 		return x;
 	}
 
-	static inline const NodeBase * min(const NodeBase * x) {
-		while (x->left != 0) x = x->left;
+	static inline const NodeBase *min(const NodeBase *x) {
+		while (x->left != 0) { x = x->left; }
 		return x;
 	}
 
-	static inline NodeBase * max(NodeBase * x) {
-		while (x->right != 0) x = x->right;
+	static inline NodeBase *max(NodeBase *x) {
+		while (x->right != 0) { x = x->right; }
 		return x;
 	}
 
-	static inline const NodeBase * max(const NodeBase * x) {
-		while (x->right != 0) x = x->right;
+	static inline const NodeBase *max(const NodeBase *x) {
+		while (x->right != 0) { x = x->right; }
 		return x;
 	}
 
-	static NodeBase * increment(NodeBase *c);
-	static const NodeBase * increment(const NodeBase *c);
+	static NodeBase *increment(NodeBase *c);
+	static const NodeBase *increment(const NodeBase *c);
 
-	static NodeBase * decrement(NodeBase *c);
-	static const NodeBase * decrement(const NodeBase *c);
+	static NodeBase *decrement(NodeBase *c);
+	static const NodeBase *decrement(const NodeBase *c);
 
 	// replace node in it's place in tree with new one
 	static NodeBase *replace(NodeBase *old, NodeBase *n);
 
-	static void insert(NodeBase *head, NodeBase * n);
-	static void remove(NodeBase *head, NodeBase * n);
+	static void insert(NodeBase *head, NodeBase *n);
+	static void remove(NodeBase *head, NodeBase *n);
 };
 
 template <typename Value>
@@ -104,10 +104,12 @@ struct Node : public NodeBase {
 	Storage<Value> value;
 
 	static inline Value *cast(NodeBase *n) { return static_cast<Node<Value> *>(n)->value.ptr(); }
-	static inline const Value *cast(const NodeBase *n) { return static_cast<const Node<Value> *>(n)->value.ptr(); }
+	static inline const Value *cast(const NodeBase *n) {
+		return static_cast<const Node<Value> *>(n)->value.ptr();
+	}
 };
 
-template<typename Value>
+template <typename Value>
 struct TreeIterator {
 	using iterator_category = std::bidirectional_iterator_tag;
 
@@ -116,32 +118,47 @@ struct TreeIterator {
 	using reference = Value &;
 	using pointer = Value *;
 
+	using size_type = size_t;
 	using difference_type = ptrdiff_t;
 
 	using self = TreeIterator<Value>;
 	using node_ptr = NodeBase *;
 	using link_ptr = Node<Value> *;
 
-	TreeIterator() noexcept : _node() {}
+	TreeIterator() noexcept : _node() { }
 
-	explicit TreeIterator(node_ptr x) noexcept : _node(x) {}
+	explicit TreeIterator(node_ptr x) noexcept : _node(x) { }
 
-	reference operator*() const noexcept {return *node_type::cast(_node);}
-	pointer operator->() const noexcept {return node_type::cast(_node);}
+	reference operator*() const noexcept { return *node_type::cast(_node); }
+	pointer operator->() const noexcept { return node_type::cast(_node); }
 
-	self & operator++() noexcept {_node = node_type::increment(_node); return *this;}
-	self operator++(int) noexcept {self ret = *this; _node = node_type::increment(_node); return ret;}
+	self &operator++() noexcept {
+		_node = node_type::increment(_node);
+		return *this;
+	}
+	self operator++(int) noexcept {
+		self ret = *this;
+		_node = node_type::increment(_node);
+		return ret;
+	}
 
-	self & operator--() noexcept {_node = node_type::decrement(_node); return *this;}
-	self operator--(int) noexcept {self ret = *this; _node = node_type::decrement(_node); return ret;}
+	self &operator--() noexcept {
+		_node = node_type::decrement(_node);
+		return *this;
+	}
+	self operator--(int) noexcept {
+		self ret = *this;
+		_node = node_type::decrement(_node);
+		return ret;
+	}
 
-	bool operator==(const self & other) const noexcept {return _node == other._node;}
-	bool operator!=(const self & other) const noexcept {return _node != other._node;}
+	bool operator==(const self &other) const noexcept { return _node == other._node; }
+	bool operator!=(const self &other) const noexcept { return _node != other._node; }
 
 	node_ptr _node;
 };
 
-template<typename Value>
+template <typename Value>
 struct TreeConstIterator {
 	using iterator_category = std::bidirectional_iterator_tag;
 
@@ -152,41 +169,62 @@ struct TreeConstIterator {
 
 	using iterator = TreeIterator<Value>;
 
+	using size_type = size_t;
 	using difference_type = ptrdiff_t;
 
 	using self = TreeConstIterator<Value>;
 	using node_ptr = const NodeBase *;
 	using link_ptr = const Node<Value> *;
 
-	TreeConstIterator() noexcept : _node() {}
+	TreeConstIterator() noexcept : _node() { }
 
-	explicit TreeConstIterator(node_ptr x) noexcept : _node(x) {}
+	explicit TreeConstIterator(node_ptr x) noexcept : _node(x) { }
 
-	TreeConstIterator(const iterator& it) noexcept : _node(it._node) {}
+	TreeConstIterator(const iterator &it) noexcept : _node(it._node) { }
 
-	iterator constcast() const noexcept {return iterator(const_cast<typename iterator::node_ptr>(_node));}
+	iterator constcast() const noexcept {
+		return iterator(const_cast<typename iterator::node_ptr>(_node));
+	}
 
-	reference operator*() const noexcept {return *node_type::cast(_node); }
-	pointer operator->() const noexcept {return node_type::cast(_node); }
+	reference operator*() const noexcept { return *node_type::cast(_node); }
+	pointer operator->() const noexcept { return node_type::cast(_node); }
 
-	self & operator++() noexcept {_node = node_type::increment(_node); return *this;}
-	self operator++(int) noexcept {self tmp = *this; _node = node_type::increment(_node); return tmp;}
+	self &operator++() noexcept {
+		_node = node_type::increment(_node);
+		return *this;
+	}
+	self operator++(int) noexcept {
+		self tmp = *this;
+		_node = node_type::increment(_node);
+		return tmp;
+	}
 
-	self & operator--() noexcept {_node = node_type::decrement(_node); return *this;}
-	self operator--(int) noexcept {self tmp = *this; _node = node_type::decrement(_node); return tmp;}
+	self &operator--() noexcept {
+		_node = node_type::decrement(_node);
+		return *this;
+	}
+	self operator--(int) noexcept {
+		self tmp = *this;
+		_node = node_type::decrement(_node);
+		return tmp;
+	}
 
-	bool operator==(const self & x) const noexcept {return _node == x._node;}
-	bool operator!=(const self & x) const noexcept {return _node != x._node;}
+	bool operator==(const self &x) const noexcept { return _node == x._node; }
+	bool operator!=(const self &x) const noexcept { return _node != x._node; }
 
 	node_ptr _node;
 };
 
 
-template<typename Value> inline bool
-operator==(const TreeIterator<Value> & l, const TreeConstIterator<Value> & r) noexcept { return l._node == r._node; }
+template <typename Value>
+inline bool operator==(const TreeIterator<Value> &l, const TreeConstIterator<Value> &r) noexcept {
+	return l._node == r._node;
+}
 
-template<typename Value> inline bool
-operator!=(const TreeIterator<Value> & l, const TreeConstIterator<Value> & r) noexcept { return l._node != r._node; }
+template <typename Value>
+inline bool operator!=(const TreeIterator<Value> &l, const TreeConstIterator<Value> &r) noexcept {
+	return l._node != r._node;
+}
 
 
 template <typename Key, typename Value>
@@ -194,35 +232,35 @@ struct TreeKeyExtractor;
 
 template <typename Key>
 struct TreeKeyExtractor<Key, Key> {
-	static inline const Key & extract(const Key &k) noexcept { return k; }
+	static inline const Key &extract(const Key &k) noexcept { return k; }
 
-	template <typename A, typename ... Args>
-	static inline void construct(A &alloc, Node<Key> *node, const Key &key, Args && ... args) noexcept {
+	template <typename A, typename... Args>
+	static inline void construct(A &alloc, Node<Key> *node, const Key &key,
+			Args &&...args) noexcept {
 		alloc.construct(node->value.ptr(), key);
 	}
 
-	template <typename A, typename ... Args>
-	static inline void construct(A &alloc, Node<Key> *node, Key &&key, Args && ... args) noexcept {
+	template <typename A, typename... Args>
+	static inline void construct(A &alloc, Node<Key> *node, Key &&key, Args &&...args) noexcept {
 		alloc.construct(node->value.ptr(), sp::move_unsafe(key));
 	}
 };
 
 template <typename Key, typename Value>
 struct TreeKeyExtractor<Key, Pair<Key, Value>> {
-	static inline const Key & extract(const Pair<Key, Value> &k) noexcept { return k.first; }
+	static inline const Key &extract(const Pair<Key, Value> &k) noexcept { return k.first; }
 
-	template <typename A, typename ... Args>
-	static inline void construct(A &alloc, Node<Pair<Key, Value>> *node, const Key &k, Args && ... args) noexcept {
-		alloc.construct(node->value.ptr(),
-				std::piecewise_construct,
-				std::forward_as_tuple(k),
+	template <typename A, typename... Args>
+	static inline void construct(A &alloc, Node<Pair<Key, Value>> *node, const Key &k,
+			Args &&...args) noexcept {
+		alloc.construct(node->value.ptr(), std::piecewise_construct, std::forward_as_tuple(k),
 				std::forward_as_tuple(std::forward<Args>(args)...));
 	}
 
-	template <typename A, typename ... Args>
-	static inline void construct(A &alloc, Node<Pair<Key, Value>> *node, Key &&k, Args && ... args) noexcept {
-		alloc.construct(node->value.ptr(),
-				std::piecewise_construct,
+	template <typename A, typename... Args>
+	static inline void construct(A &alloc, Node<Pair<Key, Value>> *node, Key &&k,
+			Args &&...args) noexcept {
+		alloc.construct(node->value.ptr(), std::piecewise_construct,
 				std::forward_as_tuple(sp::move_unsafe(k)),
 				std::forward_as_tuple(std::forward<Args>(args)...));
 	}
@@ -230,20 +268,19 @@ struct TreeKeyExtractor<Key, Pair<Key, Value>> {
 
 template <typename Key, typename Value>
 struct TreeKeyExtractor<Key, Pair<const Key, Value>> {
-	static inline const Key & extract(const Pair<const Key, Value> &k) noexcept { return k.first; }
+	static inline const Key &extract(const Pair<const Key, Value> &k) noexcept { return k.first; }
 
-	template <typename A, typename ... Args>
-	static inline void construct(A &alloc, Node<Pair<const Key, Value>> *node, const Key &k, Args && ... args) noexcept {
-		alloc.construct(node->value.ptr(),
-				std::piecewise_construct,
-				std::forward_as_tuple(k),
+	template <typename A, typename... Args>
+	static inline void construct(A &alloc, Node<Pair<const Key, Value>> *node, const Key &k,
+			Args &&...args) noexcept {
+		alloc.construct(node->value.ptr(), std::piecewise_construct, std::forward_as_tuple(k),
 				std::forward_as_tuple(std::forward<Args>(args)...));
 	}
 
-	template <typename A, typename ... Args>
-	static inline void construct(A &alloc, Node<Pair<const Key, Value>> *node, Key &&k, Args && ... args) noexcept {
-		alloc.construct(node->value.ptr(),
-				std::piecewise_construct,
+	template <typename A, typename... Args>
+	static inline void construct(A &alloc, Node<Pair<const Key, Value>> *node, Key &&k,
+			Args &&...args) noexcept {
+		alloc.construct(node->value.ptr(), std::piecewise_construct,
 				std::forward_as_tuple(sp::move_unsafe(k)),
 				std::forward_as_tuple(std::forward<Args>(args)...));
 	}
@@ -251,26 +288,27 @@ struct TreeKeyExtractor<Key, Pair<const Key, Value>> {
 
 namespace impl {
 
-template<typename T, typename ...P>
+template <typename T, typename... P>
 struct dependent_type {
 	using type = T;
 };
 
-template<typename A, typename ...B>
+template <typename A, typename... B>
 using void_type = typename dependent_type<void, A, B...>::type;
 
-template<typename DummyVoid, template<typename ...> typename A, typename ...B>
-struct is_detected : std::false_type {};
+template <typename DummyVoid, template <typename...> typename A, typename... B>
+struct is_detected : std::false_type { };
 
-template<template<typename ...> typename A, typename ...B>
-struct is_detected<void_type<A<B...>>, A, B...> : std::true_type {};
+template <template <typename...> typename A, typename... B>
+struct is_detected<void_type<A<B...>>, A, B...> : std::true_type { };
 
-template <template <typename...> typename A, typename ...B>
+template <template <typename...> typename A, typename... B>
 inline constexpr bool is_detected_v = impl::is_detected<void, A, B...>::value;
 
-}
+} // namespace impl
 
-template <typename T> using DetectTransparent = typename T::is_transparent;
+template <typename T>
+using DetectTransparent = typename T::is_transparent;
 
 template <typename Key, typename Value, typename Comp = std::less<>>
 class Tree : public AllocPool {
@@ -292,7 +330,8 @@ public:
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 public:
-	Tree(const Comp &comp = Comp(), const value_allocator_type &alloc = value_allocator_type()) noexcept
+	Tree(const Comp &comp = Comp(),
+			const value_allocator_type &alloc = value_allocator_type()) noexcept
 	: _header(NodeColor::Black), _comp(comp), _allocator(alloc), _size(0) { }
 
 	Tree(const Tree &other, const value_allocator_type &alloc = value_allocator_type()) noexcept
@@ -316,12 +355,12 @@ public:
 		}
 	}
 
-	Tree & operator = (const Tree &other) noexcept {
+	Tree &operator=(const Tree &other) noexcept {
 		clone(other);
 		return *this;
 	}
 
-	Tree & operator = (Tree &&other) noexcept {
+	Tree &operator=(Tree &&other) noexcept {
 		if (other.get_allocator() == _allocator) {
 			clear();
 			_header = other._header;
@@ -345,42 +384,43 @@ public:
 		releaseTmp();
 	}
 
-	const value_allocator_type & get_allocator() const noexcept { return _allocator; }
+	const value_allocator_type &get_allocator() const noexcept { return _allocator; }
 
-	template <typename ... Args>
-	Pair<iterator,bool> emplace(Args && ... args) {
+	template <typename... Args>
+	Pair<iterator, bool> emplace(Args &&...args) {
 		auto ret = insertNodeUnique(std::forward<Args>(args)...);
 		return pair(iterator(ret.first), ret.second);
 	}
 
-	template <typename ... Args>
-	iterator emplace_hint(const_iterator hint, Args && ... args) {
+	template <typename... Args>
+	iterator emplace_hint(const_iterator hint, Args &&...args) {
 		return iterator(insertNodeUniqueHint(hint, std::forward<Args>(args)...));
 	}
 
-	template <typename K, typename ... Args>
-	Pair<iterator,bool> try_emplace(K &&k, Args && ... args) {
+	template <typename K, typename... Args>
+	Pair<iterator, bool> try_emplace(K &&k, Args &&...args) {
 		auto ret = tryInsertNodeUnique(std::forward<K>(k), std::forward<Args>(args)...);
 		return pair(iterator(ret.first), ret.second);
 	}
 
-	template <typename K, typename ... Args>
-	iterator try_emplace(const_iterator hint, K &&k, Args && ... args) {
-		return iterator(tryInsertNodeUniqueHint(hint, std::forward<K>(k), std::forward<Args>(args)...));
+	template <typename K, typename... Args>
+	iterator try_emplace(const_iterator hint, K &&k, Args &&...args) {
+		return iterator(
+				tryInsertNodeUniqueHint(hint, std::forward<K>(k), std::forward<Args>(args)...));
 	}
 
 	template <typename K, class M>
-	Pair<iterator, bool> insert_or_assign(K&& k, M&& m) {
+	Pair<iterator, bool> insert_or_assign(K &&k, M &&m) {
 		auto ret = tryAssignNodeUnique(std::forward<K>(k), std::forward<M>(m));
 		return pair(iterator(ret.first), ret.second);
 	}
 
 	template <typename K, class M>
-	iterator insert_or_assign(const_iterator hint, K&& k, M&& m) {
+	iterator insert_or_assign(const_iterator hint, K &&k, M &&m) {
 		return iterator(tryAssignNodeUniqueHint(hint, std::forward<K>(k), std::forward<M>(m)));
 	}
 
-	iterator erase( const_iterator pos ) {
+	iterator erase(const_iterator pos) {
 		if (pos._node != &_header) {
 			auto next = NodeBase::increment(pos.constcast()._node);
 			deleteNode(const_cast<NodeBase *>(pos._node));
@@ -389,10 +429,8 @@ public:
 		return pos.constcast();
 	}
 
-	iterator erase( const_iterator first, const_iterator last ) {
-		for (auto it = first; it != last; it ++) {
-			deleteNode(const_cast<NodeBase *>(it._node));
-		}
+	iterator erase(const_iterator first, const_iterator last) {
+		for (auto it = first; it != last; it++) { deleteNode(const_cast<NodeBase *>(it._node)); }
 		return last;
 	}
 
@@ -405,10 +443,12 @@ public:
 		return 0;
 	}
 
-	iterator begin() noexcept { return iterator(_header.left?left():&_header); }
+	iterator begin() noexcept { return iterator(_header.left ? left() : &_header); }
 	iterator end() noexcept { return iterator(&_header); }
 
-	const_iterator begin() const noexcept { return const_iterator(_header.left?left():&_header); }
+	const_iterator begin() const noexcept {
+		return const_iterator(_header.left ? left() : &_header);
+	}
 	const_iterator end() const noexcept { return const_iterator(&_header); }
 
 	reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
@@ -417,7 +457,9 @@ public:
 	const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
 	const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
 
-	const_iterator cbegin() const noexcept { return const_iterator(_header.left?left():&_header); }
+	const_iterator cbegin() const noexcept {
+		return const_iterator(_header.left ? left() : &_header);
+	}
 	const_iterator cend() const noexcept { return const_iterator(&_header); }
 
 	const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
@@ -433,29 +475,17 @@ public:
 		_size = 0;
 	}
 
-	void shrink_to_fit() noexcept {
-		releaseTmp();
-	}
+	void shrink_to_fit() noexcept { releaseTmp(); }
 
-	size_t capacity() const noexcept {
-		return _size + _header.flag.size;
-	}
+	size_t capacity() const noexcept { return _size + _header.flag.size; }
 
-	size_t size() const noexcept {
-		return _size;
-	}
+	size_t size() const noexcept { return _size; }
 
-	bool empty() const noexcept {
-		return _header.left == nullptr;
-	}
+	bool empty() const noexcept { return _header.left == nullptr; }
 
-	void set_memory_persistent(bool value) noexcept {
-		_header.flag.prealloc = value ? 1 : 0;
-	}
+	void set_memory_persistent(bool value) noexcept { _header.flag.prealloc = value ? 1 : 0; }
 
-	bool memory_persistent() const noexcept {
-		return _header.flag.prealloc;
-	}
+	bool memory_persistent() const noexcept { return _header.flag.prealloc; }
 
 	void swap(Tree &other) noexcept {
 		std::swap(_header, other._header);
@@ -465,57 +495,59 @@ public:
 		std::swap(_tmp, other._tmp);
 	}
 
-	template< class K > iterator find( const K& x ) {
+	template < class K >
+	iterator find(const K &x) {
 		auto ptr = find_impl(x);
 		return (ptr) ? iterator(ptr) : end();
 	}
 
-	template< class K > const_iterator find( const K& x ) const {
+	template < class K >
+	const_iterator find(const K &x) const {
 		auto ptr = find_impl(x);
 		return (ptr) ? const_iterator(ptr) : end();
 	}
 
-	template< class K >
-	iterator lower_bound(const K& x) {
+	template < class K >
+	iterator lower_bound(const K &x) {
 		auto ptr = lower_bound_ptr(x);
 		return (ptr) ? iterator(ptr) : end();
 	}
 
-	template< class K >
-	const_iterator lower_bound(const K& x) const {
+	template < class K >
+	const_iterator lower_bound(const K &x) const {
 		auto ptr = lower_bound_ptr(x);
 		return (ptr) ? const_iterator(ptr) : end();
 	}
 
-	template< class K >
-	iterator upper_bound( const K& x ) {
+	template < class K >
+	iterator upper_bound(const K &x) {
 		auto ptr = upper_bound_ptr(x);
 		return (ptr) ? iterator(ptr) : end();
 	}
 
-	template< class K >
-	const_iterator upper_bound( const K& x ) const {
+	template < class K >
+	const_iterator upper_bound(const K &x) const {
 		auto ptr = upper_bound_ptr(x);
 		return (ptr) ? const_iterator(ptr) : end();
 	}
-	template< class K >
-	Pair<iterator,iterator> equal_range( const K& x ) {
+	template < class K >
+	Pair<iterator, iterator> equal_range(const K &x) {
 		return pair(lower_bound(x), upper_bound(x));
 	}
 
-	template< class K >
-	Pair<const_iterator,const_iterator> equal_range( const K& x ) const {
+	template < class K >
+	Pair<const_iterator, const_iterator> equal_range(const K &x) const {
 		return pair(lower_bound(x), upper_bound(x));
 	}
 
-	template< class K >
-	size_t count( const K& x ) const {
+	template < class K >
+	size_t count(const K &x) const {
 		return count_impl(x);
 	}
 
-	template< class K >
-	size_t count_unique( const K& x ) const {
-		return findNode(x)?1:0;
+	template < class K >
+	size_t count_unique(const K &x) const {
+		return findNode(x) ? 1 : 0;
 	}
 
 	void reserve(size_t c) {
@@ -545,23 +577,32 @@ protected:
 
 	inline node_ptr root() { return static_cast<node_ptr>(_header.left); }
 	inline const_node_ptr root() const { return static_cast<const_node_ptr>(_header.left); }
-	inline void setroot(base_type n) { _header.left = n; n->parent = &_header; }
+	inline void setroot(base_type n) {
+		_header.left = n;
+		n->parent = &_header;
+	}
 
 	inline node_ptr left() { return static_cast<node_ptr>(_header.parent); }
 	inline const_node_ptr left() const { return static_cast<const_node_ptr>(_header.parent); }
-	inline void setleft(base_type n) { _header.parent = (n == &_header)?nullptr:n; }
+	inline void setleft(base_type n) { _header.parent = (n == &_header) ? nullptr : n; }
 
 	inline node_ptr right() { return static_cast<node_ptr>(_header.right); }
 	inline const_node_ptr right() const { return static_cast<const_node_ptr>(_header.right); }
-	inline void setright(base_type n) { _header.right = (n == &_header)?nullptr:n; }
+	inline void setright(base_type n) { _header.right = (n == &_header) ? nullptr : n; }
 
 
-	inline const Key & extract(const Value &val) const { return TreeKeyExtractor<Key, Value>::extract(val); }
-	inline const Key & extract(const Storage<Value> &s) const { return extract(s.ref()); }
-	inline const Key & extract(const NodeBase *s) const { return extract(static_cast<const Node<Value> *>(s)->value.ref()); }
+	inline const Key &extract(const Value &val) const {
+		return TreeKeyExtractor<Key, Value>::extract(val);
+	}
+	inline const Key &extract(const Storage<Value> &s) const { return extract(s.ref()); }
+	inline const Key &extract(const NodeBase *s) const {
+		return extract(static_cast<const Node<Value> *>(s)->value.ref());
+	}
 
 	inline bool compareLtKey(const Key &l, const Key &r) const { return _comp(l, r); }
-	inline bool compareEqKey(const Key &l, const Key &r) const { return !compareLtKey(l, r) && !compareLtKey(r, l); }
+	inline bool compareEqKey(const Key &l, const Key &r) const {
+		return !compareLtKey(l, r) && !compareLtKey(r, l);
+	}
 
 	template <typename A, typename B>
 	inline bool compareLtTransparent(const A &l, const B &r) const {
@@ -570,25 +611,31 @@ protected:
 		} else if constexpr (std::is_same_v<A, B>) {
 			return compareLtKey(l, r);
 		} else {
-			static_assert("Comparator should be transparent or search key and stored key types must be the same");
+			static_assert(
+					"Comparator should be transparent or search key and stored key types must be "
+					"the same");
 			return false;
 		}
 	}
 
-	inline bool compareEqValue(const Value &l, const Value &r) const { return compareEqKey(extract(l), extract(r)); }
-	inline bool compareLtValue(const Value &l, const Value &r) const { return compareLtKey(extract(l), extract(r)); }
+	inline bool compareEqValue(const Value &l, const Value &r) const {
+		return compareEqKey(extract(l), extract(r));
+	}
+	inline bool compareLtValue(const Value &l, const Value &r) const {
+		return compareLtKey(extract(l), extract(r));
+	}
 
 	struct InsertData {
 		const Key *key;
 		Node<Value> *val;
-		NodeBase * current;
-		NodeBase * parent;
+		NodeBase *current;
+		NodeBase *parent;
 		bool isLeft;
 	};
 
-	template <typename ... Args> InsertData
-	constructNode(Args && ... args) {
-		Node<Value> * ret = allocateNode();
+	template <typename... Args>
+	InsertData constructNode(Args &&...args) {
+		Node<Value> *ret = allocateNode();
 		ret->parent = nullptr;
 		ret->left = nullptr;
 		ret->right = nullptr;
@@ -602,19 +649,18 @@ protected:
 		return InsertData{&k, nullptr, nullptr, nullptr, false};
 	}
 
-	InsertData constructKey(Key &&k) {
-		return InsertData{&k, nullptr, nullptr, nullptr, false};
-	}
+	InsertData constructKey(Key &&k) { return InsertData{&k, nullptr, nullptr, nullptr, false}; }
 
-	template <typename K, typename ... Args>
-	Node<Value> *constructEmplace(K &&k, Args && ... args) {
-		Node<Value> * ret = allocateNode();
+	template <typename K, typename... Args>
+	Node<Value> *constructEmplace(K &&k, Args &&...args) {
+		Node<Value> *ret = allocateNode();
 		ret->parent = nullptr;
 		ret->left = nullptr;
 		ret->right = nullptr;
 		ret->setColor(NodeColor::Red);
 
-		TreeKeyExtractor<Key, Value>::construct(_allocator, ret, std::forward<K>(k), std::forward<Args>(args)...);
+		TreeKeyExtractor<Key, Value>::construct(_allocator, ret, std::forward<K>(k),
+				std::forward<Args>(args)...);
 		return ret;
 	}
 
@@ -629,20 +675,20 @@ protected:
 	}
 
 	bool getInsertPositionUnique_search(InsertData &d) {
-	    while (d.current != nullptr) {
-	    	d.parent = d.current;
-	        if (compareLtKey(*(d.key), extract(d.current))) {
-	        	d.isLeft = true;
-	        	d.current = static_cast<Node<Value> *> (d.current->left);
-	        } else {
-	        	if (!compareLtKey(extract(d.current), *(d.key))) { // equality check
-	        		return false;
-	        	}
-	        	d.isLeft = false;
-	        	d.current = static_cast<Node<Value> *> (d.current->right);
-	        }
-	    }
-	    return true;
+		while (d.current != nullptr) {
+			d.parent = d.current;
+			if (compareLtKey(*(d.key), extract(d.current))) {
+				d.isLeft = true;
+				d.current = static_cast<Node<Value> *>(d.current->left);
+			} else {
+				if (!compareLtKey(extract(d.current), *(d.key))) { // equality check
+					return false;
+				}
+				d.isLeft = false;
+				d.current = static_cast<Node<Value> *>(d.current->right);
+			}
+		}
+		return true;
 	}
 
 	bool getInsertPosition_tryRoot(InsertData &d) {
@@ -707,7 +753,9 @@ protected:
 	bool getInsertPositionUnique_tryLeft(InsertData &d) {
 		if (auto l = left()) {
 			if (compareLtKey(*(d.key), extract(l->value))) {
-				d.current = nullptr; d.parent = l; d.isLeft = true;
+				d.current = nullptr;
+				d.parent = l;
+				d.isLeft = true;
 				return true;
 			} else if (!compareLtKey(extract(l->value), *(d.key))) {
 				d.current = l;
@@ -720,7 +768,9 @@ protected:
 	bool getInsertPositionUnique_tryRight(InsertData &d) {
 		if (auto r = right()) {
 			if (compareLtKey(extract(r->value), *(d.key))) {
-				d.current = nullptr; d.parent = r; d.isLeft = false;
+				d.current = nullptr;
+				d.parent = r;
+				d.isLeft = false;
 				return true;
 			} else if (!compareLtKey(*(d.key), extract(r->value))) {
 				d.current = r;
@@ -733,21 +783,21 @@ protected:
 	bool getInsertPositionUnique(InsertData &d) {
 		// *_try* functions should return true with non-nullptr d.current
 		// if new node is not unique to stop search process
-		if (getInsertPosition_tryRoot(d)
-				|| getInsertPositionUnique_tryHint(d)
-				|| getInsertPositionUnique_tryLeft(d)
-				|| getInsertPositionUnique_tryRight(d)) {
+		if (getInsertPosition_tryRoot(d) || getInsertPositionUnique_tryHint(d)
+				|| getInsertPositionUnique_tryLeft(d) || getInsertPositionUnique_tryRight(d)) {
 			return d.current == nullptr;
 		}
 
 		// full-scan
-		if (!d.current) { d.current = root(); }
-	    /* find where node belongs */
-	    return getInsertPositionUnique_search(d);
+		if (!d.current) {
+			d.current = root();
+		}
+		/* find where node belongs */
+		return getInsertPositionUnique_search(d);
 	}
 
-	template <typename ... Args> Pair<Node<Value> *,bool>
-	insertNodeUnique(Args && ... args) {
+	template <typename... Args>
+	Pair<Node<Value> *, bool> insertNodeUnique(Args &&...args) {
 		InsertData d = constructNode(std::forward<Args>(args)...);
 		if (!getInsertPositionUnique(d)) {
 			destroyNode(d.val);
@@ -757,8 +807,8 @@ protected:
 		return pair(makeInsert(d.val, d.parent, d.isLeft), true);
 	}
 
-	template <typename ... Args> Node<Value> *
-	insertNodeUniqueHint(const_iterator hint, Args && ... args) {
+	template <typename... Args>
+	Node<Value> *insertNodeUniqueHint(const_iterator hint, Args &&...args) {
 		InsertData d = constructNode(std::forward<Args>(args)...);
 		d.current = hint.constcast()._node;
 		if (!getInsertPositionUnique(d)) {
@@ -769,20 +819,20 @@ protected:
 		return makeInsert(d.val, d.parent, d.isLeft);
 	}
 
-	template <typename K, typename ... Args> Pair<Node<Value> *,bool>
-	tryInsertNodeUnique(K &&k, Args && ... args) {
+	template <typename K, typename... Args>
+	Pair<Node<Value> *, bool> tryInsertNodeUnique(K &&k, Args &&...args) {
 		InsertData d = constructKey(std::forward<K>(k));
 		if (!getInsertPositionUnique(d)) {
 			return pair(static_cast<Node<Value> *>(d.current), false);
 		}
 
-		return pair(makeInsert(
-				constructEmplace(std::forward<K>(k), std::forward<Args>(args)...),
-				d.parent, d.isLeft), true);
+		return pair(makeInsert(constructEmplace(std::forward<K>(k), std::forward<Args>(args)...),
+							d.parent, d.isLeft),
+				true);
 	}
 
-	template <typename K, typename ... Args> Node<Value> *
-	tryInsertNodeUniqueHint(const_iterator hint, K &&k, Args && ... args) {
+	template <typename K, typename... Args>
+	Node<Value> *tryInsertNodeUniqueHint(const_iterator hint, K &&k, Args &&...args) {
 		InsertData d = constructKey(std::forward<K>(k));
 		d.current = hint.constcast()._node;
 		if (!getInsertPositionUnique(d)) {
@@ -793,20 +843,21 @@ protected:
 				d.parent, d.isLeft);
 	}
 
-	template <typename K, typename M> Pair<Node<Value> *,bool>
-	tryAssignNodeUnique(K &&k, M &&m) {
+	template <typename K, typename M>
+	Pair<Node<Value> *, bool> tryAssignNodeUnique(K &&k, M &&m) {
 		InsertData d = constructKey(std::forward<K>(k));
 		if (!getInsertPositionUnique(d)) {
 			constructAssign(d.current, std::forward<M>(m));
 			return pair(static_cast<Node<Value> *>(d.current), false);
 		}
 
-		return pair(makeInsert(constructEmplace(std::forward<K>(k), std::forward<M>(m)),
-				d.parent, d.isLeft), true);
+		return pair(makeInsert(constructEmplace(std::forward<K>(k), std::forward<M>(m)), d.parent,
+							d.isLeft),
+				true);
 	}
 
-	template <typename K, typename M> Node<Value> *
-	tryAssignNodeUniqueHint(const_iterator hint, K &&k, M &&m) {
+	template <typename K, typename M>
+	Node<Value> *tryAssignNodeUniqueHint(const_iterator hint, K &&k, M &&m) {
 		InsertData d = constructKey(std::forward<K>(k));
 		d.current = hint.constcast()._node;
 		if (!getInsertPositionUnique(d)) {
@@ -814,20 +865,22 @@ protected:
 			return static_cast<Node<Value> *>(d.current);
 		}
 
-		return makeInsert(constructEmplace(std::forward<K>(k), std::forward<M>(m)),
-				d.parent, d.isLeft);
+		return makeInsert(constructEmplace(std::forward<K>(k), std::forward<M>(m)), d.parent,
+				d.isLeft);
 	}
 
-	Node<Value> * makeInsert(Node<Value> *n, NodeBase *parent, bool isLeft) {
+	Node<Value> *makeInsert(Node<Value> *n, NodeBase *parent, bool isLeft) {
 		n->parent = parent;
 		if (parent) {
 			if (isLeft) {
-				if (parent == left())
+				if (parent == left()) {
 					setleft(n);
+				}
 				parent->left = n;
 			} else {
-				if (parent == right())
+				if (parent == right()) {
 					setright(n);
+				}
 				parent->right = n;
 			}
 		} else {
@@ -837,50 +890,53 @@ protected:
 		}
 
 		NodeBase::insert(&_header, n);
-		++ _size;
+		++_size;
 		return n;
 	}
 
-	void deleteNode(NodeBase * z) {
-		NodeBase * x = nullptr;
-		NodeBase * y = nullptr;
+	void deleteNode(NodeBase *z) {
+		NodeBase *x = nullptr;
+		NodeBase *y = nullptr;
 
-	    if (!z) return;
+		if (!z) {
+			return;
+		}
 
-	    if (!z->left || !z->right) {
-	        /* y has a leaf node as a child */
-	        y = z;
+		if (!z->left || !z->right) {
+			/* y has a leaf node as a child */
+			y = z;
 
 			if (z == right()) {
-				setright((z == left())?nullptr:NodeBase::decrement(z));
+				setright((z == left()) ? nullptr : NodeBase::decrement(z));
 			}
 			if (z == left()) {
 				setleft(NodeBase::increment(z));
 			}
-	    } else {
-	        y = z->left;
-	        while (y->right) y = y->right;
-	    }
+		} else {
+			y = z->left;
+			while (y->right) { y = y->right; }
+		}
 
-	    /* x is y's only child */
-	    if (y->left) {
-	        x = y->left;
-	    } else {
-	        x = y->right;
-	    }
+		/* x is y's only child */
+		if (y->left) {
+			x = y->left;
+		} else {
+			x = y->right;
+		}
 
-	    if (!x) {
-	    	// if there is no replacement (we use empty leaf node as new Z),
-	    	// we run rebalance with phantom Y node, then swap data and remove links
-	    	// to phantom
+		if (!x) {
+			// if there is no replacement (we use empty leaf node as new Z),
+			// we run rebalance with phantom Y node, then swap data and remove links
+			// to phantom
 			if (y->getColor() == NodeColor::Black) {
 				NodeBase::remove(&_header, y);
 			}
 
-			if (y == y->parent->left)
+			if (y == y->parent->left) {
 				y->parent->left = nullptr;
-			else
+			} else {
 				y->parent->right = nullptr;
+			}
 
 
 			if (y != z) {
@@ -888,14 +944,15 @@ protected:
 				NodeBase::replace(z, y);
 			}
 
-	    } else {
-	    	// if we have replacement, we insert it at proper place then call rebalance
+		} else {
+			// if we have replacement, we insert it at proper place then call rebalance
 			x->parent = y->parent;
 
-			if (y == y->parent->left)
+			if (y == y->parent->left) {
 				y->parent->left = x;
-			else
+			} else {
 				y->parent->right = x;
+			}
 
 			if (y != z) {
 				NodeBase::replace(z, y);
@@ -908,14 +965,14 @@ protected:
 			} else {
 				x->setColor(NodeColor::Black);
 			}
-	    }
+		}
 
-	    destroyNode(static_cast<Node<Value> *>(z));
-		-- _size;
+		destroyNode(static_cast<Node<Value> *>(z));
+		--_size;
 	}
 
 	void clear_visit(Node<Value> *target) {
- 		if (target->left) {
+		if (target->left) {
 			clear_visit(static_cast<Node<Value> *>(target->left));
 		}
 		if (target->right) {
@@ -930,7 +987,8 @@ protected:
 		if (source->left) {
 			target->left = allocateNode();
 			target->left->parent = target;
-			clone_visit(static_cast<Node<Value> *>(source->left), static_cast<Node<Value> *>(target->left));
+			clone_visit(static_cast<Node<Value> *>(source->left),
+					static_cast<Node<Value> *>(target->left));
 			if (_header.parent == source->left) { // check for leftmost node
 				_header.parent = target->left;
 			}
@@ -941,7 +999,8 @@ protected:
 		if (source->right) {
 			target->right = allocateNode();
 			target->right->parent = target;
-			clone_visit(static_cast<Node<Value> *>(source->right), static_cast<Node<Value> *>(target->right));
+			clone_visit(static_cast<Node<Value> *>(source->right),
+					static_cast<Node<Value> *>(target->right));
 			if (_header.right == source->right) { // check for rightmost node
 				_header.right = target->right;
 			}
@@ -969,59 +1028,60 @@ protected:
 			if (other._header.left == other._header.right) {
 				_header.right = _header.left;
 			}
-			clone_visit(static_cast<Node<Value> *>(other._header.left), static_cast<Node<Value> *>(_header.left));
+			clone_visit(static_cast<Node<Value> *>(other._header.left),
+					static_cast<Node<Value> *>(_header.left));
 		}
 	}
 
-	template< class K >
-	node_ptr find_impl(const K & x) const {
+	template < class K >
+	node_ptr find_impl(const K &x) const {
 		const_node_ptr current = root();
-	    while(current) {
+		while (current) {
 			auto &key = extract(current);
-	        if (compareLtTransparent(x, key)) {
-	        	current = static_cast<const_node_ptr> (current->left);
-	        } else {
-	        	if (!compareLtTransparent(key, x)) { // equality check
-	        		return const_cast<node_ptr>(current);
-	        	}
-	        	current = static_cast<const_node_ptr> (current->right);
-	        }
-	    }
-	    return nullptr;
+			if (compareLtTransparent(x, key)) {
+				current = static_cast<const_node_ptr>(current->left);
+			} else {
+				if (!compareLtTransparent(key, x)) { // equality check
+					return const_cast<node_ptr>(current);
+				}
+				current = static_cast<const_node_ptr>(current->right);
+			}
+		}
+		return nullptr;
 	}
 
-	template< class K >
-	node_ptr lower_bound_ptr(const K& x) const {
+	template < class K >
+	node_ptr lower_bound_ptr(const K &x) const {
 		const_node_ptr current = root();
 		const_node_ptr saved = nullptr;
-	    while (current) {
-	        if (!compareLtTransparent(extract(current), x)) {
-	        	saved = current;
-	        	current = static_cast<const_node_ptr> (current->left);
-	        } else {
-	        	current = static_cast<const_node_ptr> (current->right);
-	        }
-	    }
-	    return const_cast<node_ptr>(saved);
+		while (current) {
+			if (!compareLtTransparent(extract(current), x)) {
+				saved = current;
+				current = static_cast<const_node_ptr>(current->left);
+			} else {
+				current = static_cast<const_node_ptr>(current->right);
+			}
+		}
+		return const_cast<node_ptr>(saved);
 	}
 
-	template< class K >
-	node_ptr upper_bound_ptr(const K& x) const {
+	template < class K >
+	node_ptr upper_bound_ptr(const K &x) const {
 		const_node_ptr current = root();
 		const_node_ptr saved = current;
-	    while (current) {
-	        if (compareLtTransparent(x, extract(current))) {
-	        	saved = current;
-	        	current = static_cast<const_node_ptr> (current->left);
-	        } else {
-	        	current = static_cast<const_node_ptr> (current->right);
-	        }
-	    }
-	    return const_cast<node_ptr>(saved);
+		while (current) {
+			if (compareLtTransparent(x, extract(current))) {
+				saved = current;
+				current = static_cast<const_node_ptr>(current->left);
+			} else {
+				current = static_cast<const_node_ptr>(current->right);
+			}
+		}
+		return const_cast<node_ptr>(saved);
 	}
 
-	template< class K >
-	size_t count_impl(const K& x) const {
+	template < class K >
+	size_t count_impl(const K &x) const {
 		auto c = find_impl(x);
 		if (!c) {
 			return 0;
@@ -1030,21 +1090,22 @@ protected:
 			const_node_ptr next, current;
 
 			current = c;
-    		next = static_cast<const_node_ptr> (NodeBase::decrement(current));
-    		while (next && !compareLtTransparent(extract(next), extract(current))) {
-    			current = next;
-    			next = static_cast<const_node_ptr> (NodeBase::decrement(current));
-    			ret ++;
-    		}
+			next = static_cast<const_node_ptr>(NodeBase::decrement(current));
+			while (next && !compareLtTransparent(extract(next), extract(current))) {
+				current = next;
+				next = static_cast<const_node_ptr>(NodeBase::decrement(current));
+				ret++;
+			}
 
 			current = c;
-    		next = static_cast<const_node_ptr> (NodeBase::increment(current));
-    		while (next && next != &_header && !compareLtTransparent(extract(current), extract(next))) {
-    			current = next;
-    			next = static_cast<const_node_ptr> (NodeBase::increment(current));
-    			ret ++;
-    		}
-    		return ret;
+			next = static_cast<const_node_ptr>(NodeBase::increment(current));
+			while (next && next != &_header
+					&& !compareLtTransparent(extract(current), extract(next))) {
+				current = next;
+				next = static_cast<const_node_ptr>(NodeBase::increment(current));
+				ret++;
+			}
+			return ret;
 		}
 	}
 
@@ -1054,23 +1115,23 @@ protected:
 			// no saved node - hold one
 			n->parent = nullptr;
 			_tmp = n;
-			++ _header.flag.size; // increment capacity counter
+			++_header.flag.size; // increment capacity counter
 		} else if (n->isPrealloc() || _header.flag.prealloc) {
 			// node was preallocated - hold it in chain
 			n->parent = _tmp;
 			_tmp = n;
-			++ _header.flag.size; // increment capacity counter
+			++_header.flag.size; // increment capacity counter
 		} else {
 			// deallocate node
 			node_allocator_type(_allocator).__deallocate(n, 1, n->getSize());
 		}
 	}
 
-	Node<Value> * allocateNode() {
+	Node<Value> *allocateNode() {
 		if (_tmp) {
 			auto ret = _tmp;
 			_tmp = (Node<Value> *)ret->parent;
-			-- _header.flag.size; // decrement capacity counter
+			--_header.flag.size; // decrement capacity counter
 			return ret;
 		} else {
 			size_t s;
@@ -1084,14 +1145,14 @@ protected:
 	void allocateTmp(size_t count) {
 		// preallocate new n nodes
 
-		uintptr_t preallocIdx = ++ _header.flag.index;
+		uintptr_t preallocIdx = ++_header.flag.index;
 		_header.flag.size += count; // increment capacity counter
 
 		size_t s;
 		auto ret = node_allocator_type(_allocator).__allocate(count, s);
 		auto n = ret;
 
-		for (size_t i = 0; i < count; ++ i) {
+		for (size_t i = 0; i < count; ++i) {
 			NodeBase *tmpN = n;
 			tmpN->parent = n + 1;
 			tmpN->setPrealloc(true);
@@ -1104,7 +1165,7 @@ protected:
 				tmpN->parent = _tmp;
 				n->setSize(s);
 			}
-			++ n;
+			++n;
 		}
 		_tmp = ret;
 	}
@@ -1126,7 +1187,7 @@ protected:
 				if (!(*ptr)->isPrealloc()) {
 					node_allocator_type(_allocator).__deallocate(*ptr, 1, (*ptr)->getSize());
 					*ptr = (Node<Value> *)(*ptr)->parent;
-					-- _header.flag.size;
+					--_header.flag.size;
 				} else {
 					ptr = (Node<Value> **)&((*ptr)->parent);
 				}
@@ -1140,7 +1201,7 @@ protected:
 				auto ptr = _tmp;
 				_tmp = (Node<Value> *)_tmp->parent;
 				node_allocator_type(_allocator).__deallocate(ptr, 1, ptr->getSize());
-				-- _header.flag.size;
+				--_header.flag.size;
 			}
 			_tmp = nullptr;
 		} else if (_header.flag.index == 1) {
@@ -1155,11 +1216,11 @@ protected:
 					if (ptr < data.head) {
 						data.head = ptr;
 					}
-					++ data.count;
+					++data.count;
 					data.size += ptr->getSize();
 				} else {
 					node_allocator_type(_allocator).__deallocate(ptr, 1, ptr->getSize());
-					-- _header.flag.size;
+					--_header.flag.size;
 				}
 			}
 			if (data.head != (Node<Value> *)maxOf<uintptr_t>()) {
@@ -1180,17 +1241,18 @@ protected:
 					if (ptr < data[ptr->getIndex() - 1].head) {
 						data[ptr->getIndex() - 1].head = ptr;
 					}
-					++ data[ptr->getIndex() - 1].count;
+					++data[ptr->getIndex() - 1].count;
 					data[ptr->getIndex() - 1].size += ptr->getSize();
 				} else {
 					node_allocator_type(_allocator).__deallocate(ptr, 1, ptr->getSize());
-					-- _header.flag.size;
+					--_header.flag.size;
 				}
 			}
-			for (size_t i = 0; i < _header.flag.index; ++ i) {
+			for (size_t i = 0; i < _header.flag.index; ++i) {
 				if (data[i].head != (Node<Value> *)maxOf<uintptr_t>()) {
 					_header.flag.size -= data[i].count;
-					node_allocator_type(_allocator).__deallocate(data[i].head, data[i].count, data[i].size);
+					node_allocator_type(_allocator)
+							.__deallocate(data[i].head, data[i].count, data[i].size);
 				}
 			}
 		}
@@ -1198,7 +1260,7 @@ protected:
 	}
 };
 
-}
+} // namespace stappler::memory::rbtree
 
 #if SP_MEM_RBTREE_DEBUG
 
@@ -1214,9 +1276,10 @@ public:
 	};
 
 	template <class T>
-	static void visit(const T & tree, std::ostream &stream) {
+	static void visit(const T &tree, std::ostream &stream) {
 		typename T::const_node_ptr r = tree.root();
-		stream << "visit " << (void *)r << "  header: " << tree._header.left << " | " << tree._header.right << " | " << tree._header.parent;
+		stream << "visit " << (void *)r << "  header: " << tree._header.left << " | "
+			   << tree._header.right << " | " << tree._header.parent;
 		stream << "\n";
 		if (r) {
 			visit(tree, stream, static_cast<typename T::const_node_ptr>(r), 0);
@@ -1224,14 +1287,16 @@ public:
 	}
 
 	template <class T>
-	static Validation validate(const T & tree) {
+	static Validation validate(const T &tree) {
 		if (tree._header.left && tree._header.left->flag.color == NodeColor::Red) {
 			return Validation::RootIsNotBlack;
 		} else {
 			auto counter = 0;
 			auto root = tree._header.left;
 			while (root) {
-				if (root->flag.color == NodeColor::Black) ++counter;
+				if (root->flag.color == NodeColor::Black) {
+					++counter;
+				}
 				root = root->left;
 			}
 			return validate(counter, tree._header.left, 0);
@@ -1242,17 +1307,18 @@ public:
 	//static bool make_test(std::ostream &stream, const apr::array<int> &insert, const apr::array<int> &erase);
 
 	static bool make_hint_test(std::ostream &stream, int size = 128);
+
 protected:
 	template <class T>
-	static void visit(const T & tree, std::ostream &stream, typename T::const_node_ptr node, int depth) {
+	static void visit(const T &tree, std::ostream &stream, typename T::const_node_ptr node,
+			int depth) {
 		if (node->left) {
 			visit(tree, stream, static_cast<typename T::const_node_ptr>(node->left), depth + 1);
 		}
-		for (int i = 0; i < depth; i++) {
-			stream << "--";
-		}
-		stream << (void *)node << " l:" << (void *)node->left << " r:" << (void *)node->right	<< " p:"
-				<< (void *)node->parent << " v:" << *(node->value.ptr()) << (node->flag.color?" black":" red") << "\n";
+		for (int i = 0; i < depth; i++) { stream << "--"; }
+		stream << (void *)node << " l:" << (void *)node->left << " r:" << (void *)node->right
+			   << " p:" << (void *)node->parent << " v:" << *(node->value.ptr())
+			   << (node->flag.color ? " black" : " red") << "\n";
 		if (node->right) {
 			visit(tree, stream, static_cast<typename T::const_node_ptr>(node->right), depth + 1);
 		}
@@ -1287,9 +1353,10 @@ protected:
 	}
 };
 
-template<typename CharType> inline std::basic_ostream<CharType> &
-operator << (std::basic_ostream<CharType> & os, const TreeDebug::Validation & v) {
-	switch(v) {
+template <typename CharType>
+inline std::basic_ostream<CharType> &operator<<(std::basic_ostream<CharType> &os,
+		const TreeDebug::Validation &v) {
+	switch (v) {
 	case TreeDebug::Validation::Valid: os << "Valid"; break;
 	case TreeDebug::Validation::DifferentBlackNodeCount: os << "DifferentBlackNodeCount"; break;
 	case TreeDebug::Validation::RedChildIntoRedNode: os << "RedChildIntoRedNode"; break;
@@ -1298,7 +1365,7 @@ operator << (std::basic_ostream<CharType> & os, const TreeDebug::Validation & v)
 	return os;
 }
 
-}
+} // namespace stappler::memory::rbtree
 
 #endif // SP_MEM_RBTREE_DEBUG
 

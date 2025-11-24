@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "detail/SPFilesystemResourceData.h"
 
 #include "SPZip.h"
-#include "SPJni.h"
+#include "platform/SPJni.h"
 #include "SPPlatformUnistd.h" // IWYU pragma: keep
 #include <android/asset_manager.h>
 #include <android/native_activity.h>
@@ -623,7 +623,10 @@ struct PathSource {
 				if (path.starts_with(prefix)) {
 					path = path.sub(prefix.size());
 				}
-				return cb(string::toString<Interface>("%PLATFORM%:", path), type);
+				if (path.starts_with(ipath)) {
+					path = path.sub(ipath.size() + 1);
+				}
+				return cb(path, type);
 			}, depth, dirFirst);
 		}
 		return Status::Declined;

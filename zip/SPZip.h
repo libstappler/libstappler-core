@@ -24,10 +24,13 @@ THE SOFTWARE.
 #ifndef STAPPLER_ZIP_SPZIP_H_
 #define STAPPLER_ZIP_SPZIP_H_
 
-#include "SPBytesView.h"
+#include "SPBytesView.h" // IWYU pragma: keep
 #include "SPBuffer.h"
 #include "SPTime.h"
-#include "SPLog.h"
+
+#ifdef MODULE_STAPPLER_FILESYSTEM
+#include "SPFilepath.h"
+#endif
 
 typedef struct zip zip_t;
 
@@ -36,6 +39,10 @@ namespace STAPPLER_VERSIONIZED stappler {
 template <typename Interface>
 struct ZipBuffer {
 	using Buffer = BufferTemplate<Interface>;
+
+	bool readonly = false;
+	void *handle = nullptr;
+	void (*finalize)(void *) = nullptr;
 
 	Buffer data;
 	Buffer buffer;
@@ -48,8 +55,12 @@ public:
 	using Buffer = BufferTemplate<Interface>;
 
 	ZipArchive();
-	ZipArchive(BytesView);
+	ZipArchive(BytesView, bool readonly);
 	ZipArchive(FILE *, bool readonly);
+
+#ifdef MODULE_STAPPLER_FILESYSTEM
+	ZipArchive(FileInfo);
+#endif
 
 	~ZipArchive();
 
@@ -59,16 +70,22 @@ public:
 
 	Buffer save();
 
-	explicit operator bool () { return _handle != nullptr; }
+	explicit operator bool() { return _handle != nullptr; }
 
 	size_t size(bool original = false) const;
-	StringView getName(size_t idx, bool original = false) const;
 
-	void ftw(const Callback<void(StringView path, size_t size, Time time)> &, bool original = false) const;
+	// returns maxOf<uint64_t>() on failure
+	uint64_t locateFile(StringView) const;
+
+	StringView getFileName(uint64_t idx, bool original = false) const;
+
+	void ftw(const Callback<void(uint64_t, StringView path, size_t size, Time time)> &,
+			bool original = false) const;
+
+	bool readFile(StringView, const Callback<void(BytesView)> &) const;
+	bool readFile(uint64_t, const Callback<void(BytesView)> &) const;
 
 protected:
-	static zip_t *createZipArchive(BytesView b, ZipBuffer<Interface> *d);
-
 	ZipBuffer<Interface> _data;
 	zip_t *_handle = nullptr;
 };
@@ -77,15 +94,10 @@ template <typename Interface>
 ZipArchive<Interface>::ZipArchive() : ZipArchive(BytesView()) { }
 
 template <typename Interface>
-ZipArchive<Interface>::ZipArchive(BytesView b) {
-	_handle = createZipArchive(b, &_data);
-}
-
-template <typename Interface>
 bool ZipArchive<Interface>::addFile(StringView name, StringView data, bool uncompressed) {
 	return addFile(name, BytesView((const uint8_t *)data.data(), data.size()), uncompressed);
 }
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* STAPPLER_ZIP_SPZIP_H_ */
