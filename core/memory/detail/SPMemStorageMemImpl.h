@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,13 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEMIMPL_H_
-#define STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEMIMPL_H_
+#ifndef STAPPLER_CORE_MEMORY_DETAIL_SPMEMSTORAGEMEMIMPL_H_
+#define STAPPLER_CORE_MEMORY_DETAIL_SPMEMSTORAGEMEMIMPL_H_
 
 #include "detail/SPLogInit.h"
 #include "SPMemAlloc.h"
 
-namespace STAPPLER_VERSIONIZED stappler::memory::impl {
+namespace STAPPLER_VERSIONIZED stappler::memory::detail {
 
 // small object optimization type (based on SSO-23: https://github.com/elliotgoodrich/SSO-23)
 template <typename Type, size_t ByteCount>
@@ -300,7 +301,7 @@ public:
 	// this memory block can be reused by next temporary buffer of same size
 	// so, no pool memory will be leaked
 	pointer reserve_block_optimal() {
-		auto target = mempool::custom::BlockThreshold / sizeof(Type) + 1;
+		auto target = config::BlockThreshold / sizeof(Type) + 1;
 		return reserve(target);
 	}
 
@@ -427,7 +428,7 @@ public:
 	// this memory block can be reused by next temporary buffer of same size
 	// so, no pool memory will be leaked
 	pointer reserve_block_optimal() {
-		auto target = mempool::custom::BlockThreshold / sizeof(Type) + 1;
+		auto target = config::BlockThreshold / sizeof(Type) + 1;
 		return reserve(target);
 	}
 
@@ -570,6 +571,6 @@ private:
 	};
 };
 
-} // namespace stappler::memory::impl
+} // namespace stappler::memory::detail
 
-#endif /* STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEMIMPL_H_ */
+#endif /* STAPPLER_CORE_MEMORY_DETAIL_SPMEMSTORAGEMEMIMPL_H_ */

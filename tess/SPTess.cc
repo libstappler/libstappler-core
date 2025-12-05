@@ -108,7 +108,7 @@ Tesselator::~Tesselator() {
 
 bool Tesselator::init(memory::pool_t *pool) {
 	auto p = memory::pool::create(pool);
-	memory::pool::context ctx(p);
+	memory::context ctx(p);
 
 	_data = new (p) Data(p);
 	return true;

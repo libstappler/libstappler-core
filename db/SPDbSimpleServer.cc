@@ -126,7 +126,7 @@ bool SimpleServer::init(const Value &params, StringView root, AccessRoleId role,
 
 void SimpleServer::scheduleAyncDbTask(
 		const Callback<Function<void(const Transaction &)>(pool_t *)> &setupCb) const {
-	pool::context<pool_t *> ctx(_data->updatePool, pool::context<pool_t *>::conditional);
+	memory::context<pool_t *> ctx(_data->updatePool, memory::context<pool_t *>::conditional);
 
 	if (!_data->asyncTasks) {
 		_data->asyncTasks = new (_data->updatePool) Vector<Function<void(const Transaction &)>>;

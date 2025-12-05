@@ -23,8 +23,6 @@ THE SOFTWARE.
 
 #include "SPCommon.h"
 
-#include "SPCore.h"
-#include "SPMemPoolInterface.h"
 #include "SPThread.cc"
 #include "platform/SPThreads-android.cc"
 #include "platform/SPThreads-linux.cc"

@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_SPMEMSTRING_H_
 #define STAPPLER_CORE_MEMORY_SPMEMSTRING_H_
 
-#include "SPMemStorageMem.h"
+#include "detail/SPMemStorageMem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
@@ -62,7 +63,7 @@ struct __basic_string_fill;
 template <typename CharType>
 class basic_string : public AllocPool {
 public:
-	using allocator_type = Allocator<CharType>;
+	using allocator_type = detail::Allocator<CharType>;
 
 	using pointer = CharType *;
 	using const_pointer = const CharType *;
@@ -74,7 +75,7 @@ public:
 	using size_type = size_t;
 	using charT = CharType;
 	using value_type = CharType;
-	using mem_type = storage_mem<CharType, size_t(1)>;
+	using mem_type = detail::storage_mem<CharType, size_t(1)>;
 	using self = basic_string<CharType>;
 
 	using iterator = typename mem_type::iterator;

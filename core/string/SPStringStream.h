@@ -21,8 +21,6 @@
  THE SOFTWARE.
  **/
 
-// clang-format off
-
 #ifndef CORE_CORE_STRING_SPSTRINGSTREAM_H_
 #define CORE_CORE_STRING_SPSTRINGSTREAM_H_
 
@@ -31,9 +29,7 @@
 #include "SPStringDetail.h"
 #include <type_traits>
 
-namespace STAPPLER_VERSIONIZED stappler {
-
-namespace string {
+namespace STAPPLER_VERSIONIZED stappler::string {
 
 template <typename Interface>
 auto toUtf16(const StringView &data) -> typename Interface::WideStringType;
@@ -56,9 +52,6 @@ auto toUtf8(char16_t c) -> typename Interface::StringType;
 template <typename Interface>
 auto toUtf8(char32_t c) -> typename Interface::StringType;
 
-}
-
-namespace string {
 
 namespace detail {
 
@@ -169,6 +162,9 @@ struct IsFastToStringAvailableValue {
 	static constexpr bool value = false;
 };
 
+
+// clang-format off
+
 template <size_t N> struct IsFastToStringAvailableValue<char[N]> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<char *> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<StringView> { static constexpr bool value = true; };
@@ -222,31 +218,29 @@ inline size_t getBufferSizeValue(const uint8_t &value) { return string::detail::
 inline size_t getBufferSizeValue(const double &value) { return string::detail::dtoa(value, (char *)nullptr, 0); }
 inline size_t getBufferSizeValue(const float &value) { return string::detail::dtoa(value, (char *)nullptr, 0); }
 
-inline size_t getBufferSize() {
-	return 0;
-}
+// clang-format on
+
+inline size_t getBufferSize() { return 0; }
 
 template <typename T>
 inline size_t getBufferSize(const T &t) {
 	return getBufferSizeValue(t);
 }
 
-template <typename T, typename ... Args>
-inline size_t getBufferSize(T &&t, Args && ...args) {
+template <typename T, typename... Args>
+inline size_t getBufferSize(T &&t, Args &&...args) {
 	return getBufferSizeValue(t) + getBufferSize(std::forward<Args>(args)...);
 }
 
-inline size_t writeBuffer(char *target) {
-	return 0;
-}
+inline size_t writeBuffer(char *target) { return 0; }
 
 template <typename T>
 inline size_t writeBuffer(char *target, const T &t) {
 	return toStringValue(target, t);
 }
 
-template <typename T, typename ... Args>
-inline size_t writeBuffer(char *target, T &&t, Args && ...args) {
+template <typename T, typename... Args>
+inline size_t writeBuffer(char *target, T &&t, Args &&...args) {
 	auto off = toStringValue(target, t);
 	target += off;
 	return off + writeBuffer(target, std::forward<Args>(args)...);
@@ -262,30 +256,22 @@ inline void toStringStream(Stream &stream, char16_t val) {
 
 template <typename Stream>
 inline void toStringStream(Stream &stream, const char16_t *val) {
-	while (*val != char16_t(0)) {
-		unicode::utf8Encode(stream, *val++);
-	}
+	while (*val != char16_t(0)) { unicode::utf8Encode(stream, *val++); }
 }
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const WideStringView &val) {
-	for (auto &it : val) {
-		unicode::utf8Encode(stream, it);
-	}
+	for (auto &it : val) { unicode::utf8Encode(stream, it); }
 }
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const std::u16string &val) {
-	for (auto &it : val) {
-		unicode::utf8Encode(stream, it);
-	}
+	for (auto &it : val) { unicode::utf8Encode(stream, it); }
 }
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const memory::u16string &val) {
-	for (auto &it : val) {
-		unicode::utf8Encode(stream, it);
-	}
+	for (auto &it : val) { unicode::utf8Encode(stream, it); }
 }
 
 template <typename Stream, typename T>
@@ -294,16 +280,22 @@ inline void toStringStream(Stream &stream, T value) {
 }
 
 template <typename Stream, typename T, typename... Args>
-inline void toStringStream(Stream &stream, T value, Args && ... args) {
+inline void toStringStream(Stream &stream, T value, Args &&...args) {
 	stream << value;
 	toStringStream(stream, std::forward<Args>(args)...);
 }
 
-}
+} // namespace detail
 
+/*
+Constructs a new string into a buffer of known length by concatenating the passed arguments
+Supports only "fast" mode, in which only known basic types are allowed (strings and numbers)
+If "fast" mode is not available, returns a compile-time error
+Returns string length or error status
+*/
 template <typename... Args>
-static StatusValue<uint32_t> toStringBuffer(char *buf, size_t bufLen, Args && ... args)  {
-	if constexpr (detail::IsFastToStringAvailable<Args ...>::value) {
+static StatusValue<uint32_t> toStringBuffer(char *buf, size_t bufLen, Args &&...args) {
+	if constexpr (detail::IsFastToStringAvailable<Args...>::value) {
 		auto size = detail::getBufferSize(std::forward<Args>(args)...);
 		if (size > bufLen) {
 			return Status::ErrorBufferOverflow;
@@ -311,28 +303,35 @@ static StatusValue<uint32_t> toStringBuffer(char *buf, size_t bufLen, Args && ..
 
 		auto s = detail::writeBuffer(buf, std::forward<Args>(args)...);
 		if (s != size) {
-			std::cout << "[core]: Invalid buffer size for toString<fast>\n";
-			abort();
+			::perror("[core]: Invalid buffer size for toString<fast>");
+			::abort();
 		}
 
 		return StatusValue<uint32_t>(uint32_t(s));
 	} else {
+		static_assert(false, "Fail to perform toStringBuffer for this arguments");
 		return Status::ErrorInvalidArguemnt;
 	}
 }
 
+/*
+Constructs a new string by concatenating the passed arguments
+Supports "fast" mode for known arguments, and standard mode using std::stringstream
+Returns the collected string. No errors are possible.
+*/
 template <typename Interface, typename... Args>
-static auto toString(Args && ... args) -> typename Interface::StringType {
-	if constexpr (detail::IsFastToStringAvailable<Args ...>::value) {
+static auto toString(Args &&...args) -> typename Interface::StringType {
+	if constexpr (detail::IsFastToStringAvailable<Args...>::value) {
 		// fast toString with preallocated buffer
 
 		auto size = detail::getBufferSize(std::forward<Args>(args)...);
-		typename Interface::StringType ret; ret.resize(size);
+		typename Interface::StringType ret;
+		ret.resize(size);
 
 		auto s = detail::writeBuffer(ret.data(), std::forward<Args>(args)...);
 		if (s != size) {
-			std::cout << "[core]: Invalid buffer size for toString<fast>\n";
-			abort();
+			::perror("[core]: Invalid buffer size for toString<fast>");
+			::abort();
 		}
 		ret.resize(size);
 		return ret;
@@ -349,6 +348,59 @@ static auto toString(Args && ... args) -> typename Interface::StringType {
 	}
 }
 
+/*
+Constructs a new string by concatenating the passed arguments in meory, obtained from current memory pool
+Supports only "fast" mode, in which only known basic types are allowed (strings and numbers)
+If "fast" mode is not available, returns a compile-time error
+Returns resulting StringView
+*/
+template <typename... Args>
+static auto pdupString(Args &&...args) -> StringView {
+	if constexpr (detail::IsFastToStringAvailable<Args...>::value) {
+		// fast toString with preallocated buffer
+
+		auto size = detail::getBufferSize(std::forward<Args>(args)...);
+
+		auto str = (char *)memory::pool::palloc(memory::pool::acquire(), size);
+
+		auto s = detail::writeBuffer(str, std::forward<Args>(args)...);
+		if (s != size) {
+			::perror("[core]: Invalid buffer size for pdupString<fast>");
+			::abort();
+		}
+		return StringView(str, s);
+	} else {
+		static_assert(false, "Fail to perform pdupString for this arguments");
+		return StringView();
+	}
+}
+
+/*
+Constructs a new string by concatenating the passed arguments in meory, obtained from memory pool provided
+Supports only "fast" mode, in which only known basic types are allowed (strings and numbers)
+If "fast" mode is not available, returns a compile-time error
+Returns resulting StringView
+*/
+template <typename... Args>
+static auto pdupString(memory::pool_t *p, Args &&...args) -> StringView {
+	if constexpr (detail::IsFastToStringAvailable<Args...>::value) {
+		// fast toString with preallocated buffer
+
+		auto size = detail::getBufferSize(std::forward<Args>(args)...);
+
+		auto str = (char *)memory::pool::palloc(p, size);
+
+		auto s = detail::writeBuffer(str, std::forward<Args>(args)...);
+		if (s != size) {
+			::perror("[core]: Invalid buffer size for pdupString<fast>");
+			::abort();
+		}
+		return StringView(str, s);
+	} else {
+		static_assert(false, "Fail to perform pdupString for this arguments");
+		return StringView();
+	}
+}
 
 namespace wdetail {
 
@@ -455,6 +507,8 @@ struct IsFastToStringAvailableValue {
 	static constexpr bool value = false;
 };
 
+// clang-format off
+
 template <size_t N> struct IsFastToStringAvailableValue<char[N]> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<char16_t *> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<WideStringView> { static constexpr bool value = true; };
@@ -507,31 +561,29 @@ inline size_t getBufferSizeValue(const uint8_t &value) { return string::detail::
 inline size_t getBufferSizeValue(const double &value) { return string::detail::dtoa(value, (char16_t *)nullptr, 0); }
 inline size_t getBufferSizeValue(const float &value) { return string::detail::dtoa(value, (char16_t *)nullptr, 0); }
 
-inline size_t getBufferSize() {
-	return 0;
-}
+// clang-format on
+
+inline size_t getBufferSize() { return 0; }
 
 template <typename T>
 inline size_t getBufferSize(const T &t) {
 	return getBufferSizeValue(t);
 }
 
-template <typename T, typename ... Args>
-inline size_t getBufferSize(T &&t, Args && ...args) {
+template <typename T, typename... Args>
+inline size_t getBufferSize(T &&t, Args &&...args) {
 	return getBufferSizeValue(t) + getBufferSize(std::forward<Args>(args)...);
 }
 
-inline size_t writeBuffer(char16_t *target) {
-	return 0;
-}
+inline size_t writeBuffer(char16_t *target) { return 0; }
 
 template <typename T>
 inline size_t writeBuffer(char16_t *target, const T &t) {
 	return toStringValue(target, t);
 }
 
-template <typename T, typename ... Args>
-inline size_t writeBuffer(char16_t *target, T &&t, Args && ...args) {
+template <typename T, typename... Args>
+inline size_t writeBuffer(char16_t *target, T &&t, Args &&...args) {
 	auto off = toStringValue(target, t);
 	target += off;
 	return off + writeBuffer(target, std::forward<Args>(args)...);
@@ -547,30 +599,22 @@ inline void toStringStream(Stream &stream, char16_t val) {
 
 template <typename Stream>
 inline void toStringStream(Stream &stream, const char16_t *val) {
-	while (*val != char16_t(0)) {
-		unicode::utf8Encode(stream, *val++);
-	}
+	while (*val != char16_t(0)) { unicode::utf8Encode(stream, *val++); }
 }
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const WideStringView &val) {
-	for (auto &it : val) {
-		unicode::utf8Encode(stream, it);
-	}
+	for (auto &it : val) { unicode::utf8Encode(stream, it); }
 }
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const std::u16string &val) {
-	for (auto &it : val) {
-		unicode::utf8Encode(stream, it);
-	}
+	for (auto &it : val) { unicode::utf8Encode(stream, it); }
 }
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const memory::u16string &val) {
-	for (auto &it : val) {
-		unicode::utf8Encode(stream, it);
-	}
+	for (auto &it : val) { unicode::utf8Encode(stream, it); }
 }
 
 template <typename Stream, typename T>
@@ -579,16 +623,22 @@ inline void toStringStream(Stream &stream, T value) {
 }
 
 template <typename Stream, typename T, typename... Args>
-inline void toStringStream(Stream &stream, T value, Args && ... args) {
+inline void toStringStream(Stream &stream, T value, Args &&...args) {
 	stream << value;
 	toStringStream(stream, std::forward<Args>(args)...);
 }
 
-}
+} // namespace wdetail
 
+/*
+Constructs a new string into a buffer of known length by concatenating the passed arguments
+Supports only "fast" mode, in which only known basic types are allowed (strings and numbers)
+If "fast" mode is not available, returns a compile-time error
+Returns string length or error status
+*/
 template <typename... Args>
-static StatusValue<uint32_t> toWideStringBuffer(char16_t *buf, size_t bufLen, Args && ... args)  {
-	if constexpr (wdetail::IsFastToStringAvailable<Args ...>::value) {
+static StatusValue<uint32_t> toWideStringBuffer(char16_t *buf, size_t bufLen, Args &&...args) {
+	if constexpr (wdetail::IsFastToStringAvailable<Args...>::value) {
 		auto size = wdetail::getBufferSize(std::forward<Args>(args)...);
 		if (size > bufLen) {
 			return Status::ErrorBufferOverflow;
@@ -602,17 +652,24 @@ static StatusValue<uint32_t> toWideStringBuffer(char16_t *buf, size_t bufLen, Ar
 
 		return StatusValue<uint32_t>(uint32_t(s));
 	} else {
+		static_assert(false, "Fail to perform toWideStringBuffer for this arguments");
 		return Status::ErrorInvalidArguemnt;
 	}
 }
 
+/*
+Constructs a new string by concatenating the passed arguments
+Supports "fast" mode for known arguments, and standard mode using std::stringstream
+Returns the collected string. No errors are possible.
+*/
 template <typename Interface, typename... Args>
-static auto toWideString(Args && ... args) -> typename Interface::WideStringType {
-	if constexpr (wdetail::IsFastToStringAvailable<Args ...>::value) {
+static auto toWideString(Args &&...args) -> typename Interface::WideStringType {
+	if constexpr (wdetail::IsFastToStringAvailable<Args...>::value) {
 		// fast toString with preallocated buffer
 
 		auto size = wdetail::getBufferSize(std::forward<Args>(args)...);
-		typename Interface::WideStringType ret; ret.resize(size);
+		typename Interface::WideStringType ret;
+		ret.resize(size);
 
 		auto s = wdetail::writeBuffer(ret.data(), std::forward<Args>(args)...);
 		if (s != size) {
@@ -634,28 +691,80 @@ static auto toWideString(Args && ... args) -> typename Interface::WideStringType
 	}
 }
 
+/*
+Constructs a new string by concatenating the passed arguments in meory, obtained from current memory pool
+Supports only "fast" mode, in which only known basic types are allowed (strings and numbers)
+If "fast" mode is not available, returns a compile-time error
+Returns resulting StringView
+*/
+template <typename... Args>
+static auto pdupWideString(Args &&...args) -> WideStringView {
+	if constexpr (detail::IsFastToStringAvailable<Args...>::value) {
+		// fast toString with preallocated buffer
+
+		auto size = wdetail::getBufferSize(std::forward<Args>(args)...);
+		auto str = reinterpret_cast<char16_t *>(
+				memory::pool::palloc(memory::pool::acquire(), size * sizeof(char16_t)));
+		auto s = wdetail::writeBuffer(str, std::forward<Args>(args)...);
+		if (s != size) {
+			::perror("[core]: Invalid buffer size for pdupWideString<fast>");
+			::abort();
+		}
+		return WideStringView(str, s);
+	} else {
+		static_assert(false, "Fail to perform pdupWideString for this arguments");
+		return WideStringView();
+	}
 }
 
+/*
+Constructs a new string by concatenating the passed arguments in meory, obtained from memory pool provided
+Supports only "fast" mode, in which only known basic types are allowed (strings and numbers)
+If "fast" mode is not available, returns a compile-time error
+Returns resulting StringView
+*/
+template <typename... Args>
+static auto pdupWideString(memory::pool_t *p, Args &&...args) -> WideStringView {
+	if constexpr (detail::IsFastToStringAvailable<Args...>::value) {
+		// fast toString with preallocated buffer
+
+		auto size = wdetail::getBufferSize(std::forward<Args>(args)...);
+		auto str = reinterpret_cast<char16_t *>(memory::pool::palloc(p, size * sizeof(char16_t)));
+		auto s = wdetail::writeBuffer(str, std::forward<Args>(args)...);
+		if (s != size) {
+			::perror("[core]: Invalid buffer size for pdupWideString<fast>");
+			::abort();
+		}
+		return WideStringView(str, s);
+	} else {
+		static_assert(false, "Fail to perform pdupWideString for this arguments");
+		return WideStringView();
+	}
 }
+
+} // namespace stappler::string
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template <typename T, typename ReturnType, typename... ArgumentTypes>
-const callback<ReturnType(ArgumentTypes...)> &operator<<(const callback<ReturnType(ArgumentTypes...)> &cb, const T &val) {
-	static_assert(sizeof...(ArgumentTypes) == 1, "Functional stream should accept only one argument");
+const callback<ReturnType(ArgumentTypes...)> &operator<<(
+		const callback<ReturnType(ArgumentTypes...)> &cb, const T &val) {
+	static_assert(sizeof...(ArgumentTypes) == 1,
+			"Functional stream should accept only one argument");
 
 	using BaseType = std::tuple_element_t<0, std::tuple<ArgumentTypes...>>;
 
 	static_assert(std::is_same<BaseType, StringViewBase<char>>::value
-		|| std::is_same<BaseType, StringViewBase<char16_t>>::value
-		|| std::is_same<BaseType, StringViewUtf8>::value
-		|| std::is_same<BaseType, BytesView>::value,
-		"Functional stream argument should be one of StringView, WideStringView, StringViewUtf8, BytesView");
+					|| std::is_same<BaseType, StringViewBase<char16_t>>::value
+					|| std::is_same<BaseType, StringViewUtf8>::value
+					|| std::is_same<BaseType, BytesView>::value,
+			"Functional stream argument should be one of StringView, WideStringView, "
+			"StringViewUtf8, BytesView");
 
 	stappler::string::detail::streamWrite(cb, val);
 	return cb;
 }
 
-}
+} // namespace stappler::memory
 
 #endif /* CORE_CORE_STRING_SPSTRINGSTREAM_H_ */

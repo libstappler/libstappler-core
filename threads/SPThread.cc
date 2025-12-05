@@ -22,8 +22,6 @@
 
 #include "SPThread.h"
 #include "SPLog.h"
-#include "SPMemPoolInterface.h"
-#include "SPThreadTaskQueue.h"
 
 #ifdef MODULE_STAPPLER_ABI
 #include "SPSharedModule.h"
@@ -62,7 +60,7 @@ static void ThreadCallbacks_init(const ThreadCallbacks &cb, Thread *tm) {
 
 	tl_threadInfo.workerPool = memory::pool::create(tl_threadInfo.threadPool);
 
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		tm->retain();
 		cb.init(tm);
 	}, tl_threadInfo.threadPool);
@@ -72,13 +70,13 @@ static bool ThreadCallbacks_worker(const ThreadCallbacks &cb, Thread *tm) {
 	SPASSERT(tl_threadInfo.workerPool, "Thread pool should be initialized");
 	bool ret = false;
 
-	memory::pool::perform_clear([&] { ret = cb.worker(tm); }, tl_threadInfo.workerPool);
+	memory::perform_clear([&] { ret = cb.worker(tm); }, tl_threadInfo.workerPool);
 
 	return ret;
 }
 
 static void ThreadCallbacks_dispose(const ThreadCallbacks &cb, Thread *tm) {
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		cb.dispose(tm);
 		tm->release(0);
 	}, tl_threadInfo.threadPool);

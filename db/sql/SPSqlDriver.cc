@@ -30,7 +30,8 @@ namespace STAPPLER_VERSIONIZED stappler::db::sql {
 
 thread_local std::map<StringView, Map<StringView, const void *>> tl_DriverQueryStorage;
 
-QueryStorageHandle::QueryStorageHandle(const Driver *d, StringView n, Map<StringView, const void *> *dt)
+QueryStorageHandle::QueryStorageHandle(const Driver *d, StringView n,
+		Map<StringView, const void *> *dt)
 : driver(d), name(n), data(dt) { }
 
 QueryStorageHandle::~QueryStorageHandle() {
@@ -44,7 +45,7 @@ QueryStorageHandle::QueryStorageHandle(QueryStorageHandle &&other)
 	other.driver = nullptr;
 }
 
-QueryStorageHandle& QueryStorageHandle::operator=(QueryStorageHandle &&other) {
+QueryStorageHandle &QueryStorageHandle::operator=(QueryStorageHandle &&other) {
 	driver = other.driver;
 	name = other.name;
 	data = other.data;
@@ -52,8 +53,9 @@ QueryStorageHandle& QueryStorageHandle::operator=(QueryStorageHandle &&other) {
 	return *this;
 }
 
-Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, const void *external) {
-	pool::context ctx(pool, pool::context<pool_t *>::conditional);
+Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path,
+		const void *external) {
+	memory::context ctx(pool, memory::context<pool_t *>::conditional);
 
 	Driver *ret = nullptr;
 
@@ -72,9 +74,7 @@ Driver *Driver::open(pool_t *pool, ApplicationInterface *app, StringView path, c
 
 Driver::~Driver() { }
 
-void Driver::setDbCtrl(Function<void(bool)> &&fn) {
-	_dbCtrl = sp::move(fn);
-}
+void Driver::setDbCtrl(Function<void(bool)> &&fn) { _dbCtrl = sp::move(fn); }
 
 const CustomFieldInfo *Driver::getCustomFieldInfo(StringView key) const {
 	auto it = _customFields.find(key);
@@ -117,12 +117,9 @@ Map<StringView, const void *> *Driver::registerQueryStorage(StringView name) con
 	return ret;
 }
 
-void Driver::unregisterQueryStorage(StringView name) const {
-	tl_DriverQueryStorage.erase(name);
-}
+void Driver::unregisterQueryStorage(StringView name) const { tl_DriverQueryStorage.erase(name); }
 
-Driver::Driver(pool_t *p, ApplicationInterface *app)
-: _pool(p), _application(app) {
+Driver::Driver(pool_t *p, ApplicationInterface *app) : _pool(p), _application(app) {
 	if (!app) {
 		auto mem = pool::palloc(_pool, sizeof(ApplicationInterface));
 
@@ -130,4 +127,4 @@ Driver::Driver(pool_t *p, ApplicationInterface *app)
 	}
 }
 
-}
+} // namespace stappler::db::sql

@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,37 +31,41 @@ namespace STAPPLER_VERSIONIZED stappler::memory {
 
 constexpr size_t basic_ostringbuf_bufsize = 256;
 
-template<typename CharType>
-class basic_ostringbuf final : public std::basic_streambuf<CharType, std::char_traits<CharType>>, public AllocPool {
+template <typename CharType>
+class basic_ostringbuf final : public std::basic_streambuf<CharType, std::char_traits<CharType>>,
+							   public AllocPool {
 public:
-	using storage_type = storage_mem<CharType>;
-	using allocator_type = Allocator<CharType>;
-	using storage_allocator_type = Allocator<storage_mem<CharType>>;
+	using storage_type = detail::storage_mem<CharType>;
+	using allocator_type = detail::Allocator<CharType>;
+	using storage_allocator_type = detail::Allocator<detail::storage_mem<CharType>>;
 	using traits_type = std::char_traits<CharType>;
 	using size_type = size_t;
 	using string_type = basic_string<CharType>;
-	using mem_type = storage_mem<CharType, 1>;
+	using mem_type = detail::storage_mem<CharType, 1>;
 	using char_type = CharType;
 	using int_type = typename traits_type::int_type;
 	using streambuf_type = std::basic_streambuf<CharType, std::char_traits<CharType>>;
 
-	basic_ostringbuf(size_type block = mem_type::get_soo_size(), const allocator_type &alloc = allocator_type()) noexcept
+	basic_ostringbuf(size_type block = mem_type::get_soo_size(),
+			const allocator_type &alloc = allocator_type()) noexcept
 	: _buf(alloc) {
 		_buf.resize(block, 0);
 
-	    char *base = &_buf.front();
-	    streambuf_type::setp(base, base + _buf.size() - 1); // -1 to make overflow() easier
+		char *base = &_buf.front();
+		streambuf_type::setp(base, base + _buf.size() - 1); // -1 to make overflow() easier
 	}
-	basic_ostringbuf(CharType *ptr, size_type block, const allocator_type &alloc = allocator_type()) noexcept
+	basic_ostringbuf(CharType *ptr, size_type block,
+			const allocator_type &alloc = allocator_type()) noexcept
 	: _buf(alloc) {
 		_buf.assign_weak(ptr, block);
 
-	    char *base = &_buf.front();
-	    streambuf_type::setp(base, base + _buf.size() - 1); // -1 to make overflow() easier
+		char *base = &_buf.front();
+		streambuf_type::setp(base, base + _buf.size() - 1); // -1 to make overflow() easier
 	}
-	basic_ostringbuf(basic_ostringbuf &&other, const allocator_type &alloc = allocator_type()) noexcept
-	: _buf(sp::move(other._buf), alloc)  {
-	    char *base = &_buf.front();
+	basic_ostringbuf(basic_ostringbuf &&other,
+			const allocator_type &alloc = allocator_type()) noexcept
+	: _buf(sp::move(other._buf), alloc) {
+		char *base = &_buf.front();
 		auto diff = (_buf.size() - 1) - (other.epptr() - other.pptr());
 		streambuf_type::setp(base + diff, base + _buf.size() - 1);
 	}
@@ -75,21 +80,13 @@ public:
 
 	virtual ~basic_ostringbuf() noexcept { }
 
-	bool empty() const noexcept {
-		return streambuf_type::pptr() == _buf.data();
-	}
+	bool empty() const noexcept { return streambuf_type::pptr() == _buf.data(); }
 
-	size_type size() const noexcept {
-		return (streambuf_type::pptr() - _buf.data());
-	}
+	size_type size() const noexcept { return (streambuf_type::pptr() - _buf.data()); }
 
-	CharType *data() noexcept {
-		return _buf.data();
-	}
+	CharType *data() noexcept { return _buf.data(); }
 
-	const CharType *data() const noexcept {
-		return _buf.data();
-	}
+	const CharType *data() const noexcept { return _buf.data(); }
 
 	string_type str() const noexcept {
 		string_type ret;
@@ -98,9 +95,9 @@ public:
 	}
 
 	void clear() {
-	    char *base = &_buf.front();
-	    streambuf_type::setp(base, base + _buf.size() - 1); // -1 to make overflow() easier
-	    memset(_buf.data(), 0, _buf.size());
+		char *base = &_buf.front();
+		streambuf_type::setp(base, base + _buf.size() - 1); // -1 to make overflow() easier
+		memset(_buf.data(), 0, _buf.size());
 	}
 
 	void reserve(size_t size) {
@@ -108,12 +105,12 @@ public:
 		_buf.reserve(size + 1);
 		_buf.resize(size + 1, 0);
 
-	    char *base = &_buf.front();
-	    streambuf_type::setp(base + psize, base + _buf.size() - 1); // -1 to make overflow() easier
+		char *base = &_buf.front();
+		streambuf_type::setp(base + psize, base + _buf.size() - 1); // -1 to make overflow() easier
 	}
 
 	basic_ostringbuf(const basic_ostringbuf &) = delete;
-	basic_ostringbuf & operator = (const basic_ostringbuf &) = delete;
+	basic_ostringbuf &operator=(const basic_ostringbuf &) = delete;
 
 	const allocator_type &get_allocator() const noexcept { return _buf.get_allocator(); }
 
@@ -125,8 +122,8 @@ protected:
 		streambuf_type::setp(base + diff, base + _buf.size() - 1); // -1 to make overflow() easier
 	}
 
-    virtual int_type overflow(int_type ch) override {
-    	if (ch != traits_type::eof()) {
+	virtual int_type overflow(int_type ch) override {
+		if (ch != traits_type::eof()) {
 			*streambuf_type::pptr() = ch;
 			streambuf_type::pbump(1);
 			make_flush();
@@ -134,13 +131,13 @@ protected:
 		}
 
 		return traits_type::eof();
-    }
-    virtual int sync() override {
-    	make_flush();
-    	return 0;
-    }
+	}
+	virtual int sync() override {
+		make_flush();
+		return 0;
+	}
 
-    mem_type _buf;
+	mem_type _buf;
 };
 
 
@@ -151,7 +148,7 @@ public:
 	using char_type = CharType;
 	using traits_type = std::char_traits<CharType>;
 
-	using allocator_type = Allocator<CharType>;
+	using allocator_type = detail::Allocator<CharType>;
 	using int_type = typename traits_type::int_type;
 	using pos_type = typename traits_type::pos_type;
 	using off_type = typename traits_type::off_type;
@@ -166,41 +163,40 @@ private:
 	stringbuf_type _buf;
 
 public:
-	explicit
-	basic_ostringstream(size_type block = stringbuf_type::mem_type::get_soo_size(), const allocator_type &alloc = allocator_type()) noexcept
+	explicit basic_ostringstream(size_type block = stringbuf_type::mem_type::get_soo_size(),
+			const allocator_type &alloc = allocator_type()) noexcept
 	: ostream_type(&_buf), _buf(block, alloc) {
 		this->init(&_buf);
 	}
 
-	basic_ostringstream(CharType *ptr, size_type block, const allocator_type &alloc = allocator_type()) noexcept
+	basic_ostringstream(CharType *ptr, size_type block,
+			const allocator_type &alloc = allocator_type()) noexcept
 	: ostream_type(&_buf), _buf(ptr, block, alloc) {
 		this->init(&_buf);
 	}
 
-	basic_ostringstream(basic_ostringstream && rhs) noexcept
+	basic_ostringstream(basic_ostringstream &&rhs) noexcept
 	: ostream_type(sp::move(rhs)), _buf(sp::move(rhs._buf)) {
 		ostream_type::set_rdbuf(&_buf);
 	}
 
-	basic_ostringstream & operator=(basic_ostringstream && rhs) noexcept {
+	basic_ostringstream &operator=(basic_ostringstream &&rhs) noexcept {
 		ostream_type::operator=(sp::move(rhs));
 		_buf = sp::move(rhs._buf);
 		return *this;
 	}
 
-	~basic_ostringstream() noexcept {}
+	~basic_ostringstream() noexcept { }
 
 	basic_ostringstream(const basic_ostringstream &) = delete;
-	basic_ostringstream & operator=(const basic_ostringstream &) = delete;
+	basic_ostringstream &operator=(const basic_ostringstream &) = delete;
 
-	void swap(basic_ostringstream & rhs) {
+	void swap(basic_ostringstream &rhs) {
 		ostream_type::swap(rhs);
 		_buf.swap(rhs._buf);
 	}
 
-	stringbuf_type * rdbuf() const {
-		return const_cast<stringbuf_type *>(&_buf);
-	}
+	stringbuf_type *rdbuf() const { return const_cast<stringbuf_type *>(&_buf); }
 
 	string_type str() const noexcept { return _buf.str(); }
 	string_type weak() const noexcept { return string_type::make_weak(data(), size()); }
@@ -218,11 +214,12 @@ public:
 
 using ostringstream = basic_ostringstream<char>;
 
-template<typename CharType> inline std::basic_ostream<CharType> &
-operator << (std::basic_ostream<CharType> & os, const basic_ostringstream<CharType> & str) {
+template <typename CharType>
+inline std::basic_ostream<CharType> &operator<<(std::basic_ostream<CharType> &os,
+		const basic_ostringstream<CharType> &str) {
 	return os << str.str();
 }
 
-}
+} // namespace stappler::memory
 
 #endif /* STAPPLER_CORE_MEMORY_SPMEMSTRINGSTREAM_H_ */

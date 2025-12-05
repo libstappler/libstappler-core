@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include "SPSqlHandle.h"
 #include "SPDso.h"
 #include "SPDbFieldExtensions.h"
+#include "detail/SPMemUserData.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db::pq {
 
@@ -301,8 +302,8 @@ bool Driver::init(Handle handle, const Vector<StringView> &dbs) {
 
 	db::sql::Result res(&result);
 
-	memory::pool::context<memory::pool_t *> ctx(_storageTypes.get_allocator(),
-			memory::pool::context<memory::pool_t *>::conditional);
+	memory::context<memory::pool_t *> ctx(_storageTypes.get_allocator(),
+			memory::context<memory::pool_t *>::conditional);
 
 	for (auto it : res) {
 		auto tid = it.toInteger(0);
@@ -374,14 +375,14 @@ void Driver::performWithStorage(Handle handle,
 
 BackendInterface *Driver::acquireInterface(Handle handle, pool_t *pool) const {
 	BackendInterface *ret = nullptr;
-	memory::pool::perform_conditional([&] { ret = new (pool) db::pq::Handle(this, handle); }, pool);
+	memory::perform_conditional([&] { ret = new (pool) db::pq::Handle(this, handle); }, pool);
 	return ret;
 }
 
 Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const {
 	auto p = pool::create(pool::acquire());
 	Driver::Handle rec;
-	memory::pool::perform_conditional([&] {
+	memory::perform_conditional([&] {
 		Vector<const char *> keywords;
 		keywords.reserve(params.size());
 		Vector<const char *> values;

@@ -29,7 +29,7 @@
 namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
 const PBXProject *PBXProject::create(XCodeExport &xctx, const Callback<void(PBXProject *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXProject(xctx);
 

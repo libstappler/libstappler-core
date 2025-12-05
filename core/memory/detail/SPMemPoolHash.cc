@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,7 @@ THE SOFTWARE.
 #include "SPMemPoolStruct.h"
 #include "SPTime.h"
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::memory::custom {
 
 constexpr auto INITIAL_MAX = 15; /* tunable == 2^n - 1 */
 
@@ -38,24 +39,25 @@ void HashTable::init(HashTable *ht, Pool *pool) {
 	ht->free = NULL;
 	ht->count = 0;
 	ht->max = INITIAL_MAX;
-	ht->seed = (unsigned int)((now >> 32) ^ now ^ (uintptr_t)pool ^ (uintptr_t)ht ^ (uintptr_t)&now) - 1;
+	ht->seed = (unsigned int)((now >> 32) ^ now ^ (uintptr_t)pool ^ (uintptr_t)ht ^ (uintptr_t)&now)
+			- 1;
 	ht->array = alloc_array(ht, ht->max);
 	ht->hash_func = nullptr;
 }
 
-HashTable * HashTable::make(Pool *pool) {
+HashTable *HashTable::make(Pool *pool) {
 	HashTable *ht = (HashTable *)pool->palloc(sizeof(HashTable));
 	init(ht, pool);
 	return ht;
 }
 
-HashTable * HashTable::make(Pool *pool, HashFunc hash_func) {
+HashTable *HashTable::make(Pool *pool, HashFunc hash_func) {
 	HashTable *ht = make(pool);
 	ht->hash_func = hash_func;
 	return ht;
 }
 
-HashIndex * HashIndex::next() {
+HashIndex *HashIndex::next() {
 	_self = _next;
 	while (!_self) {
 		if (index > ht->max) {
@@ -68,12 +70,18 @@ HashIndex * HashIndex::next() {
 }
 
 void HashIndex::self(const void **key, size_t *klen, void **val) {
-	if (key) *key = _self->key;
-	if (klen) *klen = _self->klen;
-	if (val) *val = (void *)_self->val;
+	if (key) {
+		*key = _self->key;
+	}
+	if (klen) {
+		*klen = _self->klen;
+	}
+	if (val) {
+		*val = (void *)_self->val;
+	}
 }
 
-HashIndex * HashTable::first(Pool *p) {
+HashIndex *HashTable::first(Pool *p) {
 	HashIndex *hi;
 	if (p) {
 		hi = (HashIndex *)p->palloc(sizeof(*hi));
@@ -148,12 +156,13 @@ static HashEntry **find_entry(HashTable *ht, const void *key, size_t klen, const
 	return hep;
 }
 
-HashTable * HashTable::copy(Pool *pool) const {
+HashTable *HashTable::copy(Pool *pool) const {
 	HashTable *ht;
 	HashEntry *new_vals;
 	uint32_t i, j;
 
-	ht = (HashTable *)pool->palloc(sizeof(HashTable) + sizeof(*ht->array) * (max + 1) +sizeof(HashEntry) * count);
+	ht = (HashTable *)pool->palloc(
+			sizeof(HashTable) + sizeof(*ht->array) * (max + 1) + sizeof(HashEntry) * count);
 	ht->pool = pool;
 	ht->free = nullptr;
 	ht->count = count;
@@ -214,22 +223,19 @@ void HashTable::set(const void *key, size_t klen, const void *val) {
 	/* else key not present and val==NULL */
 }
 
-size_t HashTable::size() const {
-	return count;
-}
+size_t HashTable::size() const { return count; }
 
 void HashTable::clear() {
 	HashIndex *hi;
-	for (hi = first(nullptr); hi; hi = hi->next()) {
-		set(hi->_self->key, hi->_self->klen, NULL);
-	}
+	for (hi = first(nullptr); hi; hi = hi->next()) { set(hi->_self->key, hi->_self->klen, NULL); }
 }
 
 HashTable *HashTable::merge(Pool *p, const HashTable *ov) const {
 	return merge(p, ov, nullptr, nullptr);
 }
 
-HashTable *HashTable::merge(Pool *p, const HashTable *overlay, merge_fn merger, const void *data) const {
+HashTable *HashTable::merge(Pool *p, const HashTable *overlay, merge_fn merger,
+		const void *data) const {
 	HashTable *res;
 	HashEntry *new_vals = nullptr;
 	HashEntry *iter;
@@ -297,12 +303,12 @@ HashTable *HashTable::merge(Pool *p, const HashTable *overlay, merge_fn merger, 
 	return res;
 }
 
-bool HashTable::foreach(foreach_fn comp, void *rec) const {
-	HashIndex  hix;
+bool HashTable::foreach (foreach_fn comp, void *rec) const {
+	HashIndex hix;
 	HashIndex *hi;
 	bool rv, dorv = false;
 
-	hix.ht  = (HashTable *)this;
+	hix.ht = (HashTable *)this;
 	hix.index = 0;
 	hix._self = nullptr;
 	hix._next = nullptr;
@@ -320,4 +326,4 @@ bool HashTable::foreach(foreach_fn comp, void *rec) const {
 	return dorv;
 }
 
-}
+} // namespace stappler::memory::custom

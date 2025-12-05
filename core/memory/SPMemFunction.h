@@ -25,8 +25,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_SPMEMFUNCTION_H_
 #define STAPPLER_CORE_MEMORY_SPMEMFUNCTION_H_
 
-#include "SPMemAlloc.h"
-#include "SPMemPoolInterface.h"
+#include "detail/SPMemAlloc.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
@@ -50,7 +49,7 @@ template <typename ReturnType, typename... ArgumentTypes>
 class function<ReturnType(ArgumentTypes...)> : public AllocPool {
 public:
 	using signature_type = ReturnType(ArgumentTypes...);
-	using allocator_type = Allocator<void *>;
+	using allocator_type = detail::Allocator<void *>;
 
 	~function() { clear(); }
 
@@ -209,7 +208,7 @@ private:
 				}
 			},
 				[](const void *arg, allocator_type &alloc, uint8_t *buf) -> void * {
-				Allocator<BaseType> ialloc = alloc;
+				detail::Allocator<BaseType> ialloc = alloc;
 				auto mem = ialloc.allocate(1);
 				ialloc.construct(mem, *(*static_cast<const BaseTypePtr *>(arg)));
 				return new (buf)(const BaseType *)(mem);
@@ -233,11 +232,11 @@ private:
 		if constexpr (sizeof(BaseType) <= OptBufferSize) {
 			new (buf) BaseType(std::forward<FunctionT>(f));
 		} else {
-			Allocator<BaseType> ialloc = alloc;
+			detail::Allocator<BaseType> ialloc = alloc;
 			auto mem = ialloc.allocate(1);
 
-			memory::pool::perform_conditional(
-					[&] { new (mem) BaseType(std::forward<FunctionT>(f)); }, alloc);
+			memory::perform_conditional([&] { new (mem) BaseType(std::forward<FunctionT>(f)); },
+					alloc);
 
 			new (buf)(const BaseType *)(mem);
 		}

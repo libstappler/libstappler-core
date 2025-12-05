@@ -20,11 +20,123 @@
  THE SOFTWARE.
  **/
 
+#ifndef CORE_DOCUMENT_EPUB_SPDOCEPUB_H_
+#define CORE_DOCUMENT_EPUB_SPDOCEPUB_H_
+
 #include "SPDocument.h"
 #include "SPDocPageContainer.h" // IWYU pragma: keep
 #include "SPZip.h"
+#include "SPMemForwardList.h"
 
 namespace STAPPLER_VERSIONIZED stappler::document {
+
+struct EpubRootNode {
+	StringView id;
+
+	EpubRootNode *refinedBy;
+};
+
+struct CollectionMeta {
+	StringView title;
+	StringView type;
+	StringView position;
+	StringView uid;
+
+	mem_pool::Map<StringView, StringView> localizedTitle;
+};
+
+struct TitleMeta {
+	enum Type {
+		Main,
+		Subtitle,
+		Short,
+		Collection,
+		Edition,
+		Expanded
+	};
+
+	StringView title;
+	mem_pool::Map<StringView, StringView> localizedTitle;
+
+	int64_t sequence = 0;
+	Type type = Main;
+};
+
+struct AuthorMeta {
+	enum Type {
+		Creator,
+		Contributor,
+	};
+
+	StringView name;
+	Type type = Creator;
+	mem_pool::Map<StringView, StringView> localizedName;
+
+	StringView role;
+	StringView roleScheme;
+};
+
+struct MetaData {
+	mem_pool::Vector<TitleMeta> titles;
+	mem_pool::Vector<AuthorMeta> authors;
+	mem_pool::Vector<CollectionMeta> collections;
+};
+
+enum class EpubContentSection {
+	None,
+	Package,
+	Metadata,
+	Manifest,
+	Spine,
+	Other,
+};
+
+struct EpubContentNode {
+	EpubContentSection section;
+	StringView name;
+	StringView id;
+	StringView type;
+	StringView content;
+	StringView href;
+	memory::forward_list<Pair<StringView, StringView>> attributes;
+};
+
+struct EpubArchiveFile {
+	// ZIP data
+	uint64_t index = 0;
+	StringView path;
+	size_t size = 0;
+
+	// Manifest data
+	StringView id;
+	StringView type;
+	mem_pool::Set<StringView> props;
+
+	EpubContentNode *node = nullptr;
+};
+
+struct SP_PUBLIC EpubData : DocumentData {
+	ZipArchive<memory::PoolInterface> archive;
+	Map<StringView, EpubArchiveFile> archiveFiles;
+	StringView rootPath;
+
+	StringView version;
+	StringView coverFile;
+	StringView tocFile;
+
+	memory::forward_list<EpubContentNode> epubContent;
+	memory::forward_list<EpubContentNode *> epubMetadata;
+	memory::forward_list<EpubContentNode *> epubManifest;
+	memory::forward_list<EpubContentNode *> epubSpine;
+	memory::map<StringView, EpubContentNode *> epubContentById;
+
+	virtual ~EpubData();
+
+	EpubData(memory::pool_t *, FileInfo, StringView = StringView());
+	EpubData(memory::pool_t *, BytesView, StringView = StringView());
+
+	bool init();
+};
 
 class SP_PUBLIC DocumentEpub : public Document {
 public:
@@ -39,40 +151,12 @@ public:
 	virtual bool init(memory::pool_t *, BytesView, StringView ct = StringView());
 
 protected:
-};
+	virtual bool processArchiveFiles(EpubData *);
 
-
-enum class EpubManifestType {
-	Unknown,
-	Image,
-	Source,
-	Css,
-};
-
-struct EpubManifestFile {
-	// ZIP data
-	uint64_t index;
-	StringView path;
-	size_t size;
-	EpubManifestType type = EpubManifestType::Unknown;
-
-	uint16_t width = 0;
-	uint16_t height = 0;
-
-	// Manifest data
-	StringView id;
-	StringView mime;
-};
-
-struct EpubData : DocumentData {
-	ZipArchive<memory::PoolInterface> archive;
-	Map<StringView, EpubManifestFile> manifestFiles;
-
-	virtual ~EpubData();
-	EpubData(memory::pool_t *, FileInfo, StringView = StringView());
-	EpubData(memory::pool_t *, BytesView, StringView = StringView());
-
-	bool init();
+	virtual void readContentFile(EpubData *, EpubArchiveFile *, StringView);
+	virtual void readStyleFile(EpubData *, EpubArchiveFile *, StringView);
 };
 
 } // namespace stappler::document
+
+#endif // CORE_DOCUMENT_EPUB_SPDOCEPUB_H_

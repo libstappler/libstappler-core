@@ -603,7 +603,7 @@ Template *Template::read(const StringView &str, const Options &opts,
 
 Template *Template::read(memory::pool_t *p, const StringView &str, const Options &opts,
 		const Callback<void(StringView)> &err) {
-	return memory::pool::perform([&] { return new (p) Template(p, str, opts, err); }, p);
+	return memory::perform([&] { return new (p) Template(p, str, opts, err); }, p);
 }
 
 Template::Template(memory::pool_t *p, const StringView &str, const Options &opts,

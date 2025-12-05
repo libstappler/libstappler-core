@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,13 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEM_H_
-#define STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEM_H_
+#ifndef STAPPLER_CORE_MEMORY_DETAIL_SPMEMSTORAGEMEM_H_
+#define STAPPLER_CORE_MEMORY_DETAIL_SPMEMSTORAGEMEM_H_
 
 #include "SPMemStorageMemImpl.h"
 #include "SPMemPointerIterator.h"
 
-namespace STAPPLER_VERSIONIZED stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory::detail {
 
 template <typename Type>
 struct mem_sso_test {
@@ -35,9 +36,9 @@ struct mem_sso_test {
 };
 
 template <typename Type, size_t Extra = 0>
-class storage_mem_soo : public impl::mem_soo_iface<Type, Extra, mem_sso_test<Type>::value> {
+class storage_mem_soo : public mem_soo_iface<Type, Extra, mem_sso_test<Type>::value> {
 public:
-	using base = impl::mem_soo_iface<Type, Extra, mem_sso_test<Type>::value>;
+	using base = mem_soo_iface<Type, Extra, mem_sso_test<Type>::value>;
 	using self = storage_mem_soo<Type, Extra>;
 	using pointer = Type *;
 	using const_pointer = const Type *;
@@ -426,6 +427,6 @@ private:
 template <typename Type, size_t Extra = 0>
 using storage_mem = storage_mem_soo<Type, Extra>;
 
-} // namespace stappler::memory
+} // namespace stappler::memory::detail
 
-#endif /* STAPPLER_CORE_MEMORY_SPMEMSTORAGEMEM_H_ */
+#endif /* STAPPLER_CORE_MEMORY_DETAIL_SPMEMSTORAGEMEM_H_ */

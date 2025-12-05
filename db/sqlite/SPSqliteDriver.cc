@@ -24,6 +24,7 @@
 #include "SPSqliteDriver.h"
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
+#include "SPSqliteDriverHandle.cc"
 #include "SPSqliteHandle.h"
 #include "SPDbFieldExtensions.h"
 #include "sqlite3.h"
@@ -158,7 +159,7 @@ void Driver::performWithStorage(Handle handle,
 
 BackendInterface *Driver::acquireInterface(Handle handle, pool_t *pool) const {
 	BackendInterface *ret = nullptr;
-	pool::perform_conditional([&] { ret = new (pool) db::sqlite::Handle(this, handle); }, pool);
+	memory::perform_conditional([&] { ret = new (pool) db::sqlite::Handle(this, handle); }, pool);
 	return ret;
 }
 
@@ -206,7 +207,7 @@ static Driver::Handle Driver_setupDriver(const Driver *d, DriverSym *_handle, po
 			});
 		}
 	}
-	stappler::filesystem::mkdir_recursive(stappler::filepath::root(FileInfo{dbname}));
+	filesystem::mkdir_recursive(FileInfo(filepath::root(FileInfo{dbname})));
 #if WIN32
 	dbname = StringView(filesystem::native::posixToNative<Interface>(dbname)).pdup();
 #endif
@@ -369,7 +370,7 @@ Driver::Handle Driver::connect(const Map<StringView, StringView> &params) const 
 	auto p = pool::create(pool::acquire());
 	Driver::Handle rec = Driver::Handle(nullptr);
 
-	pool::perform([&] {
+	memory::perform([&] {
 		int flags = 0;
 		StringView mode;
 		StringView dbname("db.sqlite");

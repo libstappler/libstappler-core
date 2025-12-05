@@ -24,7 +24,6 @@
 #define CORE_CORE_UTILS_SPSTATUS_H_
 
 #include "SPCore.h"
-#include <errno.h>
 
 namespace STAPPLER_VERSIONIZED stappler {
 

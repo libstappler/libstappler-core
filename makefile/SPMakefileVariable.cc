@@ -21,12 +21,7 @@
  **/
 
 #include "SPMakefileVariable.h"
-#include "SPBytesView.h"
-#include "SPIOBuffer.h"
-#include "SPIOCommon.h"
-
 #include "SPMakefileStmt.h"
-#include "SPMemPoolInterface.h"
 #include "functions/SPMakefileFunction.cc"
 #include "functions/SPMakefileFunctionCall.cc"
 #include "functions/SPMakefileFunctionFileName.cc"

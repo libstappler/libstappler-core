@@ -26,16 +26,13 @@
 
 namespace STAPPLER_VERSIONIZED stappler::document {
 
-PageContainer::PageContainer(DocumentData *doc) : StyleContainer(doc) {
+PageContainer::PageContainer(DocumentData *doc, StringView path) : StyleContainer(doc) {
 	_root = new (memory::pool::acquire()) Node(StringView("body"));
+	_path = path.pdup();
 }
 
 void PageContainer::finalize() {
 	_root->foreach ([&](Node &node, size_t level) {
-		/*for (size_t i = 0; i < level; ++ i) {
-			std::cout << "\t";
-		}
-		std::cout << node.getHtmlName() << ": " << string::toUtf8<Interface>(node.getValue()) << "\n";*/
 		node.setNodeId(_document->maxNodeId++);
 		if (!node.getHtmlId().empty()) {
 			_ids.emplace(node.getHtmlId(), &node);
@@ -43,11 +40,9 @@ void PageContainer::finalize() {
 	});
 }
 
-void PageContainer::setTitle(const StringView &data) {
-	_title = string::decodeHtml<Interface>(data);
-}
+void PageContainer::setTitle(StringView data) { _title = string::decodeHtml<Interface>(data); }
 
-void PageContainer::setMeta(const StringView &data) {
+void PageContainer::setMeta(StringView data) {
 	bool isHttp = false;
 	String name;
 
@@ -75,10 +70,8 @@ void PageContainer::setMeta(const StringView &data) {
 		} else if (isStringCaseEqual(attrName, "content")) {
 			if (!name.empty() && !attrValue.empty()) {
 				if (isHttp) {
-					std::cout << "Http: " << name << ": " << attrValue << "\n";
 					_http.emplace(move(name), move(attrValue));
 				} else {
-					std::cout << "Meta: " << name << ": " << attrValue << "\n";
 					_meta.emplace(move(name), move(attrValue));
 				}
 			}
@@ -86,11 +79,11 @@ void PageContainer::setMeta(const StringView &data) {
 	}
 }
 
-void PageContainer::setBaseOrigin(const StringView &val) { _baseOrigin = val.str<Interface>(); }
+void PageContainer::setBaseOrigin(StringView val) { _baseOrigin = val.str<Interface>(); }
 
-void PageContainer::setBaseTarget(const StringView &val) { _baseTarget = val.str<Interface>(); }
+void PageContainer::setBaseTarget(StringView val) { _baseTarget = val.str<Interface>(); }
 
-void PageContainer::addLink(const StringView &data) {
+void PageContainer::addLink(StringView data) {
 	String rel;
 	String href;
 	String media;
@@ -131,7 +124,7 @@ void PageContainer::addLink(const StringView &data) {
 	}
 }
 
-void PageContainer::addAsset(const StringView &str) { _assets.emplace_back(str.str<Interface>()); }
+void PageContainer::addAsset(StringView str) { _assets.emplace_back(str.str<Interface>()); }
 
 StringView PageContainer::getMeta(StringView key) const {
 	auto it = _meta.find(key);
@@ -139,6 +132,22 @@ StringView PageContainer::getMeta(StringView key) const {
 		return it->second;
 	}
 	return StringView();
+}
+
+StringView PageContainer::getHttpEquiv(StringView key) const {
+	auto it = _http.find(key);
+	if (it != _http.end()) {
+		return it->second;
+	}
+	return StringView();
+}
+
+void PageContainer::foreachMeta(const Callback<void(StringView, StringView)> &cb) const {
+	for (auto &it : _meta) { cb(it.first, it.second); }
+}
+
+void PageContainer::foreachHttpEquiv(const Callback<void(StringView, StringView)> &cb) const {
+	for (auto &it : _http) { cb(it.first, it.second); }
 }
 
 Node *PageContainer::getNodeById(StringView key) const {

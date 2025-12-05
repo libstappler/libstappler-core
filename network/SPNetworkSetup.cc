@@ -208,14 +208,16 @@ Pair<FILE *, uint64_t> _openFile(const FileInfo &filename, bool readOnly, bool r
 }
 
 template <typename K, typename T>
-inline void SetOpt(bool &check, CURL *curl, K opt, const T &value) {
+inline void SetOpt(bool &check, CURL *curl, K opt, const T &value, bool optional = false) {
 #ifdef DEBUG
 	int err = CURLE_OK;
 	if (check) {
 		err = curl_easy_setopt(curl, opt, value);
 		if (err != CURLE_OK) {
-			SP_NETWORK_LOG("curl_easy_setopt failed: %d %s %s", err, #name, #value);
-			check = false;
+			if (!optional || err != CURLE_NOT_BUILT_IN) {
+				slog().debug("CURL", "curl_easy_setopt (", opt, ") failed: ", err);
+				check = false;
+			}
 		}
 	}
 #else
@@ -230,9 +232,13 @@ static bool _setupCurl(const HandleData<Interface> &iface, CURL *curl, char *err
 	auto CABundle = getCABundle();
 	static struct curl_blob blob{(void *)CABundle.data(), CABundle.size(), CURL_BLOB_NOCOPY};
 
+#ifdef STAPPLER_SHARED
+	SetOpt(check, curl, CURLOPT_CAINFO_BLOB, &blob, true);
+#else
 	SetOpt(check, curl, CURLOPT_CAINFO_BLOB, &blob);
+#endif
 
-	SetOpt(check, curl, CURLOPT_USE_SSL, CURLUSESSL_TRY);
+	SetOpt(check, curl, CURLOPT_USE_SSL, CURLUSESSL_TRY, true);
 
 	SetOpt(check, curl, CURLOPT_NOSIGNAL, 1);
 	SetOpt(check, curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_WHATEVER);
@@ -260,6 +266,10 @@ static bool _setupCurl(const HandleData<Interface> &iface, CURL *curl, char *err
 	/* enable all supported built-in compressions */
 	SetOpt(check, curl, CURLOPT_ACCEPT_ENCODING, "");
 
+	if (!check) {
+		slog().debug("CURL", "Fail to perform general setup");
+	}
+
 	return check;
 }
 
@@ -271,6 +281,11 @@ static bool _setupDebug(const HandleData<Interface> &iface, CURL *curl, bool deb
 		SetOpt(check, curl, CURLOPT_DEBUGFUNCTION, _writeDebug<Interface>);
 		SetOpt(check, curl, CURLOPT_DEBUGDATA, &iface);
 	}
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform debug setup");
+	}
+
 	return check;
 }
 
@@ -314,6 +329,10 @@ static bool _setupHeaders(const HandleData<Interface> &iface, Context<Interface>
 	SetOpt(check, ctx->curl, CURLOPT_HEADERFUNCTION, _writeHeaders<Interface>);
 	SetOpt(check, ctx->curl, CURLOPT_HEADERDATA, &iface);
 
+	if (!check) {
+		slog().debug("CURL", "Fail to perform headers setup");
+	}
+
 	return check;
 }
 
@@ -326,6 +345,11 @@ static bool _setupUserAgent(const HandleData<Interface> &iface, CURL *curl,
 	} else {
 		SetOpt(check, curl, CURLOPT_USERAGENT, s_UserAgent);
 	}
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform user-agent setup");
+	}
+
 	return check;
 }
 
@@ -344,6 +368,11 @@ static bool _setupUser(const HandleData<Interface> &iface, CURL *curl, const Str
 			SetOpt(check, curl, CURLOPT_PASSWORD, SP_TERMINATED_DATA(password));
 		}
 	}
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform user setup");
+	}
+
 	return check;
 }
 
@@ -351,6 +380,11 @@ template <typename Interface>
 static bool _setupFrom(const HandleData<Interface> &iface, CURL *curl, const StringView &from) {
 	bool check = true;
 	SetOpt(check, curl, CURLOPT_MAIL_FROM, SP_TERMINATED_DATA(from));
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform user-from setup");
+	}
+
 	return check;
 }
 
@@ -363,6 +397,11 @@ static bool _setupRecv(const HandleData<Interface> &iface, CURL *curl,
 		for (const auto &str : vec) { *mailTo = curl_slist_append(*mailTo, str.c_str()); }
 		SetOpt(check, curl, CURLOPT_MAIL_RCPT, *mailTo);
 	}
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform recv setup");
+	}
+
 	return check;
 }
 
@@ -377,6 +416,11 @@ static bool _setupProgress(const HandleData<Interface> &iface, CURL *curl) {
 	}
 	SetOpt(check, curl, CURLOPT_XFERINFOFUNCTION, _progress<Interface>);
 	SetOpt(check, curl, CURLOPT_XFERINFODATA, &iface);
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform progress setup");
+	}
+
 	return check;
 }
 
@@ -388,6 +432,11 @@ static bool _setupCookies(const HandleData<Interface> &iface, CURL *curl,
 		SetOpt(check, curl, CURLOPT_COOKIEFILE, SP_TERMINATED_DATA(cookiePath));
 		SetOpt(check, curl, CURLOPT_COOKIEJAR, SP_TERMINATED_DATA(cookiePath));
 	}
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform cookies setup");
+	}
+
 	return check;
 }
 
@@ -405,6 +454,10 @@ static bool _setupProxy(const HandleData<Interface> &iface, CURL *curl, const St
 		SetOpt(check, curl, CURLOPT_PROXYUSERPWD, SP_TERMINATED_DATA(auth));
 	} else {
 		SetOpt(check, curl, CURLOPT_PROXYUSERPWD, nullptr);
+	}
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform proxy setup");
 	}
 
 	return true;
@@ -438,6 +491,11 @@ static bool _setupReceive(HandleData<Interface> &iface, CURL *curl, FILE *&input
 			}
 		}, iface.receive.data);
 	}
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform receive setup");
+	}
+
 	return check;
 }
 
@@ -446,6 +504,11 @@ static bool _setupMethodGet(const HandleData<Interface> &iface, CURL *curl) {
 	bool check = true;
 	SetOpt(check, curl, CURLOPT_HTTPGET, 1);
 	SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform GET method setup");
+	}
+
 	return check;
 }
 
@@ -455,6 +518,11 @@ static bool _setupMethodHead(const HandleData<Interface> &iface, CURL *curl) {
 	SetOpt(check, curl, CURLOPT_HTTPGET, 1);
 	SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
 	SetOpt(check, curl, CURLOPT_NOBODY, 1);
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform HEAD method setup");
+	}
+
 	return check;
 }
 
@@ -483,6 +551,10 @@ static void _setupSendData(bool &check, const HandleData<Interface> &iface, CURL
 			SetOpt(check, curl, CURLOPT_INFILESIZE, arg.size());
 		}
 	}, iface.send.data);
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform output data setup");
+	}
 }
 
 
@@ -495,6 +567,10 @@ static bool _setupMethodPost(const HandleData<Interface> &iface, CURL *curl, FIL
 	SetOpt(check, curl, CURLOPT_READDATA, (void *)NULL);
 	SetOpt(check, curl, CURLOPT_POSTFIELDS, (void *)NULL);
 	SetOpt(check, curl, CURLOPT_POSTFIELDSIZE, 0);
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform POST method setup");
+	}
 
 	_setupSendData(check, iface, curl, outputFile);
 
@@ -510,6 +586,10 @@ static bool _setupMethodPut(const HandleData<Interface> &iface, CURL *curl, FILE
 	SetOpt(check, curl, CURLOPT_READDATA, (void *)NULL);
 	SetOpt(check, curl, CURLOPT_CUSTOMREQUEST, "PUT");
 
+	if (!check) {
+		slog().debug("CURL", "Fail to perform PUT method setup");
+	}
+
 	_setupSendData(check, iface, curl, outputFile);
 
 	return check;
@@ -520,6 +600,11 @@ static bool _setupMethodDelete(const HandleData<Interface> &iface, CURL *curl) {
 	bool check = true;
 	SetOpt(check, curl, CURLOPT_FOLLOWLOCATION, 1);
 	SetOpt(check, curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+
+	if (!check) {
+		slog().debug("CURL", "Fail to perform DELETE method setup");
+	}
+
 	return check;
 }
 
@@ -532,9 +617,13 @@ static bool _setupMethodSmpt(const HandleData<Interface> &iface, CURL *curl, FIL
 	SetOpt(check, curl, CURLOPT_READDATA, (void *)NULL);
 	SetOpt(check, curl, CURLOPT_INFILESIZE, 0);
 
+	if (!check) {
+		slog().debug("CURL", "Fail to perform SMTP setup");
+	}
+
 	_setupSendData(check, iface, curl, outputFile);
 
-	SetOpt(check, curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
+	SetOpt(check, curl, CURLOPT_USE_SSL, CURLUSESSL_ALL, true);
 	return check;
 }
 

@@ -130,7 +130,7 @@ struct SP_PUBLIC FileInfo {
 	FileCategory category = FileCategory::Custom;
 	FileFlags flags = FileFlags::None;
 
-	FileInfo(StringView);
+	explicit FileInfo(StringView);
 	FileInfo(StringView, FileCategory);
 	FileInfo(StringView, FileCategory, FileFlags);
 

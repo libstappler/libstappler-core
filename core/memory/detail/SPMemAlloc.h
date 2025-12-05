@@ -22,10 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_CORE_MEMORY_SPMEMALLOC_H_
-#define STAPPLER_CORE_MEMORY_SPMEMALLOC_H_
+#ifndef STAPPLER_CORE_MEMORY_DETAIL_SPMEMALLOC_H_
+#define STAPPLER_CORE_MEMORY_DETAIL_SPMEMALLOC_H_
 
-#include "SPMemPoolApi.h"
+#include "SPMemPoolInterface.h"
 #include "SPStatus.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
@@ -51,6 +51,10 @@ struct SP_PUBLIC AllocPool {
 	template <typename T>
 	static void registerCleanupDestructor(T *obj, pool_t *pool);
 };
+
+} // namespace stappler::memory
+
+namespace STAPPLER_VERSIONIZED stappler::memory::detail {
 
 namespace {
 template < class... Args>
@@ -112,11 +116,11 @@ public:
 	template <typename B>
 	Allocator<T> &operator=(Allocator<B> &&a) noexcept;
 
-	T *allocate(size_t n) noexcept;
-	T *__allocate(size_t &n) noexcept;
-	T *__allocate(size_t n, size_t &bytes) noexcept;
-	void deallocate(T *t, size_t n) noexcept;
-	void __deallocate(T *t, size_t n, size_t bytes) noexcept;
+	T *allocate(size_t n) const noexcept;
+	T *__allocate(size_t &n) const noexcept;
+	T *__allocate(size_t n, size_t &bytes) const noexcept;
+	void deallocate(T *t, size_t n) const noexcept;
+	void __deallocate(T *t, size_t n, size_t bytes) const noexcept;
 
 	template <typename B>
 	inline bool operator==(const Allocator<B> &p) const noexcept;
@@ -129,11 +133,11 @@ public:
 	size_type max_size() const noexcept;
 
 	template <typename... Args>
-	void construct(pointer p, Args &&...args) noexcept;
+	void construct(pointer p, Args &&...args) const noexcept;
 
-	void destroy(pointer p) noexcept;
+	void destroy(pointer p) const noexcept;
 
-	void destroy(pointer p, size_t size) noexcept;
+	void destroy(pointer p, size_t size) const noexcept;
 
 	explicit operator bool() const noexcept;
 
@@ -185,45 +189,6 @@ struct Storage {
 // Implementation details
 //
 
-inline void *AllocPool::operator new(size_t size, const std::nothrow_t &tag) noexcept {
-	return pool::alloc(pool::acquire(), size);
-}
-
-inline void *AllocPool::operator new(size_t size, std::align_val_t al,
-		const std::nothrow_t &tag) noexcept {
-	return pool::alloc(pool::acquire(), size, static_cast<uint32_t>(toInt(al)));
-}
-
-inline void *AllocPool::operator new(size_t size, pool_t *pool) noexcept {
-	return pool::alloc(pool, size);
-}
-
-inline void *AllocPool::operator new(size_t size, void *mem) noexcept { return mem; }
-
-inline void AllocPool::operator delete(void *) noexcept {
-	// APR doesn't require to free object's memory
-	// It can be optimized if we'd know true allocation size
-}
-
-inline void AllocPool::operator delete(void *, std::align_val_t al) noexcept {
-	// APR doesn't require to free object's memory,
-	// It can be optimized if we'd know true allocation size
-}
-
-inline pool_t *AllocPool::getCurrentPool() { return pool::acquire(); }
-
-template <typename T>
-inline Status AllocPool::cleanupObjectFromPool(void *data) {
-	delete ((T *)data);
-	return Status::Ok;
-}
-
-template <typename T>
-inline void AllocPool::registerCleanupDestructor(T *obj, pool_t *pool) {
-	pool::pre_cleanup_register(pool, (void *)obj, &(cleanupObjectFromPool<T>));
-}
-
-
 // Default allocator uses pool from top of thread's AllocStack
 template <typename T>
 inline Allocator<T>::Allocator() noexcept : pool(pool::acquire()) { }
@@ -254,7 +219,7 @@ inline auto Allocator<T>::operator=(Allocator<B> &&a) noexcept -> Allocator<T> &
 }
 
 template <typename T>
-inline auto Allocator<T>::allocate(size_t n) noexcept -> T * {
+inline auto Allocator<T>::allocate(size_t n) const noexcept -> T * {
 	size_t size = sizeof(T) * n;
 	auto ptr = static_cast<T *>(pool::alloc(pool_ptr(pool), size, alignof(T)));
 
@@ -264,7 +229,7 @@ inline auto Allocator<T>::allocate(size_t n) noexcept -> T * {
 }
 
 template <typename T>
-inline auto Allocator<T>::__allocate(size_t &n) noexcept -> T * {
+inline auto Allocator<T>::__allocate(size_t &n) const noexcept -> T * {
 	size_t size = sizeof(T) * n;
 	auto ptr = static_cast<T *>(pool::alloc(pool_ptr(pool), size, alignof(T)));
 
@@ -275,7 +240,7 @@ inline auto Allocator<T>::__allocate(size_t &n) noexcept -> T * {
 }
 
 template <typename T>
-inline auto Allocator<T>::__allocate(size_t n, size_t &bytes) noexcept -> T * {
+inline auto Allocator<T>::__allocate(size_t n, size_t &bytes) const noexcept -> T * {
 	size_t size = sizeof(T) * n;
 	auto ptr = static_cast<T *>(pool::alloc(pool_ptr(pool), size, alignof(T)));
 
@@ -286,12 +251,12 @@ inline auto Allocator<T>::__allocate(size_t n, size_t &bytes) noexcept -> T * {
 }
 
 template <typename T>
-inline void Allocator<T>::deallocate(T *t, size_t n) noexcept {
+inline void Allocator<T>::deallocate(T *t, size_t n) const noexcept {
 	pool::free(pool_ptr(pool), t, n * sizeof(T));
 }
 
 template <typename T>
-inline void Allocator<T>::__deallocate(T *t, size_t n, size_t bytes) noexcept {
+inline void Allocator<T>::__deallocate(T *t, size_t n, size_t bytes) const noexcept {
 	pool::free(pool_ptr(pool), t, bytes);
 }
 
@@ -324,7 +289,7 @@ inline auto Allocator<T>::max_size() const noexcept -> size_type {
 
 template <typename T>
 template <typename... Args>
-inline void Allocator<T>::construct(pointer p, Args &&...args) noexcept {
+inline void Allocator<T>::construct(pointer p, Args &&...args) const noexcept {
 	static_assert(std::is_constructible<T, Args...>::value, "Invalid arguments for constructor");
 	if constexpr (std::is_constructible<T, Args...>::value) {
 		if constexpr (sizeof...(Args) == 1) {
@@ -341,7 +306,7 @@ inline void Allocator<T>::construct(pointer p, Args &&...args) noexcept {
 		}
 
 		if constexpr (Allocator_protect_construct<T>::value) {
-			memory::pool::perform_conditional([&] { new ((T *)p) T(std::forward<Args>(args)...); },
+			perform_conditional([&] { new ((T *)p) T(std::forward<Args>(args)...); },
 					pool_ptr(pool));
 			return;
 		}
@@ -350,12 +315,12 @@ inline void Allocator<T>::construct(pointer p, Args &&...args) noexcept {
 }
 
 template <typename T>
-inline void Allocator<T>::destroy(pointer p) noexcept {
+inline void Allocator<T>::destroy(pointer p) const noexcept {
 	if constexpr (!std::is_destructible<T>::value || std::is_scalar<T>::value) {
 		// do nothing
 	} else {
 		if constexpr (Allocator_protect_construct<T>::value) {
-			memory::pool::perform_conditional([&] { p->~T(); }, pool_ptr(pool));
+			perform_conditional([&] { p->~T(); }, pool_ptr(pool));
 			return;
 		}
 
@@ -364,12 +329,12 @@ inline void Allocator<T>::destroy(pointer p) noexcept {
 }
 
 template <typename T>
-inline void Allocator<T>::destroy(pointer p, size_t size) noexcept {
+inline void Allocator<T>::destroy(pointer p, size_t size) const noexcept {
 	if constexpr (!std::is_destructible<T>::value || std::is_scalar<T>::value) {
 		// do nothing
 	} else {
 		if constexpr (Allocator_protect_construct<T>::value) {
-			memory::pool::perform_conditional([&] {
+			perform_conditional([&] {
 				for (size_t i = 0; i < size; ++i) { (p + i)->~T(); }
 			}, pool_ptr(pool));
 			return;
@@ -499,24 +464,67 @@ inline void Allocator<T>::move_rewrite(T *dest, size_t dcount, T *source, size_t
 
 template <typename T>
 inline bool Allocator<T>::test(AllocFlag f) const noexcept {
-	return (uintptr_t(pool) & toInt(f)) != uintptr_t(0);
+	return (reinterpret_cast<uintptr_t>(pool) & toInt(f)) != uintptr_t(0);
 }
 
 template <typename T>
 inline void Allocator<T>::set(AllocFlag f) noexcept {
-	pool = (pool_t *)(uintptr_t(pool) | toInt(f));
+	pool = reinterpret_cast<pool_t *>(reinterpret_cast<uintptr_t>(pool) | toInt(f));
 }
 
 template <typename T>
 inline void Allocator<T>::reset(AllocFlag f) noexcept {
-	pool = (pool_t *)(uintptr_t(pool) & ~toInt(f));
+	pool = reinterpret_cast<pool_t *>(reinterpret_cast<uintptr_t>(pool) & ~toInt(f));
 }
 
 template <typename T>
 inline void Allocator<T>::flip(AllocFlag f) noexcept {
-	pool = (pool_t *)(uintptr_t(pool) ^ toInt(f));
+	pool = reinterpret_cast<pool_t *>(reinterpret_cast<uintptr_t>(pool) ^ toInt(f));
 }
 
+
+} // namespace stappler::memory::detail
+
+
+namespace STAPPLER_VERSIONIZED stappler::memory {
+
+inline void *AllocPool::operator new(size_t size, const std::nothrow_t &tag) noexcept {
+	return pool::alloc(pool::acquire(), size);
+}
+
+inline void *AllocPool::operator new(size_t size, std::align_val_t al,
+		const std::nothrow_t &tag) noexcept {
+	return pool::alloc(pool::acquire(), size, static_cast<uint32_t>(toInt(al)));
+}
+
+inline void *AllocPool::operator new(size_t size, pool_t *pool) noexcept {
+	return pool::alloc(pool, size);
+}
+
+inline void *AllocPool::operator new(size_t size, void *mem) noexcept { return mem; }
+
+inline void AllocPool::operator delete(void *) noexcept {
+	// APR doesn't require to free object's memory
+	// It can be optimized if we'd know true allocation size
+}
+
+inline void AllocPool::operator delete(void *, std::align_val_t al) noexcept {
+	// APR doesn't require to free object's memory,
+	// It can be optimized if we'd know true allocation size
+}
+
+inline pool_t *AllocPool::getCurrentPool() { return pool::acquire(); }
+
+template <typename T>
+inline Status AllocPool::cleanupObjectFromPool(void *data) {
+	delete ((T *)data);
+	return Status::Ok;
+}
+
+template <typename T>
+inline void AllocPool::registerCleanupDestructor(T *obj, pool_t *pool) {
+	pool::pre_cleanup_register(pool, (void *)obj, &(cleanupObjectFromPool<T>));
+}
 
 } // namespace stappler::memory
 

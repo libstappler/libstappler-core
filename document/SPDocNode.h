@@ -21,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTNODE_H_
-#define EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTNODE_H_
+#ifndef CORE_DOCUMENT_SPDOCUMENTNODE_H_
+#define CORE_DOCUMENT_SPDOCUMENTNODE_H_
 
 #include "SPDocStyle.h"
 #include "SPDocument.h"
@@ -118,4 +118,4 @@ protected:
 };
 } // namespace stappler::document
 
-#endif /* EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTNODE_H_ */
+#endif /* CORE_DOCUMENT_SPDOCUMENTNODE_H_ */

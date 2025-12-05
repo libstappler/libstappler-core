@@ -135,7 +135,7 @@ public:
 
 	template <typename Callable>
 	auto perform(const Callable &cb) {
-		return memory::pool::perform(cb, _pool);
+		return memory::perform(cb, _pool);
 	}
 
 protected:
@@ -197,10 +197,10 @@ using Mutex = std::mutex;
 
 using stappler::makeSpanView;
 
-using memory::pool::perform;
-using memory::pool::perform_clear;
-using memory::pool::perform_temporary;
-using memory::pool::perform_main;
+using memory::perform;
+using memory::perform_clear;
+using memory::perform_temporary;
+using memory::perform_main;
 using memory::makeCallback;
 
 template <typename Container, typename T>
@@ -264,10 +264,10 @@ using Mutex = std::mutex;
 
 using stappler::makeSpanView;
 
-using memory::pool::perform;
-using memory::pool::perform_clear;
-using memory::pool::perform_temporary;
-using memory::pool::perform_main;
+using memory::perform;
+using memory::perform_clear;
+using memory::perform_temporary;
+using memory::perform_main;
 using memory::makeCallback;
 
 template <typename Container, typename T>

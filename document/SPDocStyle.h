@@ -21,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTSTYLE_H_
-#define EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTSTYLE_H_
+#ifndef CORE_DOCUMENT_SPDOCSTYLE_H_
+#define CORE_DOCUMENT_SPDOCSTYLE_H_
 
 #include "SPCore.h"
 #include "SPFontStyle.h"
@@ -264,6 +264,8 @@ enum class ParameterName : NameSize {
 	CssAutofit, // enum
 	CssBorderCollapse, // enum
 	CssCaptionSide, // enum
+	CssOrphans, // uint
+	CssWidows, // uint
 	__EndCssParameters,
 
 	/* media - specific */
@@ -327,6 +329,9 @@ struct SP_PUBLIC BlockModelParameters {
 	Metric maxWidth;
 	Metric maxHeight;
 
+	uint32_t orphans = 2;
+	uint32_t widows = 2;
+
 	inline bool operator==(const BlockModelParameters &other) const = default;
 	inline bool operator!=(const BlockModelParameters &other) const = default;
 };
@@ -388,6 +393,8 @@ public:
 
 	virtual float getDensity() const = 0;
 	virtual float getFontScale() const = 0;
+
+	virtual Color4B getTextColor() const = 0;
 };
 
 class SP_PUBLIC SimpleStyleInterface : public StyleInterface {
@@ -402,6 +409,7 @@ public:
 
 	virtual float getDensity() const override;
 	virtual float getFontScale() const override;
+	virtual Color4B getTextColor() const override;
 
 protected:
 	float _density = 1.0f;
@@ -444,6 +452,8 @@ union SP_PUBLIC StyleValue {
 	Color4B color4;
 	Metric sizeValue;
 	float floatValue;
+	uint32_t uintValue;
+	int32_t intValue;
 	StringId stringId;
 
 	StyleValue();
@@ -639,4 +649,4 @@ inline void StyleList::set(const Value &value, MediaQueryId mediaQuery) {
 
 } // namespace stappler::document
 
-#endif /* EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTSTYLE_H_ */
+#endif /* CORE_DOCUMENT_SPDOCSTYLE_H_ */

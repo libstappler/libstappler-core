@@ -43,6 +43,19 @@ static zip_t *_createZipArchive(FileInfo info, ZipBuffer<Interface> *d) {
 	auto target = (void *)math::align(uintptr_t(ptr), uintptr_t(alignof(filesystem::File)));
 	auto f = new (target) filesystem::File(filesystem::openForReading(info));
 
+	uint8_t magicBuf[4] = {0};
+	f->read(magicBuf, 4);
+
+	if (memcmp(magicBuf, ZipArchive<Interface>::ZIP_SIG1, 4) != 0
+			&& memcmp(magicBuf, ZipArchive<Interface>::ZIP_SIG2, 4) != 0
+			&& memcmp(magicBuf, ZipArchive<Interface>::ZIP_SIG3, 4) != 0) {
+		f->close();
+		f->~File();
+		return nullptr;
+	}
+
+	f->seek(0, io::Seek::Set);
+
 	d->readonly = true;
 	d->handle = f;
 
@@ -111,7 +124,8 @@ static zip_t *_createZipArchive(FileInfo info, ZipBuffer<Interface> *d) {
 	auto handle = zip_open_from_source(source, ZIP_RDONLY, &err);
 	if (!handle) {
 		f->~File();
-		log::source().warn("ZipArchive", "Fail to create archive: ", err.str);
+		log::source().warn("ZipArchive",
+				"Fail to create archive: ", err.str ? err.str : "unknown error");
 	} else {
 		d->finalize = [](void *ptr) {
 			auto f = (filesystem::File *)ptr;
@@ -137,6 +151,15 @@ ZipArchive<memory::PoolInterface>::ZipArchive(FileInfo info) {
 template <typename Interface>
 static zip_t *_createZipArchive(BytesView b, ZipBuffer<Interface> *d, bool readonly) {
 	if (!b.empty()) {
+		if (b.size() < 4) {
+			return nullptr;
+		}
+		if (memcmp(b.data(), ZipArchive<Interface>::ZIP_SIG1, 4) != 0
+				&& memcmp(b.data(), ZipArchive<Interface>::ZIP_SIG2, 4) != 0
+				&& memcmp(b.data(), ZipArchive<Interface>::ZIP_SIG3, 4) != 0) {
+			return nullptr;
+		}
+
 		d->data.put(b.data(), b.size());
 	}
 
@@ -230,7 +253,8 @@ static zip_t *_createZipArchive(BytesView b, ZipBuffer<Interface> *d, bool reado
 	zip_error_t err;
 	auto handle = zip_open_from_source(source, flags, &err);
 	if (!handle) {
-		log::source().warn("ZipArchive", "Fail to create archive: ", err.str);
+		log::source().warn("ZipArchive",
+				"Fail to create archive: ", err.str ? err.str : "unknown error");
 	}
 	return handle;
 }

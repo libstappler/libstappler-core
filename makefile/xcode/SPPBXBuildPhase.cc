@@ -28,7 +28,7 @@ namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
 const PBXCopyFilesBuildPhase *PBXCopyFilesBuildPhase::create(XCodeExport &xctx,
 		const Callback<void(PBXCopyFilesBuildPhase *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXCopyFilesBuildPhase(xctx);
 	obj->buildPhase = BuildPhase::copyFiles;
@@ -50,7 +50,7 @@ void PBXCopyFilesBuildPhase::write(const Callback<void(StringView)> &cb,
 
 const PBXFrameworksBuildPhase *PBXFrameworksBuildPhase::create(XCodeExport &xctx,
 		const Callback<void(PBXFrameworksBuildPhase *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXFrameworksBuildPhase(xctx);
 	obj->buildPhase = BuildPhase::frameworks;
@@ -74,7 +74,7 @@ void PBXFrameworksBuildPhase::write(const Callback<void(StringView)> &cb,
 
 const PBXHeadersBuildPhase *PBXHeadersBuildPhase::create(XCodeExport &xctx,
 		const Callback<void(PBXHeadersBuildPhase *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXHeadersBuildPhase(xctx);
 	obj->buildPhase = BuildPhase::headers;
@@ -97,7 +97,7 @@ void PBXHeadersBuildPhase::write(const Callback<void(StringView)> &cb,
 
 const PBXResourcesBuildPhase *PBXResourcesBuildPhase::create(XCodeExport &xctx,
 		const Callback<void(PBXResourcesBuildPhase *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXResourcesBuildPhase(xctx);
 	obj->buildPhase = BuildPhase::resources;
@@ -120,7 +120,7 @@ void PBXResourcesBuildPhase::write(const Callback<void(StringView)> &cb,
 
 const PBXRezBuildPhase *PBXRezBuildPhase::create(XCodeExport &xctx,
 		const Callback<void(PBXRezBuildPhase *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXRezBuildPhase(xctx);
 	obj->buildPhase = BuildPhase::carbonResources;
@@ -141,7 +141,7 @@ void PBXRezBuildPhase::write(const Callback<void(StringView)> &cb, const PBXRezB
 
 const PBXShellScriptBuildPhase *PBXShellScriptBuildPhase::create(XCodeExport &xctx,
 		const Callback<void(PBXShellScriptBuildPhase *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXShellScriptBuildPhase(xctx);
 	obj->buildPhase = BuildPhase::runScript;
@@ -163,7 +163,7 @@ void PBXShellScriptBuildPhase::write(const Callback<void(StringView)> &cb,
 
 const PBXSourcesBuildPhase *PBXSourcesBuildPhase::create(XCodeExport &xctx,
 		const Callback<void(PBXSourcesBuildPhase *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXSourcesBuildPhase(xctx);
 	obj->buildPhase = BuildPhase::sources;

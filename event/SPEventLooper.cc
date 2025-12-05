@@ -22,7 +22,6 @@
  **/
 
 #include "SPEventLooper.h"
-#include "SPMemPoolInterface.h"
 #include "SPMemory.h"
 #include "SPThread.h"
 #include "SPEventThreadHandle.h"

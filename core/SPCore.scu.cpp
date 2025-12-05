@@ -21,19 +21,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#include "SPCommon.h"
+#include "SPCommon.h" // IWYU pragma: keep
 
 #include "SPIO.cc"
-#include "SPMemPoolAllocator.cc"
-#include "SPMemPoolApr.cc"
-#include "SPMemPoolHash.cc"
-#include "SPMemPoolInterface.cc"
-#include "SPMemPoolInterface.h"
-#include "SPMemPoolPool.cc"
-#include "SPMemPoolUtils.cc"
-#include "SPMemAlloc.cc"
-#include "SPMemRbtree.cc"
-#include "SPMemUserData.cc"
+#include "detail/SPMemPoolAllocator.cc"
+#include "detail/SPMemPoolApr.cc"
+#include "detail/SPMemPoolHash.cc"
+#include "detail/SPMemPoolInterface.cc"
+#include "detail/SPMemPoolPool.cc"
+#include "detail/SPMemPoolUtils.cc"
+#include "detail/SPMemAlloc.cc"
+#include "detail/SPMemRbtree.cc"
+#include "detail/SPMemUserData.cc"
 #include "SPMemUuid.cc"
 #include "SPBase64.cc"
 #include "SPCharGroup.cc"

@@ -132,7 +132,7 @@ static void readDoubleQuoted(memory::pool_t *pool, StringView &str,
 }
 
 StringView FilesystemResourceData::readVariable(memory::pool_t *pool, StringView str) {
-	return memory::pool::perform_temporary([&](memory::pool_t *tmpPool) {
+	return memory::perform_temporary([&](memory::pool_t *tmpPool) {
 		memory::PoolInterface::StringType out;
 
 		auto writer = [&](StringView s) { out.append(s.data(), s.size()); };

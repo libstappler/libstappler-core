@@ -25,7 +25,7 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_SPMEMINTERFACE_H_
 #define STAPPLER_CORE_MEMORY_SPMEMINTERFACE_H_
 
-#include "SPMemDict.h"
+#include "SPMemDict.h" // IWYU pragma: keep
 #include "SPMemFunction.h"
 #include "SPMemMap.h"
 #include "SPMemSet.h"
@@ -169,7 +169,7 @@ public:
 
 	template <typename Callback>
 	auto perform(Callback &&cb) {
-		return memory::pool::perform(std::forward<Callback>(cb), _pool);
+		return memory::perform(std::forward<Callback>(cb), _pool);
 	}
 
 protected:

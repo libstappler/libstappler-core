@@ -297,6 +297,14 @@ template <>
 void StyleParameter::set<ParameterName::CssCaptionSide, CaptionSide>(const CaptionSide &v) {
 	value.captionSide = v;
 }
+template <>
+void StyleParameter::set<ParameterName::CssOrphans, uint32_t>(const uint32_t &v) {
+	value.uintValue = v;
+}
+template <>
+void StyleParameter::set<ParameterName::CssWidows, uint32_t>(const uint32_t &v) {
+	value.uintValue = v;
+}
 
 template <>
 void StyleParameter::set<ParameterName::CssMediaType, MediaType>(const MediaType &v) {
@@ -364,7 +372,8 @@ void StyleList::set(const StyleParameter &p, bool force) {
 	data.push_back(p);
 }
 
-void getStyleForTag(StyleList &style, StringView tag, StringView parent) {
+void getStyleForTag(StyleList &style, StringView tag, StringView parent,
+		const MediaParameters &media) {
 	if (tag == "div") {
 		style.data.push_back(StyleParameter::create<ParameterName::CssDisplay>(Display::Block));
 	}
@@ -468,8 +477,17 @@ void getStyleForTag(StyleList &style, StringView tag, StringView parent) {
 	} else if (tag == "a") {
 		style.data.push_back(StyleParameter::create<ParameterName::CssTextDecoration>(
 				TextDecoration::Underline));
-		style.data.push_back(
-				StyleParameter::create<ParameterName::CssColor>(Color3B(0x0d, 0x47, 0xa1)));
+
+		auto c = Color(media.defaultBackground).text();
+		if (c == Color::White.text()) {
+			// light theme
+			style.data.push_back(
+					StyleParameter::create<ParameterName::CssColor>(Color3B(0x0d, 0x47, 0xa1)));
+		} else {
+			// dark theme 70b1f0
+			style.data.push_back(
+					StyleParameter::create<ParameterName::CssColor>(Color3B(0x70, 0xb1, 0xf0)));
+		}
 
 	} else if (tag == "b" || tag == "strong") {
 		style.data.push_back(
@@ -783,6 +801,10 @@ FontStyleParameters StyleList::compileFontStyle(const StyleInterface *renderer) 
 }
 TextLayoutParameters StyleList::compileTextLayout(const StyleInterface *renderer) const {
 	TextLayoutParameters compiled;
+	auto textColor = renderer->getTextColor();
+	compiled.color = Color3B(textColor.r, textColor.g, textColor.b);
+	compiled.opacity = textColor.a;
+
 	for (auto &it : data) {
 		if (it.mediaQuery == MediaQueryIdNone || renderer->resolveMediaQuery(it.mediaQuery)) {
 			switch (it.name) {
@@ -865,6 +887,8 @@ BlockModelParameters StyleList::compileBlockModel(const StyleInterface *renderer
 				compiled.borderCollapse = it.value.borderCollapse;
 				break;
 			case ParameterName::CssCaptionSide: compiled.captionSide = it.value.captionSide; break;
+			case ParameterName::CssOrphans: compiled.orphans = it.value.uintValue; break;
+			case ParameterName::CssWidows: compiled.widows = it.value.uintValue; break;
 			default: break;
 			}
 		}
@@ -1438,7 +1462,11 @@ auto StyleList::css(const StyleInterface *iface) const -> String {
 			case Autofit::Contain: stream << "contain"; break;
 			case Autofit::Width: stream << "width"; break;
 			case Autofit::Height: stream << "height"; break;
-			};
+			}
+			break; // enum
+		case ParameterName::CssOrphans: stream << "orphans: " << it.value.uintValue; break; // enum
+		case ParameterName::CssWidows:
+			stream << "widows: " << it.value.uintValue;
 			break; // enum
 
 		/* media - specific */
@@ -1774,6 +1802,8 @@ StringView SimpleStyleInterface::resolveString(StringId str) const {
 float SimpleStyleInterface::getDensity() const { return _density; }
 
 float SimpleStyleInterface::getFontScale() const { return _fontScale; }
+
+Color4B SimpleStyleInterface::getTextColor() const { return Color4B::WHITE; }
 
 StyleValue::StyleValue() { memset(reinterpret_cast<void *>(this), 0, sizeof(StyleValue)); }
 

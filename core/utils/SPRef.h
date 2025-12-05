@@ -430,7 +430,7 @@ auto SharedRef<T>::create(Args &&...args) -> SharedRef * {
 	auto pool = memory::pool::create((memory::pool_t *)nullptr);
 
 	SharedRef *shared = nullptr;
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool);
 		if (shared) {
 			shared->_shared = new (pool) T(shared, pool, std::forward<Args>(args)...);
@@ -445,7 +445,7 @@ auto SharedRef<T>::create(memory::pool_t *p, Args &&...args) -> SharedRef * {
 	auto pool = memory::pool::create(p);
 
 	SharedRef *shared = nullptr;
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		shared = new (pool) SharedRef(SharedRefMode::Pool, nullptr, pool);
 		if (shared) {
 			shared->_shared = new (pool) T(shared, pool, std::forward<Args>(args)...);
@@ -473,7 +473,7 @@ auto SharedRef<T>::create(SharedRefMode mode, Args &&...args) -> SharedRef * {
 	}
 
 	SharedRef *shared = nullptr;
-	memory::pool::perform([&] {
+	memory::perform([&] {
 		shared = new (pool) SharedRef(mode, alloc, pool);
 		if (shared) {
 			shared->_shared = new (pool) T(shared, pool, std::forward<Args>(args)...);
@@ -496,7 +496,7 @@ Status SharedRef<T>::invaldate(void *ptr) {
 template <typename T>
 SharedRef<T>::~SharedRef() {
 	if (_shared) {
-		memory::pool::perform([&, this] { delete _shared; }, _pool);
+		memory::perform([&, this] { delete _shared; }, _pool);
 		_shared = nullptr;
 	}
 
@@ -525,10 +525,10 @@ template <typename T>
 template <typename Callback>
 void SharedRef<T>::perform(Callback &&cb) {
 	if constexpr (std::is_invocable_v<Callback, memory::pool_t *, T *>) {
-		memory::pool::perform([&, this] { cb(_pool, _shared); }, _pool);
+		memory::perform([&, this] { cb(_pool, _shared); }, _pool);
 	} else {
 		static_assert(std::is_invocable_v<Callback, T *>, "Invalid callback type");
-		memory::pool::perform([&, this] { cb(_shared); }, _pool);
+		memory::perform([&, this] { cb(_shared); }, _pool);
 	}
 }
 

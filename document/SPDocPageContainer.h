@@ -21,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTPAGECONTAINER_H_
-#define EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTPAGECONTAINER_H_
+#ifndef CORE_DOCUMENT_SPDOCPAGECONTAINER_H_
+#define CORE_DOCUMENT_SPDOCPAGECONTAINER_H_
 
 #include "SPDocStyleContainer.h"
 #include "SPDocNode.h"
@@ -38,22 +38,28 @@ public:
 
 	virtual ~PageContainer() = default;
 
-	PageContainer(DocumentData *);
+	PageContainer(DocumentData *, StringView path = StringView());
 
 	virtual void finalize();
 
-	void setTitle(const StringView &);
-	void setMeta(const StringView &);
-	void setBaseOrigin(const StringView &);
-	void setBaseTarget(const StringView &);
-	void addLink(const StringView &);
+	void setTitle(StringView);
+	void setMeta(StringView);
+	void setBaseOrigin(StringView);
+	void setBaseTarget(StringView);
+	void addLink(StringView);
 
-	void addAsset(const StringView &);
+	void addAsset(StringView);
 
 	Node *getRoot() const { return _root; }
+
+	StringView getTitle() const { return _title; }
 	StringView getPath() const { return _path; }
 
 	StringView getMeta(StringView) const;
+	StringView getHttpEquiv(StringView) const;
+
+	void foreachMeta(const Callback<void(StringView, StringView)> &) const;
+	void foreachHttpEquiv(const Callback<void(StringView, StringView)> &) const;
 
 	SpanView<StyleLink> getStyleLinks() const { return _styleLinks; }
 
@@ -62,7 +68,7 @@ public:
 	Node *getNodeById(StringView) const;
 
 protected:
-	String _path;
+	StringView _path;
 	String _title;
 	String _charset;
 	String _baseOrigin;
@@ -81,4 +87,4 @@ protected:
 
 } // namespace stappler::document
 
-#endif /* EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTPAGECONTAINER_H_ */
+#endif /* CORE_DOCUMENT_SPDOCPAGECONTAINER_H_ */

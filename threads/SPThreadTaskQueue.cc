@@ -102,7 +102,7 @@ void TaskQueue::update(uint32_t *count) {
 
 	_outContext.outputMutex.unlock();
 
-	memory::pool::perform_clear([&] {
+	memory::perform_clear([&] {
 		for (Rc<Task> &task : stack) {
 			// launch all stages with run()
 			task->run();

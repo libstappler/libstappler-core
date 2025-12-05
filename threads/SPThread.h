@@ -137,7 +137,7 @@ template <typename Callback>
 void ThreadInfo::addCleanup(Callback &&cb) {
 	static_assert(std::is_invocable_v<Callback>, "Callback should be invokable without arguments");
 	auto d = getThreadInfo();
-	memory::pool::perform_conditional([&] {
+	memory::perform_conditional([&] {
 		memory::pool::cleanup_register(d->threadPool,
 				memory::function<void()>(sp::forward<Callback>(cb)));
 	}, d->threadPool);

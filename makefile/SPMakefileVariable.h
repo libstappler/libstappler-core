@@ -26,7 +26,6 @@
 #include "SPMakefileError.h"
 #include "SPMakefileStmt.h"
 #include "SPMakefileBlock.h"
-#include "SPMemPoolInterface.h"
 
 namespace STAPPLER_VERSIONIZED stappler::makefile {
 

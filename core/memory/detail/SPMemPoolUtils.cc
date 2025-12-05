@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,7 @@ THE SOFTWARE.
 #include "SPMemPoolConfig.h"
 #include "SPMemPoolStruct.h"
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::memory::custom {
 
 void AllocManager::reset(void *p) {
 	memset(this, 0, sizeof(AllocManager));
@@ -41,7 +42,7 @@ void *AllocManager::alloc(size_t &sizeInBytes, uint32_t alignment, AllocFn alloc
 			if (c->size > sizeInBytes * 2) {
 				break;
 			} else if (c->size >= sizeInBytes) {
-				if (alignment > DefaultAlignment) {
+				if (alignment > config::DefaultAlignment) {
 					// check if we can place aligned block into cached block
 					auto newAddr = c->address;
 					size_t space = c->size;
@@ -81,7 +82,7 @@ void AllocManager::free(void *ptr, size_t sizeInBytes, AllocFn allocFn) {
 		addr = free_buffered;
 		free_buffered = addr->next;
 	} else {
-		addr = (MemAddr *)allocFn(pool, sizeof(MemAddr), DefaultAlignment);
+		addr = (MemAddr *)allocFn(pool, sizeof(MemAddr), config::DefaultAlignment);
 		increment_alloc(sizeof(MemAddr));
 	}
 
@@ -141,4 +142,4 @@ void Cleanup::run(Cleanup **cref) {
 	}
 }
 
-} // namespace stappler::mempool::custom
+} // namespace stappler::memory::custom

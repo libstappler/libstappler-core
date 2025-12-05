@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,18 +22,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLCONFIG_H_
-#define STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLCONFIG_H_
+#ifndef STAPPLER_CORE_MEMORY_POOL_DETAIL_SPMEMPOOLCONFIG_H_
+#define STAPPLER_CORE_MEMORY_POOL_DETAIL_SPMEMPOOLCONFIG_H_
 
 #include "SPCore.h"
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::apr {
+namespace STAPPLER_VERSIONIZED stappler::memory::apr {
 #if MODULE_STAPPLER_APR
 static constexpr int SP_APR_COMPATIBLE = 1;
 #else
 static constexpr int SP_APR_COMPATIBLE = 0;
 #endif
-} // namespace stappler::mempool::apr
+} // namespace stappler::memory::apr
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
@@ -41,13 +42,13 @@ class function;
 
 }
 
-
-namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::memory::config {
 
 
 // minimal size of block, that can be reallocated
 static constexpr uint32_t BlockThreshold = 256;
 
+// standard alignment when allocating memory. Must be at least 8 (16 recommended)
 static constexpr uint32_t DefaultAlignment = 16;
 
 // Align on a power of 2 boundary
@@ -72,6 +73,6 @@ static constexpr size_t ALLOCATOR_MMAP_RESERVED = size_t(64_GiB);
 // Can be 64-bit or stripped to 32-bit
 static constexpr uint64_t POOL_MAGIC = 0xDEAD'7fff'DEAD'7fff;
 
-} // namespace stappler::mempool::custom
+} // namespace stappler::memory::config
 
-#endif /* STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLCONFIG_H_ */
+#endif /* STAPPLER_CORE_MEMORY_POOL_DETAIL_SPMEMPOOLCONFIG_H_ */

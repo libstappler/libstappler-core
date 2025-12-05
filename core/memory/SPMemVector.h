@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,14 +25,14 @@ THE SOFTWARE.
 #ifndef STAPPLER_CORE_MEMORY_SPMEMVECTOR_H_
 #define STAPPLER_CORE_MEMORY_SPMEMVECTOR_H_
 
-#include "SPMemStorageMem.h"
+#include "detail/SPMemStorageMem.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
 template <typename Type>
 class vector : public AllocPool {
 public:
-	using allocator_type = Allocator<Type>;
+	using allocator_type = detail::Allocator<Type>;
 
 	using pointer = Type *;
 	using const_pointer = const Type *;
@@ -40,7 +41,7 @@ public:
 
 	using size_type = size_t;
 	using value_type = Type;
-	using mem_type = storage_mem<Type, 0>;
+	using mem_type = detail::storage_mem<Type, 0>;
 	using self = vector<Type>;
 
 	using iterator = typename mem_type::iterator;

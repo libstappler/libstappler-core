@@ -1172,7 +1172,7 @@ public:
 
 		template <typename... Args>
 		Node(uint32_t width, Args &&...args)
-		: resampler(new (std::nothrow) Resampler(width, forward<Args>(args)...)) {
+		: resampler(new (std::nothrow) Resampler(width, std::forward<Args>(args)...)) {
 			sample.resize(width);
 		}
 	};
@@ -1196,7 +1196,7 @@ protected:
 template <typename Interface>
 void ResamplerData::resample(Filter filter, const BitmapTemplate<Interface> &source,
 		BitmapTemplate<Interface> &target) {
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto bpp = getBytesPerPixel(source.format());
 
@@ -1296,7 +1296,7 @@ auto BitmapTemplate<memory::PoolInterface>::resample(ResampleFilter f, uint32_t 
 	ret._originalFormat = _originalFormat;
 	ret._originalFormatName = _originalFormatName;
 
-	memory::pool::perform_temporary([&] {
+	memory::perform_temporary([&] {
 		ResamplerData data(memory::pool::acquire());
 		data.resample(f, *this, ret);
 	});
@@ -1341,7 +1341,7 @@ auto BitmapTemplate<memory::StandartInterface>::resample(ResampleFilter f, uint3
 	ret._originalFormat = _originalFormat;
 	ret._originalFormatName = _originalFormatName;
 
-	memory::pool::perform_temporary([&] {
+	memory::perform_temporary([&] {
 		ResamplerData data(memory::pool::acquire());
 		data.resample(f, *this, ret);
 	});

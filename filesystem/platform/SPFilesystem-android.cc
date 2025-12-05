@@ -355,7 +355,7 @@ struct PathSource {
 		if (!_apkPath.empty()) {
 			if (auto f = fopen(_apkPath.data(), "r")) {
 				ZipArchive<Interface> a(f, true);
-				a.ftw([&](StringView path, size_t size, Time time) {
+				a.ftw([&](uint64_t, StringView path, size_t size, Time time) {
 					_archive.add(path, size, time);
 				});
 				fclose(f);

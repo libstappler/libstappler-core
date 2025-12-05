@@ -51,6 +51,10 @@ struct ZipBuffer {
 template <typename Interface>
 class SP_PUBLIC ZipArchive : public Interface::AllocBaseType {
 public:
+	static constexpr uint8_t ZIP_SIG1[4] = {0x50, 0x4B, 0x03, 0x04};
+	static constexpr uint8_t ZIP_SIG2[4] = {0x50, 0x4B, 0x05, 0x06};
+	static constexpr uint8_t ZIP_SIG3[4] = {0x50, 0x4B, 0x07, 0x08};
+
 	using Bytes = typename Interface::BytesType;
 	using Buffer = BufferTemplate<Interface>;
 

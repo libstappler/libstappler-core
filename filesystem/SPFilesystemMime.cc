@@ -860,7 +860,7 @@ StringView detectMimeType(StringView path) {
 	}
 
 	// try image format
-	auto fmt = bitmap_detectFormat(StringView(path));
+	auto fmt = bitmap_detectFormat(FileInfo(path));
 	if (fmt.first != bitmap::FileFormat::Custom) {
 		return bitmap_getMimeType1(fmt.first);
 	} else {

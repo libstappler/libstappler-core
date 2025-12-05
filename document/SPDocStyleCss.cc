@@ -1157,6 +1157,22 @@ static std::unordered_map<StringView, StyleFunctionPtr> s_cssParameters{
 	}
 	return false;
 }),
+	pair("orphans",
+			[](const StringView &value, const StyleCallback &cb, const StringCallback &strCb) {
+	auto v = StringView(value).readInteger(10);
+	if (v) {
+		return cb(StyleParameter::create<ParameterName::CssOrphans>(uint32_t(v.get())));
+	}
+	return false;
+}),
+	pair("widows",
+			[](const StringView &value, const StyleCallback &cb, const StringCallback &strCb) {
+	auto v = StringView(value).readInteger(10);
+	if (v) {
+		return cb(StyleParameter::create<ParameterName::CssWidows>(uint32_t(v.get())));
+	}
+	return false;
+}),
 	pair("orientation",
 			[](const StringView &value, const StyleCallback &cb, const StringCallback &strCb) {
 	if (value.equals("landscape")) {

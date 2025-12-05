@@ -22,13 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#include "SPMemPoolConfig.h"
 #include "SPMemPoolInterface.h"
 #include "SPMemPoolStruct.h"
-#include "SPMemPoolApi.h"
 #include "SPLog.h"
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::base {
+namespace STAPPLER_VERSIONIZED stappler::memory {
 
 pool_t *get_zero_pool() {
 	struct ZeroPoolStruct {
@@ -46,15 +44,15 @@ pool_t *get_zero_pool() {
 	return (pool_t *)s_struct._pool;
 }
 
-} // namespace stappler::mempool::base
+} // namespace stappler::memory
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
+namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
 SPUNUSED static void popPoolInfo(pool_t *pool);
 
 }
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::memory::custom {
 
 SPUNUSED static Allocator *s_global_allocator = nullptr;
 SPUNUSED static Pool *s_global_pool = nullptr;
@@ -63,7 +61,7 @@ SPUNUSED static std::atomic<int> s_global_init = 0;
 static std::atomic<size_t> s_nPools = 0;
 
 static void Pool_performCleanup(Pool *pool) {
-	memory::pool::perform_conditional([&] { Cleanup::run(&pool->pre_cleanups); },
+	perform_conditional([&] { Cleanup::run(&pool->pre_cleanups); },
 			(stappler::memory::pool_t *)pool);
 
 	pool->pre_cleanups = nullptr;
@@ -72,8 +70,7 @@ static void Pool_performCleanup(Pool *pool) {
 	while (pool->child) { pool->child->~Pool(); }
 
 	/* Run cleanups */
-	memory::pool::perform_conditional([&] { Cleanup::run(&pool->cleanups); },
-			(stappler::memory::pool_t *)pool);
+	perform_conditional([&] { Cleanup::run(&pool->cleanups); }, (stappler::memory::pool_t *)pool);
 
 	pool->cleanups = nullptr;
 	pool->free_cleanups = nullptr;
@@ -81,7 +78,7 @@ static void Pool_performCleanup(Pool *pool) {
 }
 
 void *Pool::alloc(size_t &sizeInBytes, uint32_t alignment) {
-	if (sizeInBytes >= BlockThreshold) {
+	if (sizeInBytes >= config::BlockThreshold) {
 		return allocmngr.alloc(sizeInBytes, alignment,
 				[](void *p, size_t s, uint32_t a) { return ((Pool *)p)->palloc(s, a); });
 	}
@@ -91,9 +88,9 @@ void *Pool::alloc(size_t &sizeInBytes, uint32_t alignment) {
 }
 
 void Pool::free(void *ptr, size_t sizeInBytes) {
-	if (sizeInBytes >= BlockThreshold) {
+	if (sizeInBytes >= config::BlockThreshold) {
 		allocmngr.free(ptr, sizeInBytes, [](void *p, size_t s, uint32_t a) {
-			if (a == DefaultAlignment) {
+			if (a == config::DefaultAlignment) {
 				return ((Pool *)p)->palloc_self(s);
 			} else {
 				return ((Pool *)p)->palloc(s, a);
@@ -107,14 +104,14 @@ void *Pool::palloc(size_t in_size, uint32_t alignment) {
 	void *mem;
 	size_t size, free_index;
 
-	alignment = std::max(alignment, DefaultAlignment);
+	alignment = std::max(alignment, config::DefaultAlignment);
 
 	if (alignment > 1'024) {
 		log::source().error("memory", SP_FUNC, ": alignment value too large: ", alignment);
 		return nullptr;
 	}
 
-	size = SPALIGN_DEFAULT(in_size);
+	size = config::SPALIGN_DEFAULT(in_size);
 	if (size < in_size) {
 		return nullptr;
 	}
@@ -124,7 +121,7 @@ void *Pool::palloc(size_t in_size, uint32_t alignment) {
 	if (size <= active->free_space()) {
 		mem = active->first_avail;
 
-		if (alignment > DefaultAlignment) {
+		if (alignment > config::DefaultAlignment) {
 			size_t space = active->endp - active->first_avail;
 			mem = std::align(alignment, in_size, mem, space);
 			if (mem) {
@@ -150,7 +147,7 @@ void *Pool::palloc(size_t in_size, uint32_t alignment) {
 
 	mem = node->first_avail;
 
-	if (alignment > DefaultAlignment) {
+	if (alignment > config::DefaultAlignment) {
 		size_t space = node->endp - node->first_avail;
 		mem = std::align(alignment, in_size, mem, space);
 		if (mem) {
@@ -168,8 +165,9 @@ void *Pool::palloc(size_t in_size, uint32_t alignment) {
 
 	this->active = node;
 
-	free_index = (SPALIGN(active->endp - active->first_avail + 1, BOUNDARY_SIZE) - BOUNDARY_SIZE)
-			>> BOUNDARY_INDEX;
+	free_index = (config::SPALIGN(active->endp - active->first_avail + 1, config::BOUNDARY_SIZE)
+						 - config::BOUNDARY_SIZE)
+			>> config::BOUNDARY_INDEX;
 
 	active->free_index = (uint32_t)free_index;
 	node = active->next;
@@ -187,7 +185,7 @@ void *Pool::palloc(size_t in_size, uint32_t alignment) {
 
 void *Pool::palloc_self(size_t in_size) {
 	void *mem;
-	auto size = SPALIGN_DEFAULT(in_size);
+	auto size = config::SPALIGN_DEFAULT(in_size);
 	if (size < in_size) {
 		return nullptr;
 	}
@@ -256,7 +254,7 @@ Pool *Pool::create(Allocator *alloc) {
 		allocator = new Allocator();
 	}
 
-	auto node = allocator->alloc(MIN_ALLOC - SIZEOF_MEMNODE);
+	auto node = allocator->alloc(config::MIN_ALLOC - SIZEOF_MEMNODE);
 	node->next = node;
 	node->ref = &node->next;
 
@@ -336,7 +334,7 @@ Pool *Pool::make_child(Allocator *allocator) {
 	}
 
 	MemNode *node;
-	if ((node = allocator->alloc(MIN_ALLOC - SIZEOF_MEMNODE)) == nullptr) {
+	if ((node = allocator->alloc(config::MIN_ALLOC - SIZEOF_MEMNODE)) == nullptr) {
 		return nullptr;
 	}
 
@@ -507,4 +505,4 @@ Pool *create(Pool *p) {
 
 void destroy(Pool *p) { Pool::destroy(p); }
 
-} // namespace stappler::mempool::custom
+} // namespace stappler::memory::custom

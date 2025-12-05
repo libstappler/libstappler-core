@@ -64,14 +64,14 @@ class ValueTemplate;
 } // namespace stappler::data
 
 
-namespace STAPPLER_VERSIONIZED stappler::memory {
+namespace STAPPLER_VERSIONIZED stappler::memory::detail {
 
 template <typename Interface>
 struct mem_sso_test<data::ValueTemplate<Interface>> {
 	static constexpr bool value = true;
 };
 
-} // namespace stappler::memory
+} // namespace stappler::memory::detail
 
 
 namespace STAPPLER_VERSIONIZED stappler::data {

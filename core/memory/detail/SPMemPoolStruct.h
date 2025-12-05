@@ -22,13 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLSTRUCT_H_
-#define STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLSTRUCT_H_
+#ifndef STAPPLER_CORE_MEMORY_DETAIL_SPMEMPOOLSTRUCT_H_
+#define STAPPLER_CORE_MEMORY_DETAIL_SPMEMPOOLSTRUCT_H_
 
 #include "SPMemPoolConfig.h"
 #include "SPStatus.h"
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::memory::custom {
 
 struct SP_LOCAL MemAddr {
 	uint32_t size = 0;
@@ -97,14 +97,14 @@ struct SP_LOCAL Allocator {
 	using AllocMutex = std::recursive_mutex;
 
 	// used to detect stappler allocators vs. APR allocators
-	uintptr_t magic = static_cast<uintptr_t>(POOL_MAGIC);
+	uintptr_t magic = static_cast<uintptr_t>(config::POOL_MAGIC);
 	uint32_t last = 0; // largest used index into free
-	uint32_t max = ALLOCATOR_MAX_FREE_UNLIMITED; // Total size (in BOUNDARY_SIZE multiples)
+	uint32_t max = config::ALLOCATOR_MAX_FREE_UNLIMITED; // Total size (in BOUNDARY_SIZE multiples)
 	uint32_t current = 0; // current allocated size in BOUNDARY_SIZE
 	Pool *owner = nullptr;
 
 	AllocMutex mutex;
-	std::array<MemNode *, MAX_INDEX> buf;
+	std::array<MemNode *, config::MAX_INDEX> buf;
 	std::atomic<size_t> allocated;
 
 	static size_t getAllocatorsCount();
@@ -129,8 +129,8 @@ struct SP_LOCAL Pool {
 	Cleanup *cleanups = nullptr;
 	Cleanup *free_cleanups = nullptr;
 	Allocator *allocator = nullptr;
-	uintptr_t magic =
-			static_cast<uintptr_t>(POOL_MAGIC); // used to detect stappler pools vs. APR pools
+	uintptr_t magic = static_cast<uintptr_t>(
+			config::POOL_MAGIC); // used to detect stappler pools vs. APR pools
 	MemNode *active = nullptr;
 	MemNode *self = nullptr; /* The node containing the pool itself */
 	uint8_t *self_first_avail = nullptr;
@@ -148,10 +148,10 @@ struct SP_LOCAL Pool {
 	Pool(Pool *parent, Allocator *alloc, MemNode *node);
 	~Pool();
 
-	void *alloc(size_t &sizeInBytes, uint32_t = DefaultAlignment);
+	void *alloc(size_t &sizeInBytes, uint32_t = config::DefaultAlignment);
 	void free(void *ptr, size_t sizeInBytes);
 
-	void *palloc(size_t, uint32_t = DefaultAlignment);
+	void *palloc(size_t, uint32_t = config::DefaultAlignment);
 	void *palloc_self(size_t);
 	void *calloc(size_t count, size_t eltsize);
 
@@ -196,7 +196,7 @@ struct SP_LOCAL HashIndex {
 };
 
 struct SP_LOCAL HashTable {
-	using merge_fn = void *(*)(Pool *p, const void *key, size_t klen, const void *h1_val,
+	using merge_fn = void *(*)(Pool * p, const void *key, size_t klen, const void *h1_val,
 			const void *h2_val, const void *data);
 	using foreach_fn = bool (*)(void *rec, const void *key, size_t klen, const void *value);
 
@@ -238,9 +238,9 @@ SP_LOCAL Pool *create(Pool *);
 SP_LOCAL void destroy(Pool *);
 SP_LOCAL void clear(Pool *);
 
-constexpr size_t SIZEOF_MEMNODE(SPALIGN_DEFAULT(sizeof(MemNode)));
-constexpr size_t SIZEOF_POOL(SPALIGN_DEFAULT(sizeof(Pool)));
+constexpr size_t SIZEOF_MEMNODE(config::SPALIGN_DEFAULT(sizeof(MemNode)));
+constexpr size_t SIZEOF_POOL(config::SPALIGN_DEFAULT(sizeof(Pool)));
 
-} // namespace stappler::mempool::custom
+} // namespace stappler::memory::custom
 
-#endif /* STAPPLER_CORE_MEMORY_POOL_SPMEMPOOLSTRUCT_H_ */
+#endif /* STAPPLER_CORE_MEMORY_DETAIL_SPMEMPOOLSTRUCT_H_ */

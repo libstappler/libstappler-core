@@ -30,7 +30,7 @@ namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
 const XCBuildConfiguration *XCBuildConfiguration::create(XCodeExport &xctx,
 		const Callback<void(XCBuildConfiguration *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) XCBuildConfiguration(xctx);
 
@@ -57,7 +57,7 @@ void XCBuildConfiguration::write(const Callback<void(StringView)> &cb,
 
 const XCConfigurationList *XCConfigurationList::create(XCodeExport &xctx,
 		const Callback<void(XCConfigurationList *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) XCConfigurationList(xctx);
 
@@ -79,7 +79,7 @@ void XCConfigurationList::write(const Callback<void(StringView)> &cb,
 
 const PBXNativeTarget *PBXNativeTarget::create(XCodeExport &xctx,
 		const Callback<void(PBXNativeTarget *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXNativeTarget(xctx);
 

@@ -26,9 +26,10 @@
 
 namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 
-const PBXFileSystemSynchronizedBuildFileExceptionSet *PBXFileSystemSynchronizedBuildFileExceptionSet::create(XCodeExport &xctx,
+const PBXFileSystemSynchronizedBuildFileExceptionSet *
+PBXFileSystemSynchronizedBuildFileExceptionSet::create(XCodeExport &xctx,
 		const Callback<void(PBXFileSystemSynchronizedBuildFileExceptionSet *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXFileSystemSynchronizedBuildFileExceptionSet(xctx);
 
@@ -49,7 +50,7 @@ void PBXFileSystemSynchronizedBuildFileExceptionSet::write(const CallbackStream 
 
 const PBXFileReference *PBXFileReference::create(XCodeExport &xctx,
 		const Callback<void(PBXFileReference *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXFileReference(xctx);
 
@@ -88,7 +89,7 @@ void PBXFileReference::write(const Callback<void(StringView)> &cb, const PBXFile
 
 const PBXFileSystemSynchronizedRootGroup *PBXFileSystemSynchronizedRootGroup::create(
 		XCodeExport &xctx, const Callback<void(PBXFileSystemSynchronizedRootGroup *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXFileSystemSynchronizedRootGroup(xctx);
 
@@ -100,7 +101,8 @@ const PBXFileSystemSynchronizedRootGroup *PBXFileSystemSynchronizedRootGroup::cr
 	return obj;
 }
 
-void PBXFileSystemSynchronizedRootGroup::write(const CallbackStream &cb, const PBXFileSystemSynchronizedRootGroup &group) {
+void PBXFileSystemSynchronizedRootGroup::write(const CallbackStream &cb,
+		const PBXFileSystemSynchronizedRootGroup &group) {
 	cb << '\t' << getStringId(group.id) << " = {\n";
 
 	cb << Line{"isa", "PBXFileSystemSynchronizedRootGroup"};
@@ -123,7 +125,7 @@ void PBXFileSystemSynchronizedRootGroup::write(const CallbackStream &cb, const P
 }
 
 const PBXGroup *PBXGroup::create(XCodeExport &xctx, const Callback<void(PBXGroup *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXGroup(xctx);
 

@@ -21,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTPARSER_H_
-#define EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTPARSER_H_
+#ifndef CORE_DOCUMENT_SPDOCPARSER_H_
+#define CORE_DOCUMENT_SPDOCPARSER_H_
 
 #include "SPDocStyle.h"
 #include "SPMemory.h"
@@ -56,4 +56,4 @@ SP_PUBLIC void readStyle(StyleReaderInfo &, StringReader &);
 
 } // namespace stappler::document::parser
 
-#endif /* EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTPARSER_H_ */
+#endif /* CORE_DOCUMENT_SPDOCPARSER_H_ */

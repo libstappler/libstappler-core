@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,13 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#include "SPCore.h"
+#include "SPMemPoolStruct.h"
 #include "SPMemAlloc.h"
 
 namespace STAPPLER_VERSIONIZED stappler::memory {
 
 bool AllocPool::isStapplerPool(pool_t *p) {
-	if (p && ((mempool::custom::Pool *)p)->magic == static_cast<uintptr_t>(mempool::custom::POOL_MAGIC)) {
+	if (p && ((custom::Pool *)p)->magic == static_cast<uintptr_t>(config::POOL_MAGIC)) {
 		return true;
 	} else {
 		return false;
@@ -48,4 +49,4 @@ SP_PUBLIC void PriorityQueue_unlock_std_mutex(void *ptr) {
 	mutex->unlock();
 }
 
-}
+} // namespace stappler::memory

@@ -22,9 +22,6 @@
  **/
 
 #include "SPXCodeProject.h"
-#include "SPMemPoolApi.h"
-#include "SPPlatform.h"
-#include "SPString.h"
 #include "xcode/SPPBXObject.h"
 
 namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
@@ -32,7 +29,7 @@ namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 XCodeExport::XCodeExport() { pool = memory::pool::create(memory::pool::acquire()); }
 
 void XCodeExport::write(const Callback<void(StringView)> &cb) {
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	auto exportList = [&](SpanView<ISA> isaList, StringView sectionName) {
 		cb << "/* Begin " << sectionName << " section */\n";

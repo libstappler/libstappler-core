@@ -216,7 +216,7 @@ Value File::createFile(const Transaction &t, const StringView &type, const Strin
 	auto scheme = t.getAdapter().getApplicationInterface()->getFileScheme();
 	Value fileData;
 	filesystem::Stat stat;
-	if (filesystem::stat(path, stat)) {
+	if (filesystem::stat(FileInfo(path), stat)) {
 		fileData.setInteger(stat.size, "size");
 	}
 
@@ -226,7 +226,7 @@ Value File::createFile(const Transaction &t, const StringView &type, const Strin
 
 #if MODULE_STAPPLER_BITMAP
 	uint32_t width = 0, height = 0;
-	auto file = filesystem::openForReading(StringView(path));
+	auto file = filesystem::openForReading(FileInfo(path));
 	auto fmt = bitmap::detectFormat(file);
 	if ((fmt.second.empty() && fmt.first == bitmap::FileFormat::Custom)
 			|| !bitmap::getImageSize(file, width, height)) {
@@ -249,14 +249,14 @@ Value File::createFile(const Transaction &t, const StringView &type, const Strin
 	if (fileData && fileData.isInteger("__oid")) {
 		auto id = fileData.getInteger("__oid");
 		auto filePath = File::getFilesystemPath(t.getAdapter().getApplicationInterface(), id);
-		if (stappler::filesystem::move(path, FileInfo{filePath})) {
+		if (filesystem::move(FileInfo(path), FileInfo{filePath})) {
 			return Value(id);
 		} else {
 			Worker(*scheme, t).remove(fileData.getInteger("__oid"));
 		}
 	}
 
-	stappler::filesystem::remove(path);
+	filesystem::remove(FileInfo(path));
 	return Value();
 }
 

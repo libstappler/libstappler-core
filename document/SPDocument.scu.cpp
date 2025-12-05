@@ -22,7 +22,6 @@
  **/
 
 #include "SPCommon.h" // IWYU pragma: keep
-#include "SPDocHtml.cc"
 #include "SPDocNode.cc"
 #include "SPDocStyle.cc"
 #include "SPDocStyleCss.cc"
@@ -33,6 +32,7 @@
 #include "SPDocParser.cc"
 #include "SPDocAsset.cc"
 
+#include "html/SPDocHtml.cc"
 #include "epub/SPDocEpub.cc"
 
 namespace STAPPLER_VERSIONIZED stappler::document {
@@ -109,7 +109,7 @@ bool Document::init(memory::pool_t *pool) {
 
 bool Document::init(memory::pool_t *pool, const Callback<DocumentData *(memory::pool_t *)> &cb) {
 	_pool = memory::pool::create(pool);
-	memory::pool::perform([&] { _data = cb(_pool); }, pool);
+	memory::perform([&] { _data = cb(_pool); }, pool);
 	return true;
 }
 
@@ -117,16 +117,16 @@ StringView Document::getType() const { return _data->type; }
 
 StringView Document::getName() const { return _data->name; }
 
-SpanView<StringView> Document::getSpine() const { return _data->spine; }
+SpanView<SpineFile> Document::getSpine() const { return _data->spine; }
 
 const DocumentContentRecord &Document::getTableOfContents() const { return _data->tableOfContents; }
 
-const DocumentMeta *Document::getMeta(StringView key) const {
+StringView Document::getMeta(StringView key) const {
 	auto it = _data->meta.find(key);
 	if (it != _data->meta.end()) {
-		return &it->second;
+		return it->second;
 	}
-	return nullptr;
+	return StringView();
 }
 
 bool Document::isFileExists(StringView path) const {
@@ -137,6 +137,9 @@ bool Document::isFileExists(StringView path) const {
 		return true;
 	}
 	if (_data->images.find(path) != _data->images.end()) {
+		return true;
+	}
+	if (_data->fonts.find(path) != _data->fonts.end()) {
 		return true;
 	}
 	return false;
@@ -168,7 +171,7 @@ const StyleContainer *Document::getStyleDocument(StringView path) const {
 
 const PageContainer *Document::getRoot() const {
 	if (!_data->spine.empty()) {
-		return getContentPage(_data->spine.front());
+		return getContentPage(_data->spine.front().file);
 	}
 
 	if (!_data->pages.empty()) {
@@ -185,6 +188,19 @@ const Node *Document::getNodeById(StringView path, StringView id) const {
 }
 
 Pair<const PageContainer *, const Node *> Document::getNodeByIdGlobal(StringView id) const {
+	StringView tmp = id;
+	auto file = tmp.readUntil<StringView::Chars<'#'>>();
+	if (tmp.is('#') && !file.empty()) {
+		++tmp;
+		auto it = _data->pages.find(file);
+		if (it != _data->pages.end()) {
+			auto id_it = it->second->getNodeById(tmp);
+			if (id_it) {
+				return pair(it->second, id_it);
+			}
+		}
+	}
+
 	for (auto &it : _data->pages) {
 		auto page = it.second;
 		auto id_it = page->getNodeById(id);
@@ -209,7 +225,7 @@ void Document::beginStyle(StyleList &style, const Node &node, SpanView<const Nod
 	}
 
 	getStyleForTag(style, node.getHtmlName(),
-			parent ? StringView(parent->getHtmlName()) : StringView());
+			parent ? StringView(parent->getHtmlName()) : StringView(), media);
 
 	auto &attr = node.getAttributes();
 
@@ -224,7 +240,7 @@ void Document::endStyle(StyleList &, const Node &node, SpanView<const Node *> st
 }
 
 DocumentData *Document::allocateData(memory::pool_t *pool) {
-	memory::pool::context ctx(pool);
+	memory::context ctx(pool);
 
 	return new (pool) DocumentData(pool);
 }

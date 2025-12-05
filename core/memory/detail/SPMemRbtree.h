@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2017-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,41 +22,37 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **/
 
-#ifndef STAPPLER_CORE_MEMORY_SPMEMRBTREE_H_
-#define STAPPLER_CORE_MEMORY_SPMEMRBTREE_H_
+#ifndef STAPPLER_CORE_MEMORY_DETAIL_SPMEMRBTREE_H_
+#define STAPPLER_CORE_MEMORY_DETAIL_SPMEMRBTREE_H_
 
 #include "SPMemAlloc.h"
+#include "SPMemStorageNode.h"
 
 #define SP_MEM_RBTREE_DEBUG 0
 
-namespace STAPPLER_VERSIONIZED stappler::memory::rbtree {
+namespace STAPPLER_VERSIONIZED stappler::memory::detail {
 
-enum NodeColor : uintptr_t {
+enum RbTreeNodeColor : uintptr_t {
 	Red = 0,
 	Black = 1
 };
 
 template <typename Value>
-using Storage = memory::Storage<Value>;
+using RbTreeNodeStorage = Storage<Value>;
 
-struct SP_PUBLIC NodeBase : public AllocPool {
-	struct Flag {
-		uintptr_t color	   : 1;
-		uintptr_t prealloc : 1;
-		uintptr_t index	   : (sizeof(uintptr_t) / 2) * 8 - 2;
-		uintptr_t size	   : (sizeof(uintptr_t) / 2) * 8;
-	};
+struct SP_PUBLIC RbTreeNodeBase : public AllocPool {
+	using Flag = RbTreeNodeFlag<sizeof(uintptr_t)>;
 
-	NodeBase *parent = nullptr;
-	NodeBase *left = nullptr;
-	NodeBase *right = nullptr;
+	RbTreeNodeBase *parent = nullptr;
+	RbTreeNodeBase *left = nullptr;
+	RbTreeNodeBase *right = nullptr;
 	Flag flag;
 
-	NodeBase() noexcept : flag(Flag{0, 0, 0, 0}) { }
-	NodeBase(NodeColor c) noexcept : flag(Flag{uintptr_t(c ? 1 : 0), 0, 0, 0}) { }
+	RbTreeNodeBase() noexcept : flag(Flag{0, 0, 0, 0}) { }
+	RbTreeNodeBase(RbTreeNodeColor c) noexcept : flag(Flag{uintptr_t(c ? 1 : 0), 0, 0, 0}) { }
 
-	inline void setColor(NodeColor c) { flag.color = c ? 1 : 0; }
-	inline NodeColor getColor() const { return NodeColor(flag.color); }
+	inline void setColor(RbTreeNodeColor c) { flag.color = c ? 1 : 0; }
+	inline RbTreeNodeColor getColor() const { return RbTreeNodeColor(flag.color); }
 
 	inline void setPrealloc(bool v) { flag.prealloc = v ? 1 : 0; }
 	inline bool isPrealloc() const { return flag.prealloc != 0; }
@@ -66,54 +63,60 @@ struct SP_PUBLIC NodeBase : public AllocPool {
 	inline void setIndex(uintptr_t s) { flag.index = s; }
 	inline uintptr_t getIndex() const { return flag.index; }
 
-	static inline NodeBase *min(NodeBase *x) {
+	static inline RbTreeNodeBase *min(RbTreeNodeBase *x) {
 		while (x->left != 0) { x = x->left; }
 		return x;
 	}
 
-	static inline const NodeBase *min(const NodeBase *x) {
+	static inline const RbTreeNodeBase *min(const RbTreeNodeBase *x) {
 		while (x->left != 0) { x = x->left; }
 		return x;
 	}
 
-	static inline NodeBase *max(NodeBase *x) {
+	static inline RbTreeNodeBase *max(RbTreeNodeBase *x) {
 		while (x->right != 0) { x = x->right; }
 		return x;
 	}
 
-	static inline const NodeBase *max(const NodeBase *x) {
+	static inline const RbTreeNodeBase *max(const RbTreeNodeBase *x) {
 		while (x->right != 0) { x = x->right; }
 		return x;
 	}
 
-	static NodeBase *increment(NodeBase *c);
-	static const NodeBase *increment(const NodeBase *c);
+	static RbTreeNodeBase *increment(RbTreeNodeBase *c);
+	static const RbTreeNodeBase *increment(const RbTreeNodeBase *c);
 
-	static NodeBase *decrement(NodeBase *c);
-	static const NodeBase *decrement(const NodeBase *c);
+	static RbTreeNodeBase *decrement(RbTreeNodeBase *c);
+	static const RbTreeNodeBase *decrement(const RbTreeNodeBase *c);
 
 	// replace node in it's place in tree with new one
-	static NodeBase *replace(NodeBase *old, NodeBase *n);
+	static RbTreeNodeBase *replace(RbTreeNodeBase *old, RbTreeNodeBase *n);
 
-	static void insert(NodeBase *head, NodeBase *n);
-	static void remove(NodeBase *head, NodeBase *n);
+	static void insert(RbTreeNodeBase *head, RbTreeNodeBase *n);
+	static void remove(RbTreeNodeBase *head, RbTreeNodeBase *n);
 };
 
 template <typename Value>
-struct Node : public NodeBase {
-	Storage<Value> value;
+struct RbTreeNode : public RbTreeNodeBase {
+	RbTreeNodeStorage<Value> value;
 
-	static inline Value *cast(NodeBase *n) { return static_cast<Node<Value> *>(n)->value.ptr(); }
-	static inline const Value *cast(const NodeBase *n) {
-		return static_cast<const Node<Value> *>(n)->value.ptr();
+	static inline Value *cast(RbTreeNodeBase *n) {
+		return static_cast<RbTreeNode<Value> *>(n)->value.ptr();
 	}
+	static inline const Value *cast(const RbTreeNodeBase *n) {
+		return static_cast<const RbTreeNode<Value> *>(n)->value.ptr();
+	}
+
+	// Where to store next node when this node is in preserved list
+	auto getNextStorage() const { return static_cast<RbTreeNode *>(parent); }
+	auto getNextStoragePtr() { return reinterpret_cast<RbTreeNode **>(&parent); }
 };
 
 template <typename Value>
-struct TreeIterator {
+struct RbTreeIterator {
 	using iterator_category = std::bidirectional_iterator_tag;
 
-	using node_type = Node<Value>;
+	using node_type = RbTreeNode<Value>;
 	using value_type = Value;
 	using reference = Value &;
 	using pointer = Value *;
@@ -121,13 +124,13 @@ struct TreeIterator {
 	using size_type = size_t;
 	using difference_type = ptrdiff_t;
 
-	using self = TreeIterator<Value>;
-	using node_ptr = NodeBase *;
-	using link_ptr = Node<Value> *;
+	using self = RbTreeIterator<Value>;
+	using node_ptr = RbTreeNodeBase *;
+	using link_ptr = RbTreeNode<Value> *;
 
-	TreeIterator() noexcept : _node() { }
+	RbTreeIterator() noexcept : _node() { }
 
-	explicit TreeIterator(node_ptr x) noexcept : _node(x) { }
+	explicit RbTreeIterator(node_ptr x) noexcept : _node(x) { }
 
 	reference operator*() const noexcept { return *node_type::cast(_node); }
 	pointer operator->() const noexcept { return node_type::cast(_node); }
@@ -159,28 +162,28 @@ struct TreeIterator {
 };
 
 template <typename Value>
-struct TreeConstIterator {
+struct RbTreeConstIterator {
 	using iterator_category = std::bidirectional_iterator_tag;
 
-	using node_type = Node<Value>;
+	using node_type = RbTreeNode<Value>;
 	using value_type = Value;
 	using reference = const Value &;
 	using pointer = const Value *;
 
-	using iterator = TreeIterator<Value>;
+	using iterator = RbTreeIterator<Value>;
 
 	using size_type = size_t;
 	using difference_type = ptrdiff_t;
 
-	using self = TreeConstIterator<Value>;
-	using node_ptr = const NodeBase *;
-	using link_ptr = const Node<Value> *;
+	using self = RbTreeConstIterator<Value>;
+	using node_ptr = const RbTreeNodeBase *;
+	using link_ptr = const RbTreeNode<Value> *;
 
-	TreeConstIterator() noexcept : _node() { }
+	RbTreeConstIterator() noexcept : _node() { }
 
-	explicit TreeConstIterator(node_ptr x) noexcept : _node(x) { }
+	explicit RbTreeConstIterator(node_ptr x) noexcept : _node(x) { }
 
-	TreeConstIterator(const iterator &it) noexcept : _node(it._node) { }
+	RbTreeConstIterator(const iterator &it) noexcept : _node(it._node) { }
 
 	iterator constcast() const noexcept {
 		return iterator(const_cast<typename iterator::node_ptr>(_node));
@@ -217,48 +220,51 @@ struct TreeConstIterator {
 
 
 template <typename Value>
-inline bool operator==(const TreeIterator<Value> &l, const TreeConstIterator<Value> &r) noexcept {
+inline bool operator==(const RbTreeIterator<Value> &l,
+		const RbTreeConstIterator<Value> &r) noexcept {
 	return l._node == r._node;
 }
 
 template <typename Value>
-inline bool operator!=(const TreeIterator<Value> &l, const TreeConstIterator<Value> &r) noexcept {
+inline bool operator!=(const RbTreeIterator<Value> &l,
+		const RbTreeConstIterator<Value> &r) noexcept {
 	return l._node != r._node;
 }
 
 
 template <typename Key, typename Value>
-struct TreeKeyExtractor;
+struct RbTreeKeyExtractor;
 
 template <typename Key>
-struct TreeKeyExtractor<Key, Key> {
+struct RbTreeKeyExtractor<Key, Key> {
 	static inline const Key &extract(const Key &k) noexcept { return k; }
 
 	template <typename A, typename... Args>
-	static inline void construct(A &alloc, Node<Key> *node, const Key &key,
+	static inline void construct(A &alloc, RbTreeNode<Key> *node, const Key &key,
 			Args &&...args) noexcept {
 		alloc.construct(node->value.ptr(), key);
 	}
 
 	template <typename A, typename... Args>
-	static inline void construct(A &alloc, Node<Key> *node, Key &&key, Args &&...args) noexcept {
+	static inline void construct(A &alloc, RbTreeNode<Key> *node, Key &&key,
+			Args &&...args) noexcept {
 		alloc.construct(node->value.ptr(), sp::move_unsafe(key));
 	}
 };
 
 template <typename Key, typename Value>
-struct TreeKeyExtractor<Key, Pair<Key, Value>> {
+struct RbTreeKeyExtractor<Key, Pair<Key, Value>> {
 	static inline const Key &extract(const Pair<Key, Value> &k) noexcept { return k.first; }
 
 	template <typename A, typename... Args>
-	static inline void construct(A &alloc, Node<Pair<Key, Value>> *node, const Key &k,
+	static inline void construct(A &alloc, RbTreeNode<Pair<Key, Value>> *node, const Key &k,
 			Args &&...args) noexcept {
 		alloc.construct(node->value.ptr(), std::piecewise_construct, std::forward_as_tuple(k),
 				std::forward_as_tuple(std::forward<Args>(args)...));
 	}
 
 	template <typename A, typename... Args>
-	static inline void construct(A &alloc, Node<Pair<Key, Value>> *node, Key &&k,
+	static inline void construct(A &alloc, RbTreeNode<Pair<Key, Value>> *node, Key &&k,
 			Args &&...args) noexcept {
 		alloc.construct(node->value.ptr(), std::piecewise_construct,
 				std::forward_as_tuple(sp::move_unsafe(k)),
@@ -267,18 +273,18 @@ struct TreeKeyExtractor<Key, Pair<Key, Value>> {
 };
 
 template <typename Key, typename Value>
-struct TreeKeyExtractor<Key, Pair<const Key, Value>> {
+struct RbTreeKeyExtractor<Key, Pair<const Key, Value>> {
 	static inline const Key &extract(const Pair<const Key, Value> &k) noexcept { return k.first; }
 
 	template <typename A, typename... Args>
-	static inline void construct(A &alloc, Node<Pair<const Key, Value>> *node, const Key &k,
+	static inline void construct(A &alloc, RbTreeNode<Pair<const Key, Value>> *node, const Key &k,
 			Args &&...args) noexcept {
 		alloc.construct(node->value.ptr(), std::piecewise_construct, std::forward_as_tuple(k),
 				std::forward_as_tuple(std::forward<Args>(args)...));
 	}
 
 	template <typename A, typename... Args>
-	static inline void construct(A &alloc, Node<Pair<const Key, Value>> *node, Key &&k,
+	static inline void construct(A &alloc, RbTreeNode<Pair<const Key, Value>> *node, Key &&k,
 			Args &&...args) noexcept {
 		alloc.construct(node->value.ptr(), std::piecewise_construct,
 				std::forward_as_tuple(sp::move_unsafe(k)),
@@ -308,39 +314,41 @@ inline constexpr bool is_detected_v = impl::is_detected<void, A, B...>::value;
 } // namespace impl
 
 template <typename T>
-using DetectTransparent = typename T::is_transparent;
+using RbTreeDetectTransparent = typename T::is_transparent;
 
 template <typename Key, typename Value, typename Comp = std::less<>>
-class Tree : public AllocPool {
+class RbTree : public AllocPool {
 public:
 	using value_type = Value;
-	using node_type = Node<Value>;
-	using node_ptr = Node<Value> *;
-	using base_type = NodeBase *;
+	using node_type = RbTreeNode<Value>;
+	using node_ptr = RbTreeNode<Value> *;
+	using base_type = RbTreeNodeBase *;
 	using const_node_ptr = const node_type *;
 
 	using node_allocator_type = Allocator<node_type>;
 	using value_allocator_type = Allocator<value_type>;
 	using comparator_type = Comp;
 
-	using iterator = TreeIterator<Value>;
-	using const_iterator = TreeConstIterator<Value>;
+	using iterator = RbTreeIterator<Value>;
+	using const_iterator = RbTreeConstIterator<Value>;
 
 	using reverse_iterator = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-public:
-	Tree(const Comp &comp = Comp(),
-			const value_allocator_type &alloc = value_allocator_type()) noexcept
-	: _header(NodeColor::Black), _comp(comp), _allocator(alloc), _size(0) { }
+	using allocator_helper = NodeBlockAllocatorHelper<node_type>;
 
-	Tree(const Tree &other, const value_allocator_type &alloc = value_allocator_type()) noexcept
-	: _header(NodeColor::Black), _comp(other._comp), _allocator(alloc), _size(0) {
+public:
+	RbTree(const Comp &comp = Comp(),
+			const value_allocator_type &alloc = value_allocator_type()) noexcept
+	: _header(RbTreeNodeColor::Black), _comp(comp), _allocator(alloc), _size(0) { }
+
+	RbTree(const RbTree &other, const value_allocator_type &alloc = value_allocator_type()) noexcept
+	: _header(RbTreeNodeColor::Black), _comp(other._comp), _allocator(alloc), _size(0) {
 		clone(other);
 	}
 
-	Tree(Tree &&other, const value_allocator_type &alloc = value_allocator_type()) noexcept
-	: _header(NodeColor::Black), _comp(other._comp), _allocator(alloc), _size(0) {
+	RbTree(RbTree &&other, const value_allocator_type &alloc = value_allocator_type()) noexcept
+	: _header(RbTreeNodeColor::Black), _comp(other._comp), _allocator(alloc), _size(0) {
 		if (other.get_allocator() == _allocator) {
 			_header = other._header;
 			_size = other._size;
@@ -348,19 +356,19 @@ public:
 			if (_header.left != nullptr) {
 				_header.left->parent = &_header;
 			}
-			other._header = NodeBase(NodeColor::Black);
+			other._header = RbTreeNodeBase(RbTreeNodeColor::Black);
 			other._size = 0;
 		} else {
 			clone(other);
 		}
 	}
 
-	Tree &operator=(const Tree &other) noexcept {
+	RbTree &operator=(const RbTree &other) noexcept {
 		clone(other);
 		return *this;
 	}
 
-	Tree &operator=(Tree &&other) noexcept {
+	RbTree &operator=(RbTree &&other) noexcept {
 		if (other.get_allocator() == _allocator) {
 			clear();
 			_header = other._header;
@@ -369,7 +377,7 @@ public:
 			if (_header.left != nullptr) {
 				_header.left->parent = &_header;
 			}
-			other._header = NodeBase(NodeColor::Black);
+			other._header = RbTreeNodeBase(RbTreeNodeColor::Black);
 			other._size = 0;
 		} else {
 			clone(other);
@@ -377,11 +385,14 @@ public:
 		return *this;
 	}
 
-	~Tree() noexcept {
+	~RbTree() noexcept {
 		if (_size > 0) {
 			clear();
 		}
-		releaseTmp();
+		if (_header.flag.size > 0 && _free) {
+			allocator_helper::template release_blocks<false>(_allocator, &_free,
+					_header.flag.index);
+		}
 	}
 
 	const value_allocator_type &get_allocator() const noexcept { return _allocator; }
@@ -422,15 +433,17 @@ public:
 
 	iterator erase(const_iterator pos) {
 		if (pos._node != &_header) {
-			auto next = NodeBase::increment(pos.constcast()._node);
-			deleteNode(const_cast<NodeBase *>(pos._node));
+			auto next = RbTreeNodeBase::increment(pos.constcast()._node);
+			deleteNode(const_cast<RbTreeNodeBase *>(pos._node));
 			return iterator(next);
 		}
 		return pos.constcast();
 	}
 
 	iterator erase(const_iterator first, const_iterator last) {
-		for (auto it = first; it != last; it++) { deleteNode(const_cast<NodeBase *>(it._node)); }
+		for (auto it = first; it != last; it++) {
+			deleteNode(const_cast<RbTreeNodeBase *>(it._node));
+		}
 		return last;
 	}
 
@@ -467,7 +480,7 @@ public:
 
 	void clear() noexcept {
 		if (_header.left) {
-			clear_visit(static_cast<Node<Value> *>(_header.left));
+			clear_visit(static_cast<RbTreeNode<Value> *>(_header.left));
 		}
 		_header.left = nullptr;
 		_header.right = nullptr;
@@ -475,7 +488,11 @@ public:
 		_size = 0;
 	}
 
-	void shrink_to_fit() noexcept { releaseTmp(); }
+	void shrink_to_fit() noexcept {
+		auto nFreed = allocator_helper::template release_blocks<true>(get_allocator(), &_free,
+				_header.flag.index);
+		_header.flag.size -= nFreed;
+	}
 
 	size_t capacity() const noexcept { return _size + _header.flag.size; }
 
@@ -487,12 +504,12 @@ public:
 
 	bool memory_persistent() const noexcept { return _header.flag.prealloc; }
 
-	void swap(Tree &other) noexcept {
+	void swap(RbTree &other) noexcept {
 		std::swap(_header, other._header);
 		std::swap(_allocator, other._allocator);
 		std::swap(_size, other._size);
 		std::swap(_comp, other._comp);
-		std::swap(_tmp, other._tmp);
+		std::swap(_free, other._free);
 	}
 
 	template < class K >
@@ -551,9 +568,9 @@ public:
 	}
 
 	void reserve(size_t c) {
-		// requested count is greater then size + pending preallocated nodes
+		// if requested count is greater then size + pending preallocated nodes
 		if (c > _size + _header.flag.size) {
-			allocateTmp(c - _size);
+			allocate_block(c - (_size + _header.flag.size));
 		}
 	}
 
@@ -565,15 +582,15 @@ protected:
 	// _header.right - right node from root
 	// _header.left - root node (actual root of the tree), nullptr if tree is not defined
 	// &_header (pointer to the header) - last node in iteration
-	// _header.size - extra capacity, available via _tmp
+	// _header.size - extra capacity, available via _free
 	// _header.index - count of preallocated blocks in use
 	// _header.prealloc - flag of persistent mode (enabled if 1, disabled by default)
 
-	NodeBase _header; // root is _header.left
+	RbTreeNodeBase _header; // root is _header.left
 	comparator_type _comp;
 	value_allocator_type _allocator;
 	size_t _size = 0;
-	Node<Value> *_tmp = nullptr;
+	RbTreeNode<Value> *_free = nullptr;
 
 	inline node_ptr root() { return static_cast<node_ptr>(_header.left); }
 	inline const_node_ptr root() const { return static_cast<const_node_ptr>(_header.left); }
@@ -592,11 +609,11 @@ protected:
 
 
 	inline const Key &extract(const Value &val) const {
-		return TreeKeyExtractor<Key, Value>::extract(val);
+		return RbTreeKeyExtractor<Key, Value>::extract(val);
 	}
-	inline const Key &extract(const Storage<Value> &s) const { return extract(s.ref()); }
-	inline const Key &extract(const NodeBase *s) const {
-		return extract(static_cast<const Node<Value> *>(s)->value.ref());
+	inline const Key &extract(const RbTreeNodeStorage<Value> &s) const { return extract(s.ref()); }
+	inline const Key &extract(const RbTreeNodeBase *s) const {
+		return extract(static_cast<const RbTreeNode<Value> *>(s)->value.ref());
 	}
 
 	inline bool compareLtKey(const Key &l, const Key &r) const { return _comp(l, r); }
@@ -606,7 +623,7 @@ protected:
 
 	template <typename A, typename B>
 	inline bool compareLtTransparent(const A &l, const B &r) const {
-		if constexpr (impl::is_detected_v<DetectTransparent, Comp>) {
+		if constexpr (impl::is_detected_v<RbTreeDetectTransparent, Comp>) {
 			return _comp(l, r);
 		} else if constexpr (std::is_same_v<A, B>) {
 			return compareLtKey(l, r);
@@ -627,19 +644,19 @@ protected:
 
 	struct InsertData {
 		const Key *key;
-		Node<Value> *val;
-		NodeBase *current;
-		NodeBase *parent;
+		RbTreeNode<Value> *val;
+		RbTreeNodeBase *current;
+		RbTreeNodeBase *parent;
 		bool isLeft;
 	};
 
 	template <typename... Args>
 	InsertData constructNode(Args &&...args) {
-		Node<Value> *ret = allocateNode();
+		RbTreeNode<Value> *ret = allocateNode();
 		ret->parent = nullptr;
 		ret->left = nullptr;
 		ret->right = nullptr;
-		ret->setColor(NodeColor::Red);
+		ret->setColor(RbTreeNodeColor::Red);
 		_allocator.construct(ret->value.ptr(), std::forward<Args>(args)...);
 
 		return InsertData{&extract(ret->value), ret, nullptr, nullptr, false};
@@ -652,25 +669,25 @@ protected:
 	InsertData constructKey(Key &&k) { return InsertData{&k, nullptr, nullptr, nullptr, false}; }
 
 	template <typename K, typename... Args>
-	Node<Value> *constructEmplace(K &&k, Args &&...args) {
-		Node<Value> *ret = allocateNode();
+	RbTreeNode<Value> *constructEmplace(K &&k, Args &&...args) {
+		RbTreeNode<Value> *ret = allocateNode();
 		ret->parent = nullptr;
 		ret->left = nullptr;
 		ret->right = nullptr;
-		ret->setColor(NodeColor::Red);
+		ret->setColor(RbTreeNodeColor::Red);
 
-		TreeKeyExtractor<Key, Value>::construct(_allocator, ret, std::forward<K>(k),
+		RbTreeKeyExtractor<Key, Value>::construct(_allocator, ret, std::forward<K>(k),
 				std::forward<Args>(args)...);
 		return ret;
 	}
 
 	template <typename M>
-	void constructAssign(Node<Value> *n, const M &m) {
+	void constructAssign(RbTreeNode<Value> *n, const M &m) {
 		n->value.ref() = m;
 	}
 
 	template <typename M>
-	void constructAssign(Node<Value> *n, M &&m) {
+	void constructAssign(RbTreeNode<Value> *n, M &&m) {
 		n->value.ref() = sp::move_unsafe(m);
 	}
 
@@ -679,13 +696,13 @@ protected:
 			d.parent = d.current;
 			if (compareLtKey(*(d.key), extract(d.current))) {
 				d.isLeft = true;
-				d.current = static_cast<Node<Value> *>(d.current->left);
+				d.current = static_cast<RbTreeNode<Value> *>(d.current->left);
 			} else {
 				if (!compareLtKey(extract(d.current), *(d.key))) { // equality check
 					return false;
 				}
 				d.isLeft = false;
-				d.current = static_cast<Node<Value> *>(d.current->right);
+				d.current = static_cast<RbTreeNode<Value> *>(d.current->right);
 			}
 		}
 		return true;
@@ -707,16 +724,16 @@ protected:
 		}
 
 		// check if hint is special value (begin or end)
-		if (d.current == left() || static_cast<NodeBase *>(d.current) == &_header) {
+		if (d.current == left() || static_cast<RbTreeNodeBase *>(d.current) == &_header) {
 			d.current = nullptr;
 			return false; // this cases served by next two functions
 		}
 
 		// check if we can insert just before hint
-		auto h = static_cast<Node<Value> *>(d.current);
+		auto h = static_cast<RbTreeNode<Value> *>(d.current);
 		if (compareLtKey(*(d.key), extract(h->value))) {
 			// check for bound
-			auto p = static_cast<node_ptr>(NodeBase::decrement(d.current));
+			auto p = static_cast<node_ptr>(RbTreeNodeBase::decrement(d.current));
 			if (compareLtKey(extract(p->value), *(d.key))) {
 				d.parent = d.current;
 				d.current = d.current->left;
@@ -727,8 +744,8 @@ protected:
 				return true;
 			}
 		} else if (compareLtKey(extract(h->value), *(d.key))) {
-			auto p = static_cast<node_ptr>(NodeBase::increment(d.current));
-			if (static_cast<NodeBase *>(p) == &_header) { // insert back case
+			auto p = static_cast<node_ptr>(RbTreeNodeBase::increment(d.current));
+			if (static_cast<RbTreeNodeBase *>(p) == &_header) { // insert back case
 				d.parent = d.current;
 				d.current = d.current->right;
 				d.isLeft = false;
@@ -797,33 +814,33 @@ protected:
 	}
 
 	template <typename... Args>
-	Pair<Node<Value> *, bool> insertNodeUnique(Args &&...args) {
+	Pair<RbTreeNode<Value> *, bool> insertNodeUnique(Args &&...args) {
 		InsertData d = constructNode(std::forward<Args>(args)...);
 		if (!getInsertPositionUnique(d)) {
 			destroyNode(d.val);
-			return pair(static_cast<Node<Value> *>(d.current), false);
+			return pair(static_cast<RbTreeNode<Value> *>(d.current), false);
 		}
 
 		return pair(makeInsert(d.val, d.parent, d.isLeft), true);
 	}
 
 	template <typename... Args>
-	Node<Value> *insertNodeUniqueHint(const_iterator hint, Args &&...args) {
+	RbTreeNode<Value> *insertNodeUniqueHint(const_iterator hint, Args &&...args) {
 		InsertData d = constructNode(std::forward<Args>(args)...);
 		d.current = hint.constcast()._node;
 		if (!getInsertPositionUnique(d)) {
 			destroyNode(d.val);
-			return static_cast<Node<Value> *>(d.current);
+			return static_cast<RbTreeNode<Value> *>(d.current);
 		}
 
 		return makeInsert(d.val, d.parent, d.isLeft);
 	}
 
 	template <typename K, typename... Args>
-	Pair<Node<Value> *, bool> tryInsertNodeUnique(K &&k, Args &&...args) {
+	Pair<RbTreeNode<Value> *, bool> tryInsertNodeUnique(K &&k, Args &&...args) {
 		InsertData d = constructKey(std::forward<K>(k));
 		if (!getInsertPositionUnique(d)) {
-			return pair(static_cast<Node<Value> *>(d.current), false);
+			return pair(static_cast<RbTreeNode<Value> *>(d.current), false);
 		}
 
 		return pair(makeInsert(constructEmplace(std::forward<K>(k), std::forward<Args>(args)...),
@@ -832,11 +849,11 @@ protected:
 	}
 
 	template <typename K, typename... Args>
-	Node<Value> *tryInsertNodeUniqueHint(const_iterator hint, K &&k, Args &&...args) {
+	RbTreeNode<Value> *tryInsertNodeUniqueHint(const_iterator hint, K &&k, Args &&...args) {
 		InsertData d = constructKey(std::forward<K>(k));
 		d.current = hint.constcast()._node;
 		if (!getInsertPositionUnique(d)) {
-			return static_cast<Node<Value> *>(d.current);
+			return static_cast<RbTreeNode<Value> *>(d.current);
 		}
 
 		return makeInsert(constructEmplace(std::forward<K>(k), std::forward<Args>(args)...),
@@ -844,11 +861,11 @@ protected:
 	}
 
 	template <typename K, typename M>
-	Pair<Node<Value> *, bool> tryAssignNodeUnique(K &&k, M &&m) {
+	Pair<RbTreeNode<Value> *, bool> tryAssignNodeUnique(K &&k, M &&m) {
 		InsertData d = constructKey(std::forward<K>(k));
 		if (!getInsertPositionUnique(d)) {
 			constructAssign(d.current, std::forward<M>(m));
-			return pair(static_cast<Node<Value> *>(d.current), false);
+			return pair(static_cast<RbTreeNode<Value> *>(d.current), false);
 		}
 
 		return pair(makeInsert(constructEmplace(std::forward<K>(k), std::forward<M>(m)), d.parent,
@@ -857,19 +874,19 @@ protected:
 	}
 
 	template <typename K, typename M>
-	Node<Value> *tryAssignNodeUniqueHint(const_iterator hint, K &&k, M &&m) {
+	RbTreeNode<Value> *tryAssignNodeUniqueHint(const_iterator hint, K &&k, M &&m) {
 		InsertData d = constructKey(std::forward<K>(k));
 		d.current = hint.constcast()._node;
 		if (!getInsertPositionUnique(d)) {
 			constructAssign(d.current, std::forward<M>(m));
-			return static_cast<Node<Value> *>(d.current);
+			return static_cast<RbTreeNode<Value> *>(d.current);
 		}
 
 		return makeInsert(constructEmplace(std::forward<K>(k), std::forward<M>(m)), d.parent,
 				d.isLeft);
 	}
 
-	Node<Value> *makeInsert(Node<Value> *n, NodeBase *parent, bool isLeft) {
+	RbTreeNode<Value> *makeInsert(RbTreeNode<Value> *n, RbTreeNodeBase *parent, bool isLeft) {
 		n->parent = parent;
 		if (parent) {
 			if (isLeft) {
@@ -889,14 +906,14 @@ protected:
 			setroot(n);
 		}
 
-		NodeBase::insert(&_header, n);
+		RbTreeNodeBase::insert(&_header, n);
 		++_size;
 		return n;
 	}
 
-	void deleteNode(NodeBase *z) {
-		NodeBase *x = nullptr;
-		NodeBase *y = nullptr;
+	void deleteNode(RbTreeNodeBase *z) {
+		RbTreeNodeBase *x = nullptr;
+		RbTreeNodeBase *y = nullptr;
 
 		if (!z) {
 			return;
@@ -907,10 +924,10 @@ protected:
 			y = z;
 
 			if (z == right()) {
-				setright((z == left()) ? nullptr : NodeBase::decrement(z));
+				setright((z == left()) ? nullptr : RbTreeNodeBase::decrement(z));
 			}
 			if (z == left()) {
-				setleft(NodeBase::increment(z));
+				setleft(RbTreeNodeBase::increment(z));
 			}
 		} else {
 			y = z->left;
@@ -928,8 +945,8 @@ protected:
 			// if there is no replacement (we use empty leaf node as new Z),
 			// we run rebalance with phantom Y node, then swap data and remove links
 			// to phantom
-			if (y->getColor() == NodeColor::Black) {
-				NodeBase::remove(&_header, y);
+			if (y->getColor() == RbTreeNodeColor::Black) {
+				RbTreeNodeBase::remove(&_header, y);
 			}
 
 			if (y == y->parent->left) {
@@ -941,7 +958,7 @@ protected:
 
 			if (y != z) {
 				// copy node's data may be expensive, so, we keep data and replace node
-				NodeBase::replace(z, y);
+				RbTreeNodeBase::replace(z, y);
 			}
 
 		} else {
@@ -955,40 +972,40 @@ protected:
 			}
 
 			if (y != z) {
-				NodeBase::replace(z, y);
+				RbTreeNodeBase::replace(z, y);
 			} else {
-				y->setColor(NodeColor::Red);
+				y->setColor(RbTreeNodeColor::Red);
 			}
 
-			if (y->getColor() == NodeColor::Black) {
-				NodeBase::remove(&_header, x);
+			if (y->getColor() == RbTreeNodeColor::Black) {
+				RbTreeNodeBase::remove(&_header, x);
 			} else {
-				x->setColor(NodeColor::Black);
+				x->setColor(RbTreeNodeColor::Black);
 			}
 		}
 
-		destroyNode(static_cast<Node<Value> *>(z));
+		destroyNode(static_cast<RbTreeNode<Value> *>(z));
 		--_size;
 	}
 
-	void clear_visit(Node<Value> *target) {
+	void clear_visit(RbTreeNode<Value> *target) {
 		if (target->left) {
-			clear_visit(static_cast<Node<Value> *>(target->left));
+			clear_visit(static_cast<RbTreeNode<Value> *>(target->left));
 		}
 		if (target->right) {
-			clear_visit(static_cast<Node<Value> *>(target->right));
+			clear_visit(static_cast<RbTreeNode<Value> *>(target->right));
 		}
 		destroyNode(target);
 	}
 
-	void clone_visit(const Node<Value> *source, Node<Value> *target) {
+	void clone_visit(const RbTreeNode<Value> *source, RbTreeNode<Value> *target) {
 		_allocator.construct(target->value.ptr(), source->value.ref());
 		target->setColor(source->getColor());
 		if (source->left) {
 			target->left = allocateNode();
 			target->left->parent = target;
-			clone_visit(static_cast<Node<Value> *>(source->left),
-					static_cast<Node<Value> *>(target->left));
+			clone_visit(static_cast<RbTreeNode<Value> *>(source->left),
+					static_cast<RbTreeNode<Value> *>(target->left));
 			if (_header.parent == source->left) { // check for leftmost node
 				_header.parent = target->left;
 			}
@@ -999,8 +1016,8 @@ protected:
 		if (source->right) {
 			target->right = allocateNode();
 			target->right->parent = target;
-			clone_visit(static_cast<Node<Value> *>(source->right),
-					static_cast<Node<Value> *>(target->right));
+			clone_visit(static_cast<RbTreeNode<Value> *>(source->right),
+					static_cast<RbTreeNode<Value> *>(target->right));
 			if (_header.right == source->right) { // check for rightmost node
 				_header.right = target->right;
 			}
@@ -1009,16 +1026,21 @@ protected:
 		}
 	}
 
-	void clone(const Tree &other) {
+	void clone(const RbTree &other) {
+		// prevent 'clear' from dealloc anything
+		auto preallocTmp = memory_persistent();
+		set_memory_persistent(true);
 		clear();
+		set_memory_persistent(preallocTmp);
+
+		reserve(other._size);
+
+		auto flag = _header.flag;
 
 		_size = other._size;
-		if (_size) {
-			allocateTmp(_size);
-		}
-
 		_comp = other._comp;
 		_header = other._header;
+		_header.flag = flag;
 		if (other._header.left) {
 			_header.left = allocateNode();
 			_header.left->parent = &_header;
@@ -1028,8 +1050,8 @@ protected:
 			if (other._header.left == other._header.right) {
 				_header.right = _header.left;
 			}
-			clone_visit(static_cast<Node<Value> *>(other._header.left),
-					static_cast<Node<Value> *>(_header.left));
+			clone_visit(static_cast<RbTreeNode<Value> *>(other._header.left),
+					static_cast<RbTreeNode<Value> *>(_header.left));
 		}
 	}
 
@@ -1090,36 +1112,36 @@ protected:
 			const_node_ptr next, current;
 
 			current = c;
-			next = static_cast<const_node_ptr>(NodeBase::decrement(current));
+			next = static_cast<const_node_ptr>(RbTreeNodeBase::decrement(current));
 			while (next && !compareLtTransparent(extract(next), extract(current))) {
 				current = next;
-				next = static_cast<const_node_ptr>(NodeBase::decrement(current));
+				next = static_cast<const_node_ptr>(RbTreeNodeBase::decrement(current));
 				ret++;
 			}
 
 			current = c;
-			next = static_cast<const_node_ptr>(NodeBase::increment(current));
+			next = static_cast<const_node_ptr>(RbTreeNodeBase::increment(current));
 			while (next && next != &_header
 					&& !compareLtTransparent(extract(current), extract(next))) {
 				current = next;
-				next = static_cast<const_node_ptr>(NodeBase::increment(current));
+				next = static_cast<const_node_ptr>(RbTreeNodeBase::increment(current));
 				ret++;
 			}
 			return ret;
 		}
 	}
 
-	void destroyNode(Node<Value> *n) {
+	void destroyNode(RbTreeNode<Value> *n) {
 		_allocator.destroy(n->value.ptr());
-		if (!_tmp) {
-			// no saved node - hold one
+		if (!_free) {
+			// no saved node - always hold one
 			n->parent = nullptr;
-			_tmp = n;
+			_free = n;
 			++_header.flag.size; // increment capacity counter
 		} else if (n->isPrealloc() || _header.flag.prealloc) {
 			// node was preallocated - hold it in chain
-			n->parent = _tmp;
-			_tmp = n;
+			n->parent = _free;
+			_free = n;
 			++_header.flag.size; // increment capacity counter
 		} else {
 			// deallocate node
@@ -1127,144 +1149,46 @@ protected:
 		}
 	}
 
-	Node<Value> *allocateNode() {
-		if (_tmp) {
-			auto ret = _tmp;
-			_tmp = (Node<Value> *)ret->parent;
+	RbTreeNode<Value> *allocateNode() {
+		if (_free) {
+			auto ret = _free;
+			_free = (RbTreeNode<Value> *)ret->parent;
 			--_header.flag.size; // decrement capacity counter
 			return ret;
 		} else {
 			size_t s;
 			auto ret = node_allocator_type(_allocator).__allocate(1, s);
+			node_allocator_type(_allocator).construct(ret);
 			ret->setSize(s);
 			ret->setPrealloc(false);
 			return ret;
 		}
 	}
 
-	void allocateTmp(size_t count) {
-		// preallocate new n nodes
-
-		uintptr_t preallocIdx = ++_header.flag.index;
-		_header.flag.size += count; // increment capacity counter
-
-		size_t s;
-		auto ret = node_allocator_type(_allocator).__allocate(count, s);
-		auto n = ret;
-
-		for (size_t i = 0; i < count; ++i) {
-			NodeBase *tmpN = n;
-			tmpN->parent = n + 1;
-			tmpN->setPrealloc(true);
-			tmpN->setIndex(preallocIdx);
-			if (i < count - 1) {
-				tmpN->parent = n + 1;
-				tmpN->setSize(sizeof(Node<Value>));
-				s -= sizeof(Node<Value>);
-			} else {
-				tmpN->parent = _tmp;
-				n->setSize(s);
-			}
-			++n;
-		}
-		_tmp = ret;
-	}
-
-	void releaseTmp() {
-		// release any tmp nodes if possible
-		// preallocated nodes released in batch as acquired, only if tree is empty
-
-		struct PreallocatedData {
-			Node<Value> *head = (Node<Value> *)maxOf<uintptr_t>();
-			size_t count = 0;
-			size_t size = 0;
-		};
-
-		if (_size != 0) {
-			// release only free tmps;
-			auto ptr = &_tmp;
-			while (*ptr) {
-				if (!(*ptr)->isPrealloc()) {
-					node_allocator_type(_allocator).__deallocate(*ptr, 1, (*ptr)->getSize());
-					*ptr = (Node<Value> *)(*ptr)->parent;
-					--_header.flag.size;
-				} else {
-					ptr = (Node<Value> **)&((*ptr)->parent);
-				}
-			}
-			return;
-		}
-
-		if (_header.flag.index == 0) {
-			// no preallocated blocks
-			while (_tmp) {
-				auto ptr = _tmp;
-				_tmp = (Node<Value> *)_tmp->parent;
-				node_allocator_type(_allocator).__deallocate(ptr, 1, ptr->getSize());
-				--_header.flag.size;
-			}
-			_tmp = nullptr;
-		} else if (_header.flag.index == 1) {
-			// all preallocated nodes should be in tmp chain, only one preallocated block
-			PreallocatedData data;
-
-			while (_tmp) {
-				auto ptr = _tmp;
-				_tmp = (Node<Value> *)_tmp->parent;
-
-				if (ptr->isPrealloc()) {
-					if (ptr < data.head) {
-						data.head = ptr;
-					}
-					++data.count;
-					data.size += ptr->getSize();
-				} else {
-					node_allocator_type(_allocator).__deallocate(ptr, 1, ptr->getSize());
-					--_header.flag.size;
-				}
-			}
-			if (data.head != (Node<Value> *)maxOf<uintptr_t>()) {
-				_header.flag.size -= data.count;
-				node_allocator_type(_allocator).__deallocate(data.head, data.count, data.size);
-			}
+	void allocate_block(size_t count) {
+		RbTreeNode<Value> *block = nullptr, *tail = nullptr;
+		if (_header.flag.index < node_type::Flag::MaxIndex) {
+			uintptr_t preallocIdx = ++_header.flag.index;
+			block = allocator_helper::allocate_block([](auto node, size_t idx) SPINLINE {
+				return false;
+			}, get_allocator(), preallocIdx, count, &tail);
 		} else {
-			// multiple preallocated blocks make things complicated
-			// VLA, compilers should support C99,
-			// MSVC - fuck off, use new[] or std::vector=)
-			PreallocatedData data[_header.flag.index];
-
-			while (_tmp) {
-				auto ptr = _tmp;
-				_tmp = (Node<Value> *)_tmp->parent;
-
-				if (ptr->isPrealloc()) {
-					if (ptr < data[ptr->getIndex() - 1].head) {
-						data[ptr->getIndex() - 1].head = ptr;
-					}
-					++data[ptr->getIndex() - 1].count;
-					data[ptr->getIndex() - 1].size += ptr->getSize();
-				} else {
-					node_allocator_type(_allocator).__deallocate(ptr, 1, ptr->getSize());
-					--_header.flag.size;
-				}
-			}
-			for (size_t i = 0; i < _header.flag.index; ++i) {
-				if (data[i].head != (Node<Value> *)maxOf<uintptr_t>()) {
-					_header.flag.size -= data[i].count;
-					node_allocator_type(_allocator)
-							.__deallocate(data[i].head, data[i].count, data[i].size);
-				}
-			}
+			block = allocator_helper::allocate_batch([](auto node, size_t idx) SPINLINE {
+				return false;
+			}, get_allocator(), count, &tail);
 		}
-		_tmp = nullptr;
+
+		_header.flag.size += count; // increment capacity counter
+		*tail->getNextStoragePtr() = _free;
+		_free = block;
 	}
 };
 
-} // namespace stappler::memory::rbtree
+} // namespace stappler::memory::detail
 
 #if SP_MEM_RBTREE_DEBUG
 
-namespace STAPPLER_VERSIONIZED stappler::memory::rbtree {
+namespace STAPPLER_VERSIONIZED stappler::memory::detail {
 
 class TreeDebug {
 public:
@@ -1288,13 +1212,13 @@ public:
 
 	template <class T>
 	static Validation validate(const T &tree) {
-		if (tree._header.left && tree._header.left->flag.color == NodeColor::Red) {
+		if (tree._header.left && tree._header.left->flag.color == RbTreeNodeColor::Red) {
 			return Validation::RootIsNotBlack;
 		} else {
 			auto counter = 0;
 			auto root = tree._header.left;
 			while (root) {
-				if (root->flag.color == NodeColor::Black) {
+				if (root->flag.color == RbTreeNodeColor::Black) {
 					++counter;
 				}
 				root = root->left;
@@ -1324,22 +1248,22 @@ protected:
 		}
 	}
 
-	static Validation validate(int counter, NodeBase *node, int path) {
+	static Validation validate(int counter, RbTreeNodeBase *node, int path) {
 		if (node == nullptr) {
 			if (counter != path) {
 				return Validation::DifferentBlackNodeCount;
 			}
 			return Validation::Valid;
 		} else {
-			if (node->flag.color == NodeColor::Black) {
+			if (node->flag.color == RbTreeNodeColor::Black) {
 				auto res = validate(counter, node->left, path + 1);
 				if (res == Validation::Valid) {
 					res = validate(counter, node->right, path + 1);
 				}
 				return res;
 			} else {
-				if ((node->left && node->left->flag.color == NodeColor::Red)
-						|| (node->right && node->right->flag.color == NodeColor::Red)) {
+				if ((node->left && node->left->flag.color == RbTreeNodeColor::Red)
+						|| (node->right && node->right->flag.color == RbTreeNodeColor::Red)) {
 					return Validation::RedChildIntoRedNode;
 				} else {
 					auto res = validate(counter, node->left, path);
@@ -1365,8 +1289,8 @@ inline std::basic_ostream<CharType> &operator<<(std::basic_ostream<CharType> &os
 	return os;
 }
 
-} // namespace stappler::memory::rbtree
+} // namespace stappler::memory::detail
 
 #endif // SP_MEM_RBTREE_DEBUG
 
-#endif /* STAPPLER_CORE_MEMORY_SPMEMRBTREE_H_ */
+#endif /* STAPPLER_CORE_MEMORY_DETAIL_SPMEMRBTREE_H_ */

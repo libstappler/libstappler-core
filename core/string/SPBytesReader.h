@@ -235,6 +235,11 @@ public:
 	Self &operator=(const PoolString &str);
 	Self &operator=(const StdString &str);
 
+	Self &operator=(const CharType *);
+
+	template <size_t Size>
+	Self &operator=(const CharType c[Size]);
+
 	template <size_t Size>
 	constexpr Self &operator=(const std::array<CharType, Size> &);
 
@@ -658,7 +663,7 @@ class SpanView {
 public:
 	using Type = _Type;
 	using Self = SpanView<Type>;
-	using iterator = memory::pointer_iterator<const Type, const Type *, const Type &>;
+	using iterator = memory::detail::pointer_iterator<const Type, const Type *, const Type &>;
 	using reverse_iterator = std::reverse_iterator<iterator>;
 
 	constexpr SpanView() = default;

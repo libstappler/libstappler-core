@@ -24,13 +24,15 @@
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
 #include "SPMemInterface.h"
-#include "SPMemPoolInterface.h"
 #include "SPMemory.h"
 #include "SPDocument.h"
+#include "SPDocPageContainer.h"
 
 #include "SPMakefile.h"
 #include "XCodeProject.h"
 #include "LocaleInfo.h"
+
+#include "SPMemForwardList.h"
 
 namespace stappler::buildtool {
 
@@ -160,7 +162,7 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 
 	filesystem::enumeratePaths(USER_SDK_PROFILE, FileCategory::CommonConfig,
 			filesystem::Access::Read, [&](StringView path, FileFlags flags) {
-		auto data = data::readFile<Interface>(path);
+		auto data = data::readFile<Interface>(FileInfo(path));
 		if (data && data.isArray("paths")) {
 			for (auto &it : data.getArray("paths")) {
 				candidate = it.getString();
@@ -175,8 +177,8 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 	});
 
 	// try system-wide configs
-	if (filesystem::exists(SYSTEM_WIDE_PROFILE_D_FILE)) {
-		auto fileData = filesystem::readIntoMemory<Interface>(SYSTEM_WIDE_PROFILE_D_FILE);
+	if (filesystem::exists(FileInfo(SYSTEM_WIDE_PROFILE_D_FILE))) {
+		auto fileData = filesystem::readIntoMemory<Interface>(FileInfo(SYSTEM_WIDE_PROFILE_D_FILE));
 		auto strData = BytesView(fileData).readString();
 
 		candidate = getCandidateFromShellScript(strData);
@@ -187,8 +189,9 @@ static void findStapplerBuildRoot(const Callback<bool(StringView)> &cb) {
 		}
 	}
 
-	if (filesystem::exists(SYSTEM_WIDE_ENVIRONMENT_D_FILE)) {
-		auto fileData = filesystem::readIntoMemory<Interface>(SYSTEM_WIDE_ENVIRONMENT_D_FILE);
+	if (filesystem::exists(FileInfo(SYSTEM_WIDE_ENVIRONMENT_D_FILE))) {
+		auto fileData =
+				filesystem::readIntoMemory<Interface>(FileInfo(SYSTEM_WIDE_ENVIRONMENT_D_FILE));
 		auto strData = BytesView(fileData).readString();
 
 		candidate = getCandidateFromEnvironmentConfig(strData);
@@ -259,21 +262,62 @@ static void printDocumentTableOfContents(const document::DocumentContentRecord &
 	for (auto &it : rec.childs) { printDocumentTableOfContents(it, depth + 1); }
 }
 
-static int printDocumentInfo(StringView path) {
-	auto doc = document::Document::open(FileInfo(path));
-
+static bool openAndReadDocument(FileInfo fileinfo) {
+	auto doc = document::Document::open(fileinfo);
 	if (doc) {
 		std::cout << "Document: " << doc->getName() << "\n";
 
 		std::cout << "Spine:\n";
-		for (auto &it : doc->getSpine()) { std::cout << "\t" << it << "\n"; }
+		for (auto &it : doc->getSpine()) { std::cout << "\t" << it.file << "\n"; }
 
 		std::cout << "Table of contents:\n";
 		printDocumentTableOfContents(doc->getTableOfContents(), 1);
+
+		std::cout << "Pages:\n";
+		doc->foreachPage([](StringView str, const document::PageContainer *page) {
+			std::cout << "" << page->getPath() << " \"" << page->getTitle() << "\"\n";
+			std::cout << "\tMeta:\n";
+			page->foreachMeta([](StringView key, StringView value) {
+				std::cout << "\t\t" << key << ": " << value << "\n";
+			});
+
+			std::cout << "\tHttpEquiv:\n";
+			page->foreachHttpEquiv([](StringView key, StringView value) {
+				std::cout << "\t\t" << key << ": " << value << "\n";
+			});
+
+			std::cout << "\tLinks:\n";
+			for (auto &it : page->getStyleLinks()) { std::cout << "\t\t" << it.href << "\n"; }
+
+			std::cout << "\tAssets:\n";
+			for (auto &it : page->getAssets()) { std::cout << "\t\t" << it << "\n"; }
+		});
+
+		return true;
 	}
-	return 0;
+	return false;
 }
 
+static int printDocumentInfo(StringView path) {
+	filesystem::Stat stat;
+	if (filesystem::stat(FileInfo(path), stat)) {
+		if (stat.type == FileType::File) {
+			openAndReadDocument(FileInfo(path));
+		} else if (stat.type == FileType::Dir) {
+			filesystem::ftw(FileInfo(path), [](const FileInfo &info, FileType type) {
+				if (type == FileType::File) {
+					std::cout << "--- " << info.path << "----\n";
+					openAndReadDocument(info);
+				}
+				return true;
+			});
+		}
+	} else {
+		slog().error("buildtool", "Fail to open document: ", path, ": not exists");
+	}
+
+	return 0;
+}
 
 SP_EXTERN_C int main(int argc, const char *argv[]) {
 	if (argc < 2) {

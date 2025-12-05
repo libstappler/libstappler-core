@@ -21,13 +21,77 @@
  THE SOFTWARE.
  **/
 
-#ifndef EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTHTML_H_
-#define EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTHTML_H_
+#ifndef CORE_DOCUMENT_HTML_SPDOCHTML_H_
+#define CORE_DOCUMENT_HTML_SPDOCHTML_H_
 
 #include "SPDocument.h"
 #include "SPDocPageContainer.h" // IWYU pragma: keep
+#include "SPHtmlParser.h"
 
 namespace STAPPLER_VERSIONIZED stappler::document {
+
+class Node;
+
+struct HtmlTag : html::Tag<StringView> {
+	enum Type {
+		Html,
+		Head,
+		Meta,
+		Title,
+		Base,
+		Link,
+		Style,
+		Script,
+		Body,
+		Image,
+		Special,
+		Block,
+	};
+
+	Type type = Block;
+	Node *node = nullptr;
+
+	HtmlTag(StringView name) : Tag(name) { }
+
+	explicit operator bool() const { return !name.empty(); }
+
+	static Type getType(const StringView &tagName);
+	static bool isForceUnclosed(const StringView &tagName);
+};
+
+struct HtmlReader {
+	using Parser = html::Parser<HtmlReader, StringView, HtmlTag>;
+
+	using Interface = memory::PoolInterface;
+
+	template <typename T>
+	using Vector = Interface::VectorType<T>;
+
+	using String = Interface::StringType;
+
+	static String encodePathString(StringView r);
+
+	void onBeginTag(Parser &p, HtmlTag &tag);
+	void onEndTag(Parser &p, HtmlTag &tag, bool isClosable);
+	void onTagAttribute(Parser &p, HtmlTag &tag, StringView &name, StringView &value);
+	void onTagAttributeList(Parser &p, HtmlTag &tag, StringView &data);
+	void onPushTag(Parser &p, HtmlTag &tag);
+	void onPopTag(Parser &p, HtmlTag &tag);
+	void onInlineTag(Parser &p, HtmlTag &tag);
+	void onTagContent(Parser &p, HtmlTag &tag, StringView &s);
+	void onSchemeTag(Parser &p, StringView &name, StringView &value);
+	void onCommentTag(Parser &p, StringView &data);
+
+	HtmlReader(PageContainer *);
+
+	PageContainer *page = nullptr;
+	Vector<Node *> nodeStack;
+
+	uint32_t _htmlTag = 0;
+	uint32_t _bodyTag = 0;
+	uint32_t _headTag = 0;
+	uint32_t _pseudoId = 0;
+};
 
 class SP_PUBLIC DocumentHtml : public Document {
 public:
@@ -48,4 +112,4 @@ protected:
 
 } // namespace stappler::document
 
-#endif /* EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTHTML_H_ */
+#endif // CORE_DOCUMENT_HTML_SPDOCHTML_H_

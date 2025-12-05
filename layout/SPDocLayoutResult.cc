@@ -73,7 +73,7 @@ bool LayoutResult::init(const MediaParameters &media, Document *doc) {
 }
 
 void LayoutResult::storeFont(font::FontFaceSet *f) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	_data->faces.emplace(f);
 }
@@ -82,7 +82,7 @@ const MediaParameters &LayoutResult::getMedia() const { return _data->media; }
 
 Document *LayoutResult::getDocument() const { return _data->document; }
 
-void LayoutResult::pushIndex(StringView str, const Vec2 &pos) {
+void LayoutResult::pushIndex(StringView str, Vec2 pos) {
 	_data->index.emplace(str.pdup(_data->pool), pos);
 }
 
@@ -97,9 +97,9 @@ void LayoutResult::finalize() {
 
 	StringView title = toc.label;
 	if (title.empty()) {
-		auto meta = _data->document->getMeta("title");
-		if (meta && !meta->values.empty()) {
-			title = meta->values.front().value;
+		auto metaTitle = _data->document->getMeta("title");
+		if (!metaTitle.empty()) {
+			title = metaTitle;
 		}
 	}
 
@@ -109,10 +109,10 @@ void LayoutResult::finalize() {
 	for (auto &it : toc.childs) { processContents(it, 1); }
 }
 
-void LayoutResult::setBackgroundColor(const Color4B &c) { _data->background = c; }
-const Color4B &LayoutResult::getBackgroundColor() const { return _data->background; }
+void LayoutResult::setBackgroundColor(Color4B c) { _data->background = c; }
+Color4B LayoutResult::getBackgroundColor() const { return _data->background; }
 
-void LayoutResult::setContentSize(const Size2 &s) {
+void LayoutResult::setContentSize(Size2 s) {
 	_data->size = s;
 	_data->size.width = _data->media.surfaceSize.width;
 
@@ -123,9 +123,9 @@ void LayoutResult::setContentSize(const Size2 &s) {
 	_data->numPages = size_t(ceilf(_data->size.height / _data->media.surfaceSize.height)) + 1;
 }
 
-const Size2 &LayoutResult::getContentSize() const { return _data->size; }
+Size2 LayoutResult::getContentSize() const { return _data->size; }
 
-const Size2 &LayoutResult::getSurfaceSize() const { return _data->media.surfaceSize; }
+Size2 LayoutResult::getSurfaceSize() const { return _data->media.surfaceSize; }
 
 SpanView<Object *> LayoutResult::getObjects() const { return _data->objects; }
 
@@ -163,7 +163,7 @@ LayoutBoundIndex LayoutResult::getBoundsForPosition(float pos) const {
 }
 
 Label *LayoutResult::emplaceLabel(const LayoutBlock &l, ZOrder zIndex, bool isBullet) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	auto ret = new (_data->pool) Label;
 	ret->type = Object::Type::Label;
@@ -190,7 +190,7 @@ Label *LayoutResult::emplaceLabel(const LayoutBlock &l, ZOrder zIndex, bool isBu
 
 Background *LayoutResult::emplaceBackground(const LayoutBlock &l, const Rect &rect,
 		const BackgroundParameters &style, ZOrder zIndex) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	auto ret = new (_data->pool) Background;
 	ret->type = Object::Type::Background;
@@ -206,7 +206,7 @@ Background *LayoutResult::emplaceBackground(const LayoutBlock &l, const Rect &re
 
 Link *LayoutResult::emplaceLink(const LayoutBlock &l, const Rect &rect, StringView href,
 		StringView target, WideStringView text) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	auto ret = new (_data->pool) Link;
 	ret->type = Object::Type::Link;
@@ -224,7 +224,7 @@ Link *LayoutResult::emplaceLink(const LayoutBlock &l, const Rect &rect, StringVi
 
 PathObject *LayoutResult::emplaceOutline(const LayoutBlock &l, const Rect &rect,
 		const Color4B &color, ZOrder zIndex, float width, BorderStyle style) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	auto ret = new (_data->pool) PathObject;
 	ret->type = Object::Type::Path;
@@ -239,13 +239,13 @@ PathObject *LayoutResult::emplaceOutline(const LayoutBlock &l, const Rect &rect,
 
 void LayoutResult::emplaceBorder(LayoutBlock &l, const Rect &rect, const OutlineParameters &style,
 		float width, ZOrder zIndex) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	PathObject::makeBorder(this, l, rect, style, width, zIndex, _data->media);
 }
 
 PathObject *LayoutResult::emplacePath(const LayoutBlock &l, ZOrder zIndex) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	auto ret = new (_data->pool) PathObject;
 	ret->type = Object::Type::Path;

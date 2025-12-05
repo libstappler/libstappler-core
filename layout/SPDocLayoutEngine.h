@@ -80,6 +80,7 @@ public:
 
 	virtual float getDensity() const override;
 	virtual float getFontScale() const override;
+	virtual Color4B getTextColor() const override;
 
 	Float getNodeFloating(const Node &node) const;
 	Display getNodeDisplay(const Node &node) const;

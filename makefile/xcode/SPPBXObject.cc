@@ -93,13 +93,15 @@ static int8_t *TSGenerateUniqueGlobalID(int8_t *buff) {
 		gid.user = output;
 
 		int32_t host_id = 0;
-		int32_t temp = static_cast<int32_t>(gethostid()); // this is used even though it is deprecated on OS X
+		int32_t temp = static_cast<int32_t>(
+				gethostid()); // this is used even though it is deprecated on OS X
 		if (temp != -1) {
 			host_id = temp;
 		}
 		// generate the random seed
 		auto time_seed = platform::nanoclock();
-		srandom(static_cast<unsigned>((current_pid & 0xff) << 0x10 | host_id) ^ static_cast<unsigned>(time_seed));
+		srandom(static_cast<unsigned>((current_pid & 0xff) << 0x10 | host_id)
+				^ static_cast<unsigned>(time_seed));
 		if (host_id == 0) {
 			host_id = static_cast<int32_t>(random());
 		}
@@ -196,10 +198,12 @@ void PBXObject::write(const Callback<void(StringView)> &cb) const {
 		PBXSourcesBuildPhase::write(cb, static_cast<const PBXSourcesBuildPhase &>(*this));
 		break;
 	case ISA::PBXFileSystemSynchronizedRootGroup:
-		PBXFileSystemSynchronizedRootGroup::write(cb, static_cast<const PBXFileSystemSynchronizedRootGroup &>(*this));
+		PBXFileSystemSynchronizedRootGroup::write(cb,
+				static_cast<const PBXFileSystemSynchronizedRootGroup &>(*this));
 		break;
 	case ISA::PBXFileSystemSynchronizedBuildFileExceptionSet:
-		PBXFileSystemSynchronizedBuildFileExceptionSet::write(cb, static_cast<const PBXFileSystemSynchronizedBuildFileExceptionSet &>(*this));
+		PBXFileSystemSynchronizedBuildFileExceptionSet::write(cb,
+				static_cast<const PBXFileSystemSynchronizedBuildFileExceptionSet &>(*this));
 		break;
 	case ISA::PBXBuildFile:
 		PBXBuildFile::write(cb, static_cast<const PBXBuildFile &>(*this));
@@ -208,8 +212,9 @@ void PBXObject::write(const Callback<void(StringView)> &cb) const {
 	}
 }
 
-const PBXBuildFile *PBXBuildFile::create(XCodeExport &xctx, const Callback<void(PBXBuildFile *)> &cb) {
-	memory::pool::context ctx(xctx.pool);
+const PBXBuildFile *PBXBuildFile::create(XCodeExport &xctx,
+		const Callback<void(PBXBuildFile *)> &cb) {
+	memory::context ctx(xctx.pool);
 
 	auto obj = new (xctx.pool) PBXBuildFile(xctx);
 

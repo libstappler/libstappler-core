@@ -26,6 +26,7 @@
 
 #include "SPRef.h"
 #include "SPDocStyle.h"
+#include "SPMemForwardList.h"
 
 namespace STAPPLER_VERSIONIZED stappler::document {
 
@@ -42,38 +43,41 @@ class Document;
 
 struct SP_PUBLIC DocumentImage : public memory::AllocPool {
 	enum Type {
-		Embed,
-		Local,
-		Web,
+		Embed, // The image is written inside the document
+		Local, // Image on local file system
+		Web, // Image available online
 	};
 
 	Type type = Local;
 
-	uint16_t width = 0;
-	uint16_t height = 0;
-
-	size_t offset = 0;
-	size_t length = 0;
+	uint32_t width = 0;
+	uint32_t height = 0;
 
 	StringView path;
 	StringView ref;
 	StringView ct;
-	BytesView data;
+
+	BytesView data; // if stored within document
 
 	DocumentImage() = default;
 
-	DocumentImage(uint16_t w, uint16_t h, size_t size, StringView p, StringView r = StringView())
-	: width(w), height(h), length(size), path(p.pdup()), ref(r.pdup()) { }
+	DocumentImage(uint32_t w, uint32_t h, StringView p, StringView r = StringView())
+	: width(w), height(h), path(p.pdup()), ref(r.pdup()) { }
 };
 
-struct DocumentMetaValue {
-	StringView value;
-	mem_pool::Map<StringView, StringView> attrs;
+struct SP_PUBLIC DocumentFont {
+	StringView path;
+	StringView ref;
+	StringView ct;
+
+	BytesView data; // if stored within document
+
+	DocumentFont(StringView p, StringView r = StringView()) : path(p.pdup()), ref(r.pdup()) { }
 };
 
-struct DocumentMeta {
-	StringView name;
-	mem_pool::Vector<DocumentMetaValue> values;
+struct SpineFile {
+	StringView file;
+	bool linear = true;
 };
 
 struct SP_PUBLIC DocumentContentRecord {
@@ -89,15 +93,17 @@ struct SP_PUBLIC DocumentData : public memory::AllocPool,
 								public InterfaceObject<memory::PoolInterface> {
 	memory::pool_t *pool = nullptr;
 	uint64_t id;
+	StringView uid;
 	StringView name;
 	StringView type;
-	Vector<StringView> spine;
 	Vector<StringView> strings;
 	Vector<MediaQuery> queries;
+	Vector<SpineFile> spine;
 	Map<StringView, StyleContainer *> styles;
 	Map<StringView, PageContainer *> pages;
 	Map<StringView, DocumentImage> images;
-	Map<StringView, DocumentMeta> meta;
+	Map<StringView, DocumentFont> fonts;
+	Map<StringView, StringView> meta;
 	DocumentContentRecord tableOfContents;
 
 	NodeId maxNodeId = NodeIdNone;
@@ -129,10 +135,10 @@ public:
 
 	virtual StringView getType() const;
 	virtual StringView getName() const;
-	virtual SpanView<StringView> getSpine() const;
+	virtual SpanView<SpineFile> getSpine() const;
 	virtual const DocumentContentRecord &getTableOfContents() const;
 
-	virtual const DocumentMeta *getMeta(StringView) const;
+	virtual StringView getMeta(StringView) const;
 
 	virtual bool isFileExists(StringView) const;
 	virtual const DocumentImage *getImage(StringView) const;

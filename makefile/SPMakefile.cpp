@@ -22,17 +22,12 @@
  **/
 
 #include "SPMakefile.h"
-#include "SPBuffer.h"
-#include "SPBytesView.h"
-#include "SPCharGroup.h"
 #include "SPFilepath.h"
 #include "SPFilesystem.h"
 #include "SPMakefileBlock.h"
 #include "SPMakefileError.h"
 #include "SPMakefileStmt.h"
 #include "SPMemInterface.h"
-#include "SPMemPoolApi.h"
-#include "SPMemPoolInterface.h"
 #include "SPMemory.h"
 
 #include "SPMakefileError.cc"

@@ -9,7 +9,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${command:makefile.launchTargetPath}",
-			"args": ["readelf", "/home/sbkarr/stappler/dev/stappler-musl-toolchain/toolchain-linux/fdhelper/x86_64/fdhelper"],
+			"args": ["docinfo", "/home/sbkarr/stappler/dev/Сложные epub для теста читалки"],
 			"stopAtEntry": false,
 			"cwd": "${command:makefile.getLaunchTargetDirectory}",
 			"environment": [],

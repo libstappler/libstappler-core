@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +26,6 @@ THE SOFTWARE.
 #include "SPMemPoolStruct.h"
 
 #include "SPMemFunction.h"
-#include "SPMemPoolApi.h"
 #include "SPLog.h"
 
 // requires libbacktrace
@@ -36,7 +36,7 @@ THE SOFTWARE.
 #include <backtrace.h>
 #endif
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
+namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
 static constexpr size_t SP_ALLOC_STACK_SIZE = 4'097;
 
@@ -159,56 +159,61 @@ pool_t *acquire() { return get_stack().top(); }
 Pair<uint32_t, const void *> info() { return get_stack().info(); }
 
 void push(pool_t *p, const char *source) { return get_stack().push(p, source); }
+
 void push(pool_t *p, uint32_t tag, const void *ptr, const char *source) {
 	set_pool_info(p, tag, ptr);
 	return get_stack().push(p, tag, ptr, source);
 }
+
 void pop(pool_t *p, const char *source) { return get_stack().pop(p, source); }
 
+SP_UNUSED static inline bool isStappler(allocator_t *alloc) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
+		if (alloc && *((uintptr_t *)alloc) == static_cast<uintptr_t>(config::POOL_MAGIC)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	return true;
+}
+
+SP_UNUSED static inline bool isStappler(pool_t *p) {
+	if constexpr (apr::SP_APR_COMPATIBLE) {
+		if (p && ((custom::Pool *)p)->magic == static_cast<uintptr_t>(config::POOL_MAGIC)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	return true;
+}
+
+} // namespace stappler::memory::pool
+
+namespace STAPPLER_VERSIONIZED stappler::memory {
+
 void foreach_info(void *data, bool (*cb)(void *, pool_t *, uint32_t, const void *)) {
-	get_stack().foreachInfo(data, cb);
+	pool::get_stack().foreachInfo(data, cb);
 }
 
-static inline bool isStappler(allocator_t *alloc) {
-	if constexpr (apr::SP_APR_COMPATIBLE) {
-		if (alloc && *((uintptr_t *)alloc) == static_cast<uintptr_t>(custom::POOL_MAGIC)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-	return true;
-}
-
-static inline bool isStappler(pool_t *p) {
-	if constexpr (apr::SP_APR_COMPATIBLE) {
-		if (p && ((custom::Pool *)p)->magic == static_cast<uintptr_t>(custom::POOL_MAGIC)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-	return true;
-}
-
-} // namespace stappler::mempool::base::pool
-
+} // namespace stappler::memory
 
 typedef struct apr_allocator_t apr_allocator_t;
 typedef struct apr_pool_t apr_pool_t;
 
 using apr_status_t = int;
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::apr {
+namespace STAPPLER_VERSIONIZED stappler::memory::apr {
 
 using allocator_t = apr_allocator_t;
 using status_t = apr_status_t;
 using pool_t = apr_pool_t;
 using cleanup_fn = status_t (*)(void *);
 
-} // namespace stappler::mempool::apr
+} // namespace stappler::memory::apr
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::apr::allocator {
+namespace STAPPLER_VERSIONIZED stappler::memory::apr::allocator {
 
 SPUNUSED static allocator_t *create();
 SPUNUSED static allocator_t *create(void *mutex);
@@ -217,9 +222,9 @@ SPUNUSED static void owner_set(allocator_t *alloc, pool_t *pool);
 SPUNUSED static pool_t *owner_get(allocator_t *alloc);
 SPUNUSED static void max_free_set(allocator_t *alloc, size_t size);
 
-} // namespace stappler::mempool::apr::allocator
+} // namespace stappler::memory::apr::allocator
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::apr::pool {
+namespace STAPPLER_VERSIONIZED stappler::memory::apr::pool {
 
 SPUNUSED static void initialize();
 SPUNUSED static void terminate();
@@ -250,10 +255,10 @@ SPUNUSED static char *pstrdup(pool_t *a, const char *s);
 SPUNUSED static void set_pool_info(pool_t *p, uint32_t tag, const void *ptr);
 SPUNUSED static const char *get_tag(pool_t *pool);
 
-} // namespace stappler::mempool::apr::pool
+} // namespace stappler::memory::apr::pool
 
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::base::allocator {
+namespace STAPPLER_VERSIONIZED stappler::memory::allocator {
 
 allocator_t *create() { return (allocator_t *)(new custom::Allocator()); }
 
@@ -316,9 +321,9 @@ void max_free_set(allocator_t *alloc, size_t size) {
 	}
 }
 
-} // namespace stappler::mempool::base::allocator
+} // namespace stappler::memory::allocator
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::base::pool {
+namespace STAPPLER_VERSIONIZED stappler::memory::pool {
 
 static std::atomic<size_t> s_activePools = 0;
 static std::atomic<bool> s_poolDebug = 0;
@@ -633,7 +638,7 @@ void cleanup_kill(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			apr::pool::cleanup_kill((apr::pool_t *)pool, ptr,
-					(stappler::mempool::apr::status_t (*)(void *))cb);
+					(stappler::memory::apr::status_t (*)(void *))cb);
 			return;
 		}
 	}
@@ -644,7 +649,7 @@ void cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			apr::pool::cleanup_register((apr::pool_t *)pool, ptr,
-					(stappler::mempool::apr::status_t (*)(void *))cb);
+					(stappler::memory::apr::status_t (*)(void *))cb);
 			return;
 		}
 	}
@@ -655,7 +660,7 @@ void pre_cleanup_register(pool_t *pool, void *ptr, cleanup_fn cb) {
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			apr::pool::pre_cleanup_register((apr::pool_t *)pool, ptr,
-					(stappler::mempool::apr::status_t (*)(void *))cb);
+					(stappler::memory::apr::status_t (*)(void *))cb);
 			return;
 		}
 	}
@@ -666,7 +671,7 @@ Status userdata_set(const void *data, const char *key, cleanup_fn cb, pool_t *po
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			return Status(apr::pool::userdata_set(data, key,
-					(stappler::mempool::apr::status_t (*)(void *))cb, (apr::pool_t *)pool));
+					(stappler::memory::apr::status_t (*)(void *))cb, (apr::pool_t *)pool));
 		}
 	}
 	return ((custom::Pool *)pool)->userdata_set(data, key, (custom::Cleanup::Callback)cb);
@@ -676,7 +681,7 @@ Status userdata_setn(const void *data, const char *key, cleanup_fn cb, pool_t *p
 	if constexpr (apr::SP_APR_COMPATIBLE) {
 		if (!isStappler(pool)) {
 			return Status(apr::pool::userdata_setn(data, key,
-					(stappler::mempool::apr::status_t (*)(void *))cb, (apr::pool_t *)pool));
+					(stappler::memory::apr::status_t (*)(void *))cb, (apr::pool_t *)pool));
 		}
 	}
 	return ((custom::Pool *)pool)->userdata_setn(data, key, (custom::Cleanup::Callback)cb);
@@ -789,14 +794,14 @@ static Status cleanup_register_fn(void *ptr) {
 }
 
 void cleanup_register(pool_t *p, memory::function<void()> &&cb) {
-	memory::pool::perform_conditional([&] {
+	perform_conditional([&] {
 		auto fn = new (p) memory::function<void()>(move(cb));
 		pool::cleanup_register(p, fn, &cleanup_register_fn);
 	}, p);
 }
 
 void pre_cleanup_register(pool_t *p, memory::function<void()> &&cb) {
-	memory::pool::perform_conditional([&] {
+	perform_conditional([&] {
 		auto fn = new (p) memory::function<void()>(move(cb));
 		pool::pre_cleanup_register(p, fn, &cleanup_register_fn);
 	}, p);
@@ -843,4 +848,4 @@ void debug_foreach(void *ptr, void (*cb)(void *, pool_t *)) {
 #endif
 }
 
-} // namespace stappler::mempool::base::pool
+} // namespace stappler::memory::pool

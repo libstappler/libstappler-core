@@ -571,6 +571,7 @@ bool Formatter::pushLineBreak() {
 			}
 		}
 		firstInLine = wordStart;
+		wordWrapPos = wordStart;
 
 		if (wordStart < _output.chars.size()) {
 			uint16_t originOffset = getOriginPosition(wordStart);

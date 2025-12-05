@@ -191,7 +191,7 @@ bool Scheme::init() {
 		return true;
 	}
 
-	pool::context<pool_t *> ctx(_fields.get_allocator(), pool::context<pool_t *>::conditional);
+	memory::context<pool_t *> ctx(_fields.get_allocator(), memory::context<pool_t *>::conditional);
 
 	// init non-linked object fields as StrongReferences
 	for (auto &fit : _fields) {
@@ -1272,7 +1272,7 @@ void Scheme::purgeFilePatch(const Transaction &t, const Value &patch) const {
 }
 
 void Scheme::addView(const Scheme *s, const Field *f) {
-	pool::context<pool_t *> ctx(_views.get_allocator(), pool::context<pool_t *>::conditional);
+	memory::context<pool_t *> ctx(_views.get_allocator(), memory::context<pool_t *>::conditional);
 
 	if (auto view = static_cast<const FieldView *>(f->getSlot())) {
 		_views.emplace_back(new (std::nothrow) ViewScheme{s, f, *view});
@@ -1330,7 +1330,7 @@ void Scheme::addView(const Scheme *s, const Field *f) {
 }
 
 void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme &a) {
-	pool::context<pool_t *> ctx(_views.get_allocator(), pool::context<pool_t *>::conditional);
+	memory::context<pool_t *> ctx(_views.get_allocator(), memory::context<pool_t *>::conditional);
 
 	_views.emplace_back(new (std::nothrow) ViewScheme{s, f, a});
 	auto viewScheme = _views.back();
@@ -1409,7 +1409,7 @@ void Scheme::addAutoField(const Scheme *s, const Field *f, const AutoFieldScheme
 }
 
 void Scheme::addParent(const Scheme *s, const Field *f) {
-	pool::context<pool_t *> ctx(_parents.get_allocator(), pool::context<pool_t *>::conditional);
+	memory::context<pool_t *> ctx(_parents.get_allocator(), memory::context<pool_t *>::conditional);
 
 	_parents.emplace_back(new (std::nothrow) ParentScheme(s, f));
 	auto &p = _parents.back();

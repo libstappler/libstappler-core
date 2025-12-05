@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include "SPDbAdapter.h"
 #include "SPDbScheme.h"
 #include "SPDbWorker.h"
+#include "detail/SPMemUserData.h"
 
 namespace STAPPLER_VERSIONIZED stappler::db {
 
@@ -64,9 +65,7 @@ Transaction Transaction::acquire(const Adapter &adapter) {
 	return Transaction(nullptr);
 }
 
-Transaction Transaction::acquireIfExists() {
-	return acquireIfExists(pool::acquire());
-}
+Transaction Transaction::acquireIfExists() { return acquireIfExists(pool::acquire()); }
 
 Transaction Transaction::acquireIfExists(stappler::memory::pool_t *pool) {
 	auto stack = pool::get<Stack>(pool, config::STORAGE_TRANSACTION_STACK_KEY);
@@ -94,7 +93,7 @@ void Transaction::release() const {
 	if (stack) {
 		auto it = std::find(stack->stack.rbegin(), stack->stack.rend(), _data);
 		if (it != stack->stack.rend()) {
-			stack->stack.erase( std::next(it).base() );
+			stack->stack.erase(std::next(it).base());
 		}
 	}
 }
@@ -103,14 +102,10 @@ Transaction::Transaction(nullptr_t) : Transaction((Data *)nullptr) { }
 
 Transaction::Transaction(Data *d) : _data(d) { }
 
-void Transaction::setRole(AccessRoleId id) const {
-	_data->role = id;
-}
-AccessRoleId Transaction::getRole() const {
-	return _data->role;
-}
+void Transaction::setRole(AccessRoleId id) const { _data->role = id; }
+AccessRoleId Transaction::getRole() const { return _data->role; }
 
-const Value & Transaction::setValue(const StringView &key, Value &&val) {
+const Value &Transaction::setValue(const StringView &key, Value &&val) {
 	return _data->data.emplace(key.str<Interface>(), sp::move(val)).first->second;
 }
 
@@ -124,7 +119,7 @@ const Value &Transaction::getValue(const StringView &key) const {
 
 Value Transaction::setObject(int64_t id, Value &&val) const {
 	Value ret;
-	pool::perform_conditional([&] {
+	memory::perform_conditional([&] {
 		ret = _data->objects.emplace(id, sp::move(val)).first->second;
 	}, _data->objects.get_allocator());
 	return ret;
@@ -141,16 +136,10 @@ Value Transaction::getObject(int64_t id) const {
 void Transaction::setStatus(int value) { _data->status = value; }
 int Transaction::getStatus() const { return _data->status; }
 
-void Transaction::setAdapter(const Adapter &a) {
-	_data->adapter = a;
-}
-const Adapter &Transaction::getAdapter() const {
-	return _data->adapter;
-}
+void Transaction::setAdapter(const Adapter &a) { _data->adapter = a; }
+const Adapter &Transaction::getAdapter() const { return _data->adapter; }
 
-bool Transaction::isInTransaction() const {
-	return _data->adapter.isInTransaction();
-}
+bool Transaction::isInTransaction() const { return _data->adapter.isInTransaction(); }
 
 TransactionStatus Transaction::getTransactionStatus() const {
 	return _data->adapter.getTransactionStatus();
@@ -164,17 +153,15 @@ struct DataHolder {
 		}
 	}
 
-	~DataHolder() {
-		_data->role = _tmpRole;
-	}
+	~DataHolder() { _data->role = _tmpRole; }
 
 	Transaction::Data *_data = nullptr;
 	AccessRoleId _tmpRole = AccessRoleId::Nobody;
 };
 
-bool Transaction::foreach(Worker &w, const Query &query, const Callback<bool(Value &)> &cb) const {
+bool Transaction::foreach (Worker &w, const Query &query, const Callback<bool(Value &)> &cb) const {
 	if (!w.scheme().hasAccessControl()) {
-		return _data->adapter.foreach(w, query, cb);
+		return _data->adapter.foreach (w, query, cb);
 	}
 
 	DataHolder h(_data, w);
@@ -186,11 +173,12 @@ bool Transaction::foreach(Worker &w, const Query &query, const Callback<bool(Val
 	auto r = w.scheme().getAccessRole(_data->role);
 	auto d = w.scheme().getAccessRole(AccessRoleId::Default);
 
-	if ((d && d->onSelect && !d->onSelect(w, query)) || (r && r->onSelect && !r->onSelect(w, query))) {
+	if ((d && d->onSelect && !d->onSelect(w, query))
+			|| (r && r->onSelect && !r->onSelect(w, query))) {
 		return false;
 	}
 
-	return _data->adapter.foreach(w, query, [&, this] (Value &val) -> bool {
+	return _data->adapter.foreach (w, query, [&, this](Value &val) -> bool {
 		if (processReturnObject(w.scheme(), val)) {
 			return cb(val);
 		}
@@ -216,7 +204,8 @@ Value Transaction::select(Worker &w, const Query &query) const {
 	auto r = w.scheme().getAccessRole(_data->role);
 	auto d = w.scheme().getAccessRole(AccessRoleId::Default);
 
-	if ((d && d->onSelect && !d->onSelect(w, query)) || (r && r->onSelect && !r->onSelect(w, query))) {
+	if ((d && d->onSelect && !d->onSelect(w, query))
+			|| (r && r->onSelect && !r->onSelect(w, query))) {
 		return Value();
 	}
 
@@ -226,7 +215,7 @@ Value Transaction::select(Worker &w, const Query &query) const {
 	auto it = arr.begin();
 	while (it != arr.end()) {
 		if (processReturnObject(w.scheme(), *it)) {
-			++ it;
+			++it;
 		} else {
 			it = arr.erase(it);
 		}
@@ -308,10 +297,11 @@ Value Transaction::create(Worker &w, Value &data) const {
 			auto &arr = data.asArray();
 			auto it = arr.begin();
 			while (it != arr.end()) {
-				if ((d && d->onCreate && !d->onCreate(w, *it)) || (r && r->onCreate && !r->onCreate(w, *it))) {
+				if ((d && d->onCreate && !d->onCreate(w, *it))
+						|| (r && r->onCreate && !r->onCreate(w, *it))) {
 					it = arr.erase(it);
 				} else {
-					++ it;
+					++it;
 				}
 			}
 
@@ -320,23 +310,25 @@ Value Transaction::create(Worker &w, Value &data) const {
 				auto it = arr.begin();
 
 				while (it != arr.end()) {
-					if ((d && d->onCreate && !d->onCreate(w, *it)) || (r && r->onCreate && !r->onCreate(w, *it))) {
+					if ((d && d->onCreate && !d->onCreate(w, *it))
+							|| (r && r->onCreate && !r->onCreate(w, *it))) {
 						it = arr.erase(it);
 					} else {
-						++ it;
+						++it;
 					}
 				}
 
-				ret =  !arr.empty() ? sp::move(val) : Value(true);
+				ret = !arr.empty() ? sp::move(val) : Value(true);
 				return true; // if user can not see result - return success but with no object
 			}
 		} else {
-			if ((d && d->onCreate && !d->onCreate(w, data)) || (r && r->onCreate && !r->onCreate(w, data))) {
+			if ((d && d->onCreate && !d->onCreate(w, data))
+					|| (r && r->onCreate && !r->onCreate(w, data))) {
 				return false;
 			}
 
 			if (auto val = _data->adapter.create(w, data)) {
-				ret =  processReturnObject(w.scheme(), val) ? sp::move(val) : Value(true);
+				ret = processReturnObject(w.scheme(), val) ? sp::move(val) : Value(true);
 				return true; // if user can not see result - return success but with no object
 			}
 		}
@@ -347,7 +339,8 @@ Value Transaction::create(Worker &w, Value &data) const {
 	return Value();
 }
 
-Value Transaction::save(Worker &w, uint64_t oid, Value &obj, Value &patch, Set<const Field *> &fields) const {
+Value Transaction::save(Worker &w, uint64_t oid, Value &obj, Value &patch,
+		Set<const Field *> &fields) const {
 	if (!w.scheme().hasAccessControl()) {
 		return _data->adapter.save(w, oid, obj, patch, fields);
 	}
@@ -367,7 +360,8 @@ Value Transaction::save(Worker &w, uint64_t oid, Value &obj, Value &patch, Set<c
 		bool hasD = (d && d->onSave);
 
 		if (hasR || hasD) {
-			if ((hasD && !d->onSave(w, obj, patch, fields)) || (hasR && !r->onSave(w, obj, patch, fields))) {
+			if ((hasD && !d->onSave(w, obj, patch, fields))
+					|| (hasR && !r->onSave(w, obj, patch, fields))) {
 				return false;
 			}
 
@@ -405,7 +399,8 @@ Value Transaction::patch(Worker &w, uint64_t oid, Value &data) const {
 	if (perform([&, this] {
 		auto r = w.scheme().getAccessRole(_data->role);
 		auto d = w.scheme().getAccessRole(AccessRoleId::Default);
-		if ((d && d->onPatch && !d->onPatch(w, oid, data)) || (r && r->onPatch && !r->onPatch(w, oid, data))) {
+		if ((d && d->onPatch && !d->onPatch(w, oid, data))
+				|| (r && r->onPatch && !r->onPatch(w, oid, data))) {
 			return false;
 		}
 
@@ -456,7 +451,8 @@ Value Transaction::field(Action a, Worker &w, uint64_t oid, const Field &f, Valu
 	}
 	return Value();
 }
-Value Transaction::field(Action a, Worker &w, const Value &obj, const Field &f, Value &&patch) const {
+Value Transaction::field(Action a, Worker &w, const Value &obj, const Field &f,
+		Value &&patch) const {
 	if (!w.scheme().hasAccessControl()) {
 		return _data->adapter.field(a, w, obj, f, sp::move(patch));
 	}
@@ -472,7 +468,8 @@ Value Transaction::field(Action a, Worker &w, const Value &obj, const Field &f, 
 		auto r = w.scheme().getAccessRole(_data->role);
 		auto d = w.scheme().getAccessRole(AccessRoleId::Default);
 
-		if ((d && d->onField && !d->onField(a, w, obj, f, patch)) || (r && r->onField && !r->onField(a, w, obj, f, patch))) {
+		if ((d && d->onField && !d->onField(a, w, obj, f, patch))
+				|| (r && r->onField && !r->onField(a, w, obj, f, patch))) {
 			return false;
 		}
 
@@ -490,7 +487,8 @@ Value Transaction::field(Action a, Worker &w, const Value &obj, const Field &f, 
 	return Value();
 }
 
-bool Transaction::removeFromView(const Scheme &scheme, const FieldView &field, uint64_t oid, const Value &obj) const {
+bool Transaction::removeFromView(const Scheme &scheme, const FieldView &field, uint64_t oid,
+		const Value &obj) const {
 	if (!isOpAllowed(scheme, RemoveFromView)) {
 		return false;
 	}
@@ -498,7 +496,8 @@ bool Transaction::removeFromView(const Scheme &scheme, const FieldView &field, u
 	return _data->adapter.removeFromView(field, &scheme, oid);
 }
 
-bool Transaction::addToView(const Scheme &scheme, const FieldView &field, uint64_t oid, const Value &obj, const Value &viewObj) const {
+bool Transaction::addToView(const Scheme &scheme, const FieldView &field, uint64_t oid,
+		const Value &obj, const Value &viewObj) const {
 	if (!isOpAllowed(scheme, AddToView)) {
 		return false;
 	}
@@ -553,7 +552,8 @@ Value Transaction::performQueryList(const QueryList &list, size_t count, bool fo
 		} else {
 			auto q = list.getItems().back().query;
 			vals = t.perform(*list.getItems().back().scheme, *this, q,
-					t.hasFlag(ContinueToken::Inverted) ? Ordering::Descending : Ordering::Ascending);
+					t.hasFlag(ContinueToken::Inverted) ? Ordering::Descending
+													   : Ordering::Ascending);
 		}
 	} else {
 		vals = _data->adapter.performQueryList(list, count, forUpdate);
@@ -564,7 +564,7 @@ Value Transaction::performQueryList(const QueryList &list, size_t count, bool fo
 		auto it = arr.begin();
 		while (it != arr.end()) {
 			if (processReturnObject(*list.getScheme(), *it)) {
-				++ it;
+				++it;
 			} else {
 				it = arr.erase(it);
 			}
@@ -604,7 +604,8 @@ Value Transaction::performQueryListField(const QueryList &list, const Field &f) 
 			if ((r && r->onField) || (d && d->onField) || f.getSlot()->readFilterFn) {
 				if ((obj = acquireObject(w.scheme(), id))) {
 					Value tmp;
-					if (!d->onField(Action::Get, w, obj, f, tmp) || !r->onField(Action::Get, w, obj, f, tmp)) {
+					if (!d->onField(Action::Get, w, obj, f, tmp)
+							|| !r->onField(Action::Get, w, obj, f, tmp)) {
 						return Value();
 					}
 				}
@@ -612,7 +613,9 @@ Value Transaction::performQueryListField(const QueryList &list, const Field &f) 
 
 			Value val;
 			if (auto &t = list.getContinueToken()) {
-				val = t.perform(*scheme, *this, q, t.hasFlag(ContinueToken::Inverted) ? Ordering::Descending : Ordering::Ascending);
+				val = t.perform(*scheme, *this, q,
+						t.hasFlag(ContinueToken::Inverted) ? Ordering::Descending
+														   : Ordering::Ascending);
 			} else {
 				val = scheme->select(*this, q);
 			}
@@ -624,7 +627,8 @@ Value Transaction::performQueryListField(const QueryList &list, const Field &f) 
 			return val;
 		} else {
 			if (auto obj = acquireObject(*scheme, id)) {
-				return scheme->getProperty(*this, obj, f, list.getItems().at(list.size() - 1).getQueryFields());
+				return scheme->getProperty(*this, obj, f,
+						list.getItems().at(list.size() - 1).getQueryFields());
 			}
 		}
 	}
@@ -660,19 +664,19 @@ void Transaction::scheduleAutoField(const Scheme &scheme, const Field &field, ui
 	}, _data->pool);
 }
 
-bool Transaction::beginTransaction() const {
-	return _data->adapter.beginTransaction();
-}
+bool Transaction::beginTransaction() const { return _data->adapter.beginTransaction(); }
 
-static void Transaction_runAutoFields(const Transaction &t, const Vector<uint64_t> &vec, const Scheme &scheme, const Field &field) {
+static void Transaction_runAutoFields(const Transaction &t, const Vector<uint64_t> &vec,
+		const Scheme &scheme, const Field &field) {
 	auto &defs = field.getSlot()->autoField;
 	if (defs.defaultFn) {
-		auto includeSelf = (std::find(defs.requireFields.begin(), defs.requireFields.end(), field.getName()) == defs.requireFields.end());
+		auto includeSelf =
+				(std::find(defs.requireFields.begin(), defs.requireFields.end(), field.getName())
+						== defs.requireFields.end());
 		for (auto &id : vec) {
-			Query q; q.select(id);
-			for (auto &req : defs.requireFields) {
-				q.include(req);
-			}
+			Query q;
+			q.select(id);
+			for (auto &req : defs.requireFields) { q.include(req); }
 			if (includeSelf) {
 				q.include(field.getName());
 			}
@@ -696,13 +700,13 @@ bool Transaction::endTransaction() const {
 		if (!_data->adapter.isInTransaction()) {
 			if (_data->delayedTasks) {
 				for (auto &it : *_data->delayedTasks) {
-					_data->adapter.getApplicationInterface()->scheduleAyncDbTask([d = it] (stappler::memory::pool_t *p) -> Function<void(const Transaction &t)> {
+					_data->adapter.getApplicationInterface()->scheduleAyncDbTask(
+							[d = it](stappler::memory::pool_t *p)
+									-> Function<void(const Transaction &t)> {
 						auto vec = new (p) Vector<uint64_t>(p);
-						for (auto &it : d->objects) {
-							vec->push_back(it);
-						}
+						for (auto &it : d->objects) { vec->push_back(it); }
 
-						return [vec, scheme = d->scheme, field = d->field] (const Transaction &t) {
+						return [vec, scheme = d->scheme, field = d->field](const Transaction &t) {
 							Transaction_runAutoFields(t, *vec, *scheme, *field);
 						};
 					});
@@ -717,15 +721,12 @@ bool Transaction::endTransaction() const {
 	return false;
 }
 
-void Transaction::cancelTransaction() const {
-	_data->adapter.cancelTransaction();
-}
+void Transaction::cancelTransaction() const { _data->adapter.cancelTransaction(); }
 
-void Transaction::clearObjectStorage() const {
-	_data->objects.clear();
-}
+void Transaction::clearObjectStorage() const { _data->objects.clear(); }
 
-static bool Transaction_processFields(const Scheme &scheme, const Value &val, Value &obj, const Map<String, Field> &vec) {
+static bool Transaction_processFields(const Scheme &scheme, const Value &val, Value &obj,
+		const Map<String, Field> &vec) {
 	if (obj.isDictionary()) {
 		auto &dict = obj.asDict();
 		auto it = dict.begin();
@@ -748,7 +749,7 @@ static bool Transaction_processFields(const Scheme &scheme, const Value &val, Va
 					}
 				}
 			}
-			++ it;
+			++it;
 		}
 	}
 
@@ -771,7 +772,8 @@ bool Transaction::processReturnObject(const Scheme &scheme, Value &val) const {
 	return Transaction_processFields(scheme, val, val, scheme.getFields());
 }
 
-bool Transaction::processReturnField(const Scheme &scheme, const Value &obj, const Field &field, Value &val) const {
+bool Transaction::processReturnField(const Scheme &scheme, const Value &obj, const Field &field,
+		Value &val) const {
 	if (!scheme.hasAccessControl()) {
 		return true;
 	}
@@ -801,7 +803,8 @@ bool Transaction::processReturnField(const Scheme &scheme, const Value &obj, con
 		return false;
 	}
 
-	if (field.getType() == Type::Object || field.getType() == Type::Set || field.getType() == Type::View) {
+	if (field.getType() == Type::Object || field.getType() == Type::Set
+			|| field.getType() == Type::View) {
 		if (auto nextScheme = field.getForeignScheme()) {
 			if (val.isDictionary()) {
 				if (!processReturnObject(*nextScheme, val)) {
@@ -812,7 +815,7 @@ bool Transaction::processReturnField(const Scheme &scheme, const Value &obj, con
 				auto it = arr.begin();
 				while (it != arr.end()) {
 					if (processReturnObject(*nextScheme, *it)) {
-						++ it;
+						++it;
 					} else {
 						it = arr.erase(it);
 					}
@@ -833,17 +836,13 @@ bool Transaction::isOpAllowed(const Scheme &scheme, Op op, const Field *f) const
 	}
 	switch (op) {
 	case Op::None:
-	case Op::Max:
-		return false;
-		break;
+	case Op::Max: return false; break;
 	case Op::Id:
 	case Op::Select:
 	case Op::Count:
 	case Op::Delta:
 	case Op::DeltaView:
-	case Op::FieldGet:
-		return true;
-		break;
+	case Op::FieldGet: return true; break;
 	case Op::Remove:
 	case Op::Create:
 	case Op::Save:
@@ -865,7 +864,7 @@ Transaction::Data::Data(const Adapter &adapter, memory::pool_t *p) : adapter(ada
 
 Value Transaction::acquireObject(const Scheme &scheme, uint64_t oid) const {
 	Value ret;
-	pool::perform_conditional([&] {
+	memory::perform_conditional([&] {
 		auto it = _data->objects.find(oid);
 		if (it == _data->objects.end()) {
 			if (auto obj = Worker(scheme, *this).asSystem().get(oid)) {
@@ -886,9 +885,7 @@ AccessRole &AccessRole::define(AccessRoleId id) {
 	users.set(stappler::toInt(id));
 	return *this;
 }
-AccessRole &AccessRole::define() {
-	return *this;
-}
+AccessRole &AccessRole::define() { return *this; }
 AccessRole &AccessRole::define(OnSelect &&val) {
 	if (val.get()) {
 		operations.set(Transaction::Select);
@@ -944,4 +941,4 @@ AccessRole &AccessRole::define(OnReturnField &&val) {
 	return *this;
 }
 
-}
+} // namespace stappler::db

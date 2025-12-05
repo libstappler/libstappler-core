@@ -26,7 +26,6 @@ THE SOFTWARE.
 #define STAPPLER_DB_SPDB_H_
 
 #include "SPFilepath.h"
-#include "SPMemUserData.h"
 #include "SPMemory.h"
 #include "SPData.h"
 #include "SPSql.h"

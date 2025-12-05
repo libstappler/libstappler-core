@@ -21,8 +21,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTFORMAT_H_
-#define EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTFORMAT_H_
+#ifndef CORE_DOCUMENT_SPDOCFORMAT_H_
+#define CORE_DOCUMENT_SPDOCFORMAT_H_
 
 #include "SPRef.h"
 #include "SPFilesystem.h" // IWYU pragma: keep
@@ -64,4 +64,4 @@ struct SP_PUBLIC Format {
 
 } // namespace stappler::document
 
-#endif /* EXTRA_DOCUMENT_DOCUMENT_SPDOCUMENTFORMAT_H_ */
+#endif /* CORE_DOCUMENT_SPDOCFORMAT_H_ */

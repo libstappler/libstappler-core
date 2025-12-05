@@ -22,7 +22,10 @@
 
 #include "SPDocEpub.h"
 #include "SPDocFormat.h"
+#include "SPDocStyleContainer.h"
 #include "SPHtmlParser.h"
+#include "SPBitmap.h"
+#include "html/SPDocHtml.h"
 
 namespace STAPPLER_VERSIONIZED stappler::document {
 
@@ -53,9 +56,6 @@ bool DocumentEpub::isEpub(BytesView data) {
 }
 
 bool DocumentEpub::isEpub(FileInfo path) {
-	auto mem = filesystem::readIntoMemory<mem_std::Interface>(path);
-	isEpub(mem);
-
 	ZipArchive<memory::StandartInterface> zip(path);
 	if (!zip) {
 		return false;
@@ -79,7 +79,13 @@ bool DocumentEpub::init(FileInfo info, StringView ct) {
 	}
 
 	if (_data) {
-		return memory::pool::perform([&] { return static_cast<EpubData *>(_data)->init(); }, _pool);
+		return memory::perform([&] {
+			auto epub = static_cast<EpubData *>(_data);
+			if (epub->init()) {
+				return processArchiveFiles(epub);
+			}
+			return false;
+		}, _pool);
 	}
 	return false;
 }
@@ -92,7 +98,13 @@ bool DocumentEpub::init(BytesView data, StringView ct) {
 	}
 
 	if (_data) {
-		return memory::pool::perform([&] { return static_cast<EpubData *>(_data)->init(); }, _pool);
+		return memory::perform([&] {
+			auto epub = static_cast<EpubData *>(_data);
+			if (epub->init()) {
+				return processArchiveFiles(epub);
+			}
+			return false;
+		}, _pool);
 	}
 	return false;
 }
@@ -105,7 +117,13 @@ bool DocumentEpub::init(memory::pool_t *pool, FileInfo info, StringView ct) {
 	}
 
 	if (_data) {
-		return memory::pool::perform([&] { return static_cast<EpubData *>(_data)->init(); }, _pool);
+		return memory::perform([&] {
+			auto epub = static_cast<EpubData *>(_data);
+			if (epub->init()) {
+				return processArchiveFiles(epub);
+			}
+			return false;
+		}, _pool);
 	}
 	return false;
 }
@@ -118,9 +136,79 @@ bool DocumentEpub::init(memory::pool_t *pool, BytesView data, StringView ct) {
 	}
 
 	if (_data) {
-		return memory::pool::perform([&] { return static_cast<EpubData *>(_data)->init(); }, _pool);
+		return memory::perform([&] {
+			auto epub = static_cast<EpubData *>(_data);
+			if (epub->init()) {
+				return processArchiveFiles(epub);
+			}
+			return false;
+		}, _pool);
 	}
 	return false;
+}
+
+bool DocumentEpub::processArchiveFiles(EpubData *epubData) {
+	for (auto &it : epubData->archiveFiles) {
+		if (it.second.type.starts_with("image/")) {
+			epubData->archive.readFile(it.second.index, [&](BytesView data) {
+				uint32_t width = 0;
+				uint32_t height = 0;
+				CoderSource fileSource(data);
+				if (bitmap::getImageSize(fileSource, width, height)) {
+					auto imgIt = epubData->images
+										 .emplace(it.second.path,
+												 DocumentImage(width, height, it.second.path))
+										 .first;
+					imgIt->second.type = DocumentImage::Embed;
+					imgIt->second.ct = it.second.type;
+
+					// preserve extracted file in memory
+					imgIt->second.data = data.pdup();
+				}
+			});
+		} else if (it.second.type.starts_with("font/")
+				|| it.second.type.starts_with("application/font-")
+				|| it.second.type.starts_with("application/x-font")) {
+			epubData->archive.readFile(it.second.index, [&](BytesView data) {
+				auto fontIt =
+						epubData->fonts.emplace(it.second.path, DocumentFont(it.second.path)).first;
+				fontIt->second.ct = it.second.type;
+				fontIt->second.data = data;
+			});
+		} else if (it.second.type.starts_with("text/html")
+				|| it.second.type.starts_with("application/xhtml+xml")) {
+			epubData->archive.readFile(it.second.index, [&](BytesView data) {
+				readContentFile(epubData, &it.second, data.toStringView());
+			});
+		} else if (it.second.type.starts_with("text/css")) {
+			epubData->archive.readFile(it.second.index, [&](BytesView data) {
+				readStyleFile(epubData, &it.second, data.toStringView());
+			});
+		}
+	}
+
+	return true;
+}
+
+void DocumentEpub::readContentFile(EpubData *epubData, EpubArchiveFile *file, StringView content) {
+	auto page = new (epubData->pool) PageContainer(_data, file->path);
+
+	HtmlReader reader(page);
+
+	html::parse<HtmlReader, StringView, HtmlTag>(reader, content, html::ParserFlags::None);
+
+	page->finalize();
+
+	epubData->pages.emplace(file->path, page);
+}
+
+void DocumentEpub::readStyleFile(EpubData *epubData, EpubArchiveFile *file, StringView content) {
+	auto page = new (epubData->pool) StyleContainer(_data, StyleContainer::StyleType::Css);
+
+	auto ucontent = StringViewUtf8(content);
+	page->readStyle(ucontent);
+
+	epubData->styles.emplace(file->path, page);
 }
 
 EpubData::~EpubData() { }
@@ -152,140 +240,235 @@ static StringView _readEpubRootPath(StringView container) {
 	} r;
 
 	html::parse(r, StringViewUtf8((const char *)container.data(), container.size()));
-	return r.result;
+	return r.result.pdup();
 };
 
-static void _processRootEpubPublication(EpubData *data, StringView content) {
-	/*struct Reader {
-		using Parser = html::Parser<Reader>;
-		using Tag = Parser::Tag;
-		using StringReader = Parser::StringReader;
+struct EpubContentTag : html::Tag<StringView> {
+	EpubContentSection section = EpubContentSection::None;
+	EpubContentNode *content = nullptr;
+};
 
-		struct Item {
-			StringView id;
-			StringView href;
-			StringView type;
-			StringView props;
+static StringView _resolveEpubPath(StringView path, StringView root) {
+	if (root.empty()) {
+		return path.pdup();
+	} else {
+		path.skipChars<StringView::Chars<'/'>>();
+		root.backwardSkipChars<StringView::Chars<'/'>>();
+		return string::pdupString(root, "/", path);
+	}
+}
 
-			void clear() {
-				id.clear();
-				href.clear();
-				type.clear();
-				props.clear();
+struct EpubContentReader {
+	using Parser = html::Parser<EpubContentReader, StringView, EpubContentTag>;
+	using Tag = EpubContentTag;
+	using StringReader = Parser::StringReader;
+
+	EpubContentReader(EpubData *d) : data(d) { }
+
+	void onBeginTag(Parser &p, Tag &tag) {
+		EpubContentSection sect = EpubContentSection::None;
+		if (!p.tagStack.empty()) {
+			sect = p.tagStack.back().section;
+		}
+
+		if (tag.name.starts_with<StringCaseComparator>("opf:")) {
+			tag.name = tag.name.sub(4);
+		}
+
+		switch (sect) {
+		case EpubContentSection::None:
+			if (tag.name.equals<StringCaseComparator>("package")) {
+				tag.section = EpubContentSection::Package;
 			}
-		} item;
+			return;
+			break;
+		case EpubContentSection::Package:
+			if (tag.name.equals<StringCaseComparator>("metadata")) {
+				tag.section = EpubContentSection::Metadata;
+			} else if (tag.name.equals<StringCaseComparator>("manifest")) {
+				tag.section = EpubContentSection::Manifest;
+			} else if (tag.name.equals<StringCaseComparator>("spine")) {
+				tag.section = EpubContentSection::Spine;
+			}
+			return;
+			break;
+		default: tag.section = sect; break;
+		}
 
-		enum Section {
-			None,
-			Package,
-			Metadata,
-			Manifest,
-			Spine
-		} section = None;
+		switch (tag.section) {
+		case EpubContentSection::Metadata:
+			tag.content = &(data->epubContent.emplace_back());
+			tag.content->section = tag.section;
+			if (tag.name.starts_with<StringCaseComparator>("dc:")) {
+				tag.content->name = StringView(tag.name.sub(3)).pdup();
+			} else if (tag.name.equals<StringCaseComparator>("meta")) {
+				tag.content->name = tag.name.pdup();
+			}
+			break;
+		case EpubContentSection::Manifest:
+			tag.content = &data->epubContent.emplace_back();
+			tag.content->section = tag.section;
+			if (tag.name.equals("item")) {
+				tag.content->name = tag.name.pdup();
+			}
+			break;
+		case EpubContentSection::Spine:
+			tag.content = &data->epubContent.emplace_back();
+			tag.content->section = tag.section;
+			if (tag.name.equals("itemref")) {
+				tag.content->name = tag.name.pdup();
+			}
+			break;
+		default: break;
+		}
+	}
 
-		Reader(EpubData *d) : data(d) { }
-
-		inline void onBeginTag(Parser &p, Tag &tag) {
-			switch (section) {
-			case Metadata:
-				if (tag.name.is("dc:")) {
-					metaProps.emplace_back();
-					auto &prop = metaProps.back();
-					prop.name = String(tag.name.data() + 3, tag.name.size() - 3);
-				} else if (tag.name.compare("meta") || tag.name.compare("opf:meta")) {
-					metaProps.emplace_back();
+	void onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringReader &value) {
+		if (name.starts_with<StringCaseComparator>("opf:")) {
+			name = name.sub(4);
+		}
+		if (tag.content && name.equals<StringCaseComparator>("id")) {
+			tag.content->id = value.pdup();
+		} else if (tag.content && name.equals<StringCaseComparator>("media-type")) {
+			tag.content->type = value.pdup();
+		} else if (tag.content && name.equals<StringCaseComparator>("href")) {
+			tag.content->href = value.pdup();
+		} else {
+			switch (tag.section) {
+			case EpubContentSection::Package:
+				if (tag.name.equals<StringCaseComparator>("package")
+						|| tag.name.equals<StringCaseComparator>("opf:package")) {
+					if (name.equals<StringCaseComparator>("version")) {
+						version = StringView(value).pdup();
+					} else if (name.equals<StringCaseComparator>("unique-identifier")) {
+						uid = StringView(value).pdup();
+					}
+				} else if (tag.content) {
+					tag.content->attributes.emplace_back(name.pdup(), value.pdup());
 				}
 				break;
-			case Manifest:
-				if (tag.name.compare("item") || tag.name.compare("opf:item")) {
-					item.clear();
+			case EpubContentSection::Metadata:
+				if (tag.content) {
+					tag.content->attributes.emplace_back(name.pdup(), value.pdup());
 				}
 				break;
-			case Spine:
-				if (tag.name.compare("itemref") || tag.name.compare("opf:itemref")) {
-					spineVec->emplace_back();
-					SpineFile &spine = spineVec->back();
-					spine.linear = true;
+			case EpubContentSection::Manifest:
+				if (tag.content) {
+					tag.content->attributes.emplace_back(name.pdup(), value.pdup());
+				}
+				break;
+			case EpubContentSection::Spine:
+				if ((tag.name.equals<StringCaseComparator>("spine"))
+						&& (name.equals<StringCaseComparator>("toc"))) {
+					tocFile = value.pdup();
+				} else if (tag.content) {
+					tag.content->attributes.emplace_back(name.pdup(), value.pdup());
 				}
 				break;
 			default: break;
 			}
 		}
+	}
+
+	void onPushTag(Parser &p, Tag &tag) { }
+
+	void onPopTag(Parser &p, Tag &tag) {
+		if (tag.content) {
+			if (!tag.content->id.empty()) {
+				data->epubContentById.emplace(tag.content->id, tag.content);
+			}
+			switch (tag.content->section) {
+			case EpubContentSection::Metadata: data->epubMetadata.emplace_back(tag.content); break;
+			case EpubContentSection::Manifest: data->epubManifest.emplace_back(tag.content); break;
+			case EpubContentSection::Spine: data->epubSpine.emplace_back(tag.content); break;
+			default: break;
+			}
+
+			for (auto &it : tag.content->attributes) {
+				if (it.first.equals<StringCaseComparator>("content")) {
+					if (tag.content->content.empty()) {
+						tag.content->content = it.second;
+					} else {
+						tag.content->content =
+								string::pdupString(tag.content->content, " ", it.second);
+					}
+				}
+			}
+		}
+	}
+
+	inline void onInlineTag(Parser &p, Tag &tag) {
+		if (tag.content) {
+			if (!tag.content->id.empty()) {
+				data->epubContentById.emplace(tag.content->id, tag.content);
+			}
+			switch (tag.content->section) {
+			case EpubContentSection::Metadata: data->epubMetadata.emplace_back(tag.content); break;
+			case EpubContentSection::Manifest: data->epubManifest.emplace_back(tag.content); break;
+			case EpubContentSection::Spine: data->epubSpine.emplace_back(tag.content); break;
+			default: break;
+			}
+
+			for (auto &it : tag.content->attributes) {
+				if (it.first.equals<StringCaseComparator>("content")) {
+					if (tag.content->content.empty()) {
+						tag.content->content = it.second;
+					} else {
+						tag.content->content =
+								string::pdupString(tag.content->content, " ", it.second);
+					}
+				}
+			}
+		}
+	}
+
+	inline void onTagContent(Parser &p, Tag &tag, StringReader &s) {
+		if (tag.content) {
+			if (tag.content->content.empty()) {
+				tag.content->content = s.pdup();
+			} else {
+				tag.content->content = string::pdupString(tag.content->content, " ", s);
+			}
+		}
+	}
+
+	EpubData *data = nullptr;
+	StringView version;
+	StringView uid;
+	StringView tocFile;
+};
+
+static void _epubReadNcxNav(EpubData *data, StringView content, StringView filePath) {
+	struct NcxReader {
+		using Parser = html::Parser<NcxReader, StringView>;
+		using Tag = Parser::Tag;
+		using StringReader = Parser::StringReader;
+
+		enum Section {
+			None,
+			Ncx,
+			Head,
+			DocTitle,
+			NavMap,
+			NavPoint,
+			NavPointLabel,
+		} section = None;
+
+		EpubData *data;
+		StringView path;
+		mem_pool::Vector<DocumentContentRecord *> contents;
+
+		NcxReader(EpubData *d, StringView path, DocumentContentRecord *c)
+		: data(d), path(filepath::root(path)) {
+			contents.push_back(c);
+		}
 
 		inline void onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringReader &value) {
 			switch (section) {
-			case None:
-				if (tag.name.compare("package") || tag.name.compare("opf:package")) {
-					if (name.compare("version")) {
-						version = value.str();
-					} else if (name.compare("unique-identifier")) {
-						uid = value.str();
-					}
-				}
-				break;
-			case Package:
-				if ((tag.name.compare("spine") || tag.name.compare("opf:spine"))
-						&& (name.compare("toc") || name.compare("opf:toc"))) {
-					auto it = manifestIds.find(value.str());
-					if (it != manifestIds.end()) {
-						tocFile = it->second->path;
-					}
-				}
-				break;
-			case Metadata:
-				if (tag.name.is("dc:")) {
-					auto &prop = metaProps.back();
-					if (name.compare("id")) {
-						prop.id = value.str();
-					} else if (name.compare("lang") || name.compare("xml-lang")) {
-						prop.lang = locale::common(value.str());
-					} else if (name.compare("scheme") || name.compare("opf:scheme")) {
-						prop.scheme = value.str();
-					}
-				} else if (tag.name.compare("meta") || tag.name.compare("opf:meta")) {
-					MetaProp &meta = metaProps.back();
-					if (name.compare("id")) {
-						meta.id = value.str();
-					} else if (name.compare("property") || name.compare("name")) {
-						meta.name = value.str();
-					} else if (name.compare("scheme") || name.compare("opf:scheme")) {
-						meta.scheme = value.str();
-					} else if (name.compare("xml:lang")) {
-						meta.lang = value.str();
-					} else if (name.compare("content")) {
-						meta.value = value.str();
-					} else if (name.compare("refines")) {
-						meta.refines = value.str();
-					}
-				}
-				break;
-			case Manifest:
-				if (tag.name.compare("item") || tag.name.compare("opf:item")) {
-					if (name.compare("id")) {
-						item.id = value.str();
-					} else if (name.compare("href")) {
-						item.href = value.str();
-					} else if (name.compare("media-type")) {
-						item.type = value.str();
-					} else if (name.compare("properties")) {
-						item.props = value.str();
-					}
-				}
-				break;
-			case Spine:
-				if (tag.name.compare("itemref") || tag.name.compare("opf:itemref")) {
-					SpineFile &spine = spineVec->back();
-					if (name.compare("idref")) {
-						auto itemIt = manifestIds.find(value.str());
-						if (itemIt != manifestIds.end()) {
-							spine.entry = itemIt->second;
-						}
-					} else if (name.compare("linear") && value.compare("no")) {
-						spine.linear = false;
-					} else if (name.compare("properties")) {
-						string::split(value, " ",
-								[&](const StringView &str) { spine.props.emplace(str.str()); });
-					}
+			case NavPoint:
+				if (tag.name.equals<StringCaseComparator>("content")
+						&& name.equals<StringCaseComparator>("src")) {
+					contents.back()->href = _resolveEpubPath(value, path);
 				}
 				break;
 			default: break;
@@ -295,131 +478,76 @@ static void _processRootEpubPublication(EpubData *data, StringView content) {
 		inline void onPushTag(Parser &p, Tag &tag) {
 			switch (section) {
 			case None:
-				if (tag.name.compare("package") || tag.name.compare("opf:package")) {
-					section = Package;
+				if (tag.name.equals<StringCaseComparator>("ncx")) {
+					section = Ncx;
 				}
 				break;
-			case Package:
-				if (tag.name.compare("metadata") || tag.name.compare("opf:metadata")) {
-					section = Metadata;
-				} else if (tag.name.compare("manifest") || tag.name.compare("opf:manifest")) {
-					section = Manifest;
-				} else if (tag.name.compare("spine") || tag.name.compare("opf:spine")) {
-					section = Spine;
+			case Ncx:
+				if (tag.name.equals<StringCaseComparator>("head")) {
+					section = Head;
+				} else if (tag.name.equals<StringCaseComparator>("doctitle")) {
+					section = DocTitle;
+				} else if (tag.name.equals<StringCaseComparator>("navmap")) {
+					section = NavMap;
+				}
+				break;
+			case Head: break;
+			case DocTitle: break;
+			case NavMap:
+				if (tag.name.equals<StringCaseComparator>("navpoint")) {
+					section = NavPoint;
+					contents.back()->childs.emplace_back(DocumentContentRecord());
+					contents.emplace_back(&contents.back()->childs.back());
+				}
+				break;
+			case NavPoint:
+				if (tag.name.equals<StringCaseComparator>("navpoint")) {
+					section = NavPoint;
+					contents.back()->childs.emplace_back(DocumentContentRecord());
+					contents.emplace_back(&contents.back()->childs.back());
+				} else if (tag.name.equals<StringCaseComparator>("navlabel")) {
+					section = NavPointLabel;
 				}
 				break;
 			default: break;
-			}
-		}
-
-		void updateMeta(MetaProp &prop, const String &key) {
-			auto metaIt = metaIds.find(key);
-			if (metaIt != metaIds.end()) {
-				MetaProp *refined = nullptr;
-				Vector<size_t> path = metaIt->second;
-				for (auto &it : path) {
-					if (refined == nullptr) {
-						refined = &metaProps.at(it);
-					} else {
-						refined = &refined->extra.at(it);
-					}
-				}
-				if (refined) {
-					refined->extra.emplace_back(std::move(prop));
-					auto &ref = refined->extra.back();
-					if (!ref.id.empty()) {
-						path.push_back(refined->extra.size() - 1);
-						metaIds.emplace(ref.id, std::move(path));
-					}
-				}
-			}
-		}
-
-		inline void popMetaTag() {
-			MetaProp &prop = metaProps.back();
-			if (!prop.refines.empty()) {
-				updateMeta(prop, prop.refines.substr(1));
-				metaProps.pop_back();
-			} else {
-				if (!prop.id.empty()) {
-					metaIds.emplace(prop.id, Vector<size_t>{metaProps.size() - 1});
-				}
 			}
 		}
 
 		inline void onPopTag(Parser &p, Tag &tag) {
 			switch (section) {
-			case Package:
-				if (tag.name.compare("package") || tag.name.compare("opf:package")) {
+			case None: break;
+			case Ncx:
+				if (tag.name.equals<StringCaseComparator>("ncx")) {
 					section = None;
 				}
 				break;
-			case Metadata:
-				if (tag.name.compare("metadata") || tag.name.compare("opf:metadata")) {
-					section = Package;
-				} else if (tag.name.is("dc:") || tag.name.compare("meta")
-						|| tag.name.compare("opf:meta")) {
-					popMetaTag();
+			case Head:
+				if (tag.name.equals<StringCaseComparator>("head")) {
+					section = Ncx;
 				}
 				break;
-			case Manifest:
-				if (tag.name.compare("manifest") || tag.name.compare("opf:manifest")) {
-					section = Package;
+			case DocTitle:
+				if (tag.name.equals<StringCaseComparator>("doctitle")) {
+					section = Ncx;
 				}
 				break;
-			case Spine:
-				if (tag.name.compare("spine") || tag.name.compare("opf:spine")) {
-					section = Package;
+			case NavMap:
+				if (tag.name.equals<StringCaseComparator>("navmap")) {
+					section = Ncx;
 				}
 				break;
-			default: break;
-			}
-		}
-
-		inline void onManifestTag() {
-			if (!item.id.empty() && !item.href.empty() && !item.type.empty()) {
-				String path(*rootPath);
-				path.append("/").append(item.href);
-				auto fileIt = manifest->find(path);
-				if (fileIt != manifest->end()) {
-					fileIt->second.id = std::move(item.id);
-					fileIt->second.mime = std::move(item.type);
-					if (!item.props.empty()) {
-						string::split(item.props, " ", [&fileIt](const StringView &r) {
-							fileIt->second.props.insert(r.str());
-						});
-					}
-					manifestIds.emplace(fileIt->second.id, &fileIt->second);
-					auto &m = fileIt->second.mime;
-					if (m == "text/html"
-							|| m.compare(0, "application/xhtml"_len, "application/xhtml") == 0) {
-						fileIt->second.type = ManifestFile::Source;
-					} else if (m == "text/css") {
-						fileIt->second.type = ManifestFile::Css;
+			case NavPoint:
+				if (tag.name.equals<StringCaseComparator>("navpoint")) {
+					contents.pop_back();
+					if (p.tagStack.at(p.tagStack.size() - 2)
+									.name.equals<StringCaseComparator>("navmap")) {
+						section = NavMap;
 					}
 				}
-			}
-		}
-
-		inline void onInlineTag(Parser &p, Tag &tag) {
-			switch (section) {
-			case Metadata:
-				if (tag.name.is("dc:") || tag.name.compare("meta")
-						|| tag.name.compare("opf:meta")) {
-					popMetaTag();
-				}
 				break;
-			case Manifest:
-				if (tag.name.compare("item") || tag.name.compare("opf:item")) {
-					onManifestTag();
-				}
-				break;
-			case Spine:
-				if (tag.name.compare("itemref") || tag.name.compare("opf:itemref")) {
-					SpineFile &spine = spineVec->back();
-					if (!spine.entry) {
-						spineVec->pop_back();
-					}
+			case NavPointLabel:
+				if (tag.name.equals<StringCaseComparator>("navlabel")) {
+					section = NavPoint;
 				}
 				break;
 			default: break;
@@ -428,132 +556,280 @@ static void _processRootEpubPublication(EpubData *data, StringView content) {
 
 		inline void onTagContent(Parser &p, Tag &tag, StringReader &s) {
 			switch (section) {
-			case Metadata:
-				if (tag.name.is("dc:") || tag.name.compare("meta")
-						|| tag.name.compare("opf:meta")) {
-					auto &prop = metaProps.back();
-					prop.value = s.str();
-					string::trim(prop.value);
+			case DocTitle:
+			case NavPointLabel:
+				if (tag.name.equals<StringCaseComparator>("text")) {
+					StringView value(s);
+					value.trimChars<StringView::WhiteSpace>();
+					if (!value.empty()) {
+						contents.back()->label = value.pdup();
+					}
+				}
+				break;
+			default: break;
+			}
+		}
+	} r(data, filePath, &data->tableOfContents);
+
+	html::parse<NcxReader, StringView>(r, content);
+
+	if (data->tableOfContents.label.empty()) {
+		data->tableOfContents.label = data->name;
+	}
+}
+
+static void _epubReadXmlNav(EpubData *data, StringView content, StringView filePath) {
+	struct TocReader {
+		using Parser = html::Parser<TocReader, StringView>;
+		using Tag = Parser::Tag;
+		using StringReader = Parser::StringReader;
+
+		enum Section {
+			None,
+			PreNav,
+			Nav,
+			Heading,
+			Ol,
+			Li,
+		} section = None;
+
+		EpubData *data;
+		StringView path;
+		mem_pool::Vector<DocumentContentRecord *> contents;
+
+		TocReader(EpubData *d, StringView path, DocumentContentRecord *c)
+		: data(d), path(filepath::root(path)) {
+			contents.push_back(c);
+		}
+
+		inline void onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringReader &value) {
+			switch (section) {
+			case None:
+				if (tag.name.equals<StringCaseComparator>("nav")
+						&& name.equals<StringCaseComparator>("epub:type")
+						&& value.equals<StringCaseComparator>("toc")) {
+					section = PreNav;
+				}
+				break;
+			case Li:
+				if (tag.name.equals<StringCaseComparator>("a")
+						&& name.equals<StringCaseComparator>("href")) {
+					contents.back()->href = _resolveEpubPath(value, path);
+				}
+				break;
+			case Heading:
+				if (name.equals<StringCaseComparator>("title")
+						|| name.equals<StringCaseComparator>("alt")) {
+					value.trimChars<StringView::WhiteSpace>();
+					if (contents.back()->label.empty()) {
+						contents.back()->label = value.pdup();
+					} else {
+						contents.back()->label =
+								string::pdupString(contents.back()->label, " ", value);
+					}
 				}
 				break;
 			default: break;
 			}
 		}
 
-		StringView version;
-		StringView uid;
-		StringView tocFile;
-		EpubData *data = nullptr;
-
-		Vector<MetaProp> metaProps;
-		mem_pool::Map<StringView, mem_pool::Vector<size_t>> metaIds;
-		mem_pool::Map<StringView, const EpubManifestFile *> manifestIds;
-
-		mem_pool::String *rootPath = nullptr;
-		mem_pool::Map<StringView, EpubManifestFile> *manifest = nullptr;
-		Vector<SpineFile> *spineVec = nullptr;
-	} r(&data);
-
-	html::parse(r, StringViewUtf8((const char *)opf.data(), opf.size()));*/
-
-	/*_meta.meta = std::move(r.metaProps);
-	for (auto &it : _meta.meta) {
-		if (it.id == r.uid) {
-			_uniqueId = it.value;
+		inline void onPushTag(Parser &p, Tag &tag) {
+			switch (section) {
+			case PreNav:
+				if (tag.name.equals<StringCaseComparator>("nav")) {
+					section = Nav;
+				}
+				break;
+			case Nav:
+				if (tag.name.equals<StringCaseComparator>("h1")
+						|| tag.name.equals<StringCaseComparator>("h2")
+						|| tag.name.equals<StringCaseComparator>("h3")
+						|| tag.name.equals<StringCaseComparator>("h4")
+						|| tag.name.equals<StringCaseComparator>("h5")
+						|| tag.name.equals<StringCaseComparator>("h6")) {
+					section = Heading;
+				} else if (tag.name.equals<StringCaseComparator>("ol")) {
+					section = Ol;
+				}
+				break;
+			case Ol:
+				if (tag.name.equals<StringCaseComparator>("li")) {
+					section = Li;
+					contents.back()->childs.emplace_back(DocumentContentRecord());
+					contents.emplace_back(&contents.back()->childs.back());
+				}
+			case Li:
+				if (tag.name.equals<StringCaseComparator>("a")
+						|| tag.name.equals<StringCaseComparator>("span")) {
+					section = Heading;
+				} else if (tag.name.equals<StringCaseComparator>("ol")) {
+					section = Ol;
+				}
+				break;
+			default: break;
+			}
 		}
 
-		if (it.name == "title") {
-			_meta.titles.emplace_back(TitleMeta{it.value});
-			TitleMeta &title = _meta.titles.back();
-
-			if (!it.lang.empty()) {
-				title.localizedTitle.emplace(it.lang, it.value);
-			}
-
-			for (auto &eit : it.extra) {
-				if (eit.name == "alternate-script") {
-					title.localizedTitle.emplace(eit.lang, it.value);
-				} else if (eit.name == "display-seq") {
-					title.sequence = StringToNumber<int64_t>(eit.value.c_str(), nullptr, 0);
-				} else if (eit.name == "title-type") {
-					if (eit.value == "main") {
-						title.type = TitleMeta::Main;
-					} else if (eit.value == "subtitle") {
-						title.type = TitleMeta::Subtitle;
-					} else if (eit.value == "short") {
-						title.type = TitleMeta::Short;
-					} else if (eit.value == "collection") {
-						title.type = TitleMeta::Collection;
-					} else if (eit.value == "edition") {
-						title.type = TitleMeta::Edition;
-					} else if (eit.value == "expanded") {
-						title.type = TitleMeta::Expanded;
+		inline void onPopTag(Parser &p, Tag &tag) {
+			switch (section) {
+			case Nav:
+				if (tag.name.equals<StringCaseComparator>("nav")) {
+					section = None;
+				}
+				break;
+			case Heading:
+			case Ol:
+				if (tag.name.equals<StringCaseComparator>("h1")
+						|| tag.name.equals<StringCaseComparator>("h2")
+						|| tag.name.equals<StringCaseComparator>("h3")
+						|| tag.name.equals<StringCaseComparator>("h4")
+						|| tag.name.equals<StringCaseComparator>("h5")
+						|| tag.name.equals<StringCaseComparator>("h6")
+						|| tag.name.equals<StringCaseComparator>("ol")
+						|| tag.name.equals<StringCaseComparator>("a")
+						|| tag.name.equals<StringCaseComparator>("span")) {
+					auto &last = p.tagStack.at(p.tagStack.size() - 2);
+					if (last.name.equals<StringCaseComparator>("nav")) {
+						section = Nav;
+					} else if (last.name.equals<StringCaseComparator>("li")) {
+						section = Li;
 					}
 				}
+				break;
+			case Li:
+				if (tag.name.equals<StringCaseComparator>("li")) {
+					contents.pop_back();
+					section = Ol;
+				}
+				break;
+			default: break;
 			}
-		} else if (it.name == "contributor" || it.name == "creator") {
-			_meta.authors.emplace_back(AuthorMeta{it.value,
-				(it.name == "contributor") ? AuthorMeta::Contributor : AuthorMeta::Creator});
+		}
 
-			AuthorMeta &author = _meta.authors.back();
+		inline void onTagContent(Parser &p, Tag &tag, StringReader &s) {
+			switch (section) {
+			case Heading:
+				s.trimChars<StringView::WhiteSpace>();
+				if (contents.back()->label.empty()) {
+					contents.back()->label = s.pdup();
+				} else {
+					contents.back()->label = string::pdupString(contents.back()->label, " ", s);
+				}
+				break;
+			default: break;
+			}
+		}
+	} r(data, filePath, &data->tableOfContents);
 
-			if (!it.lang.empty()) {
-				author.localizedName.emplace(it.lang, it.value);
+	html::parse(r, content);
+
+	if (data->tableOfContents.label.empty()) {
+		data->tableOfContents.label = data->name;
+	}
+}
+
+static void _processRootEpubPublication(EpubData *data, StringView content, StringView rootPath) {
+	EpubContentReader r(data);
+
+	html::parse(r, content);
+
+	data->version = r.version;
+
+	StringView cover;
+
+	for (auto &it : data->epubMetadata) {
+		StringView metaName = it->name;
+		for (auto aIt : it->attributes) {
+			if (aIt.first.equals<StringCaseComparator>("name")) {
+				metaName = aIt.second;
+			}
+		}
+
+		if (!it->content.empty()) {
+			if (metaName.equals<StringCaseComparator>("title")) {
+				data->name = it->content;
+			} else if (metaName.equals<StringCaseComparator>("identifier") && it->id == r.uid) {
+				data->uid = it->content;
+			} else if (metaName.equals<StringCaseComparator>("cover")) {
+				cover = it->content;
 			}
 
-			for (auto &eit : it.extra) {
-				if (eit.name == "alternate-script") {
-					author.localizedName.emplace(eit.lang, it.value);
-				} else if (eit.name == "role") {
-					author.role = eit.value;
-					author.roleScheme = eit.scheme;
+			auto mIt = data->meta.find(metaName);
+			if (mIt == data->meta.end()) {
+				data->meta.emplace(metaName, it->content);
+			} else {
+				mIt->second = string::pdupString(mIt->second, " ", it->content);
+			}
+		}
+	}
+
+	for (auto &it : data->epubManifest) {
+		if (it->href.empty()) {
+			continue;
+		}
+
+		auto filename = _resolveEpubPath(it->href, rootPath);
+		auto fileIt = data->archiveFiles.find(filename);
+		if (fileIt == data->archiveFiles.end()) {
+			slog().error("EpubDocument", "Fail to locate file: ", filename);
+			continue;
+		}
+
+		it->href = filename;
+
+		if (!it->type.empty()) {
+			fileIt->second.type = it->type;
+		}
+		if (!it->id.empty()) {
+			fileIt->second.id = it->id;
+		}
+	}
+
+	data->spine.reserve(data->epubSpine.size());
+	for (auto &it : data->epubSpine) {
+		StringView idref;
+		bool linear = true;
+
+		for (auto &aIt : it->attributes) {
+			if (aIt.first.equals<StringCaseComparator>("idref")) {
+				idref = aIt.second;
+			} else if (aIt.first.equals<StringCaseComparator>("linear")) {
+				if (aIt.second.equals<StringCaseComparator>("no")) {
+					linear = false;
 				}
 			}
-		} else if (it.name == "dcterms:modified") {
-			_modified = it.value;
-		} else if (it.name == "belongs-to-collection") {
-			_meta.collections.emplace_back(CollectionMeta{it.value});
-			auto &col = _meta.collections.back();
-			if (!it.lang.empty()) {
-				col.localizedTitle.emplace(it.lang, it.value);
+		}
+
+		if (!idref.empty()) {
+			auto vIt = data->epubContentById.find(idref);
+			if (vIt == data->epubContentById.end()) {
+				slog().error("EpubDocument", "Fail to locate itemref: ", idref);
+				continue;
 			}
 
-			for (auto &eit : it.extra) {
-				if (eit.name == "collection-type") {
-					col.type = eit.value;
-				} else if (eit.name == "group-position") {
-					col.position = eit.value;
-				} else if (eit.name == "alternate-script") {
-					col.localizedTitle.emplace(eit.lang, eit.value);
-				} else if (eit.name == "dcterms:identifier") {
-					col.uid = eit.value;
-				}
+			auto fileIt = data->archiveFiles.find(vIt->second->href);
+			if (fileIt == data->archiveFiles.end()) {
+				slog().error("EpubDocument", "Fail to locate file: ", vIt->second->href);
+				continue;
 			}
+
+			data->spine.emplace_back(SpineFile(fileIt->first, linear));
 		}
 	}
 
-	String coverFile, tocFile;
-	for (auto &it : _manifest) {
-		if (it.second.props.find("cover-image") != it.second.props.end()) {
-			coverFile = it.second.path;
-		}
-		if (it.second.props.find("nav") != it.second.props.end()) {
-			tocFile = it.second.path;
-		}
-		if (!coverFile.empty() && !tocFile.empty()) {
-			break;
-		}
-	}
-
-	if (!coverFile.empty()) {
-		_coverFile = coverFile;
-	}
-
-	if (!tocFile.empty()) {
-		_tocFile = tocFile;
+	auto coverIt = data->epubContentById.find(cover);
+	if (coverIt != data->epubContentById.end()) {
+		data->coverFile = coverIt->second->href;
 	} else {
-		_tocFile = r.tocFile;
-	}*/
+		slog().error("EpubDocument", "Fail to locate cover file: ", cover);
+	}
+
+	auto tocIt = data->epubContentById.find(r.tocFile);
+	if (tocIt != data->epubContentById.end()) {
+		data->tocFile = tocIt->second->href;
+	} else {
+		slog().error("EpubDocument", "Fail to locate toc file: ", r.tocFile);
+	}
 }
 
 bool EpubData::init() {
@@ -561,9 +837,8 @@ bool EpubData::init() {
 		return false;
 	}
 
-	StringView rootPath;
-
 	archive.ftw([&](uint64_t index, StringView path, size_t size, Time time) {
+		path = path.pdup();
 		if (path == "META-INF/container.xml") {
 			archive.readFile(index, [&](BytesView data) {
 				rootPath = _readEpubRootPath(data.readString());
@@ -571,9 +846,8 @@ bool EpubData::init() {
 			});
 		}
 
-		path = path.pdup(pool);
-		manifestFiles.emplace(path,
-				EpubManifestFile{
+		archiveFiles.emplace(path,
+				EpubArchiveFile{
 					index,
 					path,
 					size,
@@ -584,13 +858,34 @@ bool EpubData::init() {
 		return false;
 	}
 
-	auto fIt = manifestFiles.find(rootPath);
-	if (fIt == manifestFiles.end()) {
+	auto fIt = archiveFiles.find(rootPath);
+	if (fIt == archiveFiles.end()) {
 		return false;
 	}
 
-	archive.readFile(fIt->second.index,
-			[&](BytesView data) { _processRootEpubPublication(this, data.toStringView()); });
+	archive.readFile(fIt->second.index, [&](BytesView data) {
+		_processRootEpubPublication(this, data.toStringView(), filepath::root(rootPath));
+	});
+
+	if (!tocFile.empty()) {
+		auto tocFileIt = archiveFiles.find(tocFile);
+		if (tocFileIt != archiveFiles.end()) {
+			auto fileType = tocFileIt->second.type;
+
+			if (fileType.equals("application/x-dtbncx+xml")) {
+				archive.readFile(tocFileIt->second.index, [&](BytesView data) {
+					_epubReadNcxNav(this, data.toStringView(), tocFile);
+				});
+			} else if (fileType.equals("application/xhtml+xml")
+					|| fileType.equals("application/xhtml") || fileType.equals("text/html")) {
+				archive.readFile(tocFileIt->second.index, [&](BytesView data) {
+					_epubReadXmlNav(this, data.toStringView(), tocFile);
+				});
+			} else {
+				slog().error("EpubData", "Unknown table-of-contents file type: ", fileType);
+			}
+		}
+	}
 
 	return true;
 }

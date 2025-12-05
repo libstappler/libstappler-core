@@ -32,7 +32,7 @@ THE SOFTWARE.
 #include <sys/mman.h>
 #endif
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::custom {
+namespace STAPPLER_VERSIONIZED stappler::memory::custom {
 
 static std::atomic<size_t> s_nAllocators = 0;
 
@@ -76,7 +76,7 @@ static void Allocator_unmmap(uint8_t *ptr, size_t size) {
 }
 
 static MemNode *Allocator_malloc(size_t size, uint32_t index) {
-	static bool isPageAligned = BOUNDARY_SIZE % platform::getMemoryPageSize() == 0;
+	static bool isPageAligned = config::BOUNDARY_SIZE % platform::getMemoryPageSize() == 0;
 
 	uint32_t mapped = 0;
 	uint8_t *ptr = nullptr;
@@ -108,7 +108,7 @@ Allocator::Allocator() {
 }
 
 Allocator::~Allocator() {
-	for (uint32_t index = 0; index < MAX_INDEX; index++) {
+	for (uint32_t index = 0; index < config::MAX_INDEX; index++) {
 		auto node = buf[index];
 
 #if DEBUG
@@ -132,7 +132,8 @@ Allocator::~Allocator() {
 void Allocator::set_max(size_t size) {
 	std::unique_lock<Allocator> lock(*this);
 
-	uint32_t max_free_index = uint32_t(SPALIGN(size, BOUNDARY_SIZE) >> BOUNDARY_INDEX);
+	uint32_t max_free_index =
+			uint32_t(config::SPALIGN(size, config::BOUNDARY_SIZE) >> config::BOUNDARY_INDEX);
 	current += max_free_index;
 	current -= max;
 	max = max_free_index;
@@ -144,15 +145,15 @@ void Allocator::set_max(size_t size) {
 MemNode *Allocator::alloc(size_t in_size) {
 	std::unique_lock<Allocator> lock;
 
-	size_t size = uint32_t(SPALIGN(in_size + SIZEOF_MEMNODE, BOUNDARY_SIZE));
+	size_t size = uint32_t(config::SPALIGN(in_size + SIZEOF_MEMNODE, config::BOUNDARY_SIZE));
 	if (size < in_size) {
 		return nullptr;
 	}
-	if (size < MIN_ALLOC) {
-		size = MIN_ALLOC;
+	if (size < config::MIN_ALLOC) {
+		size = config::MIN_ALLOC;
 	}
 
-	uint32_t index = uint32_t(size >> BOUNDARY_INDEX) - 1;
+	uint32_t index = uint32_t(size >> config::BOUNDARY_INDEX) - 1;
 	if (index > maxOf<uint32_t>()) {
 		return nullptr;
 	}
@@ -261,10 +262,11 @@ void Allocator::free(MemNode *node) {
 		next = node->next;
 		uint32_t index = node->index;
 
-		if (max_free_index != ALLOCATOR_MAX_FREE_UNLIMITED && index + 1 > current_free_index) {
+		if (max_free_index != config::ALLOCATOR_MAX_FREE_UNLIMITED
+				&& index + 1 > current_free_index) {
 			node->next = freelist;
 			freelist = node;
-		} else if (index < MAX_INDEX) {
+		} else if (index < config::MAX_INDEX) {
 			/* Add the node to the appropiate 'size' bucket.  Adjust
 			 * the max_index when appropiate.
 			 */
@@ -330,4 +332,4 @@ void Allocator::lock() { mutex.lock(); }
 
 void Allocator::unlock() { mutex.unlock(); }
 
-} // namespace stappler::mempool::custom
+} // namespace stappler::memory::custom

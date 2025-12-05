@@ -59,16 +59,16 @@ public:
 	const MediaParameters &getMedia() const;
 	Document *getDocument() const;
 
-	void pushIndex(StringView, const Vec2 &);
+	void pushIndex(StringView, Vec2);
 	void finalize();
 
-	void setBackgroundColor(const Color4B &c);
-	const Color4B &getBackgroundColor() const;
+	void setBackgroundColor(Color4B);
+	Color4B getBackgroundColor() const;
 
-	void setContentSize(const Size2 &);
-	const Size2 &getContentSize() const;
+	void setContentSize(Size2);
+	Size2 getContentSize() const;
 
-	const Size2 &getSurfaceSize() const;
+	Size2 getSurfaceSize() const;
 
 	SpanView<Object *> getObjects() const;
 	SpanView<Link *> getRefs() const;

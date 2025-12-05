@@ -37,7 +37,7 @@ struct LayoutEngine::Data : public memory::AllocPool,
 	LayoutEngine *engine = nullptr;
 	Rc<Document> document;
 	MediaParameters media;
-	SpanView<StringView> spine;
+	Vector<StringView> spine;
 
 	Vector<MediaParameters> originalMedia;
 	Margin margin;
@@ -79,6 +79,8 @@ struct LayoutEngine::Data : public memory::AllocPool,
 			float &collapsableMarginTop);
 
 	const StyleList *compileStyle(const Node &node);
+
+	WideStringView getNodeValue(const LayoutBlock::NodeInfo &) const;
 };
 
 LayoutEngine::LayoutEngine(Document *doc,
@@ -162,25 +164,25 @@ void LayoutEngine::incrementNodeId(NodeId max) { _data->maxNodeId += max; }
 NodeId LayoutEngine::getMaxNodeId() const { return _data->maxNodeId; }
 
 LayoutBlock *LayoutEngine::makeLayout(LayoutBlock::NodeInfo &&n, bool disablePageBreaks) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 	return new (_data->pool)
 			LayoutBlock(this, move(n), disablePageBreaks, uint16_t(_data->layoutStack.size()));
 }
 
 LayoutBlock *LayoutEngine::makeLayout(LayoutBlock::NodeInfo &&n, LayoutBlock::PositionInfo &&p) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 	return new (_data->pool)
 			LayoutBlock(this, move(n), move(p), uint16_t(_data->layoutStack.size()));
 }
 
 LayoutBlock *LayoutEngine::makeLayout(const Node *node, Display ctx, bool disablePageBreaks) {
-	memory::pool::context context(_data->pool);
+	memory::context context(_data->pool);
 	return new (_data->pool) LayoutBlock(this, node, getStyle(*node), ctx, disablePageBreaks,
 			uint16_t(_data->layoutStack.size()));
 }
 
 InlineContext *LayoutEngine::acquireInlineContext(float d) {
-	memory::pool::context ctx(_data->pool);
+	memory::context ctx(_data->pool);
 
 	for (auto &it : _data->contextStorage) {
 		if (it->finalized) {
@@ -244,6 +246,8 @@ StringView LayoutEngine::resolveString(StringId id) const {
 float LayoutEngine::getDensity() const { return _data->media.density; }
 
 float LayoutEngine::getFontScale() const { return _data->media.fontScale; }
+
+Color4B LayoutEngine::getTextColor() const { return Color(_data->media.defaultBackground).text(); }
 
 Float LayoutEngine::getNodeFloating(const Node &node) const {
 	auto style = getStyle(node);
@@ -356,10 +360,18 @@ LayoutBlock *LayoutEngine::getTopLayout() const {
 
 void LayoutEngine::render() {
 	if (_data->spine.empty()) {
-		_data->spine = _data->document->getSpine();
+		auto spine = _data->document->getSpine();
+		_data->spine.reserve(spine.size());
+
+		for (auto &it : spine) { _data->spine.emplace_back(it.file); }
 	}
 
 	auto root = _data->document->getRoot();
+	if (!root) {
+		slog().error("LayoutEngine", "Fail to detect document root");
+		return;
+	}
+
 	auto rootNode = root->getRoot();
 
 	_data->setPage(root);
@@ -543,7 +555,7 @@ void LayoutEngine::endStyle(StyleList &style, const Node &node, SpanView<const N
 
 LayoutEngine::Data::Data(memory::pool_t *p, LayoutEngine *e, Document *doc,
 		const MediaParameters &m, SpanView<StringView> sp)
-: pool(p), engine(e), document(doc), media(m), spine(sp) {
+: pool(p), engine(e), document(doc), media(m), spine(sp.vec<Interface>()) {
 
 	maxNodeId = document->getMaxNodeId();
 
@@ -717,7 +729,7 @@ bool LayoutEngine::Data::processInlineNode(LayoutBlock &l, LayoutBlock::NodeInfo
 
 	firstCharId = ctx.targetLabel->layout.chars.size();
 
-	ctx.reader.read(fstyle, textStyle, node.node->getValue(), front, back);
+	ctx.reader.read(fstyle, textStyle, getNodeValue(node), front, back);
 	ctx.pushNode(node.node, [&](InlineContext &ctx) {
 		lastCharId = (ctx.targetLabel->layout.chars.size() > 0)
 				? (ctx.targetLabel->layout.chars.size() - 1)
@@ -819,7 +831,7 @@ bool LayoutEngine::Data::processInlineBlockNode(LayoutBlock &l, LayoutBlock::Nod
 				height += (fontMetrics.size - fontMetrics.height) + fontMetrics.descender / 2;
 				break;
 			case VerticalAlign::Super:
-				height += fontMetrics.size - fontMetrics.height + fontMetrics.ascender / 2;
+				height += (fontMetrics.size - fontMetrics.height) - fontMetrics.ascender / 2;
 				break;
 			default: break;
 			}
@@ -1006,6 +1018,14 @@ const StyleList *LayoutEngine::Data::compileStyle(const Node &node) {
 	}
 
 	return &it->second;
+}
+
+WideStringView LayoutEngine::Data::getNodeValue(const LayoutBlock::NodeInfo &node) const {
+	if (node.node->getHtmlName() == "br") {
+		return u"\n";
+	} else {
+		return node.node->getValue();
+	}
 }
 
 } // namespace stappler::document

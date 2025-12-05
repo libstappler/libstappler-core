@@ -1,6 +1,7 @@
 /**
 Copyright (c) 2020-2022 Roman Katuntsev <sbkarr@stappler.org>
 Copyright (c) 2023-2025 Stappler LLC <admin@stappler.dev>
+Copyright (c) 2025 Stappler Team <admin@stappler.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +24,7 @@ THE SOFTWARE.
 
 #include "SPMemPoolConfig.h"
 #include "SPMemPoolInterface.h"
-#include "SPMemPoolApi.h"
+#include "SPMemPoolStruct.h"
 
 #if MODULE_STAPPLER_APR
 #define SP_APR_EXPORT SP_EXTERN_C
@@ -96,16 +97,16 @@ SP_APR_EXPORT void *apr_pmemdup(apr_pool_t *p, const void *m, apr_size_t n)
 		__attribute__((alloc_size(3)));
 SP_APR_EXPORT char *apr_pstrdup(apr_pool_t *p, const char *s);
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::apr {
+namespace STAPPLER_VERSIONIZED stappler::memory::apr {
 
 using pool_t = apr_pool_t;
 using status_t = apr_status_t;
 using allocator_t = apr_allocator_t;
 using cleanup_fn = status_t (*)(void *);
 
-} // namespace stappler::mempool::apr
+} // namespace stappler::memory::apr
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::apr::allocator {
+namespace STAPPLER_VERSIONIZED stappler::memory::apr::allocator {
 
 SPUNUSED static allocator_t *create() {
 	allocator_t *ret = nullptr;
@@ -132,10 +133,10 @@ SPUNUSED static void max_free_set(allocator_t *alloc, size_t size) {
 	apr_allocator_max_free_set(alloc, size);
 }
 
-} // namespace stappler::mempool::apr::allocator
+} // namespace stappler::memory::apr::allocator
 
 
-namespace STAPPLER_VERSIONIZED stappler::mempool::apr::pool {
+namespace STAPPLER_VERSIONIZED stappler::memory::apr::pool {
 
 struct wrapper_pool_t {
 	apr_pool_t *parent;
@@ -197,8 +198,8 @@ SPUNUSED static void clear(pool_t *p) { apr_pool_clear(p); }
 
 SPUNUSED static void *alloc(pool_t *p, size_t &size) {
 	if (auto mngr = allocmngr_get(p)) {
-		if (size >= custom::BlockThreshold) {
-			return mngr->alloc(size, custom::DefaultAlignment,
+		if (size >= config::BlockThreshold) {
+			return mngr->alloc(size, config::DefaultAlignment,
 					[](void *p, size_t s, uint32_t a) { return apr_palloc((pool_t *)p, s); });
 		} else {
 			mngr->increment_alloc(size);
@@ -208,7 +209,7 @@ SPUNUSED static void *alloc(pool_t *p, size_t &size) {
 }
 
 SPUNUSED static void free(pool_t *p, void *ptr, size_t size) {
-	if (size >= custom::BlockThreshold) {
+	if (size >= config::BlockThreshold) {
 		if (auto m = allocmngr_get(p)) {
 			return m->free(ptr, size,
 					[](void *p, size_t s, uint32_t a) { return apr_palloc((pool_t *)p, s); });
@@ -236,8 +237,7 @@ struct SP_PUBLIC __CleaupData {
 
 	static status_t doCleanup(void *data) {
 		if (auto d = (__CleaupData *)data) {
-			memory::pool::perform_conditional([&] { d->callback(d->data); },
-					(memory::pool_t *)d->pool);
+			perform_conditional([&] { d->callback(d->data); }, (memory::pool_t *)d->pool);
 		}
 		return 0;
 	}
@@ -328,7 +328,7 @@ SPUNUSED static const char *get_tag(pool_t *pool) {
 	return NULL;
 }
 
-} // namespace stappler::mempool::apr::pool
+} // namespace stappler::memory::apr::pool
 
 #ifndef MODULE_STAPPLER_APR
 
