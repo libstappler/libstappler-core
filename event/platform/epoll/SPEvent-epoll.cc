@@ -32,6 +32,24 @@ namespace STAPPLER_VERSIONIZED stappler::event {
 
 static constexpr uint32_t EPOLL_CANCEL_FLAG = 0x8000'0000;
 
+#if LINUX
+static constexpr int sp_sys_epoll_pwait2 = 441;
+
+// We use the old glibc, so we implement it ourselves
+// The actual presence of a function in the kernel can be checked using EPollFlags::HaveEPollPWait2
+static int sp_epoll_pwait2(int fd, struct epoll_event *ev, int maxev, const struct timespec *tmo,
+		const sigset_t *s) {
+	struct _linux_timespec tmo64, *ptmo64 = NULL;
+	if (tmo != NULL) {
+		tmo64.tv_sec = tmo->tv_sec;
+		tmo64.tv_nsec = tmo->tv_nsec;
+		ptmo64 = &tmo64;
+	}
+
+	return syscall(sp_sys_epoll_pwait2, fd, ev, maxev, ptmo64, s, _NSIG / 8);
+}
+#endif
+
 Status EPollData::add(int fd, const epoll_event &ev) {
 	auto ret = ::epoll_ctl(_epollFd, EPOLL_CTL_ADD, fd, const_cast<epoll_event *>(&ev));
 	if (ret < 0) {
@@ -65,7 +83,7 @@ Status EPollData::runPoll(TimeInterval ival) {
 
 		setNanoTimespec(timeout, ival);
 
-		nevents = ::epoll_pwait2(_epollFd, _events.data(), _events.size(), &timeout, sigset);
+		nevents = sp_epoll_pwait2(_epollFd, _events.data(), _events.size(), &timeout, sigset);
 	} else {
 		nevents = ::epoll_pwait(_epollFd, _events.data(), _events.size(),
 				(ival == TimeInterval::Infinite) ? -1 : ival.toMillis(), sigset);

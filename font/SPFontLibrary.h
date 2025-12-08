@@ -24,6 +24,7 @@
 #define CORE_FONT_SPFONTLIBRARY_H_
 
 #include "SPFontFace.h"
+#include "SPThread.h"
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
@@ -105,7 +106,7 @@ protected:
 	std::shared_mutex _sharedMutex;
 	Map<StringView, Rc<FontFaceObject>> _faces;
 	Map<StringView, Rc<FontFaceData>> _data;
-	Map<FontFaceObject *, Map<std::thread::id, Rc<FontFaceObjectHandle>>> _threads;
+	Map<FontFaceObject *, Map<thread::Thread::Id, Rc<FontFaceObjectHandle>>> _threads;
 	FT_Library _library = nullptr;
 
 	std::bitset<1'024 * 16> _fontIds;

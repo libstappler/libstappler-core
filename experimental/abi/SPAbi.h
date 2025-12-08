@@ -41,8 +41,9 @@ SP_PUBLIC void *open(StringView name, DsoFlags flags, const char **err);
 SP_PUBLIC void close(DsoFlags flags, void *handle);
 SP_PUBLIC void *sym(void *h, StringView name, DsoSymFlags flags, const char **err);
 
-SP_PUBLIC void initThread(memory::pool_t *, NotNull<thread::Thread>);
-SP_PUBLIC void disposeThread(memory::pool_t *, NotNull<thread::Thread>);
+SP_PUBLIC void *createThread(void (*)(thread::Thread *), thread::Thread *, uint32_t flags);
+SP_PUBLIC void *joinThread(void *);
+SP_PUBLIC void detachThread(void *);
 
 } // namespace stappler::abi
 

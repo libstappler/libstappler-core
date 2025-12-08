@@ -160,6 +160,15 @@ constexpr size_t length(const _CharT *__p, size_t max) {
 	}
 }
 
+template <>
+constexpr size_t length(const uint8_t *__p, size_t max) {
+	if (!__p) {
+		return 0;
+	}
+
+	return max;
+}
+
 template <typename T, typename Char>
 inline auto readNumber(const Char *ptr, size_t len, int base, uint8_t &offset) -> Result<T> {
 	// prevent to read out of bounds, copy symbols to stack buffer
@@ -218,13 +227,30 @@ inline int compare_u(const L &l, const R &r) {
 	return platform::compare_u(l, r);
 }
 
+template <typename CharType>
+inline auto caseCompareChar_c(const std::locale &locale, const CharType &l, const CharType &r) {
+	return std::toupper(l, locale) <=> std::toupper(r, locale);
+}
+
+// libc++ has no char16_t support, but has wchar_t support
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+
+// Specialize comparation template
+template <>
+inline auto caseCompareChar_c<char16_t>(const std::locale &locale, const char16_t &l,
+		const char16_t &r) {
+	return std::toupper(wchar_t(l), locale) <=> std::toupper(wchar_t(r), locale);
+}
+
+#endif
+
 template <typename L, typename R, typename CharType>
 inline int caseCompare_c(const L &l, const R &r) {
 	auto &locale = std::locale::classic();
 
 	auto ret = std::lexicographical_compare_three_way(l.data(), l.data() + l.size(), r.data(),
 			r.data() + r.size(), [&](const CharType &l, const CharType &r) -> std::strong_ordering {
-		return std::toupper(l, locale) <=> std::toupper(r, locale);
+		return caseCompareChar_c(locale, l, r);
 	});
 
 	if (std::is_eq(ret)) {
@@ -621,6 +647,14 @@ inline bool BytesReader<CharT>::starts_with(const CharType *d) const {
 	return prefix<Comparator>(d, l);
 }
 
+template <typename CharT>
+template <size_t Count, typename Comparator>
+inline bool BytesReader<CharT>::starts_with(const CharType d[Count]) const {
+	if (Count > len) {
+		return false;
+	}
+	return prefix<Comparator>(d, Count);
+}
 
 template <typename CharT>
 template <typename Comparator>
@@ -636,6 +670,15 @@ inline bool BytesReader<CharT>::ends_with(const CharType *d) const {
 		return false;
 	}
 	return ends_with<Comparator>(d, l);
+}
+
+template <typename CharT>
+template <size_t Count, typename Comparator>
+inline bool BytesReader<CharT>::ends_with(const CharType d[Count]) const {
+	if (Count > len) {
+		return false;
+	}
+	return ends_with<Comparator>(d, Count);
 }
 
 template <typename _CharType>

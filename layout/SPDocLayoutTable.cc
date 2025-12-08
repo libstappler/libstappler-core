@@ -1387,7 +1387,8 @@ void LayoutTable::processTableBackground() {
 					if (it->type == Object::Type::Label) {
 						WideString str;
 						str.reserve(it->asLabel()->layout.chars.size());
-						it->asLabel()->layout.str([&](char16_t ch) { str.emplace_back(ch); });
+						it->asLabel()->layout.str(
+								[&](char32_t ch) { unicode::utf16Encode(str, ch); });
 						caption = string::toUtf8<Interface>(str);
 					}
 				}

@@ -28,11 +28,30 @@
 
 #if LINUX
 
+#if STAPPLER_STATIC_TOOLCHAIN
+
+#include <unicode/uchar.h>
+#include <unicode/ustring.h>
+#include <unicode/uidna.h>
+
+#else
+
+constexpr uint32_t U_COMPARE_CODE_POINT_ORDER = 0x8000;
+constexpr int U_ZERO_ERROR = 0;
+using UErrorCode = int;
+using UBreakIterator = void;
+using UIDNA = void;
+
+struct UIDNAInfo {
+	int8_t isTransitionalDifferent;
+	uint32_t errors;
+};
+
+#endif
+
 #include <sys/random.h>
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
-
-constexpr uint32_t U_COMPARE_CODE_POINT_ORDER = 0x8000;
 
 struct unistring_iface {
 	using u8_case_fn = uint8_t *(*)(const uint8_t *s, size_t n, const char *iso639_language,
@@ -145,9 +164,6 @@ struct idn2_iface {
 };
 
 struct icu_iface {
-	using UIDNA = void;
-	using UErrorCode = int;
-
 	enum {
 		UIDNA_DEFAULT = 0x30,
 		UIDNA_USE_STD3_RULES = 2,
@@ -158,49 +174,43 @@ struct icu_iface {
 		UIDNA_CHECK_CONTEXTO = 0x40
 	};
 
-	struct UIDNAInfo {
-		int8_t isTransitionalDifferent;
-		uint32_t errors;
-	};
-
 	using case_fn = int32_t (*)(char16_t *dest, int32_t destCapacity, const char16_t *src,
-			int32_t srcLength, const char *locale, int *pErrorCode);
+			int32_t srcLength, const char *locale, UErrorCode *pErrorCode);
 	using case_iter_fn = int32_t (*)(char16_t *dest, int32_t destCapacity, const char16_t *src,
-			int32_t srcLength, void *iter, const char *locale, int *pErrorCode);
+			int32_t srcLength, UBreakIterator *iter, const char *locale, UErrorCode *pErrorCode);
 
 	using cmp_fn = int32_t (*)(const char16_t *s1, int32_t length1, const char16_t *s2,
 			int32_t length2, int8_t codePointOrder);
 	using case_cmp_fn = int32_t (*)(const char16_t *s1, int32_t length1, const char16_t *s2,
-			int32_t length2, uint32_t options, int *pErrorCode);
+			int32_t length2, uint32_t options, UErrorCode *pErrorCode);
 
 	int32_t (*tolower_fn)(int32_t) = nullptr;
 	int32_t (*toupper_fn)(int32_t) = nullptr;
 	int32_t (*totitle_fn)(int32_t) = nullptr;
 
-	case_fn u_strToLower = nullptr;
-	case_fn u_strToUpper = nullptr;
-	case_iter_fn u_strToTitle = nullptr;
+	case_fn u_strToLower_fn = nullptr;
+	case_fn u_strToUpper_fn = nullptr;
+	case_iter_fn u_strToTitle_fn = nullptr;
 
-	cmp_fn u_strCompare = nullptr;
-	case_cmp_fn u_strCaseCompare = nullptr;
+	cmp_fn u_strCompare_fn = nullptr;
+	case_cmp_fn u_strCaseCompare_fn = nullptr;
 
-	const char *(*u_errorName)(int code) = nullptr;
+	const char *(*u_errorName_fn)(UErrorCode code) = nullptr;
 
-	UIDNA *(*uidna_openUTS46)(uint32_t options, UErrorCode *pErrorCode) = nullptr;
-	void (*uidna_close)(UIDNA *idna) = nullptr;
+	UIDNA *(*uidna_openUTS46_fn)(uint32_t options, UErrorCode *pErrorCode) = nullptr;
+	void (*uidna_close_fn)(UIDNA *idna) = nullptr;
 
-	int32_t (*uidna_labelToASCII_UTF8)(const UIDNA *idna, const char *label, int32_t length,
+	int32_t (*uidna_labelToASCII_UTF8_fn)(const UIDNA *idna, const char *label, int32_t length,
 			char *dest, int32_t capacity, UIDNAInfo *pInfo, UErrorCode *pErrorCode) = nullptr;
 
-	int32_t (*uidna_labelToUnicodeUTF8)(const UIDNA *idna, const char *label, int32_t length,
+	int32_t (*uidna_labelToUnicodeUTF8_fn)(const UIDNA *idna, const char *label, int32_t length,
 			char *dest, int32_t capacity, UIDNAInfo *pInfo, UErrorCode *pErrorCode) = nullptr;
 
-	int32_t (*uidna_nameToASCII_UTF8)(const UIDNA *idna, const char *name, int32_t length,
+	int32_t (*uidna_nameToASCII_UTF8_fn)(const UIDNA *idna, const char *name, int32_t length,
 			char *dest, int32_t capacity, UIDNAInfo *pInfo, UErrorCode *pErrorCode) = nullptr;
 
-	int32_t (*uidna_nameToUnicodeUTF8)(const UIDNA *idna, const char *name, int32_t length,
+	int32_t (*uidna_nameToUnicodeUTF8_fn)(const UIDNA *idna, const char *name, int32_t length,
 			char *dest, int32_t capacity, UIDNAInfo *pInfo, UErrorCode *pErrorCode) = nullptr;
-
 
 	static void *loadIcu(Dso &h, const char *name, StringView ver) {
 		char buf[256] = {0};
@@ -216,63 +226,85 @@ struct icu_iface {
 	}
 
 	void load(Dso &handle, StringView verSuffix) {
+#if STAPPLER_STATIC_TOOLCHAIN
+		tolower_fn = &::u_tolower;
+		toupper_fn = &::u_toupper;
+		totitle_fn = &::u_totitle;
+
+		u_strToLower_fn = &::u_strToLower;
+		u_strToUpper_fn = &::u_strToUpper;
+		u_strToTitle_fn = &::u_strToTitle;
+		u_strCompare_fn = &::u_strCompare;
+		u_strCaseCompare_fn = &::u_strCaseCompare;
+
+		u_errorName_fn = &::u_errorName;
+		uidna_openUTS46_fn = &::uidna_openUTS46;
+		uidna_close_fn = &::uidna_close;
+
+		uidna_labelToASCII_UTF8_fn = &::uidna_labelToASCII_UTF8;
+		uidna_labelToUnicodeUTF8_fn = &::uidna_labelToUnicodeUTF8;
+		uidna_nameToASCII_UTF8_fn = &::uidna_nameToASCII_UTF8;
+		uidna_nameToUnicodeUTF8_fn = &::uidna_nameToUnicodeUTF8;
+#else
 		tolower_fn =
 				reinterpret_cast<decltype(tolower_fn)>(loadIcu(handle, "u_tolower", verSuffix));
 		toupper_fn =
 				reinterpret_cast<decltype(toupper_fn)>(loadIcu(handle, "u_toupper", verSuffix));
 		totitle_fn =
 				reinterpret_cast<decltype(totitle_fn)>(loadIcu(handle, "u_totitle", verSuffix));
-		u_strToLower = reinterpret_cast<decltype(u_strToLower)>(
+		u_strToLower_fn = reinterpret_cast<decltype(u_strToLower_fn)>(
 				loadIcu(handle, "u_strToLower", verSuffix));
-		u_strToUpper = reinterpret_cast<decltype(u_strToUpper)>(
+		u_strToUpper_fn = reinterpret_cast<decltype(u_strToUpper_fn)>(
 				loadIcu(handle, "u_strToUpper", verSuffix));
-		u_strToTitle = reinterpret_cast<decltype(u_strToTitle)>(
+		u_strToTitle_fn = reinterpret_cast<decltype(u_strToTitle_fn)>(
 				loadIcu(handle, "u_strToTitle", verSuffix));
-		u_strCompare = reinterpret_cast<decltype(u_strCompare)>(
+		u_strCompare_fn = reinterpret_cast<decltype(u_strCompare_fn)>(
 				loadIcu(handle, "u_strCompare", verSuffix));
-		u_strCaseCompare = reinterpret_cast<decltype(u_strCaseCompare)>(
+		u_strCaseCompare_fn = reinterpret_cast<decltype(u_strCaseCompare_fn)>(
 				loadIcu(handle, "u_strCaseCompare", verSuffix));
 
-		u_errorName =
-				reinterpret_cast<decltype(u_errorName)>(loadIcu(handle, "u_errorName", verSuffix));
-		uidna_openUTS46 = reinterpret_cast<decltype(uidna_openUTS46)>(
+		u_errorName_fn = reinterpret_cast<decltype(u_errorName_fn)>(
+				loadIcu(handle, "u_errorName", verSuffix));
+		uidna_openUTS46_fn = reinterpret_cast<decltype(uidna_openUTS46_fn)>(
 				loadIcu(handle, "uidna_openUTS46", verSuffix));
-		uidna_close =
-				reinterpret_cast<decltype(uidna_close)>(loadIcu(handle, "uidna_close", verSuffix));
+		uidna_close_fn = reinterpret_cast<decltype(uidna_close_fn)>(
+				loadIcu(handle, "uidna_close", verSuffix));
 
-		uidna_labelToASCII_UTF8 = reinterpret_cast<decltype(uidna_labelToASCII_UTF8)>(
+		uidna_labelToASCII_UTF8_fn = reinterpret_cast<decltype(uidna_labelToASCII_UTF8_fn)>(
 				loadIcu(handle, "uidna_labelToASCII_UTF8", verSuffix));
-		uidna_labelToUnicodeUTF8 = reinterpret_cast<decltype(uidna_labelToUnicodeUTF8)>(
+		uidna_labelToUnicodeUTF8_fn = reinterpret_cast<decltype(uidna_labelToUnicodeUTF8_fn)>(
 				loadIcu(handle, "uidna_labelToUnicodeUTF8", verSuffix));
-		uidna_nameToASCII_UTF8 = reinterpret_cast<decltype(uidna_nameToASCII_UTF8)>(
+		uidna_nameToASCII_UTF8_fn = reinterpret_cast<decltype(uidna_nameToASCII_UTF8_fn)>(
 				loadIcu(handle, "uidna_nameToASCII_UTF8", verSuffix));
-		uidna_nameToUnicodeUTF8 = reinterpret_cast<decltype(uidna_nameToUnicodeUTF8)>(
+		uidna_nameToUnicodeUTF8_fn = reinterpret_cast<decltype(uidna_nameToUnicodeUTF8_fn)>(
 				loadIcu(handle, "uidna_nameToUnicodeUTF8", verSuffix));
+#endif
 	}
 
 	explicit operator bool() const {
-		return tolower_fn && toupper_fn && totitle_fn && u_strToLower && u_strToUpper
-				&& u_strToTitle && u_strCompare && u_strCaseCompare && u_errorName
-				&& uidna_openUTS46 && uidna_close && uidna_labelToASCII_UTF8
-				&& uidna_labelToUnicodeUTF8 && uidna_nameToASCII_UTF8 && uidna_nameToUnicodeUTF8;
+		return tolower_fn && toupper_fn && totitle_fn && u_strToLower_fn && u_strToUpper_fn
+				&& u_strToTitle_fn && u_strCompare_fn && u_strCaseCompare_fn && u_errorName_fn
+				&& uidna_openUTS46_fn && uidna_close_fn && uidna_labelToASCII_UTF8_fn
+				&& uidna_labelToUnicodeUTF8_fn && uidna_nameToASCII_UTF8_fn
+				&& uidna_nameToUnicodeUTF8_fn;
 	}
 
 	void clear() {
 		tolower_fn = nullptr;
 		toupper_fn = nullptr;
 		totitle_fn = nullptr;
-		u_strToLower = nullptr;
-		u_strToUpper = nullptr;
-		u_strToTitle = nullptr;
-		u_strCompare = nullptr;
-		u_strCaseCompare = nullptr;
-		u_errorName = nullptr;
-		uidna_openUTS46 = nullptr;
-		uidna_close = nullptr;
-		uidna_labelToASCII_UTF8 = nullptr;
-		uidna_labelToUnicodeUTF8 = nullptr;
-		uidna_nameToASCII_UTF8 = nullptr;
-		uidna_nameToUnicodeUTF8 = nullptr;
+		u_strToLower_fn = nullptr;
+		u_strToUpper_fn = nullptr;
+		u_strToTitle_fn = nullptr;
+		u_strCompare_fn = nullptr;
+		u_strCaseCompare_fn = nullptr;
+		u_errorName_fn = nullptr;
+		uidna_openUTS46_fn = nullptr;
+		uidna_close_fn = nullptr;
+		uidna_labelToASCII_UTF8_fn = nullptr;
+		uidna_labelToUnicodeUTF8_fn = nullptr;
+		uidna_nameToASCII_UTF8_fn = nullptr;
+		uidna_nameToUnicodeUTF8_fn = nullptr;
 	}
 };
 
@@ -283,6 +315,16 @@ struct i18n {
 	}
 
 	i18n() {
+#if STAPPLER_STATIC_TOOLCHAIN
+		icu.load(_handle, StringView());
+		if (!icu) {
+			icu.clear();
+			_handle.close();
+		} else {
+			return;
+		}
+#endif
+
 		// try unistring
 		// try version 0 or 1 if no general symlink
 		_handle = Dso("libunistring.so");
@@ -385,7 +427,7 @@ struct i18n {
 		typename Interface::WideStringType ret;
 		ret.resize(data.size());
 
-		int status = 0;
+		UErrorCode status;
 		auto len = icuFn(ret.data(), ret.size(), data.data(), data.size(), NULL, &status);
 		if (len <= int32_t(ret.size())) {
 			ret.resize(len);
@@ -461,22 +503,22 @@ struct i18n {
 
 	template <typename Interface>
 	auto tolower(StringView data) {
-		return applyFunction<Interface>(data, icu.u_strToLower, unistring.u8_tolower);
+		return applyFunction<Interface>(data, icu.u_strToLower_fn, unistring.u8_tolower);
 	}
 
 	template <typename Interface>
 	auto tolower(WideStringView data) {
-		return applyFunction<Interface>(data, icu.u_strToLower, unistring.u16_tolower);
+		return applyFunction<Interface>(data, icu.u_strToLower_fn, unistring.u16_tolower);
 	}
 
 	template <typename Interface>
 	auto toupper(StringView data) {
-		return applyFunction<Interface>(data, icu.u_strToUpper, unistring.u8_toupper);
+		return applyFunction<Interface>(data, icu.u_strToUpper_fn, unistring.u8_toupper);
 	}
 
 	template <typename Interface>
 	auto toupper(WideStringView data) {
-		return applyFunction<Interface>(data, icu.u_strToUpper, unistring.u16_toupper);
+		return applyFunction<Interface>(data, icu.u_strToUpper_fn, unistring.u16_toupper);
 	}
 
 	template <typename Interface>
@@ -485,7 +527,7 @@ struct i18n {
 			return data.str<Interface>();
 		}
 
-		if (icu.u_strToTitle) {
+		if (icu.u_strToTitle_fn) {
 			return string::toUtf8<Interface>(totitle<Interface>(string::toUtf16<Interface>(data)));
 		} else {
 			return applyUnistringFunction<Interface>(data, unistring.u8_totitle);
@@ -501,15 +543,15 @@ struct i18n {
 		typename Interface::WideStringType ret;
 		ret.resize(data.size());
 
-		if (icu.u_strToTitle) {
-			int status = 0;
-			auto len = icu.u_strToTitle(ret.data(), ret.size(), data.data(), data.size(), NULL,
+		if (icu.u_strToTitle_fn) {
+			UErrorCode status;
+			auto len = icu.u_strToTitle_fn(ret.data(), ret.size(), data.data(), data.size(), NULL,
 					NULL, &status);
 			if (len <= int32_t(ret.size())) {
 				ret.resize(len);
 			} else {
 				ret.resize(len);
-				icu.u_strToTitle(ret.data(), ret.size(), data.data(), data.size(), NULL, NULL,
+				icu.u_strToTitle_fn(ret.data(), ret.size(), data.data(), data.size(), NULL, NULL,
 						&status);
 			}
 		} else {
@@ -523,10 +565,10 @@ struct i18n {
 		if (unistring.u8_cmp2) {
 			return unistring.u8_cmp2((const uint8_t *)l.data(), l.size(), (const uint8_t *)r.data(),
 					r.size());
-		} else if (icu.u_strCompare) {
+		} else if (icu.u_strCompare_fn) {
 			auto lStr = string::toUtf16<memory::StandartInterface>(l);
 			auto rStr = string::toUtf16<memory::StandartInterface>(r);
-			return icu.u_strCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(), 1);
+			return icu.u_strCompare_fn(lStr.data(), lStr.size(), rStr.data(), rStr.size(), 1);
 		}
 		return string::detail::compare_c(l, r);
 	}
@@ -535,8 +577,8 @@ struct i18n {
 		if (unistring.u16_cmp2) {
 			return unistring.u16_cmp2((const uint16_t *)l.data(), l.size(),
 					(const uint16_t *)r.data(), r.size());
-		} else if (icu.u_strCompare) {
-			return icu.u_strCompare(l.data(), l.size(), r.data(), r.size(), 1);
+		} else if (icu.u_strCompare_fn) {
+			return icu.u_strCompare_fn(l.data(), l.size(), r.data(), r.size(), 1);
 		}
 		return string::detail::compare_c(l, r);
 	}
@@ -549,11 +591,11 @@ struct i18n {
 					== 0) {
 				return ret;
 			}
-		} else if (icu.u_strCaseCompare) {
-			int status = 0;
+		} else if (icu.u_strCaseCompare_fn) {
+			UErrorCode status;
 			auto lStr = string::toUtf16<memory::StandartInterface>(l);
 			auto rStr = string::toUtf16<memory::StandartInterface>(r);
-			return icu.u_strCaseCompare(lStr.data(), lStr.size(), rStr.data(), rStr.size(),
+			return icu.u_strCaseCompare_fn(lStr.data(), lStr.size(), rStr.data(), rStr.size(),
 					U_COMPARE_CODE_POINT_ORDER, &status);
 		}
 		return string::detail::caseCompare_c(l, r);
@@ -568,9 +610,9 @@ struct i18n {
 					== 0) {
 				return ret;
 			}
-		} else if (icu.u_strCaseCompare) {
-			int status = 0;
-			return icu.u_strCaseCompare(l.data(), l.size(), r.data(), r.size(),
+		} else if (icu.u_strCaseCompare_fn) {
+			UErrorCode status;
+			return icu.u_strCaseCompare_fn(l.data(), l.size(), r.data(), r.size(),
 					U_COMPARE_CODE_POINT_ORDER, &status);
 		}
 		return string::detail::caseCompare_c(l, r);
@@ -737,16 +779,17 @@ auto _idnToAscii(StringView source, bool validate) -> typename Interface::String
 			return ret;
 		}
 	} else if (platform::s_instance->icu) {
-		platform::icu_iface::UErrorCode err = 0;
-		auto idna = platform::s_instance->icu.uidna_openUTS46(platform::icu_iface::UIDNA_CHECK_BIDI
-						| platform::icu_iface::UIDNA_NONTRANSITIONAL_TO_ASCII,
-				&err);
+		UErrorCode err = U_ZERO_ERROR;
+		auto idna =
+				platform::s_instance->icu.uidna_openUTS46_fn(platform::icu_iface::UIDNA_CHECK_BIDI
+								| platform::icu_iface::UIDNA_NONTRANSITIONAL_TO_ASCII,
+						&err);
 		if (err == 0) {
-			platform::icu_iface::UIDNAInfo info = {0, 0};
+			UIDNAInfo info = {0, 0};
 			char buffer[1_KiB] = {0};
-			auto retLen = platform::s_instance->icu.uidna_nameToASCII_UTF8(idna, source.data(),
+			auto retLen = platform::s_instance->icu.uidna_nameToASCII_UTF8_fn(idna, source.data(),
 					(int)source.size(), buffer, 1_KiB - 1, &info, &err);
-			platform::s_instance->icu.uidna_close(idna);
+			platform::s_instance->icu.uidna_close_fn(idna);
 			if (retLen > 0 && err == 0 && !info.errors) {
 				return typename Interface::StringType(buffer, retLen);
 			}
@@ -779,16 +822,17 @@ auto _idnToUnicode(StringView source, bool validate) -> typename Interface::Stri
 			return ret;
 		}
 	} else if (platform::s_instance->icu) {
-		platform::icu_iface::UErrorCode err = 0;
-		auto idna = platform::s_instance->icu.uidna_openUTS46(platform::icu_iface::UIDNA_CHECK_BIDI
-						| platform::icu_iface::UIDNA_NONTRANSITIONAL_TO_UNICODE,
-				&err);
-		if (err == 0) {
+		UErrorCode err;
+		auto idna =
+				platform::s_instance->icu.uidna_openUTS46_fn(platform::icu_iface::UIDNA_CHECK_BIDI
+								| platform::icu_iface::UIDNA_NONTRANSITIONAL_TO_UNICODE,
+						&err);
+		if (err == U_ZERO_ERROR) {
 			char buffer[1_KiB] = {0};
-			platform::icu_iface::UIDNAInfo info = {0, 0};
-			auto retLen = platform::s_instance->icu.uidna_nameToUnicodeUTF8(idna, source.data(),
+			UIDNAInfo info = {0, 0};
+			auto retLen = platform::s_instance->icu.uidna_nameToUnicodeUTF8_fn(idna, source.data(),
 					(int)source.size(), buffer, 1_KiB - 1, &info, &err);
-			platform::s_instance->icu.uidna_close(idna);
+			platform::s_instance->icu.uidna_close_fn(idna);
 			if (retLen > 0 && err == 0 && !info.errors) {
 				return typename Interface::StringType(buffer, retLen);
 			}

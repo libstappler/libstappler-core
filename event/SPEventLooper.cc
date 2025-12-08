@@ -45,7 +45,7 @@ struct Looper::Data : public memory::AllocPool {
 	Rc<thread::ThreadPool> threadPool;
 	const thread::ThreadInfo *threadInfo = nullptr;
 	memory::pool_t *threadMemPool = nullptr;
-	std::thread::id thisThreadId;
+	thread::Thread::Id thisThreadId;
 	bool suspendThreadsOnWakeup = false;
 
 	mem_std::Set<Bus *> buses;
@@ -258,7 +258,9 @@ const event::Queue *Looper::getQueue() const { return _data->queue; }
 
 thread::ThreadPool *Looper::getThreadPool() const { return _data->getThreadPool(); }
 
-bool Looper::isOnThisThread() const { return _data->thisThreadId == std::this_thread::get_id(); }
+bool Looper::isOnThisThread() const {
+	return _data->thisThreadId == thread::Thread::getCurrentThreadId();
+}
 
 Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 	auto pool = q->getPool();
@@ -294,7 +296,7 @@ Looper::Looper(LooperInfo &&info, Rc<QueueRef> &&q) {
 			});
 		}
 
-		_data->thisThreadId = std::this_thread::get_id();
+		_data->thisThreadId = thread::Thread::getCurrentThreadId();
 		_active = true;
 	}, pool);
 }

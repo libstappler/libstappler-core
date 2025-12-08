@@ -1,6 +1,0 @@
-# Target helper is built against target system (and its libdl).
-LDLIBS = -ldl
-
-CC := gcc
-
-fdlhelper: fdlhelper.o

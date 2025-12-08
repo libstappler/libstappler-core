@@ -33,6 +33,7 @@
 #include "LocaleInfo.h"
 
 #include "SPMemForwardList.h"
+#include "SPPlatformUnistd.h"
 
 namespace stappler::buildtool {
 

@@ -28,7 +28,6 @@ STAPPLER_VERSION_BUILD := $(firstword $(call sp_detect_build_number,$(STAPPLER_M
 STAPPLER_CRYPTO_DEFAULT ?= openssl
 
 TOOLKIT_MODULE_LIST += \
-	$(STAPPLER_MODULE_DIR)/abi/abi.mk \
 	$(STAPPLER_MODULE_DIR)/core/core.mk \
 	$(STAPPLER_MODULE_DIR)/bitmap/bitmap.mk \
 	$(STAPPLER_MODULE_DIR)/data/data.mk \
@@ -50,4 +49,5 @@ TOOLKIT_MODULE_LIST += \
 	$(STAPPLER_MODULE_DIR)/makefile/makefile.mk \
 	$(STAPPLER_MODULE_DIR)/pug/pug.mk \
 	$(STAPPLER_MODULE_DIR)/document/document.mk \
-	$(STAPPLER_MODULE_DIR)/layout/layout.mk
+	$(STAPPLER_MODULE_DIR)/layout/layout.mk \
+	$(STAPPLER_MODULE_DIR)/experimental/abi/abi.mk

@@ -31,18 +31,22 @@
 #include <linux/futex.h>
 #endif
 
+// Available sinve 5.16
+static constexpr int sp_sys_futex_wake = 454;
+static constexpr int sp_sys_futex_wait = 455;
+
 namespace STAPPLER_VERSIONIZED stappler::event {
 
 // futex implementation based on https://github.com/eliben/code-for-blog/blob/main/2018/futex-basics/mutex-using-futex.cpp
 
 #ifdef SP_URING_THREAD_FENCE_HANDLE
 static long futex_wake(volatile uint32_t *uaddr, uint32_t bitset, int nr_wake, uint32_t flags) {
-	return syscall(SYS_futex_wake, uaddr, bitset, nr_wake, flags);
+	return syscall(sp_sys_futex_wake, uaddr, bitset, nr_wake, flags);
 }
 
 static long futex_wait(volatile uint32_t *uaddr, uint32_t val, uint32_t mask, uint32_t flags,
 		_linux_timespec *timespec, clockid_t clockid) {
-	return syscall(SYS_futex_wait, uaddr, val, mask, flags, timespec, clockid);
+	return syscall(sp_sys_futex_wait, uaddr, val, mask, flags, timespec, clockid);
 }
 
 static uint32_t atomicLoadSeq(volatile uint32_t *ptr) {
@@ -145,7 +149,7 @@ Status ThreadUringHandle::rearm(URingData *uring, ThreadUringSource *source, boo
 		}
 
 		if (init) {
-			source->thisThread = std::this_thread::get_id();
+			source->thisThread = thread::Thread::getCurrentThreadId();
 		}
 
 		if (!source->failsafe) {
@@ -153,7 +157,7 @@ Status ThreadUringHandle::rearm(URingData *uring, ThreadUringSource *source, boo
 		}
 
 		auto result = uring->pushSqe({IORING_OP_FUTEX_WAIT}, [&](io_uring_sqe *sqe, uint32_t n) {
-			sqe->fd = FUTEX2_SIZE_U32 | FUTEX2_PRIVATE;
+			sqe->fd = FutexImpl::FUTEX2_SIZE_U32 | FutexImpl::FUTEX2_PRIVATE;
 			sqe->futex_flags = 0;
 			sqe->len = 0;
 			sqe->addr = reinterpret_cast<uintptr_t>(source->futex.getAddr());
@@ -251,7 +255,7 @@ void ThreadUringHandle::notify(URingData *uring, ThreadUringSource *source,
 
 Status ThreadUringHandle::perform(Rc<thread::Task> &&task) {
 	auto source = reinterpret_cast<ThreadUringSource *>(_data);
-	if (std::this_thread::get_id() == source->thisThread) {
+	if (thread::Thread::getCurrentThreadId() == source->thisThread) {
 		// Ensure that server will be notified by setting SIGNAL flag.
 		// Other thread will issue FITEX_WAKE, if we fail to lock, so
 		// just add task into non-protected queue
@@ -274,7 +278,7 @@ Status ThreadUringHandle::perform(Rc<thread::Task> &&task) {
 
 Status ThreadUringHandle::perform(mem_std::Function<void()> &&func, Ref *target, StringView tag) {
 	auto source = reinterpret_cast<ThreadUringSource *>(_data);
-	if (std::this_thread::get_id() == source->thisThread) {
+	if (thread::Thread::getCurrentThreadId() == source->thisThread) {
 		// Ensure that server will be notified by setting SIGNAL flag.
 		// Other thread will issue FITEX_WAKE, if we fail to lock, so
 		// just add task into non-protected queue

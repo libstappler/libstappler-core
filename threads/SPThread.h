@@ -71,9 +71,29 @@ SP_DEFINE_ENUM_AS_MASK(ThreadFlags)
 /* Interface for thread workers or handlers */
 class SP_PUBLIC Thread : public Ref {
 public:
+	/*
+		For the static toolchain, an alternative thread implementation based on the stappler_abi module is used
+	*/
+#if STAPPLER_STATIC_TOOLCHAIN
+	struct Type {
+		void *threadPtr = nullptr;
+
+		void join();
+		void detach();
+	};
+	struct Id {
+		pthread_t self = 0;
+
+		auto operator<=>(const Id &) const = default;
+	};
+#else
+	using Type = std::thread;
+	using Id = std::thread::id;
+#endif
 	static void workerThread(Thread *tm);
 
 	static const Thread *getCurrentThread();
+	static Id getCurrentThreadId();
 
 	template <typename T>
 	static const T *findSpecificThread();
@@ -95,7 +115,7 @@ public:
 
 	virtual bool isRunning() const { return _running.load(); }
 
-	std::thread::id getThreadId() const { return _thisThreadId; }
+	Id getThreadId() const { return _thisThreadId; }
 
 	bool isOnThisThread() const;
 
@@ -108,8 +128,8 @@ protected:
 
 	const std::type_info *_type = nullptr;
 
-	std::thread _thisThread;
-	std::thread::id _thisThreadId;
+	Type _thisThread;
+	Id _thisThreadId;
 
 	std::atomic<bool> _running = false;
 	std::mutex _runningMutex;

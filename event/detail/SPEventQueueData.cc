@@ -338,7 +338,7 @@ QueueData::QueueData(QueueRef *ref, QueueFlags flags)
 : PerformEngine(ref->getPool())
 , _info(QueueHandleClassInfo{ref, this, ref->getPool()})
 , _flags(flags)
-, _threadId(std::this_thread::get_id()) {
+, _threadId(thread::Thread::getCurrentThreadId()) {
 	_pendingHandles.set_memory_persistent(true);
 	_suspendableHandles.set_memory_persistent(true);
 }

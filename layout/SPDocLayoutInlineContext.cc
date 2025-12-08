@@ -168,8 +168,8 @@ void InlineContext::finalize(LayoutBlock &l) {
 
 	for (auto &it : refPos) {
 		WideString text;
-		targetLabel->layout.str([&](char16_t ch) { text.push_back(ch); }, it.firstCharId,
-				it.lastCharId);
+		targetLabel->layout.str([&](char32_t ch) { unicode::utf16Encode(text, ch); },
+				it.firstCharId, it.lastCharId);
 		targetLabel->layout.getLabelRects([&](geom::Rect rect) {
 			l.objects.emplace_back(res->emplaceLink(l, rect, it.target, it.mode, text));
 		}, it.firstCharId, it.lastCharId, density, origin);

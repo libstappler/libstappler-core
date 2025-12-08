@@ -21,6 +21,7 @@
  **/
 
 #include "SPAbiLinuxElf.h"
+#include "SPAbiLinux.h"
 #include "SPPlatform.h"
 #include "SPAbiLinuxLoader.h"
 
@@ -51,6 +52,8 @@
 
 namespace STAPPLER_VERSIONIZED stappler::abi {
 
+static constexpr bool PRECOMPILE_DSO_FN = false;
+
 static constexpr int ARCH_SET_GS = 0x1001;
 static constexpr int ARCH_SET_FS = 0x1002;
 static constexpr int ARCH_GET_FS = 0x1003;
@@ -59,30 +62,12 @@ static constexpr int ARCH_GET_GS = 0x1004;
 static constexpr unsigned long HWCAP2_RING3MWAIT = 1 << 0;
 static constexpr unsigned long HWCAP2_FSGSBASE = 1 << 1;
 
-struct ThreadHeader_glibc_X86_64 {
-	void *tcb;
-	void *dtv;
-	void *self;
-	int multiple_threads;
-	int gscope_flag;
-	uintptr_t sysinfo;
-	uintptr_t stack_guard;
-	uintptr_t pointer_guard;
-	unsigned long int unused_vgetcpu_cache[2];
-	unsigned int feature_1;
-	int __glibc_unused1;
-	void *__private_tm[4];
-	void *__private_ss;
-	unsigned long long int ssp_base;
-} tcbhead_t;
-
 struct ElfTypeWrapper {
 	using Elf_long = unsigned long;
 #if __x86_64__
 	using Elf_Ehdr = Elf64_Ehdr;
 	using Elf_Phdr = Elf64_Phdr;
 	using Elf_auxv_t = Elf64_auxv_t;
-	using Thdr = ThreadHeader_glibc_X86_64;
 
 	static constexpr ElfClass LoaderClass = ELFCLASS64;
 	static constexpr ElfMachine LoaderMachine = ElfMachine::x86_64;
@@ -173,14 +158,15 @@ struct LinuxLoader : ElfTypeWrapper {
 	SharedRc<ElfFile> _platformInterp;
 
 	jmp_buf _jmpbuf;
-	Thdr *_tcb = nullptr;
-	void *(*z_dlopen)(const char *filename, int flags) = nullptr;
-	void *(*z_dlsym)(void *handle, const char *symbol) = nullptr;
-	int (*z_dlclose)(void *handle) = nullptr;
-	char *(*z_dlerror)(void) = nullptr;
 
-	void *(*z_allocate_tls)(void *) = nullptr;
-	void (*z_deallocate_tls)(void *tcb, bool dealloc_tcb) = nullptr;
+	DsoLoader dso;
+
+	void *z_libc = nullptr;
+
+	int (*z_pthread_create)(pthread_t *, const pthread_attr_t *, typeof(void *(void *)) *,
+			void *) = nullptr;
+	int (*z_pthread_join)(pthread_t, void **) = nullptr;
+	int (*z_pthread_detach)(pthread_t) = nullptr;
 
 	JitCompiler jitCompiler;
 
@@ -189,6 +175,13 @@ struct LinuxLoader : ElfTypeWrapper {
 
 	bool setup();
 } s_loader;
+
+enum class _ThreadFlags : uint32_t {
+	None = 0,
+	Joinable = 1 << 0,
+};
+
+SP_DEFINE_ENUM_AS_MASK(_ThreadFlags)
 
 static void _getTcbAddr(unsigned long *target) {
 #if __x86_64__
@@ -217,40 +210,33 @@ static void _setLoaderAddr(unsigned long target) {
 static void do_jump(void **p) {
 	// we now in foreign context
 
-	printf("do_jump: %p\n", p);
-	s_loader.z_dlopen = reinterpret_cast<decltype(s_loader.z_dlopen)>(p[0]);
-	s_loader.z_dlsym = reinterpret_cast<decltype(s_loader.z_dlsym)>(p[1]);
-	s_loader.z_dlclose = reinterpret_cast<decltype(s_loader.z_dlclose)>(p[2]);
-	s_loader.z_dlerror = reinterpret_cast<decltype(s_loader.z_dlerror)>(p[3]);
+	s_loader.dso.z_dlopen = reinterpret_cast<decltype(s_loader.dso.z_dlopen)>(p[0]);
+	s_loader.dso.z_dlsym = reinterpret_cast<decltype(s_loader.dso.z_dlsym)>(p[1]);
+	s_loader.dso.z_dlclose = reinterpret_cast<decltype(s_loader.dso.z_dlclose)>(p[2]);
+	s_loader.dso.z_dlerror = reinterpret_cast<decltype(s_loader.dso.z_dlerror)>(p[3]);
 
 	unsigned long fs = 0;
 	::syscall(SYS_arch_prctl, ARCH_GET_FS, &fs);
 
-	void *h = s_loader.z_dlopen("libc.so.6", RTLD_NOW);
+	s_loader.z_libc = s_loader.dso.z_dlopen("libc.so.6", RTLD_NOW);
 
-	s_loader.z_allocate_tls = reinterpret_cast<decltype(s_loader.z_allocate_tls)>(
-			s_loader.z_dlsym(h, "_dl_allocate_tls"));
+	s_loader.z_pthread_create = reinterpret_cast<decltype(s_loader.z_pthread_create)>(
+			s_loader.dso.z_dlsym(s_loader.z_libc, "pthread_create"));
 
-	s_loader.z_deallocate_tls = reinterpret_cast<decltype(s_loader.z_deallocate_tls)>(
-			s_loader.z_dlsym(h, "_dl_deallocate_tls"));
+	s_loader.z_pthread_join = reinterpret_cast<decltype(s_loader.z_pthread_join)>(
+			s_loader.dso.z_dlsym(s_loader.z_libc, "pthread_join"));
 
-	/*void *printfPtr = s_loader.z_dlsym(h, "printf");
-	auto _printf = (int (*)(const char *fmt, ...))printfPtr;
+	s_loader.z_pthread_detach = reinterpret_cast<decltype(s_loader.z_pthread_detach)>(
+			s_loader.dso.z_dlsym(s_loader.z_libc, "pthread_detach"));
 
-	printf("Handle of libc.so.6: %p\n", h);
-	printf("Next line is printed by the printf() from libc.so:\n\n");
-	_printf("Hello from the other side!\n");*/
-
-	auto pthreadSelfPtr = reinterpret_cast<void *(*)()>(s_loader.z_dlsym(h, "pthread_self"));
-	s_loader._tcb = reinterpret_cast<LinuxLoader::Thdr *>(pthreadSelfPtr());
-
-	//std::cout << (unsigned long)pthreadSelfPtr() << " " << fs << " " << s_loader._tcb << "\n";
+	auto h = s_loader.dso.z_dlopen("libxcb.so", RTLD_LAZY);
 
 	// read TCB from current interp
 	_getTcbAddr(&s_loader._header.foreignTcb);
 
 	// switch to our original context before return
 	_setTcbAddr(s_loader._header.originalTcb);
+
 	longjmp(s_loader._jmpbuf, 1);
 }
 
@@ -443,10 +429,21 @@ bool LinuxLoader::setup() {
 	// set GS to loader header
 	_setLoaderAddr(reinterpret_cast<uintptr_t>(&s_loader._header));
 
-	z_dlopen = jitCompiler.compileForeignCall(z_dlopen);
-	z_dlsym = jitCompiler.compileForeignCall(z_dlsym);
-	z_dlclose = jitCompiler.compileForeignCall(z_dlclose);
-	z_dlerror = jitCompiler.compileForeignCall(z_dlerror);
+	if constexpr (PRECOMPILE_DSO_FN) {
+		dso.z_dlopen = jitCompiler.compileForeignCall(dso.z_dlopen);
+		dso.z_dlsym = jitCompiler.compileForeignCall(dso.z_dlsym);
+		dso.z_dlclose = jitCompiler.compileForeignCall(dso.z_dlclose);
+		dso.z_dlerror = jitCompiler.compileForeignCall(dso.z_dlerror);
+	}
+
+	z_pthread_create = jitCompiler.compileForeignCall(z_pthread_create);
+	z_pthread_join = jitCompiler.compileForeignCall(z_pthread_join);
+	z_pthread_detach = jitCompiler.compileForeignCall(z_pthread_detach);
+
+	/*startForeignThread([](void *) -> void * {
+		printf("Other thread %ld\n", pthread_self());
+		return nullptr;
+	}, nullptr, 0);*/
 
 	return true;
 }
@@ -634,7 +631,7 @@ bool startLinuxLoader(int argc, const char *procArgv[]) {
 	}
 
 	// Loader should be ready, check if it has all needed functions
-	if (s_loader.z_dlopen && s_loader.z_dlclose && s_loader.z_dlsym) {
+	if (s_loader.dso.z_dlopen && s_loader.dso.z_dlclose && s_loader.dso.z_dlsym) {
 		if (s_loader.setup()) {
 			return true;
 		}
@@ -692,12 +689,12 @@ static auto ERROR_NO_FOREIGN_MEM =
 		"stappler-abi: LinuxLoader fail to allocate memory for ForeignDso";
 
 ForeignDso *openForeign(StringView name, DsoFlags flags, const char **err) {
-	if (!s_loader.z_dlopen) {
+	if (!s_loader.dso.z_dlopen) {
 		*err = ERROR_LOADER_INVALID;
 	}
 
 	if (hasFlag(flags, DsoFlags::Self) || name.empty()) {
-		*err = ERROR_LOADER_INVALID;
+		*err = ERROR_NO_SELF;
 		return nullptr;
 	}
 
@@ -709,10 +706,16 @@ ForeignDso *openForeign(StringView name, DsoFlags flags, const char **err) {
 		f |= RTLD_GLOBAL;
 	}
 
-	auto handle = s_loader.z_dlopen(
-			name.terminated() ? name.data() : name.str<memory::StandartInterface>().data(), f);
+	auto path = name.str<memory::StandartInterface>();
+
+	_setTcbAddr(s_loader._header.foreignTcb);
+
+	auto handle = s_loader.dso.z_dlopen(path.data(), RTLD_NOW);
+
+	_setTcbAddr(s_loader._header.originalTcb);
+
 	if (!handle) {
-		*err = s_loader.z_dlerror();
+		*err = s_loader.dso.z_dlerror();
 		return nullptr;
 	}
 
@@ -728,21 +731,129 @@ ForeignDso *openForeign(StringView name, DsoFlags flags, const char **err) {
 void closeForeign(DsoFlags flags, ForeignDso *handle) { ForeignDso::close(handle); }
 
 void *symForeign(ForeignDso *h, StringView name, DsoSymFlags flags, const char **err) {
-	auto sym = s_loader.z_dlsym(h->handle,
+	auto sym = s_loader.dso.z_dlsym(h->handle,
 			name.terminated() ? name.data() : name.str<memory::StandartInterface>().data());
 	if (sym) {
 		if (hasFlag(flags, DsoSymFlags::Executable)) {
-			// compile foreign call
 			sym = h->compiler.compileForeignCall(sym);
 		}
 		return sym;
 	}
 
-	*err = s_loader.z_dlerror();
+	*err = s_loader.dso.z_dlerror();
 	return nullptr;
 }
 
-void initForeignThread(memory::pool_t *, NotNull<thread::Thread>) { }
-void disposeForeignThread(memory::pool_t *, NotNull<thread::Thread>) { }
+struct ThreadHeader {
+	LoaderHeader header;
+	pthread_t preparedThread;
+	pthread_t foreignThread;
+
+	void *(*cb)(void *) = nullptr;
+	void *arg = nullptr;
+};
+
+static void *_start_thread(void *arg) {
+	auto header = reinterpret_cast<ThreadHeader *>(arg);
+
+	_setLoaderAddr(reinterpret_cast<uintptr_t>(&header->header));
+
+	_getTcbAddr(&header->header.foreignTcb);
+	_setTcbAddr(header->header.originalTcb);
+
+	__sp_pthread_initialize(header->preparedThread, gettid());
+
+	auto result = header->cb(header->arg);
+
+	// header can be unmapped by finalizer, preserve foreign TCB
+	auto foreignTcb = header->header.foreignTcb;
+
+	__sp_pthread_finalize(header->preparedThread, (void *)SP_MAGIC);
+
+	// before exit, set TCB to foreign to successfully exit
+	// after return, we will be in foreign libc finalization code
+	_setTcbAddr(foreignTcb);
+
+	// disable loader for this thread
+	_setLoaderAddr(0);
+	return result;
+}
+
+pthread_t startForeignThread(void *(*cb)(void *), void *arg, uint32_t f) {
+	unsigned long tcb = 0;
+	sigset_t sig;
+	pthread_t preparedThread;
+	_ThreadFlags flags = _ThreadFlags(f);
+
+	auto dState = hasFlag(flags, _ThreadFlags::Joinable) ? PTHREAD_CREATE_JOINABLE
+														 : PTHREAD_CREATE_DETACHED;
+
+	if (__sp_pthread_prepare(&preparedThread, &sig, &tcb, dState) != 0) {
+		return pthread_t(0);
+	}
+
+	void *headerLocation = nullptr;
+	if (__sp_pthread_get_header(preparedThread, &headerLocation) != 0) {
+		__sp_pthread_cancel(preparedThread, &sig);
+		return pthread_t(0);
+	}
+
+	auto header = new (headerLocation) ThreadHeader;
+	header->header.originalTcb = tcb;
+	header->header.root = &s_loader;
+	header->preparedThread = preparedThread;
+	header->cb = cb;
+	header->arg = arg;
+
+	if (s_loader.z_pthread_create(&header->foreignThread, nullptr, _start_thread, header) != 0) {
+		__sp_pthread_cancel(preparedThread, &sig);
+	}
+
+	__sp_pthread_attach(preparedThread, &sig, 0);
+
+	return preparedThread;
+}
+
+void *joinForeignThread(pthread_t preparedThread) {
+	void *result = nullptr;
+	void *headerLocation = nullptr;
+	if (__sp_pthread_is_attached(preparedThread)
+			|| __sp_pthread_get_header(preparedThread, &headerLocation) != 0) {
+		perror("Only attached foreign threads can be joined with joinForeignThread");
+		abort();
+		return nullptr;
+	}
+
+	auto header = reinterpret_cast<ThreadHeader *>(headerLocation);
+
+	// first - join foreign thread, from which we receive result
+	header->header.root->z_pthread_join(header->foreignThread, &result);
+
+	// then - join our thread to correctly destroy it's TCB and pseudostack
+	pthread_join(header->preparedThread, nullptr);
+
+	return result;
+}
+
+void detachForeignThread(pthread_t preparedThread) {
+	void *headerLocation = nullptr;
+	if (__sp_pthread_is_attached(preparedThread)
+			|| __sp_pthread_get_header(preparedThread, &headerLocation) != 0) {
+		perror("Only attached foreign threads can be joined with detachForeignThread");
+		abort();
+		return;
+	}
+
+	auto header = reinterpret_cast<ThreadHeader *>(headerLocation);
+
+	// preserve foreign thread address, becouse detach can destroy header
+	auto foreignThread = header->foreignThread;
+
+	// by first - detach out thread, as it's virtually noop (but do not use header after this)
+	pthread_detach(header->preparedThread);
+
+	// then detach actual foreign thread
+	s_loader.z_pthread_detach(foreignThread);
+}
 
 } // namespace stappler::abi

@@ -20,8 +20,8 @@
  THE SOFTWARE.
  **/
 
-#ifndef CORE_ABI_SPABILINUXELF_H_
-#define CORE_ABI_SPABILINUXELF_H_
+#ifndef CORE_ABI_LINUX_SPABILINUXELF_H_
+#define CORE_ABI_LINUX_SPABILINUXELF_H_
 
 #include "SPBytesView.h" // IWYU pragma: keep
 #include "SPFilesystem.h"
@@ -425,4 +425,4 @@ protected:
 
 } // namespace stappler::abi
 
-#endif // CORE_ABI_SPABILINUXELF_H_
+#endif // CORE_ABI_LINUX_SPABILINUXELF_H_

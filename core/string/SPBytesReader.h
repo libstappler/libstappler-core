@@ -118,6 +118,9 @@ public:
 	template <typename Comparator = BytesComparator>
 	bool starts_with(const CharType *d) const;
 
+	template <size_t Count, typename Comparator = BytesComparator>
+	bool starts_with(const CharType d[Count]) const;
+
 	bool starts_with(CharType c) const { return is(c); }
 
 	template <typename Comparator = BytesComparator>
@@ -130,6 +133,9 @@ public:
 
 	template <typename Comparator = BytesComparator>
 	bool ends_with(const CharType *d) const;
+
+	template <size_t Count, typename Comparator = BytesComparator>
+	bool ends_with(const CharType d[Count]) const;
 
 	bool ends_with(CharType c) const { return len > 0 && ptr[len - 1] == c; }
 

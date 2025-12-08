@@ -111,7 +111,7 @@ struct SP_PUBLIC QueueData : public PerformEngine {
 	ThreadCallback _thread = nullptr;
 	ListenHandleCallback _listenHandle = nullptr;
 
-	std::thread::id _threadId;
+	thread::Thread::Id _threadId;
 
 	NativeHandle _handle = NativeHandle(0);
 

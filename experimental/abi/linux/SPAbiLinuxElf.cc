@@ -58,7 +58,7 @@ bool ElfFile::init(const FileInfo &filePath) {
 bool ElfFile::init(BytesView data, bool dup) {
 	static constexpr uint8_t s_elfSig[] = {0x7f, 'E', 'L', 'F'};
 
-	if (data.size() < 64 || !data.starts_with(s_elfSig)) {
+	if (data.size() < 64 || !data.starts_with<sizeof(s_elfSig)>(s_elfSig)) {
 		slog().error("ElfFile", "Fail to opex file: invalid magic bytes");
 		return false;
 	}

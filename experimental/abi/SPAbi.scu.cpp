@@ -23,7 +23,6 @@ THE SOFTWARE.
 #include "SPCommon.h"
 
 #if linux
-#include "linux/SPAbiLinuxIcu.cc"
 #include "linux/SPAbiLinuxElf.cc"
 #include "linux/SPAbiLinuxLoader.cc"
 #endif
@@ -111,21 +110,19 @@ void *sym(void *handle, StringView name, DsoSymFlags flags, const char **err) {
 	return nullptr;
 }
 
-void initThread(memory::pool_t *pool, NotNull<thread::Thread> thread) {
-	if (s_hasLoader) {
-		initForeignThread(pool, thread);
-	}
+void *createThread(void (*cb)(thread::Thread *), thread::Thread *thread, uint32_t flags) {
+	return reinterpret_cast<void *>(
+			startForeignThread(reinterpret_cast<void *(*)(void *)>(cb), thread, flags));
 }
 
-void disposeThread(memory::pool_t *pool, NotNull<thread::Thread> thread) {
-	if (s_hasLoader) {
-		disposeForeignThread(pool, thread);
-	}
-}
+void *joinThread(void *thread) { return joinForeignThread(reinterpret_cast<pthread_t>(thread)); }
+
+void detachThread(void *thread) { detachForeignThread(reinterpret_cast<pthread_t>(thread)); }
 
 static SharedSymbol s_abiSharedSymbols[] = {
-	SharedSymbol("initThread", &initThread),
-	SharedSymbol("disposeThread", &disposeThread),
+	SharedSymbol("createThread", &createThread),
+	SharedSymbol("joinThread", &joinThread),
+	SharedSymbol("detachThread", &detachThread),
 };
 
 SP_USED static SharedModule s_abiSharedModule(buildconfig::MODULE_STAPPLER_ABI_NAME,

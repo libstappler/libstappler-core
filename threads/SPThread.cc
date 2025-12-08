@@ -50,14 +50,6 @@ static void ThreadCallbacks_init(const ThreadCallbacks &cb, Thread *tm) {
 	tl_threadInfo.threadAlloc = memory::allocator::create();
 	tl_threadInfo.threadPool = memory::pool::create(tl_threadInfo.threadAlloc);
 
-#ifdef MODULE_STAPPLER_ABI
-	auto init = SharedModule::acquireTypedSymbol<decltype(&abi::initThread)>(
-			buildconfig::MODULE_STAPPLER_ABI_NAME, "initThread");
-	if (init) {
-		init(tl_threadInfo.threadPool, tm);
-	}
-#endif
-
 	tl_threadInfo.workerPool = memory::pool::create(tl_threadInfo.threadPool);
 
 	memory::perform([&] {
@@ -82,14 +74,6 @@ static void ThreadCallbacks_dispose(const ThreadCallbacks &cb, Thread *tm) {
 	}, tl_threadInfo.threadPool);
 
 	memory::pool::destroy(tl_threadInfo.workerPool);
-
-#ifdef MODULE_STAPPLER_ABI
-	auto dispose = SharedModule::acquireTypedSymbol<decltype(&abi::disposeThread)>(
-			buildconfig::MODULE_STAPPLER_ABI_NAME, "disposeThread");
-	if (dispose) {
-		dispose(tl_threadInfo.threadPool, tm);
-	}
-#endif
 
 	memory::pool::destroy(tl_threadInfo.threadPool);
 	memory::allocator::destroy(tl_threadInfo.threadAlloc);
@@ -143,8 +127,34 @@ void Thread::workerThread(Thread *tm) {
 
 const Thread *Thread::getCurrentThread() { return tl_owner; }
 
+#if STAPPLER_STATIC_TOOLCHAIN
+
+void Thread::Type::detach() {
+	auto detachThread = SharedModule::acquireTypedSymbol<decltype(&abi::detachThread)>(
+			buildconfig::MODULE_STAPPLER_ABI_NAME, "detachThread");
+	if (detachThread) {
+		detachThread(threadPtr);
+	}
+}
+
+void Thread::Type::join() {
+	auto joinThread = SharedModule::acquireTypedSymbol<decltype(&abi::joinThread)>(
+			buildconfig::MODULE_STAPPLER_ABI_NAME, "joinThread");
+	if (joinThread) {
+		joinThread(threadPtr);
+	}
+}
+
+Thread::Id Thread::getCurrentThreadId() { return Id{pthread_self()}; }
+
+#else
+
+Thread::Id Thread::getCurrentThreadId() { return std::this_thread::get_id(); }
+
+#endif
+
 Thread::~Thread() {
-	if (std::this_thread::get_id() == _thisThreadId) {
+	if (getCurrentThreadId() == _thisThreadId) {
 		_thisThread.detach();
 		return;
 	}
@@ -165,7 +175,18 @@ bool Thread::run(ThreadFlags flags) {
 	_type = &(typeid(*this));
 	_continueExecution.test_and_set();
 	_parentThread = getCurrentThread();
+#if STAPPLER_STATIC_TOOLCHAIN
+	auto createThread = SharedModule::acquireTypedSymbol<decltype(&abi::createThread)>(
+			buildconfig::MODULE_STAPPLER_ABI_NAME, "createThread");
+	if (createThread) {
+		_thisThread = Type{createThread(Thread::workerThread, this, toInt(flags))};
+		if (!_thisThread.threadPtr) {
+			return false;
+		}
+	}
+#else
 	_thisThread = std::thread(Thread::workerThread, this);
+#endif
 	if ((flags & ThreadFlags::Joinable) == ThreadFlags::None) {
 		_thisThread.detach();
 	}
@@ -193,7 +214,7 @@ void Thread::waitStopped() {
 }
 
 void Thread::threadInit() {
-	_thisThreadId = std::this_thread::get_id();
+	_thisThreadId = getCurrentThreadId();
 
 	std::unique_lock lock(_runningMutex);
 	_running.store(true);
@@ -204,6 +225,6 @@ void Thread::threadDispose() { }
 
 bool Thread::worker() { return performWorkload() && _continueExecution.test_and_set(); }
 
-bool Thread::isOnThisThread() const { return _thisThreadId == std::this_thread::get_id(); }
+bool Thread::isOnThisThread() const { return _thisThreadId == getCurrentThreadId(); }
 
 } // namespace stappler::thread

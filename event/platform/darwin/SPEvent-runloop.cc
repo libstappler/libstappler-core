@@ -195,7 +195,7 @@ Status RunLoopData::wakeup(WakeupFlags flags) {
 
 void RunLoopData::cancel() {
 	// we do not need to explicitly stop RunContext, if we on main thread, and we don't have one
-	if (_data->_threadId != std::this_thread::get_id() || _runContext) {
+	if (_data->_threadId != thread::Thread::getCurrentThreadId() || _runContext) {
 		auto refId = _queue->retain();
 		CFRunLoopPerformBlock(_runLoop, kCFRunLoopCommonModes, ^{
 		  stopRootContext(WakeupFlags::ContextDefault, true);

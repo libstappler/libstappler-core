@@ -25,6 +25,7 @@
 #define CORE_EVENT_SPEVENTQUEUE_H_
 
 #include "SPEvent.h"
+#include "SPThread.h"
 #include "SPThreadTask.h"
 
 namespace STAPPLER_VERSIONIZED stappler::event {
@@ -177,7 +178,7 @@ public:
 	using PoolObject::PoolObject;
 
 protected:
-	std::thread::id _ownerThread;
+	thread::Thread::Id _ownerThread;
 	Data *_data = nullptr;
 };
 

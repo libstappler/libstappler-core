@@ -31,12 +31,13 @@ LOCAL_MODULES := \
 	stappler_data \
 	stappler_makefile \
 	stappler_network \
-	stappler_layout
+	stappler_layout \
+	stappler_event
 
 LOCAL_SRCS_DIRS := src
 LOCAL_INCLUDES_DIRS := src
 
-#LOCAL_USE_INTERNAL_TOOLCHAIN := 1
+LOCAL_USE_INTERNAL_TOOLCHAIN := 1
 
 LOCAL_MAIN := main.cpp
 
