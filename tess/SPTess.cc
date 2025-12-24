@@ -365,7 +365,7 @@ bool Tesselator::prepare(TessResult &res) {
 				auto e = it->_edge;
 				do {
 					auto edge = e->getEdge();
-					SPASSERT(!edge->invalidated,
+					sprt_passert(!edge->invalidated,
 							"Tess: failed: edge was invalidated but still in use");
 					edge->direction = nan();
 					edge->node = nullptr;
@@ -2391,7 +2391,7 @@ void Tesselator::Data::displaceBoundary(FaceEdge *edge) {
 		if (edge->_next->_vertex) {
 			edge->_next->_vertex->relocate(
 					Vec2(v1.x - result.z * insetMod, v1.y - result.w * insetMod));
-			SPASSERT(!std::isnan(edge->_next->_vertex->_origin.x)
+			sprt_passert(!std::isnan(edge->_next->_vertex->_origin.x)
 							&& !std::isnan(edge->_next->_vertex->_origin.y),
 					"Tess: displaced vertex is NaN");
 		}

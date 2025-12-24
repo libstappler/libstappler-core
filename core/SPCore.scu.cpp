@@ -47,12 +47,10 @@ THE SOFTWARE.
 #include "SPDso.cc"
 #include "SPSharedModule.cc"
 
-#include "platform/SPCore-posix.cc"
-#include "platform/SPCore-linux.cc"
-#include "platform/SPCore-android.cc"
+#include "platform/SPCoreRuntime.cc"
+
 #include "platform/SPCore-win32.cc"
 #include "platform/SPCore-darwin.cc"
-#include "platform/SPJni.cc"
 
 #include "SPUrl.cc"
 #include "SPValid.cc"
@@ -64,6 +62,7 @@ THE SOFTWARE.
 #include "SPIdnTld.cc"
 
 #include "SPMetastring.h"
+#include "SPRuntimePlatform.h"
 
 #if LINUX
 #ifdef MODULE_STAPPLER_ABI
@@ -74,13 +73,6 @@ THE SOFTWARE.
 #include <list>
 
 #define STAPPLER_VERSION_VARIANT 0
-
-namespace STAPPLER_VERSIONIZED stappler::platform {
-
-bool initialize(int &resultCode);
-void terminate();
-
-} // namespace stappler::platform
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -120,7 +112,7 @@ bool initialize(int argc, const char *argv[], int &resultCode) {
 
 	memory::pool::push(pool);
 
-	if (!platform::initialize(resultCode)) {
+	if (!sprt::initialize(resultCode)) {
 		memory::pool::pop(pool, nullptr);
 		return false;
 	}
@@ -143,7 +135,7 @@ void terminate() {
 
 	m.list.clear();
 
-	platform::terminate();
+	sprt::terminate();
 
 	memory::pool::pop(m.pool, nullptr);
 	memory::pool::terminate();
@@ -237,6 +229,5 @@ uint32_t getAppconfigVersionBuild() {
 	}
 	return 0;
 }
-
 
 } // namespace STAPPLER_VERSIONIZED stappler

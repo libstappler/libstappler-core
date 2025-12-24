@@ -30,21 +30,21 @@ THE SOFTWARE.
 namespace STAPPLER_VERSIONIZED stappler::data::cbor {
 
 enum class MajorType : uint8_t {
-	Unsigned	= 0,
-	Negative	= 1,
-	ByteString	= 2,
-	CharString	= 3,
-	Array		= 4,
-	Map			= 5,
-	Tag			= 6,
-	Simple		= 7
+	Unsigned = 0,
+	Negative = 1,
+	ByteString = 2,
+	CharString = 3,
+	Array = 4,
+	Map = 5,
+	Tag = 6,
+	Simple = 7
 };
 
 enum class SimpleValue : uint8_t {
-	False				= 20,
-	True				= 21,
-	Null				= 22,
-	Undefined			= 23,
+	False = 20,
+	True = 21,
+	Null = 22,
+	Undefined = 23,
 };
 
 enum class Flags : uint8_t {
@@ -77,19 +77,19 @@ enum class Flags : uint8_t {
 };
 
 enum class MajorTypeEncoded : uint8_t {
-	Unsigned	= toInt(MajorType::Unsigned) << toInt(Flags::MajorTypeShift),
-	Negative	= toInt(MajorType::Negative) << toInt(Flags::MajorTypeShift),
-	ByteString	= toInt(MajorType::ByteString) << toInt(Flags::MajorTypeShift),
-	CharString	= toInt(MajorType::CharString) << toInt(Flags::MajorTypeShift),
-	Array		= toInt(MajorType::Array) << toInt(Flags::MajorTypeShift),
-	Map			= toInt(MajorType::Map) << toInt(Flags::MajorTypeShift),
-	Tag			= toInt(MajorType::Tag) << toInt(Flags::MajorTypeShift),
-	Simple		= toInt(MajorType::Simple) << toInt(Flags::MajorTypeShift)
+	Unsigned = toInt(MajorType::Unsigned) << toInt(Flags::MajorTypeShift),
+	Negative = toInt(MajorType::Negative) << toInt(Flags::MajorTypeShift),
+	ByteString = toInt(MajorType::ByteString) << toInt(Flags::MajorTypeShift),
+	CharString = toInt(MajorType::CharString) << toInt(Flags::MajorTypeShift),
+	Array = toInt(MajorType::Array) << toInt(Flags::MajorTypeShift),
+	Map = toInt(MajorType::Map) << toInt(Flags::MajorTypeShift),
+	Tag = toInt(MajorType::Tag) << toInt(Flags::MajorTypeShift),
+	Simple = toInt(MajorType::Simple) << toInt(Flags::MajorTypeShift)
 };
 
 enum class Tag : uint16_t {
-	DateTime = 0,	// string - Standard date/time string
-	EpochTime = 1,	// multiple - Epoch-based date/time
+	DateTime = 0, // string - Standard date/time string
+	EpochTime = 1, // multiple - Epoch-based date/time
 	PositiveBignum = 2, // byte string
 	NegativeBignum = 3, // byte string
 	DecimalFraction = 4, // array - Decimal fraction;
@@ -106,7 +106,8 @@ enum class Tag : uint16_t {
 	SerializedPerl = 26, // array - Serialised Perl object with classname and constructor arguments
 	// [http://cbor.schmorp.de/perl-object][Marc_A._Lehmann]
 
-	SerializedObject = 27, // array - Serialised language-independent object with type name and constructor arguments
+	SerializedObject =
+			27, // array - Serialised language-independent object with type name and constructor arguments
 	// [http://cbor.schmorp.de/generic-object][Marc_A._Lehmann]
 
 	SharedValue = 28, // multiple - mark value as (potentially) shared
@@ -128,8 +129,10 @@ enum class Tag : uint16_t {
 	BinaryUuid = 37, // byte string - Binary UUID [RFC4122] section 4.1.2;
 	// [https://github.com/lucas-clemente/cbor-specs/blob/master/uuid.md][Lucas_Clemente]
 
-	LanguageTaggedString = 38, // byte string - [http://peteroupc.github.io/CBOR/langtags.html][Peter_Occil]
-	Identifier = 39, // multiple - [https://github.com/lucas-clemente/cbor-specs/blob/master/id.md][Lucas_Clemente]
+	LanguageTaggedString =
+			38, // byte string - [http://peteroupc.github.io/CBOR/langtags.html][Peter_Occil]
+	Identifier =
+			39, // multiple - [https://github.com/lucas-clemente/cbor-specs/blob/master/id.md][Lucas_Clemente]
 
 	/* 40-255 - Unassigned */
 
@@ -147,33 +150,33 @@ enum class Tag : uint16_t {
 	// [http://peteroupc.github.io/CBOR/bigfrac.html][Peter_Occil]
 
 	/* 266-22097 - Unassigned */
-	HintIndirection = 22098, // multiple - hint that indicates an additional level of indirection
+	HintIndirection = 22'098, // multiple - hint that indicates an additional level of indirection
 	// [http://cbor.schmorp.de/indirection][Marc_A._Lehmann]
 
 	/* 22099-55798 - Unassigned */
 
-	CborMagick = 55799, // multiple - Self-describe CBOR;
+	CborMagick = 55'799, // multiple - Self-describe CBOR;
 	/* 55800-18446744073709551615 - Unassigned */
 };
 
-constexpr MajorTypeEncoded operator << (MajorType t, Flags f) {
+constexpr MajorTypeEncoded operator<<(MajorType t, Flags f) {
 	return MajorTypeEncoded(toInt(t) << toInt(f));
 }
 
-constexpr bool operator == (uint8_t v, MajorTypeEncoded enc) {
+constexpr bool operator==(uint8_t v, MajorTypeEncoded enc) {
 	return (v & toInt(Flags::MajorTypeMaskEncoded)) == toInt(enc);
 }
 
-constexpr bool operator == (uint8_t v, MajorType t) {
+constexpr bool operator==(uint8_t v, MajorType t) {
 	return (v & toInt(Flags::MajorTypeMaskEncoded)) == (t << Flags::MajorTypeShift);
 }
 
-constexpr bool operator == (uint8_t v, Flags f) {
+constexpr bool operator==(uint8_t v, Flags f) {
 	return (v & toInt(Flags::AdditionalInfoMask)) == (toInt(f));
 }
 
 constexpr MajorType type(uint8_t v) {
-	switch (MajorTypeEncoded(v & 0b11100000)) {
+	switch (MajorTypeEncoded(v & 0b1110'0000)) {
 	case MajorTypeEncoded::Unsigned: return MajorType::Unsigned; break;
 	case MajorTypeEncoded::Negative: return MajorType::Negative; break;
 	case MajorTypeEncoded::ByteString: return MajorType::ByteString; break;
@@ -186,13 +189,9 @@ constexpr MajorType type(uint8_t v) {
 	return MajorType::Unsigned;
 }
 
-constexpr uint8_t data(uint8_t v) {
-	return v & toInt(Flags::AdditionalInfoMask);
-}
+constexpr uint8_t data(uint8_t v) { return v & toInt(Flags::AdditionalInfoMask); }
 
-constexpr Flags flags(uint8_t v) {
-	return Flags(v & toInt(Flags::AdditionalInfoMask));
-}
+constexpr Flags flags(uint8_t v) { return Flags(v & toInt(Flags::AdditionalInfoMask)); }
 
 // writer: some class with implementation of:
 //  emplace(uint8_t byte)
@@ -231,17 +230,20 @@ inline void _writeInt(Writer &w, uint64_t value, MajorTypeEncoded type) {
 
 template <class Writer>
 inline void _writeFloatNaN(Writer &w) {
-	_writeNumeric(w, halffloat::nan(), MajorTypeEncoded::Simple, Flags::AdditionalFloat16Bit);  // write nan from IEEE 754
+	_writeNumeric(w, halffloat::nan(), MajorTypeEncoded::Simple,
+			Flags::AdditionalFloat16Bit); // write nan from IEEE 754
 }
 
 template <class Writer>
 inline void _writeFloatPositiveInf(Writer &w) {
-	_writeNumeric(w, halffloat::posinf(), MajorTypeEncoded::Simple, Flags::AdditionalFloat16Bit);  // write +inf from IEEE 754
+	_writeNumeric(w, halffloat::posinf(), MajorTypeEncoded::Simple,
+			Flags::AdditionalFloat16Bit); // write +inf from IEEE 754
 }
 
 template <class Writer>
 inline void _writeFloatNegativeInf(Writer &w) {
-	_writeNumeric(w, halffloat::neginf(), MajorTypeEncoded::Simple, Flags::AdditionalFloat16Bit);  // write -inf from IEEE 754
+	_writeNumeric(w, halffloat::neginf(), MajorTypeEncoded::Simple,
+			Flags::AdditionalFloat16Bit); // write -inf from IEEE 754
 }
 
 template <class Writer>
@@ -276,7 +278,8 @@ inline void _writeNull(Writer &w, nullptr_t = nullptr) {
 
 template <class Writer>
 inline void _writeBool(Writer &w, bool value) {
-	w.emplace(toInt(MajorTypeEncoded::Simple) | toInt(value ? SimpleValue::True : SimpleValue::False));
+	w.emplace(toInt(MajorTypeEncoded::Simple)
+			| toInt(value ? SimpleValue::True : SimpleValue::False));
 }
 
 template <class Writer>
@@ -301,7 +304,7 @@ inline void _writeFloat(Writer &w, double value) {
 		_writeFloatNaN(w);
 	} else if (value == NumericLimits<double>::infinity()) {
 		_writeFloatPositiveInf(w);
-	} else if (value == - NumericLimits<double>::infinity()) {
+	} else if (value == -NumericLimits<double>::infinity()) {
 		_writeFloatNegativeInf(w);
 	} else if (fvalue == value) { // 32 bits is enough and we aren't NaN
 		union {
@@ -313,7 +316,7 @@ inline void _writeFloat(Writer &w, double value) {
 		if ((u32.u & 0x1FFF) == 0) { // worth trying half
 			int s16 = (u32.u >> 16) & 0x8000;
 			int exp = (u32.u >> 23) & 0xff;
-			int mant = u32.u & 0x7fffff;
+			int mant = u32.u & 0x7f'ffff;
 			if (exp == 0 && mant == 0) {
 				; // 0.0, -0.0
 			} else if (exp >= 113 && exp <= 142) { // normalized
@@ -323,7 +326,7 @@ inline void _writeFloat(Writer &w, double value) {
 					_writeFloat32(w, fvalue);
 					return;
 				}
-				s16 += ((mant + 0x800000) >> (126 - exp));
+				s16 += ((mant + 0x80'0000) >> (126 - exp));
 			} else if (exp == 255 && mant == 0) { // Inf
 				s16 += 0x7c00;
 			} else {
@@ -335,7 +338,7 @@ inline void _writeFloat(Writer &w, double value) {
 		} else {
 			_writeFloat32(w, fvalue);
 		}
-	} else  {
+	} else {
 		_writeFloat64(w, value);
 	}
 }
@@ -381,10 +384,11 @@ inline uint64_t _readIntValue(BytesViewTemplate<Endian::Network> &r, uint8_t typ
 
 inline int64_t _readInt(BytesViewTemplate<Endian::Network> &r) {
 	uint8_t type = r.readUnsigned();
-	MajorTypeEncoded majorType = (MajorTypeEncoded)(type & toInt(Flags::MajorTypeMaskEncoded));;
+	MajorTypeEncoded majorType = (MajorTypeEncoded)(type & toInt(Flags::MajorTypeMaskEncoded));
+	;
 	type = type & toInt(Flags::AdditionalInfoMask);
 
-	switch(majorType) {
+	switch (majorType) {
 	case MajorTypeEncoded::Unsigned: return _readIntValue(r, type); break;
 	case MajorTypeEncoded::Negative: return (-1 - _readIntValue(r, type)); break;
 	default: break;
@@ -394,13 +398,12 @@ inline int64_t _readInt(BytesViewTemplate<Endian::Network> &r) {
 
 inline double _readNumber(BytesViewTemplate<Endian::Network> &r) {
 	uint8_t type = r.readUnsigned();
-	MajorTypeEncoded majorType = (MajorTypeEncoded)(type & toInt(Flags::MajorTypeMaskEncoded));;
+	MajorTypeEncoded majorType = (MajorTypeEncoded)(type & toInt(Flags::MajorTypeMaskEncoded));
+	;
 	type = type & toInt(Flags::AdditionalInfoMask);
 
-	switch(majorType) {
-	case MajorTypeEncoded::Unsigned:
-		return _readIntValue(r, type);
-		break;
+	switch (majorType) {
+	case MajorTypeEncoded::Unsigned: return _readIntValue(r, type); break;
 	case MajorTypeEncoded::Negative:
 		return (-1 - static_cast<int64_t>(_readIntValue(r, type)));
 		break;
@@ -418,6 +421,6 @@ inline double _readNumber(BytesViewTemplate<Endian::Network> &r) {
 	return 0.0;
 }
 
-}
+} // namespace stappler::data::cbor
 
 #endif /* STAPPLER_DATA_SPDATACBOR_H_ */

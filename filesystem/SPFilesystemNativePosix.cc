@@ -23,8 +23,14 @@ THE SOFTWARE.
 
 #include "SPCore.h"
 #include "SPFilesystem.h"
-#include "SPPlatformUnistd.h"
 #include "SPStatus.h"
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <utime.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #ifndef WIN32
 
@@ -156,7 +162,7 @@ Status remove_fn(StringView path) {
 	if (::remove(SP_TERMINATED_DATA(path)) == 0) {
 		return Status::Ok;
 	}
-	return status::errnoToStatus(errno);
+	return sprt::status::errnoToStatus(errno);
 }
 
 Status unlink_fn(StringView path) {
@@ -169,7 +175,7 @@ Status unlink_fn(StringView path) {
 	if (::unlink(SP_TERMINATED_DATA(path)) == 0) {
 		return Status::Ok;
 	}
-	return status::errnoToStatus(errno);
+	return sprt::status::errnoToStatus(errno);
 }
 
 Status mkdir_fn(StringView path, ProtFlags flags) {
@@ -183,7 +189,7 @@ Status mkdir_fn(StringView path, ProtFlags flags) {
 	if (::mkdir(SP_TERMINATED_DATA(path), getModeFormProtFlags(flags)) == 0) {
 		ret = Status::Ok;
 	} else {
-		ret = status::errnoToStatus(errno);
+		ret = sprt::status::errnoToStatus(errno);
 	}
 	return ret;
 }
@@ -234,7 +240,7 @@ Status access_fn(StringView path, Access mode) {
 	if (hasFlag(mode, Access::Empty) && errno == ENOENT) {
 		return Status::Ok;
 	}
-	return status::errnoToStatus(errno);
+	return sprt::status::errnoToStatus(errno);
 }
 
 Status stat_fn(StringView path, Stat &stat) {
@@ -271,19 +277,13 @@ Status stat_fn(StringView path, Stat &stat) {
 		stat.user = s.st_uid;
 		stat.group = s.st_gid;
 
-#if LINUX || ANDROID
-		stat.atime = Time::microseconds(s.st_atime * 1'000'000 + s.st_atim.tv_nsec / 1'000);
-		stat.ctime = Time::microseconds(s.st_ctime * 1'000'000 + s.st_ctim.tv_nsec / 1'000);
-		stat.mtime = Time::microseconds(s.st_mtime * 1'000'000 + s.st_mtim.tv_nsec / 1'000);
-#else
-		// some fruit systems just made by assholes
-		stat.atime = Time::seconds(s.st_atime);
-		stat.ctime = Time::seconds(s.st_ctime);
-		stat.mtime = Time::seconds(s.st_mtime);
-#endif
+		stat.atime = Time::microseconds(s.st_atim.tv_sec * 1'000'000 + s.st_atim.tv_nsec / 1'000);
+		stat.ctime = Time::microseconds(s.st_ctim.tv_sec * 1'000'000 + s.st_ctim.tv_nsec / 1'000);
+		stat.mtime = Time::microseconds(s.st_mtim.tv_sec * 1'000'000 + s.st_mtim.tv_nsec / 1'000);
+
 		return Status::Ok;
 	}
-	return status::errnoToStatus(errno);
+	return sprt::status::errnoToStatus(errno);
 }
 
 Status touch_fn(StringView path) {
@@ -296,14 +296,10 @@ Status touch_fn(StringView path) {
 	if (::utime(SP_TERMINATED_DATA(path), NULL) == 0) {
 		return Status::Ok;
 	}
-	return status::errnoToStatus(errno);
+	return sprt::status::errnoToStatus(errno);
 }
 
-#ifdef O_LARGEFILE
-static constexpr int OpenDirFlags = O_DIRECTORY | O_RDONLY | O_NDELAY | O_LARGEFILE | O_CLOEXEC;
-#else
 static constexpr int OpenDirFlags = O_DIRECTORY | O_RDONLY | O_NDELAY | O_CLOEXEC;
-#endif
 
 static Status _ftw_fn(int dirfd, StringView path,
 		const Callback<bool(StringView, FileType)> &callback, int depth, bool dirFirst) {
@@ -329,7 +325,7 @@ static Status _ftw_fn(int dirfd, StringView path,
 	Dir dp(dirfd);
 	if (!dp) {
 		::close(dirfd);
-		auto result = status::errnoToStatus(errno);
+		auto result = sprt::status::errnoToStatus(errno);
 		if (callback(path, FileType::File)) {
 			return Status::Ok;
 		} else {
@@ -410,7 +406,7 @@ Status ftw_fn(StringView path, const Callback<bool(StringView, FileType)> &callb
 
 	auto dirfd = ::openat(-1, SP_TERMINATED_DATA(path), OpenDirFlags);
 	if (dirfd < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 
 	return _ftw_fn(dirfd, StringView(), callback, depth, dirFirst);
@@ -420,7 +416,7 @@ Status rename_fn(StringView source, StringView dest) {
 	if (::rename(SP_TERMINATED_DATA(source), SP_TERMINATED_DATA(dest)) == 0) {
 		return Status::Ok;
 	}
-	return status::errnoToStatus(errno);
+	return sprt::status::errnoToStatus(errno);
 }
 
 FILE *fopen_fn(StringView path, StringView mode) {
@@ -431,13 +427,13 @@ Status write_fn(StringView path, const unsigned char *data, size_t len, ProtFlag
 	auto fd = ::open(SP_TERMINATED_DATA(path), O_WRONLY | O_CREAT | O_TRUNC,
 			getModeFormProtFlags(flags));
 	if (fd < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 
 	Status result = Status::Ok;
 	auto ret = ::write(fd, data, len);
 	if (ret < 0) {
-		result = status::errnoToStatus(errno);
+		result = sprt::status::errnoToStatus(errno);
 	} else if (ret != ssize_t(len)) {
 		result = Status::Incomplete;
 	}

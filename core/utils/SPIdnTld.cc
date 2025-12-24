@@ -23,7 +23,6 @@
 
 #include "SPIdn.h"
 #include "SPString.h"
-#include "SPSharedModule.h"
 
 namespace STAPPLER_VERSIONIZED stappler::idn {
 

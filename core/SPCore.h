@@ -50,6 +50,8 @@ constexpr auto MODULE_APPCOMMON_NAME = "appcommon";
 } // namespace stappler::buildconfig
 
 #include "detail/SPPlatformInit.h"
+#include "SPRuntimeNotNull.h"
+#include <assert.h>
 
 // From C++ standard library:
 #include <type_traits> // IWYU pragma: keep
@@ -94,27 +96,16 @@ constexpr auto MODULE_APPCOMMON_NAME = "appcommon";
 #include <optional> // IWYU pragma: keep
 #include <variant> // IWYU pragma: keep
 #include <chrono> // IWYU pragma: keep
+#include <compare> // IWYU pragma: keep
 
 #if __cplusplus >= 202'002L
 #include <source_location> // IWYU pragma: keep
-#endif
-
-// From C standard library:
-#include <stdint.h> // uint32_t, int32_t, etc
-#include <string.h> // memset, memcpy, memmove
-#include <stdarg.h> // va_arg
-#include <stdlib.h> // strto*
-#include <assert.h> // assert macro
-
-#if SP_HAVE_THREE_WAY_COMPARISON
-#include <compare> // IWYU pragma: keep
 #endif
 
 #include "detail/SPHash.h" // IWYU pragma: keep
 #include "detail/SPMath.h" // IWYU pragma: keep
 #include "detail/SPValueWrapper.h" // IWYU pragma: keep
 #include "detail/SPEnum.h" // IWYU pragma: keep
-#include "detail/SPNotNull.h" // IWYU pragma: keep
 #include "detail/SPPtr.h" // IWYU pragma: keep
 
 #include "detail/SPPlatformCleanup.h" // IWYU pragma: keep
@@ -129,23 +120,11 @@ inline constexpr uint32_t SP_MAKE_API_VERSION(uint32_t variant, uint32_t major, 
 			| uint32_t(patch & 0b1111'1111'1111);
 }
 
-// Use sp::move instead of std::move to enable additional diagnostics
-template <typename T,
-		typename std::enable_if_t<
-				// Attempt to move pointer is most likely an reference count error
-				// Use move_unsafe if it's not an error (like, in template context)
-				!std::is_pointer_v<std::remove_reference_t<T>>, bool> = true>
-[[nodiscard]]
-constexpr typename std::remove_reference<T>::type &&move(T &&value) noexcept {
-	return static_cast<typename std::remove_reference<T>::type &&>(value);
-}
+using sprt::move;
+using sprt::move_unsafe;
 
-// Behaves like std::move
 template <typename T>
-[[nodiscard]]
-constexpr typename std::remove_reference<T>::type &&move_unsafe(T &&value) noexcept {
-	return static_cast<typename std::remove_reference<T>::type &&>(value);
-}
+using NotNull = sprt::NotNull<T>;
 
 // Stappler requires only C++17, backport for std::bit_cast
 // Previously referenced as as `reinterpretValue`;

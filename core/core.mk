@@ -29,8 +29,7 @@ MODULE_STAPPLER_CORE_INCLUDES_DIRS := \
 MODULE_STAPPLER_CORE_INCLUDES_OBJS := \
 	$(STAPPLER_MODULE_DIR)/core \
 	$(STAPPLER_MODULE_DIR)/core/memory \
-	$(STAPPLER_MODULE_DIR)/thirdparty \
-	$(OSTYPE_INCLUDE)
+	$(STAPPLER_MODULE_DIR)/thirdparty
 MODULE_STAPPLER_CORE_DEPENDS_ON :=
 MODULE_STAPPLER_CORE_LIBS :=
 MODULE_STAPPLER_CORE_LIBS_SHARED := -ldl
@@ -39,6 +38,10 @@ MODULE_STAPPLER_CORE_CONFIG_VALUES := \
 	STAPPLER_VERSION_API=$(STAPPLER_VERSION_API) \
 	STAPPLER_VERSION_REV=$(STAPPLER_VERSION_REV) \
 	STAPPLER_VERSION_BUILD=$(STAPPLER_VERSION_BUILD) \
+
+MODULE_STAPPLER_CORE_INCLUDES_INTERNAL := \
+	$(STAPPLER_MODULE_DIR)/core/SPPlatformUnistd.h \
+	$(STAPPLER_MODULE_DIR)/thirdparty/libbacktrace
 
 MODULE_STAPPLER_CORE_SHARED_CONSUME := \
 	stappler_build_debug_module \
@@ -77,7 +80,7 @@ Module libstappler-core provides basic libstappler framework functions:
 endef
 
 # module name resolution
-MODULE_stappler_core := MODULE_STAPPLER_CORE
+$(call define_module, stappler_core, MODULE_STAPPLER_CORE)
 
 APR_LIB_PATH ?= /usr/local/lib/apache
 
@@ -95,4 +98,4 @@ MODULE_STAPPLER_APR_LIBS += -L$(APR_LIB_PATH) -lapr-1
 endif
 
 # module name resolution
-MODULE_stappler_apr := MODULE_STAPPLER_APR
+$(call define_module, stappler_apr, MODULE_STAPPLER_APR)

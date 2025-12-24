@@ -30,9 +30,9 @@ LOCAL_MODULES := \
 	stappler_filesystem \
 	stappler_data \
 	stappler_makefile \
-	stappler_network \
 	stappler_layout \
-	stappler_event
+	stappler_network \
+	stappler_runtime
 
 LOCAL_SRCS_DIRS := src
 LOCAL_INCLUDES_DIRS := src

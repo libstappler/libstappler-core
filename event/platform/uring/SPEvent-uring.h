@@ -144,7 +144,7 @@ struct alignas(32) URingData : public PlatformQueueData {
 	static constexpr uint32_t DefaultIdleInterval = 500;
 
 	static inline Status getErrnoStatus(int negErrno) {
-		return Status(-status::STATUS_ERRNO_OFFSET + negErrno);
+		return Status(-sprt::status::STATUS_ERRNO_OFFSET + negErrno);
 	}
 
 	static bool checkSupport();

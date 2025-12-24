@@ -57,4 +57,4 @@ Module libstappler-zip implements interface to access files within ZIP archive
 endef
 
 # module name resolution
-MODULE_stappler_zip := MODULE_STAPPLER_ZIP
+$(call define_module, stappler_zip, MODULE_STAPPLER_ZIP)

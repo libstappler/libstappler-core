@@ -25,7 +25,7 @@ This file was modified for stappler project
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
-float Vec4::angle(const Vec4& v1, const Vec4& v2) {
+float Vec4::angle(const Vec4 &v1, const Vec4 &v2) {
 	const float dx = v1.w * v2.x - v1.x * v2.w - v1.y * v2.z + v1.z * v2.y;
 	const float dy = v1.w * v2.y - v1.y * v2.w - v1.z * v2.x + v1.x * v2.z;
 	const float dz = v1.w * v2.z - v1.z * v2.w - v1.x * v2.y + v1.y * v2.x;
@@ -33,7 +33,7 @@ float Vec4::angle(const Vec4& v1, const Vec4& v2) {
 	return atan2f(sqrt(dx * dx + dy * dy + dz * dz) + math::MATH_FLOAT_SMALL, dot(v1, v2));
 }
 
-void Vec4::clamp(const Vec4& min, const Vec4& max) {
+void Vec4::clamp(const Vec4 &min, const Vec4 &max) {
 	assert(!(min.x > max.x || min.y > max.y || min.z > max.z || min.w > max.w));
 
 	// Clamp the x value.
@@ -69,8 +69,7 @@ void Vec4::clamp(const Vec4& min, const Vec4& max) {
 	}
 }
 
-void Vec4::clamp(const Vec4& v, const Vec4& min, const Vec4& max, Vec4* dst)
-{
+void Vec4::clamp(const Vec4 &v, const Vec4 &min, const Vec4 &max, Vec4 *dst) {
 	assert(dst);
 	assert(!(min.x > max.x || min.y > max.y || min.z > max.z || min.w > max.w));
 
@@ -117,15 +116,4 @@ Vec4 Vec4::getNormalized() const {
 	return v;
 }
 
-#ifdef __LCC__
-
-const Vec4 Vec4::ZERO = Vec4(0.0f, 0.0f, 0.0f, 0.0f);
-const Vec4 Vec4::ONE = Vec4(1.0f, 1.0f, 1.0f, 1.0f);
-const Vec4 Vec4::UNIT_X = Vec4(1.0f, 0.0f, 0.0f, 0.0f);
-const Vec4 Vec4::UNIT_Y = Vec4(0.0f, 1.0f, 0.0f, 0.0f);
-const Vec4 Vec4::UNIT_Z = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
-const Vec4 Vec4::UNIT_W = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-
-#endif
-
-}
+} // namespace stappler::geom

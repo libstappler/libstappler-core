@@ -39,4 +39,4 @@ MODULE_STAPPLER_WASM_LIBS += -lpathcch -lntdll
 endif
 
 # module name resolution
-MODULE_stappler_wasm := MODULE_STAPPLER_WASM
+$(call define_module, stappler_wasm, MODULE_STAPPLER_WASM)

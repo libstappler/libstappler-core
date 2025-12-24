@@ -26,11 +26,6 @@
 extern void __wasm_call_ctors();
 extern void __wasm_call_dtors();
 
-void stappler_initialize(void) {
-	__wasm_call_ctors();
-}
+void stappler_initialize(void) { __wasm_call_ctors(); }
 
-__attribute__((__export_name__("_finalize")))
-void stappler_finalize(void) {
-	__wasm_call_dtors();
-}
+__attribute__((__export_name__("_finalize"))) void stappler_finalize(void) { __wasm_call_dtors(); }

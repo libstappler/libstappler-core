@@ -41,4 +41,4 @@ In general, it provides:
 endef
 
 # module name resolution
-MODULE_stappler_event := MODULE_STAPPLER_EVENT
+$(call define_module, stappler_event, MODULE_STAPPLER_EVENT)

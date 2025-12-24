@@ -361,43 +361,13 @@ bool validateBase64(const StringView &str) {
 	return true;
 }
 
-void makeRandomBytes_buf(uint8_t *buf, size_t count) {
-	auto offset = platform::makeRandomBytes(buf, count);
-
-	buf += offset;
-	count -= offset;
-
-	if (count == 0) {
-		return;
-	}
-
-	auto bytesInRand = 0;
-	size_t tmp = RAND_MAX;
-	while (tmp > 255) {
-		++bytesInRand;
-		tmp /= 256;
-	}
-
-	size_t b = bytesInRand;
-	size_t r = rand();
-	for (size_t i = 0; i < count; i++) {
-		buf[i] = (uint8_t)(r % 256);
-		r /= 256;
-		--b;
-		if (b == 0) {
-			b = bytesInRand;
-			r = rand();
-		}
-	}
-}
-
-void makeRandomBytes(uint8_t *buf, size_t count) { makeRandomBytes_buf(buf, count); }
+void makeRandomBytes(uint8_t *buf, size_t count) { sprt::platform::makeRandomBytes(buf, count); }
 
 template <>
 auto makeRandomBytes<memory::PoolInterface>(size_t count) -> memory::PoolInterface::BytesType {
 	memory::PoolInterface::BytesType ret;
 	ret.resize(count);
-	makeRandomBytes_buf(ret.data(), count);
+	makeRandomBytes(ret.data(), count);
 	return ret;
 }
 
@@ -406,7 +376,7 @@ auto makeRandomBytes<memory::StandartInterface>(size_t count)
 		-> memory::StandartInterface::BytesType {
 	memory::StandartInterface::BytesType ret;
 	ret.resize(count);
-	makeRandomBytes_buf(ret.data(), count);
+	makeRandomBytes(ret.data(), count);
 	return ret;
 }
 
@@ -415,7 +385,7 @@ static void makePassword_buf(uint8_t *passwdKey, const StringView &str, const St
 
 	passwdKey[0] = 0;
 	passwdKey[1] = 1; // version code
-	makeRandomBytes_buf(passwdKey + 2, 14);
+	makeRandomBytes(passwdKey + 2, 14);
 
 	string::Sha512 hash_ctx;
 	hash_ctx.update(passwdKey, 16);

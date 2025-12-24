@@ -26,8 +26,8 @@ This file was modified for stappler project
 
 namespace STAPPLER_VERSIONIZED stappler::geom {
 
-static void Quaternion_slerp(float q1x, float q1y, float q1z, float q1w, float q2x, float q2y, float q2z, float q2w, float t,
-		float* dstx, float* dsty, float* dstz, float* dstw) {
+static void Quaternion_slerp(float q1x, float q1y, float q1z, float q1w, float q2x, float q2y,
+		float q2z, float q2w, float t, float *dstx, float *dsty, float *dstz, float *dstw) {
 	// Fast slerp implementation by kwhatmough:
 	// It contains no division operations, no trig, no inverse trig
 	// and no sqrt. Not only does this code tolerate small constraint
@@ -121,7 +121,8 @@ static void Quaternion_slerp(float q1x, float q1y, float q1z, float q1w, float q
 	*dstz = z * f1;
 }
 
-static void Quaternion_slerpForSquad(const Quaternion& q1, const Quaternion& q2, float t, Quaternion* dst) {
+static void Quaternion_slerpForSquad(const Quaternion &q1, const Quaternion &q2, float t,
+		Quaternion *dst) {
 	assert(dst);
 
 	// cos(omega) = q1 * q2;
@@ -156,9 +157,7 @@ static void Quaternion_slerpForSquad(const Quaternion& q1, const Quaternion& q2,
 	dst->w = (q1.w * r1 + q2.w * r2);
 }
 
-Quaternion::Quaternion(const Mat4& m) {
-	m.getRotation(this);
-}
+Quaternion::Quaternion(const Mat4 &m) { m.getRotation(this); }
 
 bool Quaternion::inverse() {
 	float n = x * x + y * y + z * z + w * w;
@@ -191,11 +190,9 @@ Quaternion Quaternion::getInversed() const {
 	return q;
 }
 
-void Quaternion::multiply(const Quaternion& q) {
-	multiply(*this, q, this);
-}
+void Quaternion::multiply(const Quaternion &q) { multiply(*this, q, this); }
 
-void Quaternion::multiply(const Quaternion& q1, const Quaternion& q2, Quaternion* dst) {
+void Quaternion::multiply(const Quaternion &q1, const Quaternion &q2, Quaternion *dst) {
 	assert(dst);
 
 	float x = q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y;
@@ -213,13 +210,15 @@ void Quaternion::normalize() {
 	float n = x * x + y * y + z * z + w * w;
 
 	// Already normalized.
-	if (n == 1.0f)
+	if (n == 1.0f) {
 		return;
+	}
 
 	n = sqrt(n);
 	// Too close to zero.
-	if (n < 0.000001f)
+	if (n < 0.000001f) {
 		return;
+	}
 
 	n = 1.0f / n;
 	x *= n;
@@ -234,7 +233,7 @@ Quaternion Quaternion::getNormalized() const {
 	return q;
 }
 
-float Quaternion::toAxisAngle(Vec3* axis) const {
+float Quaternion::toAxisAngle(Vec3 *axis) const {
 	assert(axis);
 
 	Quaternion q(x, y, z, w);
@@ -247,7 +246,7 @@ float Quaternion::toAxisAngle(Vec3* axis) const {
 	return (2.0f * acos(q.w));
 }
 
-void Quaternion::lerp(const Quaternion& q1, const Quaternion& q2, float t, Quaternion* dst) {
+void Quaternion::lerp(const Quaternion &q1, const Quaternion &q2, float t, Quaternion *dst) {
 	assert(dst);
 	assert(!(t < 0.0f || t > 1.0f));
 
@@ -267,12 +266,14 @@ void Quaternion::lerp(const Quaternion& q1, const Quaternion& q2, float t, Quate
 	dst->w = t1 * q1.w + t * q2.w;
 }
 
-void Quaternion::slerp(const Quaternion& q1, const Quaternion& q2, float t, Quaternion* dst) {
+void Quaternion::slerp(const Quaternion &q1, const Quaternion &q2, float t, Quaternion *dst) {
 	assert(dst);
-	Quaternion_slerp(q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w, t, &dst->x, &dst->y, &dst->z, &dst->w);
+	Quaternion_slerp(q1.x, q1.y, q1.z, q1.w, q2.x, q2.y, q2.z, q2.w, t, &dst->x, &dst->y, &dst->z,
+			&dst->w);
 }
 
-void Quaternion::squad(const Quaternion& q1, const Quaternion& q2, const Quaternion& s1, const Quaternion& s2, float t, Quaternion* dst) {
+void Quaternion::squad(const Quaternion &q1, const Quaternion &q2, const Quaternion &s1,
+		const Quaternion &s2, float t, Quaternion *dst) {
 	assert(!(t < 0.0f || t > 1.0f));
 
 	Quaternion dstQ(0.0f, 0.0f, 0.0f, 1.0f);
@@ -283,11 +284,4 @@ void Quaternion::squad(const Quaternion& q1, const Quaternion& q2, const Quatern
 	Quaternion_slerpForSquad(dstQ, dstS, 2.0f * t * (1.0f - t), dst);
 }
 
-#ifdef __LCC__
-
-constexpr const Quaternion Quaternion::IDENTITY(0.0f, 0.0f, 0.0f, 1.0f);
-constexpr const Quaternion Quaternion::ZERO(0.0f, 0.0f, 0.0f, 0.0f);
-
-#endif
-
-}
+} // namespace stappler::geom

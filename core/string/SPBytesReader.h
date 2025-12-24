@@ -27,6 +27,7 @@ THE SOFTWARE.
 
 #include "SPMemInterface.h"
 #include "SPCharGroup.h"
+#include "SPRuntimeStringBuffer.h"
 #include "SPStatus.h"
 #include "SPByteOrder.h"
 
@@ -230,6 +231,8 @@ public:
 	constexpr StringViewBase(const CharType *ptr, size_t pos, size_t len);
 	constexpr StringViewBase(const Self &, size_t pos, size_t len);
 	constexpr StringViewBase(const Self &, size_t len);
+	constexpr StringViewBase(const sprt::StringViewBase<CharType> &str);
+	constexpr StringViewBase(const sprt::StringBuffer<CharType> &str);
 
 	StringViewBase(const PoolString &str);
 	StringViewBase(const StdString &str);
@@ -237,7 +240,9 @@ public:
 	template <size_t Size>
 	constexpr StringViewBase(const std::array<CharType, Size> &);
 
-	Self &operator=(const Self &str) = default;
+	constexpr Self &operator=(const Self &str) = default;
+	constexpr Self &operator=(const sprt::StringViewBase<CharType> &str);
+
 	Self &operator=(const PoolString &str);
 	Self &operator=(const StdString &str);
 
@@ -252,6 +257,11 @@ public:
 	Self &set(const PoolString &str);
 	Self &set(const StdString &str);
 	Self &set(const Self &str);
+	Self &set(const sprt::StringViewBase<CharType> &str);
+
+	constexpr operator sprt::StringViewBase<CharType>() const {
+		return sprt::StringViewBase<CharType>(this->data(), this->size());
+	}
 
 	template <size_t Size>
 	constexpr Self &set(const std::array<CharType, Size> &);
@@ -433,15 +443,22 @@ public:
 	StringViewUtf8(const PoolString &str);
 	StringViewUtf8(const StdString &str);
 	StringViewUtf8(const StringViewBase<char> &str);
+	StringViewUtf8(const sprt::StringView &str);
 
 	Self &operator=(const PoolString &str);
 	Self &operator=(const StdString &str);
 	Self &operator=(const Self &str);
+	Self &operator=(const StringViewBase<char> &str);
+	Self &operator=(const sprt::StringView &str);
 
 	Self &set(const PoolString &str);
 	Self &set(const StdString &str);
 	Self &set(const Self &str);
 	Self &set(const char *p, size_t l);
+	Self &set(const StringViewBase<char> &str);
+	Self &set(const sprt::StringView &str);
+
+	operator sprt::StringView() const { return sprt::StringView(this->data(), this->size()); }
 
 	bool is(const char &c) const;
 	bool is(const char16_t &c) const;

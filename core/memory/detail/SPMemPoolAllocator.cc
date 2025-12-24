@@ -23,14 +23,11 @@ THE SOFTWARE.
 **/
 
 #include "SPMemPoolStruct.h"
-#include "SPPlatformUnistd.h"
 #include "SPPlatform.h"
 
-#if SP_POSIX_MAPPED_FILES
 #include <limits.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#endif
 
 namespace STAPPLER_VERSIONIZED stappler::memory::custom {
 
@@ -56,24 +53,14 @@ static bool isValidNode(MemNode *node) {
 size_t Allocator::getAllocatorsCount() { return s_nAllocators.load(); }
 
 static uint8_t *Allocator_mmap(size_t size) {
-#if SP_POSIX_MAPPED_FILES
-#if MAP_ANON
-	auto addr = ::mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	auto addr = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (addr != MAP_FAILED) {
 		return reinterpret_cast<uint8_t *>(addr);
 	}
-#endif
-#endif
 	return nullptr;
 }
 
-static void Allocator_unmmap(uint8_t *ptr, size_t size) {
-#if SP_POSIX_MAPPED_FILES
-#if MAP_ANON
-	::munmap(ptr, size);
-#endif
-#endif
-}
+static void Allocator_unmmap(uint8_t *ptr, size_t size) { ::munmap(ptr, size); }
 
 static MemNode *Allocator_malloc(size_t size, uint32_t index) {
 	static bool isPageAligned = config::BOUNDARY_SIZE % platform::getMemoryPageSize() == 0;

@@ -55,4 +55,4 @@ Module libstappler-bitmap provides function for bitmap manipulation
 endef
 
 # module name resolution
-MODULE_stappler_bitmap := MODULE_STAPPLER_BITMAP
+$(call define_module, stappler_bitmap, MODULE_STAPPLER_BITMAP)

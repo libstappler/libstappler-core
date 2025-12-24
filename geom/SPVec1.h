@@ -164,7 +164,7 @@ public:
 		return *this;
 	}
 
-	SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Vec1)
+	constexpr auto operator<=>(const Vec1 &) const = default;
 };
 
 constexpr inline Vec1 &Vec1::normalize() {
@@ -178,14 +178,10 @@ constexpr inline Vec1 Vec1::getNormalized() const {
 	return v;
 }
 
-#ifndef __LCC__
-
 constexpr const Vec1 Vec1::ZERO = Vec1(0.0f);
 constexpr const Vec1 Vec1::ONE = Vec1(1.0f);
 constexpr const Vec1 Vec1::INVALID = Vec1(nan());
 constexpr const Vec1 Vec1::UNIT_X = Vec1(1.0f);
-
-#endif
 
 inline const Vec1 operator+(const Vec1 &l, const Vec1 &r) {
 	Vec1 result;

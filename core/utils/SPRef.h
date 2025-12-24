@@ -935,7 +935,7 @@ inline Rc<_Base>::operator _Base *() const noexcept {
 template <typename _Base>
 inline Rc<_Base>::operator NotNull<_Base>() const noexcept {
 	auto ptr = get();
-	SPASSERT(ptr, "");
+	sprt_passert(ptr, "");
 	return ptr;
 }
 
@@ -943,7 +943,7 @@ template <typename _Base>
 template <typename B, typename std::enable_if<std::is_convertible<_Base *, B *>{}>::type *>
 inline Rc<_Base>::operator NotNull<B>() const noexcept {
 	auto ptr = get();
-	SPASSERT(ptr, "");
+	sprt_passert(ptr, "");
 	return ptr;
 }
 

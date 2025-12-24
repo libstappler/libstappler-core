@@ -22,11 +22,8 @@
  **/
 
 #include "SPFilesystem.h"
-#include "SPPlatformUnistd.h"
 
-#if SP_POSIX_MAPPED_FILES > 0
-
-#include <limits.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
@@ -107,5 +104,3 @@ bool _syncMappedRegion(uint8_t *region, uint8_t storage[16]) {
 }
 
 } // namespace stappler::filesystem::platform
-
-#endif

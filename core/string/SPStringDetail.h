@@ -25,8 +25,11 @@ THE SOFTWARE.
 #define CORE_CORE_STRING_SPSTRINGDETAIL_H_
 
 #include "SPHalfFloat.h"
+#include "SPRuntimeStringBuffer.h"
 #include "SPUnicode.h"
 #include "SPBytesReader.h"
+#include "SPRuntimeString.h"
+#include "SPRuntimePlatform.h"
 
 namespace STAPPLER_VERSIONIZED stappler {
 
@@ -73,39 +76,15 @@ SP_PUBLIC int compare_u(WideStringView l, WideStringView r);
 SP_PUBLIC int caseCompare_u(StringView l, StringView r);
 SP_PUBLIC int caseCompare_u(WideStringView l, WideStringView r);
 
-SP_PUBLIC StringView getOsLocale();
+SP_PUBLIC inline StringView getOsLocale() { return sprt::platform::getOsLocale(); }
 
 } // namespace stappler::platform
 
 namespace STAPPLER_VERSIONIZED stappler::string::detail {
 
-static constexpr size_t DOUBLE_MAX_DIGITS = 27;
-
 inline char32_t tolower(char32_t c) { return platform::tolower(c); }
 inline char32_t toupper(char32_t c) { return platform::toupper(c); }
 inline char32_t totitle(char32_t c) { return platform::totitle(c); }
-
-
-// fast itoa implementation
-// data will be written at the end of buffer, no trailing zero (do not try to use strlen on it!)
-// designed to be used with StringView: StringView(buf + bufSize - ret, ret)
-
-// use nullptr buffer to calculate expected buffer length
-
-SP_PUBLIC size_t itoa(int64_t number, char *buffer, size_t bufSize);
-SP_PUBLIC size_t itoa(uint64_t number, char *buffer, size_t bufSize);
-
-SP_PUBLIC size_t itoa(int64_t number, char16_t *buffer, size_t bufSize);
-SP_PUBLIC size_t itoa(uint64_t number, char16_t *buffer, size_t bufSize);
-
-// fast dtoa implementation
-// data will be written from beginning, no trailing zero (do not try to use strlen on it!)
-// designed to be used with StringView: StringView(buf, ret)
-
-// use nullptr buffer to calculate expected buffer length
-
-SP_PUBLIC size_t dtoa(double number, char *buffer, size_t bufSize);
-SP_PUBLIC size_t dtoa(double number, char16_t *buffer, size_t bufSize);
 
 // read number from string and offset pointers
 
@@ -327,10 +306,9 @@ inline void streamWrite(const FunctionalStream &stream,
 
 template <typename FunctionalStream>
 inline void streamWrite(const FunctionalStream &stream, double d) {
-	std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType,
-			string::detail::DOUBLE_MAX_DIGITS>
+	std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType, sprt::DOUBLE_MAX_DIGITS>
 			buf = {0};
-	auto ret = string::detail::dtoa(d, buf.data(), buf.size());
+	auto ret = sprt::dtoa(d, buf.data(), buf.size());
 	streamWrite(stream,
 			typename FunctionalStreamTraits<FunctionalStream>::ArgType(buf.data(), ret));
 }
@@ -345,7 +323,7 @@ inline void streamWrite(const FunctionalStream &stream, int64_t i) {
 	std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType,
 			std::numeric_limits<int64_t>::digits10 + 2>
 			buf = {0};
-	auto ret = string::detail::itoa(i, buf.data(), buf.size());
+	auto ret = sprt::itoa(sprt::int64_t(i), buf.data(), buf.size());
 	streamWrite(stream,
 			typename FunctionalStreamTraits<FunctionalStream>::ArgType(
 					buf.data() + buf.size() - ret, ret));
@@ -356,7 +334,7 @@ inline void streamWrite(const FunctionalStream &stream, uint64_t i) {
 	std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType,
 			std::numeric_limits<int64_t>::digits10 + 2>
 			buf = {0};
-	auto ret = string::detail::itoa(i, buf.data(), buf.size());
+	auto ret = sprt::itoa(sprt::uint64_t(i), buf.data(), buf.size());
 	streamWrite(stream,
 			typename FunctionalStreamTraits<FunctionalStream>::ArgType(
 					buf.data() + buf.size() - ret, ret));
@@ -368,7 +346,7 @@ inline void streamWrite(const FunctionalStream &stream, size_t i) {
 	std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType,
 			std::numeric_limits<int64_t>::digits10 + 2>
 			buf = {0};
-	auto ret = string::detail::itoa(uint64_t(i), buf.data(), buf.size());
+	auto ret = string::detail::itoa(sprt::uint64_t(i), buf.data(), buf.size());
 	streamWrite(stream,
 			typename FunctionalStreamTraits<FunctionalStream>::ArgType(
 					buf.data() + buf.size() - ret, ret));
@@ -412,12 +390,12 @@ inline void streamWrite(const FunctionalStream &stream, char32_t c) {
 		std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType, 6> buf = {0};
 		streamWrite(stream,
 				typename FunctionalStreamTraits<FunctionalStream>::ArgType(buf.data(),
-						unicode::utf8EncodeBuf(buf.data(), c)));
+						sprt::unicode::utf8EncodeBuf(buf.data(), buf.size(), c)));
 	} else {
 		std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType, 6> buf = {0};
 		streamWrite(stream,
 				typename FunctionalStreamTraits<FunctionalStream>::ArgType(buf.data(),
-						unicode::utf16EncodeBuf(buf.data(), c)));
+						sprt::unicode::utf16EncodeBuf(buf.data(), buf.size(), c)));
 	}
 }
 
@@ -427,7 +405,7 @@ inline void streamWrite(const FunctionalStream &stream, char16_t c) {
 		std::array<typename FunctionalStreamTraits<FunctionalStream>::CharType, 4> buf = {0};
 		streamWrite(stream,
 				typename FunctionalStreamTraits<FunctionalStream>::ArgType(buf.data(),
-						unicode::utf8EncodeBuf(buf.data(), c)));
+						sprt::unicode::utf8EncodeBuf(buf.data(), buf.size(), c)));
 	} else {
 		streamWrite(stream, typename FunctionalStreamTraits<FunctionalStream>::ArgType(&c, 1));
 	}
@@ -514,6 +492,11 @@ struct StringUnicodeCaseComparator {
 
 template <typename C>
 inline std::basic_ostream<C> &operator<<(std::basic_ostream<C> &os, const StringViewBase<C> &str) {
+	return os.write(str.data(), str.size());
+}
+
+inline std::basic_ostream<char> &operator<<(std::basic_ostream<char> &os,
+		const sprt::StringView &str) {
 	return os.write(str.data(), str.size());
 }
 
@@ -814,6 +797,16 @@ inline constexpr StringViewBase<_CharType>::StringViewBase(const Self &ptr, size
 : BytesReader<_CharType>(ptr.data(), min(len, ptr.size())) { }
 
 template <typename _CharType>
+inline constexpr StringViewBase<_CharType>::StringViewBase(
+		const sprt::StringViewBase<CharType> &str)
+: StringViewBase(str.data(), str.size()) { }
+
+template <typename _CharType>
+inline constexpr StringViewBase<_CharType>::StringViewBase(const sprt::StringBuffer<CharType> &str)
+: StringViewBase(str.data(), str.size()) { }
+
+
+template <typename _CharType>
 StringViewBase<_CharType>::StringViewBase(const PoolString &str)
 : StringViewBase(str.data(), str.size()) { }
 
@@ -825,6 +818,13 @@ template <typename _CharType>
 template <size_t Size>
 inline constexpr StringViewBase<_CharType>::StringViewBase(const std::array<CharType, Size> &str)
 : StringViewBase(str.data(), str.size()) { }
+
+template <typename _CharType>
+constexpr auto StringViewBase<_CharType>::operator=(const sprt::StringViewBase<CharType> &str)
+		-> Self & {
+	this->set(str);
+	return *this;
+}
 
 template <typename _CharType>
 auto StringViewBase<_CharType>::operator=(const PoolString &str) -> Self & {
@@ -873,6 +873,12 @@ auto StringViewBase<_CharType>::set(const StdString &str) -> Self & {
 
 template <typename _CharType>
 auto StringViewBase<_CharType>::set(const Self &str) -> Self & {
+	this->set(str.data(), str.size());
+	return *this;
+}
+
+template <typename _CharType>
+auto StringViewBase<_CharType>::set(const sprt::StringViewBase<CharType> &str) -> Self & {
 	this->set(str.data(), str.size());
 	return *this;
 }
@@ -1228,6 +1234,9 @@ inline StringViewUtf8::StringViewUtf8(const StdString &str)
 inline StringViewUtf8::StringViewUtf8(const StringViewBase<char> &str)
 : StringViewUtf8(str.data(), str.size()) { }
 
+inline StringViewUtf8::StringViewUtf8(const sprt::StringView &str)
+: StringViewUtf8(str.data(), str.size()) { }
+
 inline auto StringViewUtf8::operator=(const PoolString &str) -> Self & {
 	this->set(str);
 	return *this;
@@ -1237,6 +1246,14 @@ inline auto StringViewUtf8::operator=(const StdString &str) -> Self & {
 	return *this;
 }
 inline auto StringViewUtf8::operator=(const Self &str) -> Self & {
+	this->set(str);
+	return *this;
+}
+inline auto StringViewUtf8::operator=(const StringViewBase<char> &str) -> Self & {
+	this->set(str);
+	return *this;
+}
+inline auto StringViewUtf8::operator=(const sprt::StringView &str) -> Self & {
 	this->set(str);
 	return *this;
 }
@@ -1258,15 +1275,21 @@ inline auto StringViewUtf8::set(const char *p, size_t l) -> Self & {
 	len = l;
 	return *this;
 }
+inline auto StringViewUtf8::set(const StringViewBase<char> &str) -> Self & {
+	return set(str.data(), str.size());
+}
+inline auto StringViewUtf8::set(const sprt::StringView &str) -> Self & {
+	return set(str.data(), str.size());
+}
 
 inline bool StringViewUtf8::is(const char &c) const { return len > 0 && *ptr == c; }
 inline bool StringViewUtf8::is(const char16_t &c) const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
-			&& unicode::utf8Decode32(ptr) == char32_t(c);
+	return len > 0 && len >= sprt::unicode::utf8_length_data[uint8_t(*ptr)]
+			&& sprt::unicode::utf8Decode32(ptr, len) == char32_t(c);
 }
 inline bool StringViewUtf8::is(const char32_t &c) const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
-			&& unicode::utf8Decode32(ptr) == c;
+	return len > 0 && len >= sprt::unicode::utf8_length_data[uint8_t(*ptr)]
+			&& sprt::unicode::utf8Decode32(ptr, len) == c;
 }
 inline bool StringViewUtf8::is(const char *c) const {
 	return prefix(c, std::char_traits<char>::length(c));
@@ -1275,26 +1298,26 @@ inline bool StringViewUtf8::is(const Self &c) const { return prefix(c.data(), c.
 
 template <char32_t C>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
-			&& unicode::utf8Decode32(ptr) == C;
+	return len > 0 && len >= sprt::unicode::utf8_length_data[uint8_t(*ptr)]
+			&& sprt::unicode::utf8Decode32(ptr, len) == C;
 }
 
 template <CharGroupId G>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
-			&& chars::CharGroup<MatchCharType, G>::match(unicode::utf8Decode32(ptr));
+	return len > 0 && len >= sprt::unicode::utf8_length_data[uint8_t(*ptr)]
+			&& chars::CharGroup<MatchCharType, G>::match(sprt::unicode::utf8Decode32(ptr, len));
 }
 
 template <typename M>
 inline bool StringViewUtf8::is() const {
-	return len > 0 && len >= unicode::utf8_length_data[uint8_t(*ptr)]
-			&& M::match(unicode::utf8Decode32(ptr));
+	return len > 0 && len >= sprt::unicode::utf8_length_data[uint8_t(*ptr)]
+			&& M::match(sprt::unicode::utf8Decode32(ptr, len));
 }
 
 inline char32_t StringViewUtf8::getChar() const {
 	if (!empty()) {
 		uint8_t off = 0;
-		auto ret = unicode::utf8Decode32(this->ptr, off);
+		auto ret = sprt::unicode::utf8Decode32(this->ptr, this->len, off);
 		if (off > len) {
 			// invalid codepoint in view
 			return 0;
@@ -1308,7 +1331,7 @@ inline char32_t StringViewUtf8::getChar() const {
 inline char32_t StringViewUtf8::readChar() {
 	if (!empty()) {
 		uint8_t off = 0;
-		auto ret = unicode::utf8Decode32(this->ptr, off);
+		auto ret = sprt::unicode::utf8Decode32(this->ptr, this->len, off);
 		if (off > len) {
 			// invalid codepoint in view
 			offset(len);
@@ -1324,7 +1347,7 @@ inline char32_t StringViewUtf8::readChar() {
 inline auto StringViewUtf8::letter() const -> Self {
 	if (this->len > 0) {
 		return Self(this->ptr,
-				std::min(this->len, size_t(unicode::utf8_length_data[uint8_t(*ptr)])));
+				std::min(this->len, size_t(sprt::unicode::utf8_length_data[uint8_t(*ptr)])));
 	}
 	return Self();
 }
@@ -1345,7 +1368,7 @@ inline void StringViewUtf8::offset(size_t l) {
 }
 inline auto StringViewUtf8::operator++() -> Self & {
 	if (len > 0) {
-		auto l = std::min(size_t(unicode::utf8_length_data[uint8_t(*ptr)]), len);
+		auto l = std::min(size_t(sprt::unicode::utf8_length_data[uint8_t(*ptr)]), len);
 		ptr += l;
 		len -= l;
 	}
@@ -1383,7 +1406,7 @@ inline auto StringViewUtf8::operator-=(const Self &other) -> Self & {
 	return *this;
 }
 inline auto StringViewUtf8::operator*() const -> MatchCharType {
-	return unicode::utf8Decode32(ptr);
+	return sprt::unicode::utf8Decode32(ptr, len);
 }
 
 template <typename Callback>
@@ -1392,8 +1415,8 @@ inline void StringViewUtf8::foreach (const Callback &cb) const {
 	auto p = ptr;
 	const auto e = ptr + len;
 	while (p < e) {
-		const uint8_t mask = unicode::utf8_length_mask[uint8_t(*p)];
-		const uint8_t len = unicode::utf8_length_data[uint8_t(*p)];
+		const uint8_t mask = sprt::unicode::utf8_length_mask[uint8_t(*p)];
+		const uint8_t len = sprt::unicode::utf8_length_data[uint8_t(*p)];
 		uint32_t ret = *p++ & mask;
 		for (uint8_t c = 1; c < len; ++c) {
 			const auto ch = *p++;
@@ -1414,7 +1437,7 @@ inline size_t StringViewUtf8::code_size() const {
 	const auto e = ptr + len;
 	while (p < e) {
 		++ret;
-		p += unicode::utf8_length_data[uint8_t(*p)];
+		p += sprt::unicode::utf8_length_data[uint8_t(*p)];
 	}
 	return ret;
 }
@@ -1455,7 +1478,9 @@ template <typename... Args>
 inline void StringViewUtf8::skipChars() {
 	uint8_t clen = 0;
 	size_t offset = 0;
-	while (len > offset && match<Args...>(unicode::utf8Decode32(ptr + offset, clen)) && clen > 0) {
+	while (len > offset
+			&& match<Args...>(sprt::unicode::utf8Decode32(ptr + offset, len - offset, clen))
+			&& clen > 0) {
 		offset += clen;
 	}
 	auto off = std::min(offset, len);
@@ -1467,7 +1492,9 @@ template <typename... Args>
 inline void StringViewUtf8::skipUntil() {
 	uint8_t clen = 0;
 	size_t offset = 0;
-	while (len > offset && !match<Args...>(unicode::utf8Decode32(ptr + offset, clen)) && clen > 0) {
+	while (len > offset
+			&& !match<Args...>(sprt::unicode::utf8Decode32(ptr + offset, len - offset, clen))
+			&& clen > 0) {
 		offset += clen;
 	}
 	auto off = std::min(offset, len);
@@ -1592,11 +1619,14 @@ inline void StringViewUtf8::trimUntil() {
 
 template <typename... Args>
 inline bool StringViewUtf8::rv_match_utf8(const CharType *ptr, size_t len, uint8_t &offset) {
+	size_t nchars = 0;
 	while (len > 0) {
-		if (!unicode::isUtf8Surrogate(ptr[len - 1])) {
-			return match<Args...>(unicode::utf8Decode32(ptr + len - 1, offset));
+		if (!sprt::unicode::isUtf8Surrogate(ptr[len - 1])) {
+			++nchars;
+			return match<Args...>(sprt::unicode::utf8Decode32(ptr + len - 1, nchars, offset));
 		} else {
 			--len;
+			++nchars;
 		}
 	}
 	offset = 0;

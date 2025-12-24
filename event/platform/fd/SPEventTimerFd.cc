@@ -118,7 +118,7 @@ Status TimerFdHandle::read(uint64_t *target) {
 	if (ret == sizeof(uint64_t)) {
 		return Status::Ok;
 	} else if (ret < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 	return Status::Declined;
 }

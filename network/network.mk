@@ -50,4 +50,4 @@ Module libstappler-network is an interface for network queries, based on cURL
 endef
 
 # module name resolution
-MODULE_stappler_network := MODULE_STAPPLER_NETWORK
+$(call define_module, stappler_network, MODULE_STAPPLER_NETWORK)

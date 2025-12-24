@@ -21,7 +21,7 @@
 # current dir
 STAPPLER_MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
-STAPPLER_VERSION_API := 5
+STAPPLER_VERSION_API := 6
 STAPPLER_VERSION_REV := 1
 STAPPLER_VERSION_BUILD := $(firstword $(call sp_detect_build_number,$(STAPPLER_MODULE_DIR)))
 
@@ -50,4 +50,5 @@ TOOLKIT_MODULE_LIST += \
 	$(STAPPLER_MODULE_DIR)/pug/pug.mk \
 	$(STAPPLER_MODULE_DIR)/document/document.mk \
 	$(STAPPLER_MODULE_DIR)/layout/layout.mk \
-	$(STAPPLER_MODULE_DIR)/experimental/abi/abi.mk
+	$(STAPPLER_MODULE_DIR)/experimental/abi/abi.mk \
+	$(STAPPLER_MODULE_DIR)/runtime/runtime.mk

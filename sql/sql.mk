@@ -29,4 +29,4 @@ MODULE_STAPPLER_SQL_INCLUDES_OBJS := $(STAPPLER_MODULE_DIR)/sql
 MODULE_STAPPLER_SQL_DEPENDS_ON := stappler_data
 
 # module name resolution
-MODULE_stappler_sql := MODULE_STAPPLER_SQL
+$(call define_module, stappler_sql, MODULE_STAPPLER_SQL)

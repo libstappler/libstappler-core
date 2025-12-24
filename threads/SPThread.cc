@@ -59,7 +59,7 @@ static void ThreadCallbacks_init(const ThreadCallbacks &cb, Thread *tm) {
 }
 
 static bool ThreadCallbacks_worker(const ThreadCallbacks &cb, Thread *tm) {
-	SPASSERT(tl_threadInfo.workerPool, "Thread pool should be initialized");
+	sprt_passert(tl_threadInfo.workerPool, "Thread pool should be initialized");
 	bool ret = false;
 
 	memory::perform_clear([&] { ret = cb.worker(tm); }, tl_threadInfo.workerPool);

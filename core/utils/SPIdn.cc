@@ -22,7 +22,8 @@
  **/
 
 #include "SPIdn.h"
-#include "SPString.h"
+#include "SPString.h" // IWYU pragma: keep
+#include "SPLog.h"
 
 namespace STAPPLER_VERSIONIZED stappler::idn {
 
@@ -341,6 +342,78 @@ auto decodePunycode<memory::StandartInterface>(StringView source)
 	}
 
 	return memory::StandartInterface::StringType();
+}
+
+using HostUnicodeChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+		chars::Chars<char, '.', '-'>, chars::Range<char, char(128), char(255)>>;
+
+using HostAsciiChars = chars::Compose<char, chars::CharGroup<char, CharGroupId::Alphanumeric>,
+		chars::Chars<char, '.', '-'>>;
+
+template <typename Interface>
+auto _idnToAscii(StringView source, bool validate) -> typename Interface::StringType {
+	if (source.empty()) {
+		return typename Interface::StringType();
+	}
+
+	if (validate) {
+		StringView r(source);
+		r.skipChars<HostUnicodeChars>();
+		if (!r.empty()) {
+			return typename Interface::StringType();
+		}
+	}
+
+	typename Interface::StringType ret;
+	if (!sprt::unicode::idnToAscii([&](StringView str) { ret = str.str<Interface>(); }, source)) {
+		slog().warn("core", "_idnToAscii: fail to call platform-based idnToAscii");
+	}
+	return ret;
+}
+
+template <typename Interface>
+auto _idnToUnicode(StringView source, bool validate) -> typename Interface::StringType {
+	if (source.empty()) {
+		return typename Interface::StringType();
+	}
+
+	if (validate) {
+		StringView r(source);
+		r.skipChars<HostAsciiChars>();
+		if (!r.empty()) {
+			return typename Interface::StringType();
+		}
+	}
+
+	typename Interface::StringType ret;
+	if (!sprt::unicode::idnToUnicode([&](StringView str) { ret = str.str<Interface>(); }, source)) {
+		slog().warn("core", "_idnToUnicode: fail to call platform-based idnToUnicode");
+	}
+	return ret;
+}
+
+template <>
+auto toAscii<memory::PoolInterface>(StringView source, bool validate)
+		-> memory::PoolInterface::StringType {
+	return _idnToAscii<memory::PoolInterface>(source, validate);
+}
+
+template <>
+auto toAscii<memory::StandartInterface>(StringView source, bool validate)
+		-> memory::StandartInterface::StringType {
+	return _idnToAscii<memory::StandartInterface>(source, validate);
+}
+
+template <>
+auto toUnicode<memory::PoolInterface>(StringView source, bool validate)
+		-> memory::PoolInterface::StringType {
+	return _idnToUnicode<memory::PoolInterface>(source, validate);
+}
+
+template <>
+auto toUnicode<memory::StandartInterface>(StringView source, bool validate)
+		-> memory::StandartInterface::StringType {
+	return _idnToUnicode<memory::StandartInterface>(source, validate);
 }
 
 } // namespace stappler::idn

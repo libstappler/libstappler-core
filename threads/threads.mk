@@ -36,4 +36,4 @@ MODULE_STAPPLER_THREADS_LIBS += -framework Foundation
 endif
 
 # module name resolution
-MODULE_stappler_threads := MODULE_STAPPLER_THREADS
+$(call define_module, stappler_threads, MODULE_STAPPLER_THREADS)

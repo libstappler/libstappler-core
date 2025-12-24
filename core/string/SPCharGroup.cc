@@ -28,30 +28,74 @@ namespace STAPPLER_VERSIONIZED stappler {
 bool inCharGroup(CharGroupId mask, char16_t c) {
 	switch (mask) {
 	case CharGroupId::None: return false; break;
-	case CharGroupId::PunctuationBasic: return chars::CharGroup<char16_t, CharGroupId::PunctuationBasic>::match(c); break;
-	case CharGroupId::Numbers: return chars::CharGroup<char16_t, CharGroupId::Numbers>::match(c); break;
+	case CharGroupId::PunctuationBasic:
+		return chars::CharGroup<char16_t, CharGroupId::PunctuationBasic>::match(c);
+		break;
+	case CharGroupId::Numbers:
+		return chars::CharGroup<char16_t, CharGroupId::Numbers>::match(c);
+		break;
 	case CharGroupId::Latin: return chars::CharGroup<char16_t, CharGroupId::Latin>::match(c); break;
-	case CharGroupId::Cyrillic: return chars::CharGroup<char16_t, CharGroupId::Cyrillic>::match(c); break;
-	case CharGroupId::Currency: return chars::CharGroup<char16_t, CharGroupId::Currency>::match(c); break;
-	case CharGroupId::GreekBasic: return chars::CharGroup<char16_t, CharGroupId::GreekBasic>::match(c); break;
+	case CharGroupId::Cyrillic:
+		return chars::CharGroup<char16_t, CharGroupId::Cyrillic>::match(c);
+		break;
+	case CharGroupId::Currency:
+		return chars::CharGroup<char16_t, CharGroupId::Currency>::match(c);
+		break;
+	case CharGroupId::GreekBasic:
+		return chars::CharGroup<char16_t, CharGroupId::GreekBasic>::match(c);
+		break;
 	case CharGroupId::Math: return chars::CharGroup<char16_t, CharGroupId::Math>::match(c); break;
-	case CharGroupId::Arrows: return chars::CharGroup<char16_t, CharGroupId::Arrows>::match(c); break;
-	case CharGroupId::Fractionals: return chars::CharGroup<char16_t, CharGroupId::Fractionals>::match(c); break;
-	case CharGroupId::LatinSuppl1: return chars::CharGroup<char16_t, CharGroupId::LatinSuppl1>::match(c); break;
-	case CharGroupId::PunctuationAdvanced: return chars::CharGroup<char16_t, CharGroupId::PunctuationAdvanced>::match(c); break;
-	case CharGroupId::GreekAdvanced: return chars::CharGroup<char16_t, CharGroupId::GreekAdvanced>::match(c); break;
-	case CharGroupId::WhiteSpace: return chars::CharGroup<char16_t, CharGroupId::WhiteSpace>::match(c); break;
-	case CharGroupId::Controls: return chars::CharGroup<char16_t, CharGroupId::Controls>::match(c); break;
-	case CharGroupId::NonPrintable: return chars::CharGroup<char16_t, CharGroupId::NonPrintable>::match(c); break;
-	case CharGroupId::LatinLowercase: return chars::CharGroup<char16_t, CharGroupId::LatinLowercase>::match(c); break;
-	case CharGroupId::LatinUppercase: return chars::CharGroup<char16_t, CharGroupId::LatinUppercase>::match(c); break;
-	case CharGroupId::Alphanumeric: return chars::CharGroup<char16_t, CharGroupId::Alphanumeric>::match(c); break;
-	case CharGroupId::Hexadecimial: return chars::CharGroup<char16_t, CharGroupId::Hexadecimial>::match(c); break;
-	case CharGroupId::Base64: return chars::CharGroup<char16_t, CharGroupId::Base64>::match(c); break;
-	case CharGroupId::BreakableWhiteSpace: return chars::CharGroup<char16_t, CharGroupId::BreakableWhiteSpace>::match(c); break;
-	case CharGroupId::OpticalAlignmentSpecial: return chars::CharGroup<char16_t, CharGroupId::OpticalAlignmentSpecial>::match(c); break;
-	case CharGroupId::OpticalAlignmentBullet: return chars::CharGroup<char16_t, CharGroupId::OpticalAlignmentBullet>::match(c); break;
-	case CharGroupId::TextPunctuation: return chars::CharGroup<char16_t, CharGroupId::TextPunctuation>::match(c); break;
+	case CharGroupId::Arrows:
+		return chars::CharGroup<char16_t, CharGroupId::Arrows>::match(c);
+		break;
+	case CharGroupId::Fractionals:
+		return chars::CharGroup<char16_t, CharGroupId::Fractionals>::match(c);
+		break;
+	case CharGroupId::LatinSuppl1:
+		return chars::CharGroup<char16_t, CharGroupId::LatinSuppl1>::match(c);
+		break;
+	case CharGroupId::PunctuationAdvanced:
+		return chars::CharGroup<char16_t, CharGroupId::PunctuationAdvanced>::match(c);
+		break;
+	case CharGroupId::GreekAdvanced:
+		return chars::CharGroup<char16_t, CharGroupId::GreekAdvanced>::match(c);
+		break;
+	case CharGroupId::WhiteSpace:
+		return chars::CharGroup<char16_t, CharGroupId::WhiteSpace>::match(c);
+		break;
+	case CharGroupId::Controls:
+		return chars::CharGroup<char16_t, CharGroupId::Controls>::match(c);
+		break;
+	case CharGroupId::NonPrintable:
+		return chars::CharGroup<char16_t, CharGroupId::NonPrintable>::match(c);
+		break;
+	case CharGroupId::LatinLowercase:
+		return chars::CharGroup<char16_t, CharGroupId::LatinLowercase>::match(c);
+		break;
+	case CharGroupId::LatinUppercase:
+		return chars::CharGroup<char16_t, CharGroupId::LatinUppercase>::match(c);
+		break;
+	case CharGroupId::Alphanumeric:
+		return chars::CharGroup<char16_t, CharGroupId::Alphanumeric>::match(c);
+		break;
+	case CharGroupId::Hexadecimial:
+		return chars::CharGroup<char16_t, CharGroupId::Hexadecimial>::match(c);
+		break;
+	case CharGroupId::Base64:
+		return chars::CharGroup<char16_t, CharGroupId::Base64>::match(c);
+		break;
+	case CharGroupId::BreakableWhiteSpace:
+		return chars::CharGroup<char16_t, CharGroupId::BreakableWhiteSpace>::match(c);
+		break;
+	case CharGroupId::OpticalAlignmentSpecial:
+		return chars::CharGroup<char16_t, CharGroupId::OpticalAlignmentSpecial>::match(c);
+		break;
+	case CharGroupId::OpticalAlignmentBullet:
+		return chars::CharGroup<char16_t, CharGroupId::OpticalAlignmentBullet>::match(c);
+		break;
+	case CharGroupId::TextPunctuation:
+		return chars::CharGroup<char16_t, CharGroupId::TextPunctuation>::match(c);
+		break;
 	}
 	return false;
 }
@@ -81,6 +125,7 @@ enum class SmartType : uint8_t {
 	TextPunctuation = 1 << 7
 };
 
+// clang-format off
 static uint8_t smart_lookup_table[256] = {
 	   0,   0,   0,   0,   0,   0,   0,   0,   0,   4,   4,   4,   4,   4,   0,   0,
 	   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
@@ -99,6 +144,7 @@ static uint8_t smart_lookup_table[256] = {
 	   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
 	   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
 };
+// clang-format on
 
 bool CharGroup<char, GroupId::PunctuationBasic>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::PunctuationBasic);
@@ -109,7 +155,8 @@ bool CharGroup<char, GroupId::Numbers>::match(char c) {
 }
 
 bool CharGroup<char, GroupId::Latin>::match(char c) {
-	return smart_lookup_table[((const uint8_t *)&c)[0]] & (toInt(SmartType::LatinLowercase) | toInt(SmartType::LatinUppercase));
+	return smart_lookup_table[((const uint8_t *)&c)[0]]
+			& (toInt(SmartType::LatinLowercase) | toInt(SmartType::LatinUppercase));
 }
 
 bool CharGroup<char, GroupId::WhiteSpace>::match(char c) {
@@ -125,7 +172,9 @@ bool CharGroup<char, GroupId::LatinUppercase>::match(char c) {
 }
 
 bool CharGroup<char, GroupId::Alphanumeric>::match(char c) {
-	return smart_lookup_table[((const uint8_t *)&c)[0]] & (toInt(SmartType::LatinLowercase) | toInt(SmartType::LatinUppercase) | toInt(SmartType::Numbers));
+	return smart_lookup_table[((const uint8_t *)&c)[0]]
+			& (toInt(SmartType::LatinLowercase) | toInt(SmartType::LatinUppercase)
+					| toInt(SmartType::Numbers));
 }
 
 bool CharGroup<char, GroupId::Hexadecimial>::match(char c) {
@@ -140,6 +189,6 @@ bool CharGroup<char, GroupId::TextPunctuation>::match(char c) {
 	return smart_lookup_table[((const uint8_t *)&c)[0]] & toInt(SmartType::TextPunctuation);
 }
 
-}
+} // namespace chars
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler

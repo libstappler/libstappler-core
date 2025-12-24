@@ -45,7 +45,7 @@ Module libstappler-data adds:
 endef
 
 # module name resolution
-MODULE_stappler_data := MODULE_STAPPLER_DATA
+$(call define_module, stappler_data, MODULE_STAPPLER_DATA)
 
 ## Brotli encoding extra
 MODULE_STAPPLER_BROTLI_LIB_DEFINED_IN := $(TOOLKIT_MODULE_PATH)
@@ -58,4 +58,4 @@ MODULE_STAPPLER_BROTLI_LIB_INCLUDES_OBJS :=
 MODULE_STAPPLER_BROTLI_LIB_DEPENDS_ON :=
 
 # module name resolution
-MODULE_stappler_brotli_lib := MODULE_STAPPLER_BROTLI_LIB
+$(call define_module, stappler_brotli_lib, MODULE_STAPPLER_BROTLI_LIB)

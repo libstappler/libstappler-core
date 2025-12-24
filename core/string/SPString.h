@@ -60,16 +60,6 @@ inline auto getVersionDescription(uint32_t version) {
 
 namespace STAPPLER_VERSIONIZED stappler::string {
 
-inline size_t getUtf16Length(char32_t c) { return unicode::utf16EncodeLength(c); }
-SP_PUBLIC size_t getUtf16Length(const StringView &str);
-SP_PUBLIC size_t getUtf16HtmlLength(const StringView &str);
-
-inline size_t getUtf8Length(char32_t c) { return unicode::utf8EncodeLength(c); }
-inline size_t getUtf8Length(char16_t c) { return unicode::utf8EncodeLength(c); }
-SP_PUBLIC size_t getUtf8HtmlLength(const StringView &str);
-SP_PUBLIC size_t getUtf8Length(const WideStringView &str);
-SP_PUBLIC size_t getUtf8Length(const StringViewBase<char32_t> &str);
-
 SP_PUBLIC char charToKoi8r(char16_t c);
 
 template <typename StringType>
@@ -115,8 +105,6 @@ template <>
 struct InterfaceForString<const typename memory::PoolInterface::WideStringType> {
 	using Type = memory::PoolInterface;
 };
-
-SP_PUBLIC bool isValidUtf8(StringView);
 
 template <typename Interface>
 auto toupper(const StringView &str) -> typename Interface::StringType;
@@ -353,23 +341,7 @@ inline auto toStringConcat(const Container &c, const Sep &s) -> StringType {
 } // namespace STAPPLER_VERSIONIZED stappler
 
 
-namespace STAPPLER_VERSIONIZED stappler::unicode {
-
-SP_PUBLIC Status toUtf16(char16_t *buf, size_t bufSize, const StringView &data,
-		size_t *ret = nullptr);
-
-SP_PUBLIC Status toUtf16(char16_t *buf, size_t bufSize, char32_t ch, size_t *ret = nullptr);
-
-SP_PUBLIC Status toUtf16Html(char16_t *buf, size_t bufSize, const StringView &data,
-		size_t *ret = nullptr);
-
-SP_PUBLIC Status toUtf8(char *, size_t bufSize, const WideStringView &data, size_t *ret = nullptr);
-
-SP_PUBLIC Status toUtf8(char *, size_t bufSize, char16_t c, size_t *ret = nullptr);
-
-SP_PUBLIC Status toUtf8(char *, size_t bufSize, char32_t c, size_t *ret = nullptr);
-
-} // namespace stappler::unicode
+namespace STAPPLER_VERSIONIZED stappler::unicode { } // namespace stappler::unicode
 
 
 namespace STAPPLER_VERSIONIZED stappler::string {
@@ -555,7 +527,7 @@ auto StringTraits<Interface>::urldecode(const StringView &str) -> String {
 
 template <typename Interface>
 auto StringTraits<Interface>::toUtf16(char32_t ch) -> WideString {
-	const auto size = string::getUtf16Length(ch);
+	const auto size = sprt::unicode::getUtf16Length(ch);
 	WideString utf16_str;
 	utf16_str.reserve(size);
 
@@ -566,17 +538,19 @@ auto StringTraits<Interface>::toUtf16(char32_t ch) -> WideString {
 
 template <typename Interface>
 auto StringTraits<Interface>::toUtf16(const StringView &utf8_str) -> WideString {
-	const auto size = string::getUtf16Length(utf8_str);
+	const auto size = sprt::unicode::getUtf16Length(utf8_str);
 	WideString utf16_str;
 	utf16_str.reserve(size);
 
 	uint8_t offset = 0;
 	auto ptr = utf8_str.data();
+	auto len = utf8_str.size();
 	auto end = ptr + utf8_str.size();
 	while (ptr < end) {
-		auto c = unicode::utf8Decode32(ptr, offset);
+		auto c = sprt::unicode::utf8Decode32(ptr, len, offset);
 		unicode::utf16Encode(utf16_str, c);
 		ptr += offset;
+		len -= offset;
 	}
 
 	return utf16_str;
@@ -584,17 +558,19 @@ auto StringTraits<Interface>::toUtf16(const StringView &utf8_str) -> WideString 
 
 template <typename Interface>
 auto StringTraits<Interface>::toUtf16Html(const StringView &utf8_str) -> WideString {
-	const auto size = string::getUtf16HtmlLength(utf8_str);
+	const auto size = sprt::unicode::getUtf16HtmlLength(utf8_str);
 	WideString utf16_str;
 	utf16_str.reserve(size);
 
 	uint8_t offset = 0;
 	auto ptr = utf8_str.data();
+	auto len = utf8_str.size();
 	auto end = ptr + utf8_str.size();
 	while (ptr < end) {
-		auto c = unicode::utf8HtmlDecode32(ptr, offset);
+		auto c = sprt::unicode::utf8HtmlDecode32(ptr, len, offset);
 		unicode::utf16Encode(utf16_str, c);
 		ptr += offset;
+		len -= offset;
 	}
 
 	return utf16_str;
@@ -602,17 +578,19 @@ auto StringTraits<Interface>::toUtf16Html(const StringView &utf8_str) -> WideStr
 
 template <typename Interface>
 auto StringTraits<Interface>::toUtf8(const WideStringView &str) -> String {
-	const auto size = string::getUtf8Length(str);
+	const auto size = sprt::unicode::getUtf8Length(str);
 	String ret;
 	ret.reserve(size);
 
 	uint8_t offset;
 	auto ptr = str.data();
+	auto len = str.size();
 	auto end = ptr + str.size();
 	while (ptr < end) {
-		auto c = unicode::utf16Decode32(ptr, offset);
+		auto c = sprt::unicode::utf16Decode32(ptr, len, offset);
 		unicode::utf8Encode(ret, c);
 		ptr += offset;
+		len -= offset;
 	}
 
 	return ret;
@@ -620,7 +598,7 @@ auto StringTraits<Interface>::toUtf8(const WideStringView &str) -> String {
 
 template <typename Interface>
 auto StringTraits<Interface>::toUtf8(const StringViewBase<char32_t> &str) -> String {
-	const auto size = string::getUtf8Length(str);
+	const auto size = sprt::unicode::getUtf8Length(str);
 	String ret;
 	ret.reserve(size);
 
@@ -632,7 +610,7 @@ auto StringTraits<Interface>::toUtf8(const StringViewBase<char32_t> &str) -> Str
 template <typename Interface>
 auto StringTraits<Interface>::toUtf8(char16_t c) -> String {
 	String ret;
-	ret.reserve(unicode::utf8EncodeLength(c));
+	ret.reserve(sprt::unicode::utf8EncodeLength(c));
 	unicode::utf8Encode(ret, c);
 	return ret;
 }
@@ -640,7 +618,7 @@ auto StringTraits<Interface>::toUtf8(char16_t c) -> String {
 template <typename Interface>
 auto StringTraits<Interface>::toUtf8(char32_t c) -> String {
 	String ret;
-	ret.reserve(unicode::utf8EncodeLength(c));
+	ret.reserve(sprt::unicode::utf8EncodeLength(c));
 	unicode::utf8Encode(ret, c);
 	return ret;
 }
@@ -687,21 +665,24 @@ auto StringTraits<Interface>::totitle(const StringView &str) -> String {
 
 template <typename Interface>
 auto StringTraits<Interface>::decodeHtml(const StringView &utf8_str) -> String {
-	const auto size = string::getUtf8HtmlLength(utf8_str);
+	const auto size = sprt::unicode::getUtf8HtmlLength(utf8_str);
 	String result_str;
 	result_str.reserve(size);
 
 	uint8_t offset = 0;
 	auto ptr = utf8_str.data();
+	auto len = utf8_str.size();
 	auto end = ptr + utf8_str.size();
 	while (ptr < end) {
 		if (*ptr == '&') {
-			auto c = unicode::utf8HtmlDecode32(ptr, offset);
+			auto c = sprt::unicode::utf8HtmlDecode32(ptr, len, offset);
 			unicode::utf8Encode(result_str, c);
 			ptr += offset;
+			len -= offset;
 		} else {
 			result_str.emplace_back(*ptr);
 			++ptr;
+			--len;
 		}
 	}
 

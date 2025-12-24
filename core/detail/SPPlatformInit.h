@@ -42,7 +42,19 @@
 #endif
 
 // Visibility rules (assume -fvisibility=hidden -fvisibility-inlines-hidden)
+
+// SP_LOCAL should be always hidden
+// SP_PUBLIC is the stappler interface, it should be hidden in the final library, but public for the libraries of the SDK itself
+// SP_API this is an external library interface that should always be public
+
 #if WIN32
+
+#ifdef __GNUC__
+#define SP_API [[gnu::dllexport]]
+#else
+#define SP_API __declspec(dllexport)
+#endif
+
 #ifdef SP_BUILD_APPLICATION
 #define SP_PUBLIC
 #elif SP_BUILD_SHARED_LIBRARY
@@ -51,7 +63,7 @@
 #else
 #define SP_PUBLIC __declspec(dllexport)
 #endif
-#else
+#else // SP_BUILD_APPLICATION
 #ifdef __GNUC__
 #define SP_PUBLIC [[gnu::dllimport]]
 #else
@@ -59,14 +71,37 @@
 #endif
 #endif
 #define SP_LOCAL
-#else
-#if __GNUC__ >= 4
-#define SP_PUBLIC [[gnu::visibility("default")]]
+
+#elif ANDROID
+
+#ifdef SP_BUILD_SHARED_LIBRARY
+#define SP_API [[gnu::visibility("default")]]
+#define SP_PUBLIC [[gnu::visibility("hidden")]]
 #define SP_LOCAL  [[gnu::visibility("hidden")]]
 #else
+#define SP_API [[gnu::visibility("default")]]
+#define SP_PUBLIC [[gnu::visibility("hidden")]]
+#define SP_LOCAL  [[gnu::visibility("hidden")]]
+#endif
+
+#else
+
+#if __GNUC__ >= 4
+#ifdef SP_BUILD_EXTERNAL_LIBRARY
+#define SP_API [[gnu::visibility("default")]]
+#define SP_PUBLIC [[gnu::visibility("hidden")]]
+#define SP_LOCAL  [[gnu::visibility("hidden")]]
+#else
+#define SP_API [[gnu::visibility("default")]]
+#define SP_PUBLIC [[gnu::visibility("default")]]
+#define SP_LOCAL  [[gnu::visibility("hidden")]]
+#endif
+#else
+#define SP_API
 #define SP_PUBLIC
 #define SP_LOCAL
 #endif
+
 #endif
 
 
@@ -141,107 +176,6 @@
 #endif // __cplusplus
 
 /*
- * IDE-specific section
- *
- * IDE helper macros and definition should be placed below
- */
-
-#if __CDT_PARSER__ // Eclipse CDT parser
-
-// enable all modules
-
-#define MODULE_STAPPLER_EVENT 1
-#define MODULE_STAPPLER_DATA 1
-#define MODULE_STAPPLER_FILESYSTEM 1
-#define MODULE_STAPPLER_BROTLI_LIB 1
-#define MODULE_STAPPLER_THREADS 1
-#define MODULE_STAPPLER_CRYPTO 1
-#define MODULE_STAPPLER_BITMAP 1
-#define MODULE_STAPPLER_THREADS 1
-#define MODULE_STAPPLER_NETWORK 1
-#define MODULE_STAPPLER_GEOM 1
-#define MODULE_STAPPLER_TESS 1
-#define MODULE_STAPPLER_VG 1
-#define MODULE_STAPPLER_SEARCH 1
-#define MODULE_STAPPLER_SQL 1
-#define MODULE_STAPPLER_DB 1
-#define MODULE_STAPPLER_ZIP 1
-#define MODULE_STAPPLER_WASM 1
-
-#define MODULE_STAPPLER_WEBSERVER_WEBSERVER 1
-#define MODULE_STAPPLER_WEBSERVER_UNIX 1
-
-#define MODULE_XENOLITH_CORE 1
-#define MODULE_XENOLITH_APPLICATION 1
-#define MODULE_XENOLITH_BACKEND_VK 1
-#define MODULE_XENOLITH_BACKEND_VKGUI 1
-#define MODULE_XENOLITH_RENDERER_BASIC2D 1
-#define MODULE_XENOLITH_RENDERER_MATERIAL2D 1
-
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-//define something for Windows (32-bit and 64-bit, this part is common)
-#ifdef _WIN64
-#define WINDOWS 1
-#ifndef WIN32
-#define WIN32 1
-#endif
-#else
-#define WINDOWS 1
-#ifndef WIN32
-#define WIN32 1
-#endif
-#endif
-#elif __APPLE__
-#include <TargetConditionals.h>
-#if TARGET_IPHONE_SIMULATOR
-#define IOS 1
-#elif TARGET_OS_MACCATALYST
-#define IOS 1
-#elif TARGET_OS_IPHONE
-#define IOS 1
-#elif TARGET_OS_MAC
-#define MACOS 1
-#else
-#error "Unknown Apple platform"
-#endif
-#elif __ANDROID__
-#define ANDROID 1
-#elif __linux__
-#define LINUX 1
-#else
-#error "Unknown compiler"
-#endif
-
-#if WIN32
-#ifndef __cdecl
-#define __cdecl
-#endif
-
-#define __pragma(...)
-#define _Pragma(...)
-
-using LPCWSTR = const wchar_t *;
-
-typedef long long __int64;
-typedef unsigned long long size_t;
-
-#include <intsafe.h>
-
-#endif
-
-#ifdef __cplusplus
-namespace std {
-
-template <typename T>
-using iter_reference_t = typename T::reference;
-
-}
-#endif /* __cplusplus */
-
-#endif // __CDT_PARSER__
-
-
-/*
  * Platform-specific section
  */
 
@@ -256,63 +190,6 @@ using iter_reference_t = typename T::reference;
 #define SP_HAVE_DEDICATED_SIZE_T 0
 #endif
 
-/* SP_HAVE_THREE_WAY_COMPARISON
- * - Defined as 1 if platform have <=> and defaulted comparison operators
- */
-
-#ifdef __cplusplus
-#if __LCC__ && __LCC__ <= 127
-#define SP_HAVE_THREE_WAY_COMPARISON 0
-#elif __cpp_impl_three_way_comparison >= 201711
-#define SP_HAVE_THREE_WAY_COMPARISON 1
-#else
-#define SP_HAVE_THREE_WAY_COMPARISON 0
-#endif
-
-// Enable default <=> operator if we can
-#if SP_HAVE_THREE_WAY_COMPARISON
-#define SP_THREE_WAY_COMPARISON_TYPE(Type) auto operator<=>(const Type&) const = default;
-#define SP_THREE_WAY_COMPARISON_FRIEND(Type) friend auto operator<=>(const Type&, const Type &) = default;
-#define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type) constexpr auto operator<=>(const Type &) const = default;
-#define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type) friend constexpr auto operator<=>(const Type&, const Type &) = default;
-#else
-#if __LCC__ && __LCC__ >= 127
-#define SP_THREE_WAY_COMPARISON_TYPE(Type) \
-	bool operator==(const Type&) const = default;\
-	bool operator!=(const Type&) const = default;\
-	bool operator>(const Type&) const = default;\
-	bool operator>=(const Type&) const = default;\
-	bool operator<=(const Type&) const = default;\
-	bool operator<(const Type&) const = default;
-#define SP_THREE_WAY_COMPARISON_FRIEND(Type) \
-	friend bool operator==(const Type&, const Type &) = default;\
-	friend bool operator!=(const Type&, const Type &) = default;\
-	friend bool operator>(const Type&, const Type &) = default;\
-	friend bool operator>=(const Type&, const Type &) = default;\
-	friend bool operator<=(const Type&, const Type &) = default;\
-	friend bool operator<(const Type&, const Type &) = default;
-#define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type) \
-	constexpr bool operator==(const Type&) const = default;\
-	constexpr bool operator!=(const Type&) const = default;\
-	constexpr bool operator>(const Type&) const = default;\
-	constexpr bool operator>=(const Type&) const = default;\
-	constexpr bool operator<=(const Type&) const = default;\
-	constexpr bool operator<(const Type&) const = default;
-#define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type) \
-	friend constexpr bool operator==(const Type&, const Type &) = default;\
-	friend constexpr bool operator!=(const Type&, const Type &) = default;\
-	friend constexpr bool operator>(const Type&, const Type &) = default;\
-	friend constexpr bool operator>=(const Type&, const Type &) = default;\
-	friend constexpr bool operator<=(const Type&, const Type &) = default;\
-	friend constexpr bool operator<(const Type&, const Type &) = default;
-#else
-#define SP_THREE_WAY_COMPARISON_TYPE(Type)
-#define SP_THREE_WAY_COMPARISON_FRIEND(Type)
-#define SP_THREE_WAY_COMPARISON_TYPE_CONSTEXPR(Type)
-#define SP_THREE_WAY_COMPARISON_FRIEND_CONSTEXPR(Type)
-#endif
-#endif
-#endif /* __cplusplus */
 
 // Suppress windows MIN/MAX macro
 // Actually, windows-specific includes should be only in SPPlatformUnistd.h with proper filters for macro leaking

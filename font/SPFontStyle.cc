@@ -25,49 +25,6 @@
 
 namespace STAPPLER_VERSIONIZED stappler::font {
 
-#ifdef __LCC__
-
-constexpr FontStretch FontStretch::UltraCondensed = FontStretch(50 << 1);
-constexpr FontStretch FontStretch::ExtraCondensed = FontStretch((62 << 1) | 1);
-constexpr FontStretch FontStretch::Condensed = FontStretch(75 << 1);
-constexpr FontStretch FontStretch::SemiCondensed = FontStretch((87 << 1) | 1);
-constexpr FontStretch FontStretch::Normal = FontStretch(100 << 1);
-constexpr FontStretch FontStretch::SemiExpanded = FontStretch((112 << 1) | 1);
-constexpr FontStretch FontStretch::Expanded = FontStretch(125 << 1);
-constexpr FontStretch FontStretch::ExtraExpanded = FontStretch(150 << 1);
-constexpr FontStretch FontStretch::UltraExpanded = FontStretch(200 << 1);
-
-constexpr FontWeight FontWeight::Thin = FontWeight(100);
-constexpr FontWeight FontWeight::ExtraLight = FontWeight(200);
-constexpr FontWeight FontWeight::Light = FontWeight(300);
-constexpr FontWeight FontWeight::Normal = FontWeight(400);
-constexpr FontWeight FontWeight::Regular = FontWeight(400);
-constexpr FontWeight FontWeight::Medium = FontWeight(500);
-constexpr FontWeight FontWeight::SemiBold = FontWeight(600);
-constexpr FontWeight FontWeight::Bold = FontWeight(700);
-constexpr FontWeight FontWeight::ExtraBold = FontWeight(800);
-constexpr FontWeight FontWeight::Heavy = FontWeight(900);
-constexpr FontWeight FontWeight::Black = FontWeight(1000);
-
-constexpr FontSize FontSize::XXSmall = FontSize(uint16_t(8));
-constexpr FontSize FontSize::XSmall = FontSize(uint16_t(10));
-constexpr FontSize FontSize::Small = FontSize(uint16_t(12));
-constexpr FontSize FontSize::Medium = FontSize(uint16_t(14));
-constexpr FontSize FontSize::Large = FontSize(uint16_t(16));
-constexpr FontSize FontSize::XLarge = FontSize(uint16_t(20));
-constexpr FontSize FontSize::XXLarge = FontSize(uint16_t(24));
-
-constexpr FontStyle FontStyle::Normal = FontStyle(0);
-constexpr FontStyle FontStyle::Italic = FontStyle(minOf<int16_t>());
-constexpr FontStyle FontStyle::Oblique = FontStyle(-10 << 6);
-
-constexpr FontGrade FontGrade::Thin = FontGrade(-200);
-constexpr FontGrade FontGrade::Reduced = FontGrade(-50);
-constexpr FontGrade FontGrade::Normal = FontGrade(0);
-constexpr FontGrade FontGrade::Heavy = FontGrade(150);
-
-#endif
-
 static void s_getSpecializationArgs(std::ostream &out, const FontSpecializationVector &vec) {
 	out << "?size=" << vec.fontSize.get();
 	out << "&weight=" << vec.fontWeight.get();
@@ -84,14 +41,16 @@ static void s_getSpecializationArgs(std::ostream &out, const FontSpecializationV
 }
 
 template <>
-auto FontSpecializationVector::getSpecializationArgs<memory::PoolInterface>() const -> memory::PoolInterface::StringType {
+auto FontSpecializationVector::getSpecializationArgs<memory::PoolInterface>() const
+		-> memory::PoolInterface::StringType {
 	memory::PoolInterface::StringStreamType out;
 	s_getSpecializationArgs(out, *this);
 	return out.str();
 }
 
 template <>
-auto FontSpecializationVector::getSpecializationArgs<memory::StandartInterface>() const -> memory::StandartInterface::StringType {
+auto FontSpecializationVector::getSpecializationArgs<memory::StandartInterface>() const
+		-> memory::StandartInterface::StringType {
 	memory::StandartInterface::StringStreamType out;
 	s_getSpecializationArgs(out, *this);
 	return out.str();
@@ -109,7 +68,7 @@ FontParameters FontParameters::create(StringView str, memory::pool_t *pool) {
 		Overflow,
 	} state = Family;
 
-	str.split<StringView::Chars<'.'>>([&] (const StringView &ir) {
+	str.split<StringView::Chars<'.'>>([&](const StringView &ir) {
 		StringView r(ir);
 		switch (state) {
 		case Family:
@@ -117,20 +76,33 @@ FontParameters FontParameters::create(StringView str, memory::pool_t *pool) {
 			state = Size;
 			break;
 		case Size:
-			if (r.is("xxs")) { ret.fontSize = FontSize::XXSmall; }
-			else if (r.is("xs")) { ret.fontSize = FontSize::XSmall; }
-			else if (r.is("s")) { ret.fontSize = FontSize::Small; }
-			else if (r.is("m")) { ret.fontSize = FontSize::Medium; }
-			else if (r.is("l")) {ret.fontSize = FontSize::Large; }
-			else if (r.is("xl")) { ret.fontSize = FontSize::XLarge; }
-			else if (r.is("xxl")) { ret.fontSize = FontSize::XXLarge; }
-			else { r.readInteger().unwrap([&] (int64_t value) { ret.fontSize = FontSize(value); }); }
+			if (r.is("xxs")) {
+				ret.fontSize = FontSize::XXSmall;
+			} else if (r.is("xs")) {
+				ret.fontSize = FontSize::XSmall;
+			} else if (r.is("s")) {
+				ret.fontSize = FontSize::Small;
+			} else if (r.is("m")) {
+				ret.fontSize = FontSize::Medium;
+			} else if (r.is("l")) {
+				ret.fontSize = FontSize::Large;
+			} else if (r.is("xl")) {
+				ret.fontSize = FontSize::XLarge;
+			} else if (r.is("xxl")) {
+				ret.fontSize = FontSize::XXLarge;
+			} else {
+				r.readInteger().unwrap([&](int64_t value) { ret.fontSize = FontSize(value); });
+			}
 			state = Style;
 			break;
 		case Style:
-			if (r.is("i")) { ret.fontStyle = FontStyle::Italic; }
-			else if (r.is("o")) { ret.fontStyle = FontStyle::Oblique; }
-			else if (r.is("n")) { ret.fontStyle = FontStyle::Normal; }
+			if (r.is("i")) {
+				ret.fontStyle = FontStyle::Italic;
+			} else if (r.is("o")) {
+				ret.fontStyle = FontStyle::Oblique;
+			} else if (r.is("n")) {
+				ret.fontStyle = FontStyle::Normal;
+			}
 			state = Weight;
 			break;
 		case Weight:
@@ -148,8 +120,10 @@ FontParameters FontParameters::create(StringView str, memory::pool_t *pool) {
 }
 
 template <>
-auto FontParameters::getFontConfigName<memory::PoolInterface>(StringView fontFamily, FontSize fontSize, FontStyle fontStyle, FontWeight fontWeight,
-		FontStretch fontStretch, FontGrade fontGrade, FontVariant fontVariant, bool caps) -> memory::PoolInterface::StringType {
+auto FontParameters::getFontConfigName<memory::PoolInterface>(StringView fontFamily,
+		FontSize fontSize, FontStyle fontStyle, FontWeight fontWeight, FontStretch fontStretch,
+		FontGrade fontGrade, FontVariant fontVariant, bool caps)
+		-> memory::PoolInterface::StringType {
 	auto size = fontSize;
 	memory::PoolInterface::StringType name;
 	name.reserve(fontFamily.size() + 14);
@@ -164,7 +138,10 @@ auto FontParameters::getFontConfigName<memory::PoolInterface>(StringView fontFam
 	switch (fontStyle.get()) {
 	case FontStyle::Normal.get(): name += ".n"; break;
 	case FontStyle::Italic.get(): name += ".i"; break;
-	default: name += "."; name += mem_pool::toString(fontStyle.get()); break;
+	default:
+		name += ".";
+		name += mem_pool::toString(fontStyle.get());
+		break;
 	}
 
 	name += mem_pool::toString(".", fontWeight.get());
@@ -174,8 +151,10 @@ auto FontParameters::getFontConfigName<memory::PoolInterface>(StringView fontFam
 }
 
 template <>
-auto FontParameters::getFontConfigName<memory::StandartInterface>(StringView fontFamily, FontSize fontSize, FontStyle fontStyle, FontWeight fontWeight,
-		FontStretch fontStretch, FontGrade fontGrade, FontVariant fontVariant, bool caps) -> memory::StandartInterface::StringType {
+auto FontParameters::getFontConfigName<memory::StandartInterface>(StringView fontFamily,
+		FontSize fontSize, FontStyle fontStyle, FontWeight fontWeight, FontStretch fontStretch,
+		FontGrade fontGrade, FontVariant fontVariant, bool caps)
+		-> memory::StandartInterface::StringType {
 	auto size = fontSize;
 	memory::StandartInterface::StringType name;
 	name.reserve(fontFamily.size() + 14);
@@ -190,7 +169,10 @@ auto FontParameters::getFontConfigName<memory::StandartInterface>(StringView fon
 	switch (fontStyle.get()) {
 	case FontStyle::Normal.get(): name += ".n"; break;
 	case FontStyle::Italic.get(): name += ".i"; break;
-	default: name += "."; name += mem_std::toString(fontStyle.get()); break;
+	default:
+		name += ".";
+		name += mem_std::toString(fontStyle.get());
+		break;
 	}
 
 	name += mem_std::toString(".", fontWeight.get());
@@ -205,7 +187,8 @@ FontParameters FontParameters::getSmallCaps() const {
 	return ret;
 }
 
-FontSpecializationVector FontVariations::getSpecialization(const FontSpecializationVector &vec) const {
+FontSpecializationVector FontVariations::getSpecialization(
+		const FontSpecializationVector &vec) const {
 	FontSpecializationVector ret = vec;
 	if ((axisMask & FontVariableAxis::Weight) != FontVariableAxis::None) {
 		ret.fontWeight = weight.clamp(vec.fontWeight);
@@ -247,7 +230,8 @@ FontSpecializationVector FontVariations::getSpecialization(const FontSpecializat
 	default:
 		if ((axisMask & FontVariableAxis::Slant) != FontVariableAxis::None) {
 			ret.fontStyle = slant.clamp(vec.fontStyle);
-		} else if ((axisMask & FontVariableAxis::Italic) != FontVariableAxis::None && italic.min != italic.max) {
+		} else if ((axisMask & FontVariableAxis::Italic) != FontVariableAxis::None
+				&& italic.min != italic.max) {
 			ret.fontStyle = FontStyle::Italic;
 		} else {
 			if (italic.min == 1) {
@@ -262,4 +246,4 @@ FontSpecializationVector FontVariations::getSpecialization(const FontSpecializat
 	return ret;
 }
 
-}
+} // namespace stappler::font

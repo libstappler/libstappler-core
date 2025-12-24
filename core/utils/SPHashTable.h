@@ -56,9 +56,7 @@ struct HashTraits<NamedRef *> {
 		return hash::hash32(name.data(), uint32_t(name.size()), salt);
 	}
 
-	static bool equal(const NamedRef *l, const NamedRef *r) {
-		return l == r;
-	}
+	static bool equal(const NamedRef *l, const NamedRef *r) { return l == r; }
 };
 
 template <>
@@ -72,13 +70,9 @@ struct HashTraits<Rc<NamedRef>> {
 		return hash::hash32(value.data(), uint32_t(value.size()), salt);
 	}
 
-	static bool equal(const NamedRef *l, const NamedRef *r) {
-		return l == r;
-	}
+	static bool equal(const NamedRef *l, const NamedRef *r) { return l == r; }
 
-	static bool equal(const NamedRef *l, StringView value) {
-		return l->getName() == value;
-	}
+	static bool equal(const NamedRef *l, StringView value) { return l->getName() == value; }
 };
 
 template <>
@@ -91,13 +85,9 @@ struct HashTraits<NamedMem *> {
 		return hash::hash32(value.data(), uint32_t(value.size()), salt);
 	}
 
-	static bool equal(const NamedMem *l, const NamedMem *r) {
-		return l->key == r->key;
-	}
+	static bool equal(const NamedMem *l, const NamedMem *r) { return l->key == r->key; }
 
-	static bool equal(const NamedMem *l, StringView value) {
-		return l->key == value;
-	}
+	static bool equal(const NamedMem *l, StringView value) { return l->key == value; }
 };
 
 template <typename Value>
@@ -105,18 +95,14 @@ struct HashTraitDiscovery;
 
 template <typename Value>
 struct HashTraitDiscovery<Rc<Value>> {
-	using type = typename std::conditional<
-			std::is_base_of<NamedRef, Value>::value,
-			HashTraits<Rc<NamedRef>>,
-			typename HashTraitDiscovery<Value *>::type>::type;
+	using type = typename std::conditional< std::is_base_of<NamedRef, Value>::value,
+			HashTraits<Rc<NamedRef>>, typename HashTraitDiscovery<Value *>::type>::type;
 };
 
 template <typename Value>
 struct HashTraitDiscovery<Value *> {
-	using type = typename std::conditional<
-			std::is_base_of<NamedMem, Value>::value,
-			HashTraits<NamedMem *>,
-			HashTraits<Value *>>::type;
+	using type = typename std::conditional< std::is_base_of<NamedMem, Value>::value,
+			HashTraits<NamedMem *>, HashTraits<Value *>>::type;
 };
 
 template <typename Value>
@@ -124,13 +110,13 @@ struct HashEntry {
 	using Type = typename std::remove_cv<typename std::remove_reference<Value>::type>::type;
 	using Traits = typename HashTraitDiscovery<Value>::type;
 
-	template <typename ... Args>
-	static uint32_t getHash(uint32_t salt, Args && ... args) {
+	template <typename... Args>
+	static uint32_t getHash(uint32_t salt, Args &&...args) {
 		return Traits::hash(salt, std::forward<Args>(args)...);
 	}
 
-	template <typename ... Args>
-	static bool isEqual(const Value &l, Args && ... args) {
+	template <typename... Args>
+	static bool isEqual(const Value &l, Args &&...args) {
 		return Traits::equal(l, std::forward<Args>(args)...);
 	}
 
@@ -152,7 +138,7 @@ struct HashIndex {
 	HashEntry<Type> *_next;
 	uint32_t index;
 
-	HashIndex * next() {
+	HashIndex *next() {
 		if (_self) {
 			_bucket = &_self->next;
 		}
@@ -165,20 +151,31 @@ struct HashIndex {
 			}
 			_self = ht->array[index];
 			_bucket = &ht->array[index];
-			++ index;
+			++index;
 		}
 		_next = _self->next;
 		return this;
 	}
 
-	bool operator==(const HashIndex &l) const { return l.ht == ht && l._self == _self && l._next == _next && l.index == index; }
-	bool operator!=(const HashIndex &l) const { return l.ht != ht || l._self != _self || l._next != _next || l.index != index; }
+	bool operator==(const HashIndex &l) const {
+		return l.ht == ht && l._self == _self && l._next == _next && l.index == index;
+	}
+	bool operator!=(const HashIndex &l) const {
+		return l.ht != ht || l._self != _self || l._next != _next || l.index != index;
+	}
 
-	HashIndex& operator++() { this->next(); return *this; }
-	HashIndex operator++(int) { auto tmp = *this; this->next(); return tmp; }
+	HashIndex &operator++() {
+		this->next();
+		return *this;
+	}
+	HashIndex operator++(int) {
+		auto tmp = *this;
+		this->next();
+		return tmp;
+	}
 
-	Type & operator*() const { return *_self->get(); }
-	Type * operator->() const { return _self->get(); }
+	Type &operator*() const { return *_self->get(); }
+	Type *operator->() const { return _self->get(); }
 };
 
 template <typename Value>
@@ -186,12 +183,12 @@ struct ConstHashIndex {
 	using Type = typename std::remove_cv<typename std::remove_reference<Value>::type>::type;
 
 	const HashTable<Value> *ht;
-	const HashEntry<Type> * const*_bucket;
+	const HashEntry<Type> *const *_bucket;
 	const HashEntry<Type> *_self;
 	const HashEntry<Type> *_next;
 	uint32_t index;
 
-	ConstHashIndex * next() {
+	ConstHashIndex *next() {
 		if (_self) {
 			_bucket = &_self->next;
 		}
@@ -203,20 +200,31 @@ struct ConstHashIndex {
 			}
 			_self = ht->array[index];
 			_bucket = &ht->array[index];
-			++ index;
+			++index;
 		}
 		_next = _self->next;
 		return this;
 	}
 
-	bool operator==(const ConstHashIndex &l) const { return l.ht == ht && l._self == _self && l._next == _next && l.index == index; }
-	bool operator!=(const ConstHashIndex &l) const { return l.ht != ht || l._self != _self || l._next != _next || l.index != index; }
+	bool operator==(const ConstHashIndex &l) const {
+		return l.ht == ht && l._self == _self && l._next == _next && l.index == index;
+	}
+	bool operator!=(const ConstHashIndex &l) const {
+		return l.ht != ht || l._self != _self || l._next != _next || l.index != index;
+	}
 
-	ConstHashIndex& operator++() { this->next(); return *this; }
-	ConstHashIndex operator++(int) { auto tmp = *this; this->next(); return tmp; }
+	ConstHashIndex &operator++() {
+		this->next();
+		return *this;
+	}
+	ConstHashIndex operator++(int) {
+		auto tmp = *this;
+		this->next();
+		return tmp;
+	}
 
-	const Type & operator*() const { return *_self->get(); }
-	const Type * operator->() const { return _self->get(); }
+	const Type &operator*() const { return *_self->get(); }
+	const Type *operator->() const { return _self->get(); }
 };
 
 template <typename Value>
@@ -225,7 +233,8 @@ public:
 	using Pool = memory::pool_t;
 	using ValueType = HashEntry<Value>;
 
-	using merge_fn = void *(*)(Pool *p, const void *key, size_t klen, const void *h1_val, const void *h2_val, const void *data);
+	using merge_fn = void *(*)(Pool * p, const void *key, size_t klen, const void *h1_val,
+			const void *h2_val, const void *data);
 	using foreach_fn = bool (*)(void *rec, const void *key, size_t klen, const void *value);
 
 	static constexpr auto INITIAL_MAX = 15; /* tunable == 2^n - 1 */
@@ -238,14 +247,16 @@ public:
 			p = memory::pool::acquire();
 		}
 
-		SPASSERT(p, "Pool should be defined");
+		sprt_passert(p, "Pool should be defined");
 
 		auto now = Time::now().toMicros();
 		this->pool = p;
 		this->free = nullptr;
 		this->count = 0;
 		this->max = INITIAL_MAX;
-		this->seed = (unsigned int)((now >> 32) ^ now ^ (uintptr_t)pool ^ (uintptr_t)this ^ (uintptr_t)&now) - 1;
+		this->seed = (unsigned int)((now >> 32) ^ now ^ (uintptr_t)pool ^ (uintptr_t)this
+							 ^ (uintptr_t)&now)
+				- 1;
 		this->array = alloc_array(this->pool, max);
 	}
 
@@ -254,7 +265,7 @@ public:
 			p = memory::pool::acquire();
 		}
 
-		SPASSERT(p, "Pool should be defined");
+		sprt_passert(p, "Pool should be defined");
 
 		this->pool = p;
 		this->free = nullptr;
@@ -269,7 +280,7 @@ public:
 			p = memory::pool::acquire();
 		}
 
-		SPASSERT(p, "Pool should be defined");
+		sprt_passert(p, "Pool should be defined");
 
 		this->pool = p;
 		this->free = nullptr;
@@ -280,8 +291,10 @@ public:
 		if (p == copy.pool) {
 			this->array = this->do_copy(copy.array, copy.max);
 		} else {
-			this->free = copy.free; copy.free = nullptr;
-			this->array = copy.array; copy.array = nullptr;
+			this->free = copy.free;
+			copy.free = nullptr;
+			this->array = copy.array;
+			copy.array = nullptr;
 		}
 	}
 
@@ -329,15 +342,17 @@ public:
 		if (this->pool == other.pool) {
 			this->array = this->do_copy(other.array, other.max);
 		} else {
-			this->free = other.free; other.free = nullptr;
-			this->array = other.array; other.array = nullptr;
+			this->free = other.free;
+			other.free = nullptr;
+			this->array = other.array;
+			other.array = nullptr;
 		}
 
 		return *this;
 	}
 
-	template <typename ... Args>
-	Pair<iterator, bool> assign(Args && ... args) {
+	template <typename... Args>
+	Pair<iterator, bool> assign(Args &&...args) {
 		ValueType **hep = nullptr;
 		iterator iter;
 		auto ret = set_value(true, &hep, std::forward<Args>(args)...);
@@ -349,8 +364,8 @@ public:
 		return pair(iter, ret.second);
 	}
 
-	template <typename ... Args>
-	Pair<iterator, bool> emplace(Args && ... args) {
+	template <typename... Args>
+	Pair<iterator, bool> emplace(Args &&...args) {
 		ValueType **hep = nullptr;
 		iterator iter;
 		auto ret = set_value(false, &hep, std::forward<Args>(args)...);
@@ -362,16 +377,16 @@ public:
 		return pair(iter, ret.second);
 	}
 
-	template <typename ... Args>
-	bool contains(Args && ... args) const {
+	template <typename... Args>
+	bool contains(Args &&...args) const {
 		if (auto ret = get_value(nullptr, std::forward<Args>(args)...)) {
 			return true;
 		}
 		return false;
 	}
 
-	template <typename ... Args>
-	iterator find(Args && ... args) {
+	template <typename... Args>
+	iterator find(Args &&...args) {
 		ValueType **hep = nullptr;
 		if (auto ret = get_value(&hep, std::forward<Args>(args)...)) {
 			iterator iter;
@@ -385,8 +400,8 @@ public:
 		return end();
 	}
 
-	template <typename ... Args>
-	const_iterator find(Args && ... args) const {
+	template <typename... Args>
+	const_iterator find(Args &&...args) const {
 		ValueType **hep = nullptr;
 		if (auto ret = get_value(&hep, std::forward<Args>(args)...)) {
 			const_iterator iter;
@@ -400,8 +415,8 @@ public:
 		return end();
 	}
 
-	template <typename ... Args>
-	const typename ValueType::Type get(Args && ... args) const {
+	template <typename... Args>
+	const typename ValueType::Type get(Args &&...args) const {
 		if (auto ret = get_value(nullptr, std::forward<Args>(args)...)) {
 			return *ret->get();
 		}
@@ -434,8 +449,8 @@ public:
 		return iter;
 	}
 
-	template <typename ... Args>
-	iterator erase(Args && ... args) {
+	template <typename... Args>
+	iterator erase(Args &&...args) {
 		ValueType **hep, *he;
 		const auto hash = ValueType::getHash(seed, std::forward<Args>(args)...);
 		const auto idx = hash & this->max;
@@ -483,12 +498,13 @@ public:
 			expand_array(this, c);
 		}
 
-		auto mem = (ValueType *)memory::pool::palloc(this->pool, sizeof(ValueType) * (c - this->count));
+		auto mem = (ValueType *)memory::pool::palloc(this->pool,
+				sizeof(ValueType) * (c - this->count));
 
-		for (size_t i = this->count; i < c; ++ i) {
+		for (size_t i = this->count; i < c; ++i) {
 			mem->next = free;
 			free = mem;
-			++ mem;
+			++mem;
 		}
 	}
 
@@ -497,7 +513,7 @@ public:
 			return;
 		}
 
-		for (size_t i = 0; i <= max; ++ i) {
+		for (size_t i = 0; i <= max; ++i) {
 			auto v = array[i];
 			while (v) {
 				auto tmp = v;
@@ -568,9 +584,9 @@ public:
 		}
 
 		size_t count = 0;
-		for (size_t i = 0; i <= max; ++ i) {
+		for (size_t i = 0; i <= max; ++i) {
 			if (array[i]) {
-				++ count;
+				++count;
 			}
 		}
 		return count;
@@ -581,7 +597,7 @@ public:
 		auto f = free;
 		while (f) {
 			f = f->next;
-			++ count;
+			++count;
 		}
 		return count;
 	}
@@ -620,7 +636,7 @@ private:
 			uint32_t i = hi._self->hash & new_max;
 			hi._self->next = new_array[i];
 			new_array[i] = hi._self;
-			++ hi;
+			++hi;
 		}
 
 		memory::pool::free(ht->pool, ht->array, (ht->max + 1) * sizeof(ValueType));
@@ -629,8 +645,8 @@ private:
 		ht->max = new_max;
 	}
 
-	template <typename ... Args>
-	ValueType * get_value(ValueType ***bucket, Args &&  ... args) const {
+	template <typename... Args>
+	ValueType *get_value(ValueType ***bucket, Args &&...args) const {
 		if (!this->array) {
 			return nullptr;
 		}
@@ -652,8 +668,8 @@ private:
 		return he;
 	}
 
-	template <typename ... Args>
-	Pair<ValueType *, bool> set_value(bool replace, ValueType ***bucket, Args &&  ... args) {
+	template <typename... Args>
+	Pair<ValueType *, bool> set_value(bool replace, ValueType ***bucket, Args &&...args) {
 		if (!this->array) {
 			do_allocate_array(INITIAL_MAX);
 		}
@@ -704,9 +720,10 @@ private:
 		}
 	}
 
-	HashEntry<Value> ** do_copy(HashEntry<Value> **copy_array, uint32_t copy_max) {
+	HashEntry<Value> **do_copy(HashEntry<Value> **copy_array, uint32_t copy_max) {
 		auto new_array = alloc_array(this->pool, copy_max);
-		auto new_vals = (HashEntry<Value> *)memory::pool::palloc(this->pool, sizeof(ValueType) * this->count);
+		auto new_vals = (HashEntry<Value> *)memory::pool::palloc(this->pool,
+				sizeof(ValueType) * this->count);
 
 		size_t j = 0;
 		for (size_t i = 0; i <= copy_max; i++) {
@@ -729,7 +746,9 @@ private:
 		auto now = Time::now().toMicros();
 		this->count = 0;
 		this->max = max;
-		this->seed = (unsigned int)((now >> 32) ^ now ^ (uintptr_t)pool ^ (uintptr_t)this ^ (uintptr_t)&now) - 1;
+		this->seed = (unsigned int)((now >> 32) ^ now ^ (uintptr_t)pool ^ (uintptr_t)this
+							 ^ (uintptr_t)&now)
+				- 1;
 		this->array = alloc_array(this->pool, this->max);
 	}
 
@@ -739,6 +758,6 @@ private:
 	HashEntry<Value> *free = nullptr; /* List of recycled entries */
 };
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 #endif /* STAPPLER_CORE_UTILS_SPHASHTABLE_H_ */

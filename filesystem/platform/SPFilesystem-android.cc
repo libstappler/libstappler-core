@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "detail/SPFilesystemResourceData.h"
 
 #include "SPZip.h"
-#include "platform/SPJni.h"
+#include "jni/SPRuntimeJni.h"
 #include "SPPlatformUnistd.h" // IWYU pragma: keep
 #include <android/asset_manager.h>
 #include <android/native_activity.h>
@@ -273,14 +273,14 @@ struct PathSource {
 	}
 
 	Access getExternalStorageState() {
-		auto env = jni::Env::getEnv();
+		auto env = sprt::jni::Env::getEnv();
 		auto envClass = env.findClass("android/os/Environment");
 		if (envClass) {
 			auto getExternalStorageStateMethod =
 					envClass.getStaticMethodID("getExternalStorageState", "()Ljava/lang/String;");
 			auto str = envClass.callStaticMethod<jstring>(getExternalStorageStateMethod);
 			if (str) {
-				auto v = str.getString();
+				auto v = StringView(str.getString());
 				if (v == MEDIA_MOUNTED) {
 					return Access::Read | Access::Write | Access::Exists;
 				} else if (v == MEDIA_MOUNTED_READ_ONLY) {
@@ -291,7 +291,7 @@ struct PathSource {
 		return Access::None;
 	}
 
-	bool initialize(jni::App *app, const jni::Ref &ctx, StringView apkPath) {
+	bool initialize(sprt::jni::App *app, const sprt::jni::Ref &ctx, StringView apkPath) {
 
 		auto contextClass = ctx.getClass();
 
@@ -302,26 +302,22 @@ struct PathSource {
 		auto externalCacheDir = app->Application.getExternalCacheDir(ctx);
 
 		if (filesDir) {
-			_filesDir = app->File.getAbsolutePath(filesDir)
-								.getString()
+			_filesDir = StringView(app->File.getAbsolutePath(filesDir).getString())
 								.str<memory::StandartInterface>();
 		}
 
 		if (cacheDir) {
-			_cacheDir = app->File.getAbsolutePath(cacheDir)
-								.getString()
+			_cacheDir = StringView(app->File.getAbsolutePath(cacheDir).getString())
 								.str<memory::StandartInterface>();
 		}
 
 		if (externalFilesDir) {
-			_externalFilesDir = app->File.getAbsolutePath(externalFilesDir)
-										.getString()
+			_externalFilesDir = StringView(app->File.getAbsolutePath(externalFilesDir).getString())
 										.str<memory::StandartInterface>();
 		}
 
 		if (externalCacheDir) {
-			_externalCacheDir = app->File.getAbsolutePath(externalCacheDir)
-										.getString()
+			_externalCacheDir = StringView(app->File.getAbsolutePath(externalCacheDir).getString())
 										.str<memory::StandartInterface>();
 		}
 
@@ -369,10 +365,10 @@ struct PathSource {
 	}
 
 	void initSystemPaths(FilesystemResourceData &data) {
-		auto app = jni::Env::getApp();
-		auto env = jni::Env::getEnv();
+		auto app = sprt::jni::Env::getApp();
+		auto env = sprt::jni::Env::getEnv();
 
-		auto thiz = jni::Ref(app->jApplication, env);
+		auto thiz = sprt::jni::Ref(app->jApplication, env);
 
 		initialize(app, thiz, app->classLoader.getApkPath());
 
@@ -490,7 +486,8 @@ struct PathSource {
 			auto path = app->File.getAbsolutePath(storageDir);
 			if (path) {
 				auto &res = data._resourceLocations[toInt(FileCategory::UserHome)];
-				res.paths.emplace_back(path.getString().pdup(data._pool), FileFlags::Shared);
+				res.paths.emplace_back(StringView(path.getString()).pdup(data._pool),
+						FileFlags::Shared);
 				res.init = false;
 				res.flags = externalFlags;
 			}
@@ -504,13 +501,14 @@ struct PathSource {
 
 		auto context = app->jApplication.ref(env);
 
-		auto updatePath = [&](jni::LocalString &str, FileCategory cat) {
+		auto updatePath = [&](sprt::jni::LocalString &str, FileCategory cat) {
 			auto &res = data._resourceLocations[toInt(cat)];
 			auto _public = app->Application.getExternalFilesDir(context, str);
 			if (_public) {
 				auto path = app->File.getAbsolutePath(_public);
 				if (path) {
-					res.paths.emplace_back(path.getString().pdup(data._pool), FileFlags::Public);
+					res.paths.emplace_back(StringView(path.getString()).pdup(data._pool),
+							FileFlags::Public);
 				}
 			}
 
@@ -518,7 +516,8 @@ struct PathSource {
 			if (shared) {
 				auto path = app->File.getAbsolutePath(shared);
 				if (path) {
-					res.paths.emplace_back(path.getString().pdup(data._pool), FileFlags::Shared);
+					res.paths.emplace_back(StringView(path.getString()).pdup(data._pool),
+							FileFlags::Shared);
 				}
 			}
 

@@ -40,4 +40,4 @@ structured document (like HTML, Markdown, ODT) renderer.
 endef
 
 # module name resolution
-MODULE_stappler_document := MODULE_STAPPLER_DOCUMENT
+$(call define_module, stappler_document, MODULE_STAPPLER_DOCUMENT)

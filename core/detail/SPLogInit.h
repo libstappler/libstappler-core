@@ -24,6 +24,7 @@
 #define CORE_CORE_DETAIL_SPLOGINIT_H_
 
 #include "SPPlatformInit.h"
+#include "SPRuntimeLog.h"
 
 #if __cplusplus >= 202'002L
 #include <source_location>
@@ -41,17 +42,6 @@
 #else
 #define SPPRINTF(formatPos, argPos)
 #define SP_COVERAGE_TRIVIAL
-#endif
-
-#if DEBUG
-#define SPASSERT(cond, msg) do { \
-	if (!(cond)) { \
-		if (strlen(msg)) { STAPPLER_VERSIONIZED_NAMESPACE::log::format(STAPPLER_VERSIONIZED_NAMESPACE::log::LogType::Fatal, "Assert", SP_LOCATION, "%s", msg);} \
-		assert(cond); \
-	} \
-} while (0)
-#else
-#define SPASSERT(cond, msg)
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler {
@@ -77,15 +67,8 @@ struct SourceLocation {
 
 namespace STAPPLER_VERSIONIZED stappler::log {
 
-enum LogType {
-	Verbose,
-	Debug,
-	Info,
-	Warn,
-	Error,
-	Fatal,
-	Default = Debug,
-};
+using LogType = sprt::log::LogType;
+using enum LogType;
 
 SP_PUBLIC void format(LogType, const char *tag, const SourceLocation &source, const char *, ...)
 		SPPRINTF(4, 5);

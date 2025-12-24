@@ -231,7 +231,7 @@ static StringView _readEpubRootPath(StringView container) {
 
 		inline void onTagAttribute(Parser &p, Tag &tag, StringReader &name, StringReader &value) {
 			if (tag.name.equals("rootfile") && name.equals("full-path")) {
-				result = value;
+				result = StringView(value);
 				p.cancel();
 			}
 		}

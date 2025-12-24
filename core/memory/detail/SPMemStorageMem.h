@@ -58,7 +58,7 @@ public:
 
 	// default init with current context allocator or specified allocator
 	storage_mem_soo(const allocator &alloc = allocator()) noexcept : base(alloc) {
-		SPASSERT(_allocator, "Allocator should be defined");
+		sprt_passert(_allocator, "Allocator should be defined");
 	}
 
 	storage_mem_soo(pointer p, size_type s, const allocator &alloc) noexcept

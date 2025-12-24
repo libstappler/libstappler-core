@@ -33,4 +33,4 @@ from GNU Make (or other make) files
 endef
 
 # module name resolution
-MODULE_stappler_makefile := MODULE_STAPPLER_MAKEFILE
+$(call define_module, stappler_makefile, MODULE_STAPPLER_MAKEFILE)

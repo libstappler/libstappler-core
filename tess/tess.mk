@@ -41,4 +41,4 @@ Module libstappler-tess implements 2D tesselator and supplementary functions
 endef
 
 # module name resolution
-MODULE_stappler_tess := MODULE_STAPPLER_TESS
+$(call define_module, stappler_tess, MODULE_STAPPLER_TESS)

@@ -617,7 +617,7 @@ bool Formatter::readChars(WideStringView &r, const Vector<uint8_t> &hyph) {
 
 	while (tmpLen > 0) {
 		uint8_t offset;
-		auto c = unicode::utf16Decode32(tmpStr, offset);
+		auto c = sprt::unicode::utf16Decode32(tmpStr, tmpLen, offset);
 
 		if (offset <= tmpLen) {
 			tmpStr += offset;
@@ -762,7 +762,7 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 
 		while (tmpLen > 0) {
 			uint8_t offset;
-			auto ch = unicode::utf16Decode32(tmpStr, offset);
+			auto ch = sprt::unicode::utf16Decode32(tmpStr, tmpLen, offset);
 
 			if (s.textTransform == TextTransform::Uppercase) {
 				ch = string::detail::toupper(ch);
@@ -813,7 +813,7 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 
 			while (tmpLen > 0) {
 				uint8_t offset;
-				auto ch = unicode::utf16Decode32(tmpStr, offset);
+				auto ch = sprt::unicode::utf16Decode32(tmpStr, tmpLen, offset);
 
 				if (s.textTransform == TextTransform::Uppercase) {
 					ch = string::detail::toupper(ch);
@@ -861,7 +861,7 @@ bool Formatter::read(const FontParameters &f, const TextParameters &s, const cha
 
 		while (tmpLen > 0) {
 			uint8_t offset;
-			auto ch = unicode::utf16Decode32(tmpStr, offset);
+			auto ch = sprt::unicode::utf16Decode32(tmpStr, tmpLen, offset);
 			auto c = (s.textTransform == TextTransform::None) ? ch : string::detail::tolower(ch);
 			if (string::detail::toupper(c) != c) { // char can be uppercased - use caps
 				if (caps != true) {

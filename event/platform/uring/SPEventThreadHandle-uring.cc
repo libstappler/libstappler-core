@@ -82,8 +82,8 @@ void FutexImpl::client_lock() {
 			if ((c & WAIT_VALUE) != 0 || (atomicFetchOr(&_futex, WAIT_VALUE) & LOCK_VALUE) != 0) {
 				// futex should have all three flags set at this moment
 				// wait for unlock
-				futex_wait(&_futex, FULL_VALUE, CLIENT_MASK, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE,
-						nullptr, CLOCK_MONOTONIC);
+				futex_wait(&_futex, FULL_VALUE, CLIENT_MASK, FLAG_SIZE_U32 | FLAG_PRIVATE, nullptr,
+						CLOCK_MONOTONIC);
 			}
 			// check if lock still in place by fetching value and set all flags
 		} while (((c = atomicFetchOr(&_futex, FULL_VALUE)) & LOCK_VALUE) != 0);
@@ -104,7 +104,7 @@ void FutexImpl::client_unlock() {
 	}
 
 	// wake server or clients
-	futex_wake(&_futex, FULL_MASK, 1, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE);
+	futex_wake(&_futex, FULL_MASK, 1, FLAG_SIZE_U32 | FLAG_PRIVATE);
 }
 
 bool FutexImpl::server_try_lock() {
@@ -116,7 +116,7 @@ bool FutexImpl::server_try_lock() {
 bool FutexImpl::server_unlock() {
 	// unset all, return true if WAIT was set
 	if ((atomicExchange(&_futex, 0) & WAIT_VALUE) != 0) {
-		futex_wake(&_futex, CLIENT_MASK, 1, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE);
+		futex_wake(&_futex, CLIENT_MASK, 1, FLAG_SIZE_U32 | FLAG_PRIVATE);
 		return true;
 	}
 	return false;
@@ -157,7 +157,7 @@ Status ThreadUringHandle::rearm(URingData *uring, ThreadUringSource *source, boo
 		}
 
 		auto result = uring->pushSqe({IORING_OP_FUTEX_WAIT}, [&](io_uring_sqe *sqe, uint32_t n) {
-			sqe->fd = FutexImpl::FUTEX2_SIZE_U32 | FutexImpl::FUTEX2_PRIVATE;
+			sqe->fd = FutexImpl::FLAG_SIZE_U32 | FutexImpl::FLAG_PRIVATE;
 			sqe->futex_flags = 0;
 			sqe->len = 0;
 			sqe->addr = reinterpret_cast<uintptr_t>(source->futex.getAddr());

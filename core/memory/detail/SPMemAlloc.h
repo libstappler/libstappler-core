@@ -223,7 +223,7 @@ inline auto Allocator<T>::allocate(size_t n) const noexcept -> T * {
 	size_t size = sizeof(T) * n;
 	auto ptr = static_cast<T *>(pool::alloc(pool_ptr(pool), size, alignof(T)));
 
-	SPASSERT(ptr, "allocation should always be successful");
+	sprt_passert(ptr, "allocation should always be successful");
 
 	return ptr;
 }
@@ -233,7 +233,7 @@ inline auto Allocator<T>::__allocate(size_t &n) const noexcept -> T * {
 	size_t size = sizeof(T) * n;
 	auto ptr = static_cast<T *>(pool::alloc(pool_ptr(pool), size, alignof(T)));
 
-	SPASSERT(ptr, "allocation should always be successful");
+	sprt_passert(ptr, "allocation should always be successful");
 
 	n = size / sizeof(T);
 	return ptr;
@@ -244,7 +244,7 @@ inline auto Allocator<T>::__allocate(size_t n, size_t &bytes) const noexcept -> 
 	size_t size = sizeof(T) * n;
 	auto ptr = static_cast<T *>(pool::alloc(pool_ptr(pool), size, alignof(T)));
 
-	SPASSERT(ptr, "allocation should always be successful");
+	sprt_passert(ptr, "allocation should always be successful");
 
 	bytes = size;
 	return ptr;

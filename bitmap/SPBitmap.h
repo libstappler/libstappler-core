@@ -27,7 +27,6 @@ THE SOFTWARE.
 
 #include "SPBitmapFormat.h"
 #include "SPFilepath.h"
-#include "SPLog.h" // for SPASSERT
 
 namespace STAPPLER_VERSIONIZED stappler::bitmap {
 
@@ -187,7 +186,7 @@ BitmapTemplate<Interface>::BitmapTemplate(const uint8_t *d, uint32_t width, uint
 , _height(height)
 , _stride(max(stride, width * getBytesPerPixel(c)))
 , _data(d, d + _stride * height) {
-	SPASSERT(c != PixelFormat::Auto,
+	sprt_passert(c != PixelFormat::Auto,
 			"Bitmap: Format::Auto should not be used with Bitmap directly");
 }
 
@@ -200,7 +199,7 @@ BitmapTemplate<Interface>::BitmapTemplate(BytesView d, uint32_t width, uint32_t 
 , _height(height)
 , _stride(max(stride, width * getBytesPerPixel(c)))
 , _data(d.bytes<Interface>()) {
-	SPASSERT(c != PixelFormat::Auto,
+	sprt_passert(c != PixelFormat::Auto,
 			"Bitmap: Format::Auto should not be used with Bitmap directly");
 }
 
@@ -213,7 +212,7 @@ BitmapTemplate<Interface>::BitmapTemplate(typename Interface::BytesType &&d, uin
 , _height(height)
 , _stride(max(stride, width * getBytesPerPixel(c)))
 , _data(sp::move(d)) {
-	SPASSERT(c != PixelFormat::Auto,
+	sprt_passert(c != PixelFormat::Auto,
 			"Bitmap: Format::Auto should not be used with Bitmap directly");
 }
 
@@ -247,7 +246,7 @@ auto BitmapTemplate<Interface>::operator=(BitmapTemplate &&other) -> BitmapTempl
 template <typename Interface>
 void BitmapTemplate<Interface>::loadBitmap(const uint8_t *d, uint32_t w, uint32_t h, PixelFormat c,
 		AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto,
+	sprt_passert(c != PixelFormat::Auto,
 			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
 	_data.clear();
@@ -260,7 +259,7 @@ void BitmapTemplate<Interface>::loadBitmap(const uint8_t *d, uint32_t w, uint32_
 template <typename Interface>
 void BitmapTemplate<Interface>::loadBitmap(BytesView d, uint32_t w, uint32_t h, PixelFormat c,
 		AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto,
+	sprt_passert(c != PixelFormat::Auto,
 			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
 	_data = d.bytes<Interface>();
@@ -271,7 +270,7 @@ void BitmapTemplate<Interface>::loadBitmap(BytesView d, uint32_t w, uint32_t h, 
 template <typename Interface>
 void BitmapTemplate<Interface>::loadBitmap(typename Interface::BytesType &&d, uint32_t w,
 		uint32_t h, PixelFormat c, AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto,
+	sprt_passert(c != PixelFormat::Auto,
 			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
 	_data = sp::move(d);
@@ -288,7 +287,7 @@ void BitmapTemplate<Interface>::alloc(uint32_t w, uint32_t h, PixelFormat c, Alp
 template <typename Interface>
 void BitmapTemplate<Interface>::alloc(uint8_t val, uint32_t w, uint32_t h, PixelFormat c,
 		AlphaFormat a, uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto,
+	sprt_passert(c != PixelFormat::Auto,
 			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	setInfo(w, h, c, a, stride);
 	_data.clear();
@@ -300,7 +299,7 @@ void BitmapTemplate<Interface>::alloc(uint8_t val, uint32_t w, uint32_t h, Pixel
 template <typename Interface>
 void BitmapTemplate<Interface>::setInfo(uint32_t w, uint32_t h, PixelFormat c, AlphaFormat a,
 		uint32_t stride) {
-	SPASSERT(c != PixelFormat::Auto,
+	sprt_passert(c != PixelFormat::Auto,
 			"Bitmap: Format::Auto should not be used with Bitmap directly");
 	_width = w;
 	_height = h;

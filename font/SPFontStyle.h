@@ -296,8 +296,6 @@ struct SP_PUBLIC FontVariations {
 	FontSpecializationVector getSpecialization(const FontSpecializationVector &vec) const;
 };
 
-#ifndef __LCC__
-
 constexpr FontStretch FontStretch::UltraCondensed = FontStretch(50 << 1);
 constexpr FontStretch FontStretch::ExtraCondensed = FontStretch((62 << 1) | 1);
 constexpr FontStretch FontStretch::Condensed = FontStretch(75 << 1);
@@ -337,7 +335,6 @@ constexpr FontGrade FontGrade::Reduced = FontGrade(-50);
 constexpr FontGrade FontGrade::Normal = FontGrade(0);
 constexpr FontGrade FontGrade::Heavy = FontGrade(150);
 
-#endif
 } // namespace stappler::font
 
 namespace STAPPLER_VERSIONIZED stappler {

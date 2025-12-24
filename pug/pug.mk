@@ -35,4 +35,4 @@ Module libstappler-webserver-pug provides interface to PUG template engine
 endef
 
 # module name resolution
-MODULE_stappler_pug := MODULE_STAPPLER_PUG
+$(call define_module, stappler_pug, MODULE_STAPPLER_PUG)

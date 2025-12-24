@@ -268,7 +268,7 @@ bool DocumentHtml::isHtml(StringView r) {
 		r.skipChars<StringView::WhiteSpace>();
 		auto tmp = r.readUntil<StringView::Chars<'>'>>();
 		tmp.trimChars<StringView::WhiteSpace>();
-		return ::strncasecmp(tmp.data(), "html", 4) == 0;
+		return tmp.starts_with<StringCaseComparator>("html", 4);
 	}
 	return false;
 }

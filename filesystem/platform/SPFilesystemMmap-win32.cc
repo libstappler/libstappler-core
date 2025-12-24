@@ -22,7 +22,6 @@
  **/
 
 #include "SPFilesystem.h"
-#include "SPPlatformUnistd.h"
 
 #if WIN32
 

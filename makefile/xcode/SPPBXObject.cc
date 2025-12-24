@@ -27,7 +27,7 @@
 #include "SPPBXTarget.h"
 #include "SPPBXFile.h"
 #include "SPXCodeProject.h"
-#include "SPPlatformUnistd.h"
+#include <unistd.h>
 
 namespace STAPPLER_VERSIONIZED stappler::makefile::xcode {
 

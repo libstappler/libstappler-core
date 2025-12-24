@@ -23,6 +23,7 @@ THE SOFTWARE.
 **/
 
 #include "SPFilepath.h" // IWYU pragma: keep
+#include <unistd.h>
 
 #if LINUX
 
@@ -30,8 +31,6 @@ THE SOFTWARE.
 #include "SPMemInterface.h"
 #include "SPSharedModule.h"
 #include "detail/SPFilesystemResourceData.h"
-#include <limits.h>
-#include <fcntl.h>
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem::platform {
 

@@ -25,31 +25,12 @@
 #define CORE_CORE_UTILS_SPDSO_H_
 
 #include "SPStringView.h" // IWYU pragma: keep
+#include "SPRuntimeDso.h"
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-enum class DsoFlags : uint32_t {
-	None = 0,
-	Self = 1
-			<< 0, // open caller app itself instead of target library ( Dso(StringView(), DsoFlags::Self) )
-	Lazy = 1 << 1, // use lazy binding if available (default)
-	Global = 1 << 2,
-
-	UserFlags = Self | Lazy | Global,
-
-	StapplerAbi = 1
-			<< 30, // set by implementation for Dso, opened with stappler-abi module instead of actual OS DSO
-};
-
-SP_DEFINE_ENUM_AS_MASK(DsoFlags)
-
-enum class DsoSymFlags : uint32_t {
-	None = 0,
-	Executable = 1 << 0, // Symbol is executable
-	Loader = 1 << 1, // Symbol is loader for other symbols
-};
-
-SP_DEFINE_ENUM_AS_MASK(DsoSymFlags)
+using DsoFlags = sprt::DsoFlags;
+using DsoSymFlags = sprt::DsoSymFlags;
 
 struct SP_PUBLIC DsoLoaderInfo {
 	void *(*open)(StringView, int flags) = nullptr;
@@ -92,9 +73,6 @@ public:
 	uint32_t getVersion() const { return _version; }
 
 	void close();
-
-	bool isSelf() const;
-	bool isLazy() const;
 
 protected:
 	void *loadSym(StringView, DsoSymFlags);

@@ -59,7 +59,7 @@ MODULE_STAPPLER_CRYPTO_OPENSSL_INCLUDES_OBJS :=
 MODULE_STAPPLER_CRYPTO_OPENSSL_DEPENDS_ON :=
 
 ifdef LINUX
-MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -l:libz.a
+MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -l:libz.a -lpthread
 endif
 
 ifdef ANDROID
@@ -67,15 +67,7 @@ MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lz
 endif
 
 ifdef WIN32
-MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lz
-endif
-
-ifdef LINUX
-MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lpthread
-endif
-
-ifdef WIN32
-MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lcrypt32 -ladvapi32 -luser32
+MODULE_STAPPLER_CRYPTO_OPENSSL_LIBS += -lz -lcrypt32 -ladvapi32 -luser32
 endif
 
 # module name resolution
@@ -128,4 +120,4 @@ Module libstappler-crypto provides interface for:
 endef
 
 # module name resolution
-MODULE_stappler_crypto := MODULE_STAPPLER_CRYPTO
+$(call define_module, stappler_crypto, MODULE_STAPPLER_CRYPTO)

@@ -56,44 +56,51 @@ auto toUtf8(char32_t c) -> typename Interface::StringType;
 namespace detail {
 
 inline size_t toStringValue(char *target, double val) {
-	return string::detail::dtoa(val, target, string::detail::DOUBLE_MAX_DIGITS);
+	return sprt::dtoa(val, target, sprt::DOUBLE_MAX_DIGITS);
 }
 
 inline size_t toStringValue(char *target, float val) {
-	return string::detail::dtoa(val, target, string::detail::DOUBLE_MAX_DIGITS);
+	return sprt::dtoa(val, target, sprt::DOUBLE_MAX_DIGITS);
 }
 
 inline size_t toStringValue(char *target, int64_t val) {
-	auto len = string::detail::itoa(val, (char *)nullptr, 0);
-	return string::detail::itoa(val, target, len);
+	auto len = sprt::itoa(sprt::int64_t(val), (char *)nullptr, 0);
+	return sprt::itoa(sprt::int64_t(val), target, len);
 }
 
 inline size_t toStringValue(char *target, uint64_t val) {
-	auto len = string::detail::itoa(val, (char *)nullptr, 0);
-	return string::detail::itoa(val, target, len);
+	auto len = sprt::itoa(sprt::uint64_t(val), (char *)nullptr, 0);
+	return sprt::itoa(sprt::uint64_t(val), target, len);
 }
 
 inline size_t toStringValue(char *target, int32_t val) {
-	auto len = string::detail::itoa(int64_t(val), (char *)nullptr, 0);
-	return string::detail::itoa(int64_t(val), target, len);
+	auto len = sprt::itoa(sprt::int64_t(val), (char *)nullptr, 0);
+	return sprt::itoa(sprt::int64_t(val), target, len);
 }
 
 inline size_t toStringValue(char *target, uint32_t val) {
-	auto len = string::detail::itoa(uint64_t(val), (char *)nullptr, 0);
-	return string::detail::itoa(uint64_t(val), target, len);
+	auto len = sprt::itoa(sprt::uint64_t(val), (char *)nullptr, 0);
+	return sprt::itoa(sprt::uint64_t(val), target, len);
 }
 
 inline size_t toStringValue(char *target, char32_t val) {
-	return unicode::utf8EncodeBuf(target, val);
+	// Note that buffer size was precalculated, can not overflow
+	return sprt::unicode::utf8EncodeBuf(target, maxOf<sprt::size_t>(), val);
 }
 
 inline size_t toStringValue(char *target, char16_t val) {
-	return unicode::utf8EncodeBuf(target, val);
+	// Note that buffer size was precalculated, can not overflow
+	return sprt::unicode::utf8EncodeBuf(target, maxOf<sprt::size_t>(), val);
 }
 
 inline size_t toStringValue(char *target, char val) {
 	*target = val;
 	return 1;
+}
+
+inline size_t toStringValue(char *target, const sprt::StringView &val) {
+	memcpy(target, val.data(), val.size());
+	return val.size();
 }
 
 inline size_t toStringValue(char *target, const StringView &val) {
@@ -167,6 +174,7 @@ struct IsFastToStringAvailableValue {
 
 template <size_t N> struct IsFastToStringAvailableValue<char[N]> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<char *> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<sprt::StringView> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<StringView> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<std::string> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<memory::string> { static constexpr bool value = true; };
@@ -200,23 +208,24 @@ struct IsFastToStringAvailable<T> {
 
 inline size_t getBufferSizeValue(const char *value) { return ::strlen(value); }
 template <size_t N> inline size_t getBufferSizeValue(const char value[N]) { return N; }
+inline size_t getBufferSizeValue(const sprt::StringView &value) { return value.size(); }
 inline size_t getBufferSizeValue(const StringView &value) { return value.size(); }
 inline size_t getBufferSizeValue(const StringViewUtf8 &value) { return value.size(); }
 inline size_t getBufferSizeValue(const std::string &value) { return value.size(); }
 inline size_t getBufferSizeValue(const memory::string &value) { return value.size(); }
 inline size_t getBufferSizeValue(const char &value) { return 1; }
-inline size_t getBufferSizeValue(const char16_t &value) { return unicode::utf8EncodeLength(value); }
-inline size_t getBufferSizeValue(const char32_t &value) { return unicode::utf8EncodeLength(value); }
-inline size_t getBufferSizeValue(const int64_t &value) { return string::detail::itoa(value, (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const uint64_t &value) { return string::detail::itoa(value, (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const int32_t &value) { return string::detail::itoa(int64_t(value), (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const uint32_t &value) { return string::detail::itoa(uint64_t(value), (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const int16_t &value) { return string::detail::itoa(int64_t(value), (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const uint16_t &value) { return string::detail::itoa(uint64_t(value), (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const int8_t &value) { return string::detail::itoa(int64_t(value), (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const uint8_t &value) { return string::detail::itoa(uint64_t(value), (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const double &value) { return string::detail::dtoa(value, (char *)nullptr, 0); }
-inline size_t getBufferSizeValue(const float &value) { return string::detail::dtoa(value, (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const char16_t &value) { return sprt::unicode::utf8EncodeLength(value); }
+inline size_t getBufferSizeValue(const char32_t &value) { return sprt::unicode::utf8EncodeLength(value); }
+inline size_t getBufferSizeValue(const int64_t &value) { return sprt::itoa(sprt::int64_t(value), (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint64_t &value) { return sprt::itoa(sprt::uint64_t(value), (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int32_t &value) { return sprt::itoa(sprt::int64_t(value), (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint32_t &value) { return sprt::itoa(sprt::uint64_t(value), (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int16_t &value) { return sprt::itoa(sprt::int64_t(value), (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint16_t &value) { return sprt::itoa(sprt::uint64_t(value), (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int8_t &value) { return sprt::itoa(sprt::int64_t(value), (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint8_t &value) { return sprt::itoa(sprt::uint64_t(value), (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const double &value) { return sprt::dtoa(value, (char *)nullptr, 0); }
+inline size_t getBufferSizeValue(const float &value) { return sprt::dtoa(value, (char *)nullptr, 0); }
 
 // clang-format on
 
@@ -261,17 +270,37 @@ inline void toStringStream(Stream &stream, const char16_t *val) {
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const WideStringView &val) {
-	for (auto &it : val) { unicode::utf8Encode(stream, it); }
+	auto d = val.data();
+	auto s = val.size();
+	uint8_t offset = 0;
+
+	while (s > 0) {
+		auto c = sprt::unicode::utf16Decode32(d, offset);
+		unicode::utf8Encode(stream, c);
+
+		if (s >= offset) {
+			d += offset;
+			s -= offset;
+		} else {
+			s = 0;
+			d = nullptr;
+		}
+	}
+}
+
+template <typename Stream>
+static void toStringStream(Stream &stream, const sprt::WideStringView &val) {
+	toStringStream(stream, WideStringView(val.data(), val.size()));
 }
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const std::u16string &val) {
-	for (auto &it : val) { unicode::utf8Encode(stream, it); }
+	toStringStream(stream, WideStringView(val));
 }
 
 template <typename Stream>
 static void toStringStream(Stream &stream, const memory::u16string &val) {
-	for (auto &it : val) { unicode::utf8Encode(stream, it); }
+	toStringStream(stream, WideStringView(val));
 }
 
 template <typename Stream, typename T>
@@ -405,35 +434,35 @@ static auto pdupString(memory::pool_t *p, Args &&...args) -> StringView {
 namespace wdetail {
 
 inline size_t toStringValue(char16_t *target, double val) {
-	return string::detail::dtoa(val, target, string::detail::DOUBLE_MAX_DIGITS);
+	return sprt::dtoa(val, target, sprt::DOUBLE_MAX_DIGITS);
 }
 
 inline size_t toStringValue(char16_t *target, float val) {
-	return string::detail::dtoa(val, target, string::detail::DOUBLE_MAX_DIGITS);
+	return sprt::dtoa(val, target, sprt::DOUBLE_MAX_DIGITS);
 }
 
 inline size_t toStringValue(char16_t *target, int64_t val) {
-	auto len = string::detail::itoa(val, (char *)nullptr, 0);
-	return string::detail::itoa(val, target, len);
+	auto len = sprt::itoa(sprt::int64_t(val), (char *)nullptr, 0);
+	return sprt::itoa(sprt::int64_t(val), target, len);
 }
 
 inline size_t toStringValue(char16_t *target, uint64_t val) {
-	auto len = string::detail::itoa(val, (char *)nullptr, 0);
-	return string::detail::itoa(val, target, len);
+	auto len = sprt::itoa(sprt::uint64_t(val), (char *)nullptr, 0);
+	return sprt::itoa(sprt::uint64_t(val), target, len);
 }
 
 inline size_t toStringValue(char16_t *target, int32_t val) {
-	auto len = string::detail::itoa(int64_t(val), (char *)nullptr, 0);
-	return string::detail::itoa(int64_t(val), target, len);
+	auto len = sprt::itoa(sprt::int64_t(val), (char *)nullptr, 0);
+	return sprt::itoa(sprt::int64_t(val), target, len);
 }
 
 inline size_t toStringValue(char16_t *target, uint32_t val) {
-	auto len = string::detail::itoa(uint64_t(val), (char *)nullptr, 0);
-	return string::detail::itoa(uint64_t(val), target, len);
+	auto len = sprt::itoa(sprt::uint64_t(val), (char *)nullptr, 0);
+	return sprt::itoa(sprt::uint64_t(val), target, len);
 }
 
 inline size_t toStringValue(char16_t *target, char32_t val) {
-	return unicode::utf16EncodeBuf(target, val);
+	return sprt::unicode::utf16EncodeBuf(target, maxOf<sprt::size_t>(), val);
 }
 
 inline size_t toStringValue(char16_t *target, char16_t val) {
@@ -447,6 +476,11 @@ inline size_t toStringValue(char16_t *target, char val) {
 }
 
 inline size_t toStringValue(char16_t *target, const WideStringView &val) {
+	memcpy(target, val.data(), val.size() * sizeof(char16_t));
+	return val.size();
+}
+
+inline size_t toStringValue(char16_t *target, const sprt::WideStringView &val) {
 	memcpy(target, val.data(), val.size() * sizeof(char16_t));
 	return val.size();
 }
@@ -481,6 +515,11 @@ inline auto toStringType(const char *val) -> typename Interface::WideStringType 
 }
 
 template <typename Interface>
+static auto toStringType(const sprt::StringView &val) -> typename Interface::WideStringType {
+	return string::toUtf16<Interface>(StringView(val.data(), val.size()));
+}
+
+template <typename Interface>
 static auto toStringType(const StringView &val) -> typename Interface::WideStringType {
 	return string::toUtf16<Interface>(val);
 }
@@ -511,6 +550,7 @@ struct IsFastToStringAvailableValue {
 
 template <size_t N> struct IsFastToStringAvailableValue<char[N]> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<char16_t *> { static constexpr bool value = true; };
+template <> struct IsFastToStringAvailableValue<sprt::WideStringView> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<WideStringView> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<std::u16string> { static constexpr bool value = true; };
 template <> struct IsFastToStringAvailableValue<memory::u16string> { static constexpr bool value = true; };
@@ -544,22 +584,23 @@ struct IsFastToStringAvailable<T> {
 
 inline size_t getBufferSizeValue(const char16_t *value) { return string::detail::length(value); }
 template <size_t N> inline size_t getBufferSizeValue(const char16_t value[N]) { return N; }
+inline size_t getBufferSizeValue(const sprt::WideStringView &value) { return value.size(); }
 inline size_t getBufferSizeValue(const WideStringView &value) { return value.size(); }
 inline size_t getBufferSizeValue(const std::u16string &value) { return value.size(); }
 inline size_t getBufferSizeValue(const memory::u16string &value) { return value.size(); }
 inline size_t getBufferSizeValue(const char &value) { return 1; }
 inline size_t getBufferSizeValue(const char16_t &value) { return 1; }
-inline size_t getBufferSizeValue(const char32_t &value) { return unicode::utf16EncodeLength(value); }
-inline size_t getBufferSizeValue(const int64_t &value) { return string::detail::itoa(value, (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const uint64_t &value) { return string::detail::itoa(value, (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const int32_t &value) { return string::detail::itoa(int64_t(value), (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const uint32_t &value) { return string::detail::itoa(uint64_t(value), (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const int16_t &value) { return string::detail::itoa(int64_t(value), (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const uint16_t &value) { return string::detail::itoa(uint64_t(value), (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const int8_t &value) { return string::detail::itoa(int64_t(value), (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const uint8_t &value) { return string::detail::itoa(uint64_t(value), (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const double &value) { return string::detail::dtoa(value, (char16_t *)nullptr, 0); }
-inline size_t getBufferSizeValue(const float &value) { return string::detail::dtoa(value, (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const char32_t &value) { return sprt::unicode::utf16EncodeLength(value); }
+inline size_t getBufferSizeValue(const int64_t &value) { return sprt::itoa(sprt::int64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint64_t &value) { return sprt::itoa(sprt::uint64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int32_t &value) { return sprt::itoa(sprt::int64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint32_t &value) { return sprt::itoa(sprt::uint64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int16_t &value) { return sprt::itoa(sprt::int64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint16_t &value) { return sprt::itoa(sprt::uint64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const int8_t &value) { return sprt::itoa(sprt::int64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const uint8_t &value) { return sprt::itoa(sprt::uint64_t(value), (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const double &value) { return sprt::dtoa(value, (char16_t *)nullptr, 0); }
+inline size_t getBufferSizeValue(const float &value) { return sprt::dtoa(value, (char16_t *)nullptr, 0); }
 
 // clang-format on
 

@@ -42,4 +42,4 @@ Module libstappler-search contains primitives to build full-text search engines:
 endef
 
 # module name resolution
-MODULE_stappler_search := MODULE_STAPPLER_SEARCH
+$(call define_module, stappler_search, MODULE_STAPPLER_SEARCH)

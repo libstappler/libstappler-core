@@ -57,4 +57,4 @@ It provides:
 endef
 
 # module name resolution
-MODULE_stappler_font := MODULE_STAPPLER_FONT
+$(call define_module, stappler_font, MODULE_STAPPLER_FONT)

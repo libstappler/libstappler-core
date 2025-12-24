@@ -58,13 +58,13 @@ public:
 	static constexpr uint32_t SERVER_MASK = 0x02;
 	static constexpr uint32_t FULL_MASK = CLIENT_MASK | SERVER_MASK;
 
-	static constexpr uint32_t FUTEX2_SIZE_U8 = 0x00;
-	static constexpr uint32_t FUTEX2_SIZE_U16 = 0x01;
-	static constexpr uint32_t FUTEX2_SIZE_U32 = 0x02;
-	static constexpr uint32_t FUTEX2_SIZE_U64 = 0x03;
-	static constexpr uint32_t FUTEX2_NUMA = 0x04;
-	static constexpr uint32_t FUTEX2_MPOL = 0x08;
-	static constexpr uint32_t FUTEX2_PRIVATE = 128;
+	static constexpr uint32_t FLAG_SIZE_U8 = 0x00;
+	static constexpr uint32_t FLAG_SIZE_U16 = 0x01;
+	static constexpr uint32_t FLAG_SIZE_U32 = 0x02;
+	static constexpr uint32_t FLAG_SIZE_U64 = 0x03;
+	static constexpr uint32_t FLAG_NUMA = 0x04;
+	static constexpr uint32_t FLAG_MPOL = 0x08;
+	static constexpr uint32_t FLAG_PRIVATE = 128;
 
 	void client_lock();
 	bool client_try_lock();

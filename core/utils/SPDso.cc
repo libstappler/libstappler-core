@@ -28,96 +28,6 @@
 #include "SPAbi.h"
 #endif
 
-#if LINUX || ANDROID || MACOS
-
-#include <dlfcn.h>
-
-namespace STAPPLER_VERSIONIZED stappler::dso {
-
-static void *dso_open(StringView name, DsoFlags flags, const char **err) {
-	void *h = nullptr;
-	int f = 0;
-	if ((flags & DsoFlags::Lazy) != DsoFlags::None) {
-		f |= RTLD_LAZY;
-	}
-	if ((flags & DsoFlags::Global) != DsoFlags::None) {
-		f |= RTLD_GLOBAL;
-	}
-	if ((flags & DsoFlags::Self) != DsoFlags::None) {
-		h = ::dlopen(nullptr, RTLD_LAZY);
-	} else {
-		h = ::dlopen(name.terminated() ? name.data() : name.str<mem_std::Interface>().data(), f);
-	}
-	if (!h) {
-		*err = ::dlerror();
-	}
-	return h;
-}
-
-static void dso_close(DsoFlags flags, void *handle) {
-	if (handle) {
-		::dlclose(handle);
-	}
-}
-
-static void *dso_sym(void *h, StringView name, DsoSymFlags flags, const char **err) {
-	auto s = ::dlsym(h, name.terminated() ? name.data() : name.str<mem_std::Interface>().data());
-	if (!s) {
-		*err = ::dlerror();
-	}
-	return s;
-}
-
-} // namespace stappler::dso
-
-#endif
-
-#if WIN32
-
-#include "SPPlatformUnistd.h"
-#include <libloaderapi.h>
-
-namespace STAPPLER_VERSIONIZED stappler::dso {
-
-static constexpr const char *WIN_FAIL_TO_LOAD = "Fail to load dynamic object";
-static constexpr const char *WIN_SYMBOL_NOT_FOUND = "Fail to find symbol in dynamic object";
-
-static void *dso_open(StringView name, DsoFlags flags, const char **err) {
-	HMODULE h = NULL;
-	if ((flags & DsoFlags::Self) != DsoFlags::None) {
-		h = GetModuleHandleA(nullptr);
-	} else {
-		h = LoadLibraryA(
-				LPCSTR(name.terminated() ? name.data() : name.str<mem_std::Interface>().data()));
-	}
-
-	if (!h) {
-		*err = WIN_FAIL_TO_LOAD;
-	}
-	return (void *)h;
-}
-
-static void dso_close(DsoFlags flags, void *handle) {
-	if (handle) {
-		if ((flags & DsoFlags::Self) == DsoFlags::None) {
-			FreeLibrary(HMODULE(handle));
-		}
-	}
-}
-
-static void *dso_sym(void *h, StringView name, DsoSymFlags flags, const char **err) {
-	auto s = GetProcAddress(HMODULE(h),
-			name.terminated() ? name.data() : name.str<mem_std::Interface>().data());
-	if (!s) {
-		*err = WIN_SYMBOL_NOT_FOUND;
-	}
-	return (void *)s;
-}
-
-} // namespace stappler::dso
-
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler {
 
 static constexpr const char *ERROR_MOVED_OUT = "Object was moved out";
@@ -152,7 +62,7 @@ Dso::Dso(StringView name, DsoFlags flags, uint32_t v) : _version(v) {
 		_handle = dso::dso_open(name, flags, &_error);
 	}
 #else
-	_handle = dso::dso_open(name, flags, &_error);
+	_handle = sprt::dso_open(sprt::StringView(name.data(), name.size()), flags, &_error);
 #endif
 	if (_handle) {
 		_flags = flags;
@@ -200,7 +110,7 @@ void Dso::close() {
 			dso::dso_close(_flags, _handle);
 		}
 #else
-		dso::dso_close(_flags, _handle);
+		sprt::dso_close(_flags, _handle);
 #endif
 		tl_dsoVersion = tmp;
 		_handle = nullptr;
@@ -222,7 +132,7 @@ void *Dso::loadSym(StringView name, DsoSymFlags flags) {
 			s = dso::dso_sym(_handle, name, flags, &_error);
 		}
 #else
-		s = dso::dso_sym(_handle, name, flags, &_error);
+		s = sprt::dso_sym(_handle, sprt::StringView(name.data(), name.size()), flags, &_error);
 #endif
 		tl_dsoVersion = tmp;
 		if (s) {

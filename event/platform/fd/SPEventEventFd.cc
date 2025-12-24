@@ -57,7 +57,7 @@ Status EventFdHandle::read(uint64_t *target) {
 	auto source = reinterpret_cast<EventFdSource *>(_data);
 	auto ret = ::eventfd_read(source->fd, target ? target : source->target);
 	if (ret < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 	return Status::Ok;
 }
@@ -69,7 +69,7 @@ Status EventFdHandle::write(uint64_t val, uint32_t value) {
 	}
 	auto ret = ::eventfd_write(source->fd, val);
 	if (ret < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 	return Status::Ok;
 }

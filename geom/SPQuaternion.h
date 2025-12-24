@@ -75,8 +75,8 @@ class Mat4;
  */
 class SP_PUBLIC Quaternion {
 public:
-	static void multiply(const Quaternion& q1, const Quaternion& q2, Quaternion* dst);
-	static void lerp(const Quaternion& q1, const Quaternion& q2, float t, Quaternion* dst);
+	static void multiply(const Quaternion &q1, const Quaternion &q2, Quaternion *dst);
+	static void lerp(const Quaternion &q1, const Quaternion &q2, float t, Quaternion *dst);
 
 	/**
 	 * Interpolates between two quaternions using spherical linear interpolation.
@@ -93,7 +93,7 @@ public:
 	 * @param t The interpolation coefficient.
 	 * @param dst A quaternion to store the result in.
 	 */
-	static void slerp(const Quaternion& q1, const Quaternion& q2, float t, Quaternion* dst);
+	static void slerp(const Quaternion &q1, const Quaternion &q2, float t, Quaternion *dst);
 
 	/**
 	 * Interpolates over a series of quaternions using spherical spline interpolation.
@@ -112,8 +112,8 @@ public:
 	 * @param t The interpolation coefficient.
 	 * @param dst A quaternion to store the result in.
 	 */
-	static void squad(const Quaternion& q1, const Quaternion& q2,
-			const Quaternion& s1,const Quaternion& s2, float t, Quaternion* dst);
+	static void squad(const Quaternion &q1, const Quaternion &q2, const Quaternion &s1,
+			const Quaternion &s2, float t, Quaternion *dst);
 
 	float x;
 	float y;
@@ -124,13 +124,14 @@ public:
 	constexpr Quaternion(float xx, float yy, float zz, float ww) : x(xx), y(yy), z(zz), w(ww) { }
 
 	/** Constructs a quaternion equal to the rotational part of the specified matrix */
-	Quaternion(const Mat4& m);
+	Quaternion(const Mat4 &m);
 
 	constexpr Quaternion(const Vec3 &eulerAngles) {
-		float halfRadx = eulerAngles.x / 2.f, halfRady = eulerAngles.y, halfRadz = -eulerAngles.z / 2.f;
+		float halfRadx = eulerAngles.x / 2.f, halfRady = eulerAngles.y,
+			  halfRadz = -eulerAngles.z / 2.f;
 		float coshalfRadx = std::cos(halfRadx), sinhalfRadx = std::sin(halfRadx),
-				coshalfRady = std::cos(halfRady), sinhalfRady = std::sin(halfRady),
-				coshalfRadz = std::cos(halfRadz), sinhalfRadz = std::sin(halfRadz);
+			  coshalfRady = std::cos(halfRady), sinhalfRady = std::sin(halfRady),
+			  coshalfRadz = std::cos(halfRadz), sinhalfRadz = std::sin(halfRadz);
 
 		x = sinhalfRadx * coshalfRady * coshalfRadz - coshalfRadx * sinhalfRady * sinhalfRadz;
 		y = coshalfRadx * sinhalfRady * coshalfRadz + sinhalfRadx * coshalfRady * sinhalfRadz;
@@ -139,7 +140,7 @@ public:
 	}
 
 	/** Constructs a quaternion equal to the rotation from the specified axis and angle. */
-	constexpr Quaternion(const Vec3& axis, float angle) {
+	constexpr Quaternion(const Vec3 &axis, float angle) {
 		float halfAngle = angle * 0.5f;
 		float sinHalfAngle = std::sin(halfAngle);
 
@@ -151,22 +152,30 @@ public:
 		w = std::cos(halfAngle);
 	}
 
-	constexpr Quaternion(const Quaternion& copy) = default;
+	constexpr Quaternion(const Quaternion &copy) = default;
 
-	constexpr bool operator==(const Quaternion &q) const { return q.x == x && q.y == y && q.z == z && q.w == w; }
-	constexpr bool operator!=(const Quaternion &q) const { return q.x != x || q.y != y || q.z != z || q.w != w; }
+	constexpr bool operator==(const Quaternion &q) const {
+		return q.x == x && q.y == y && q.z == z && q.w == w;
+	}
+	constexpr bool operator!=(const Quaternion &q) const {
+		return q.x != x || q.y != y || q.z != z || q.w != w;
+	}
 
 	constexpr Vec3 toEulerAngles() const {
 		Vec3 ret;
 		ret.x = atan2f(2.f * (w * x + y * z), 1.f - 2.f * (x * x + y * y));
 		ret.y = asinf(2.f * (w * y - z * x));
-		ret.z = - atanf(2.f * (w * z + x * y) / (1.f - 2.f * (y * y + z * z)));
+		ret.z = -atanf(2.f * (w * z + x * y) / (1.f - 2.f * (y * y + z * z)));
 		return ret;
 	}
 
 	constexpr bool isIdentity() const { return x == 0.0f && y == 0.0f && z == 0.0f && w == 1.0f; }
 	constexpr bool isZero() const { return x == 0.0f && y == 0.0f && z == 0.0f && w == 0.0f; }
-	constexpr void conjugate() { x = -x; y = -y; z = -z; }
+	constexpr void conjugate() {
+		x = -x;
+		y = -y;
+		z = -z;
+	}
 
 	constexpr Quaternion getConjugated() const {
 		Quaternion q(*this);
@@ -175,21 +184,21 @@ public:
 	}
 
 	bool inverse();
-	void multiply(const Quaternion& q);
+	void multiply(const Quaternion &q);
 	void normalize();
 
 	Quaternion getInversed() const;
 	Quaternion getNormalized() const;
 
-	float toAxisAngle(Vec3* e) const;
+	float toAxisAngle(Vec3 *e) const;
 
-	const Quaternion operator*(const Quaternion& q) const {
+	const Quaternion operator*(const Quaternion &q) const {
 		Quaternion result(*this);
 		result.multiply(q);
 		return result;
 	}
 
-	Vec3 operator*(const Vec3& v) const {
+	Vec3 operator*(const Vec3 &v) const {
 		Vec3 uv, uuv;
 		Vec3 qvec(x, y, z);
 		Vec3::cross(qvec, v, &uv);
@@ -201,7 +210,7 @@ public:
 		return v + uv + uuv;
 	}
 
-	Quaternion& operator*=(const Quaternion& q) {
+	Quaternion &operator*=(const Quaternion &q) {
 		multiply(q);
 		return *this;
 	}
@@ -210,13 +219,9 @@ public:
 	static const Quaternion ZERO;
 };
 
-#ifndef __LCC__
-
 constexpr const Quaternion Quaternion::IDENTITY(0.0f, 0.0f, 0.0f, 1.0f);
 constexpr const Quaternion Quaternion::ZERO(0.0f, 0.0f, 0.0f, 0.0f);
 
-#endif
-
-}
+} // namespace stappler::geom
 
 #endif /* STAPPLER_GEOM_SPQUATERNION_H_ */

@@ -25,11 +25,13 @@
 
 namespace stappler::wasm {
 
-static uint32_t StapplerCoreItoaU8(wasm_exec_env_t exec_env, int64_t val, char *buf, uint32_t bufLen) {
+static uint32_t StapplerCoreItoaU8(wasm_exec_env_t exec_env, int64_t val, char *buf,
+		uint32_t bufLen) {
 	return uint32_t(string::detail::itoa(val, buf, bufLen));
 }
 
-static uint32_t StapplerCoreItoaU16(wasm_exec_env_t exec_env, int64_t val, char16_t *buf, uint32_t bufLen) {
+static uint32_t StapplerCoreItoaU16(wasm_exec_env_t exec_env, int64_t val, char16_t *buf,
+		uint32_t bufLen) {
 	return uint32_t(string::detail::itoa(val, buf, bufLen));
 }
 
@@ -37,11 +39,13 @@ static uint32_t StapplerCoreItoaLen(wasm_exec_env_t exec_env, int64_t val) {
 	return uint32_t(string::detail::itoa(val, (char *)nullptr, 0));
 }
 
-static uint32_t StapplerCoreDtoaU8(wasm_exec_env_t exec_env, double val, char *buf, uint32_t bufLen) {
+static uint32_t StapplerCoreDtoaU8(wasm_exec_env_t exec_env, double val, char *buf,
+		uint32_t bufLen) {
 	return uint32_t(string::detail::dtoa(val, buf, bufLen));
 }
 
-static uint32_t StapplerCoreDtoaU16(wasm_exec_env_t exec_env, double val, char16_t *buf, uint32_t bufLen) {
+static uint32_t StapplerCoreDtoaU16(wasm_exec_env_t exec_env, double val, char16_t *buf,
+		uint32_t bufLen) {
 	return uint32_t(string::detail::dtoa(val, buf, bufLen));
 }
 
@@ -49,7 +53,8 @@ static uint32_t StapplerCoreDtoaLen(wasm_exec_env_t exec_env, double val) {
 	return uint32_t(string::detail::dtoa(val, (char *)nullptr, 0));
 }
 
-static void StapplerCoreToUtf16(wasm_exec_env_t exec_env, char *ptr, uint32_t size, ListOutput *outputData) {
+static void StapplerCoreToUtf16(wasm_exec_env_t exec_env, char *ptr, uint32_t size,
+		ListOutput *outputData) {
 	auto env = ExecEnv::get(exec_env);
 	auto sourceString = StringView(ptr, size);
 
@@ -62,18 +67,21 @@ static void StapplerCoreToUtf16(wasm_exec_env_t exec_env, char *ptr, uint32_t si
 
 	uint8_t offset = 0;
 	auto sourcePtr = sourceString.data();
+	auto sourceLen = sourceString.size();
 	auto end = sourcePtr + sourceString.size();
 	while (sourcePtr < end) {
-		auto c = unicode::utf8Decode32(sourcePtr, offset);
+		auto c = unicode::utf8Decode32(sourcePtr, sourceLen, offset);
 		targetBuf += unicode::utf16EncodeBuf(targetBuf, c);
 		sourcePtr += offset;
+		sourceLen -= offset;
 	}
 
 	outputData->ptr = outOffset;
 	outputData->len = uint32_t(outSize);
 }
 
-static void StapplerCoreToUtf8(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size, ListOutput *outputData) {
+static void StapplerCoreToUtf8(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size,
+		ListOutput *outputData) {
 	auto env = ExecEnv::get(exec_env);
 	auto sourceString = WideStringView(ptr, size);
 
@@ -98,8 +106,8 @@ static void StapplerCoreToUtf8(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t
 }
 
 template <typename Char>
-static void StapplerCoreConvertCase(wasm_exec_env_t exec_env, Char *ptr, uint32_t size, ListOutput *outputData,
-		const Callback<std::basic_string<Char>(StringViewBase<Char>)> &cb) {
+static void StapplerCoreConvertCase(wasm_exec_env_t exec_env, Char *ptr, uint32_t size,
+		ListOutput *outputData, const Callback<std::basic_string<Char>(StringViewBase<Char>)> &cb) {
 	auto env = ExecEnv::get(exec_env);
 	auto sourceString = StringViewBase<Char>(ptr, size);
 
@@ -114,47 +122,46 @@ static void StapplerCoreConvertCase(wasm_exec_env_t exec_env, Char *ptr, uint32_
 	outputData->len = uint32_t(outString.size());
 }
 
-static void StapplerCoreToUpperU8(wasm_exec_env_t exec_env, char *ptr, uint32_t size, ListOutput *target) {
-	StapplerCoreConvertCase<char>(exec_env, ptr, size, target, [] (StringView str) {
-		return platform::toupper<Interface>(str);
-	});
+static void StapplerCoreToUpperU8(wasm_exec_env_t exec_env, char *ptr, uint32_t size,
+		ListOutput *target) {
+	StapplerCoreConvertCase<char>(exec_env, ptr, size, target,
+			[](StringView str) { return platform::toupper<Interface>(str); });
 }
 
-static void StapplerCoreToLowerU8(wasm_exec_env_t exec_env, char *ptr, uint32_t size, ListOutput *target) {
-	StapplerCoreConvertCase<char>(exec_env, ptr, size, target, [] (StringView str) {
-		return platform::tolower<Interface>(str);
-	});
+static void StapplerCoreToLowerU8(wasm_exec_env_t exec_env, char *ptr, uint32_t size,
+		ListOutput *target) {
+	StapplerCoreConvertCase<char>(exec_env, ptr, size, target,
+			[](StringView str) { return platform::tolower<Interface>(str); });
 }
 
-static void StapplerCoreToTitleU8(wasm_exec_env_t exec_env, char *ptr, uint32_t size, ListOutput *target) {
-	StapplerCoreConvertCase<char>(exec_env, ptr, size, target, [] (StringView str) {
-		return platform::totitle<Interface>(str);
-	});
+static void StapplerCoreToTitleU8(wasm_exec_env_t exec_env, char *ptr, uint32_t size,
+		ListOutput *target) {
+	StapplerCoreConvertCase<char>(exec_env, ptr, size, target,
+			[](StringView str) { return platform::totitle<Interface>(str); });
 }
 
-static void StapplerCoreToUpperU16(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size, ListOutput *target) {
-	StapplerCoreConvertCase<char16_t>(exec_env, ptr, size, target, [] (WideStringView str) {
-		return platform::toupper<Interface>(str);
-	});
+static void StapplerCoreToUpperU16(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size,
+		ListOutput *target) {
+	StapplerCoreConvertCase<char16_t>(exec_env, ptr, size, target,
+			[](WideStringView str) { return platform::toupper<Interface>(str); });
 }
 
-static void StapplerCoreToLowerU16(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size, ListOutput *target) {
-	StapplerCoreConvertCase<char16_t>(exec_env, ptr, size, target, [] (WideStringView str) {
-		return platform::tolower<Interface>(str);
-	});
+static void StapplerCoreToLowerU16(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size,
+		ListOutput *target) {
+	StapplerCoreConvertCase<char16_t>(exec_env, ptr, size, target,
+			[](WideStringView str) { return platform::tolower<Interface>(str); });
 }
 
-static void StapplerCoreToTitleU16(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size, ListOutput *target) {
-	StapplerCoreConvertCase<char16_t>(exec_env, ptr, size, target, [] (WideStringView str) {
-		return platform::totitle<Interface>(str);
-	});
+static void StapplerCoreToTitleU16(wasm_exec_env_t exec_env, char16_t *ptr, uint32_t size,
+		ListOutput *target) {
+	StapplerCoreConvertCase<char16_t>(exec_env, ptr, size, target,
+			[](WideStringView str) { return platform::totitle<Interface>(str); });
 }
 
-static uint64_t StapplerCoreTimeNow(wasm_exec_env_t exec_env) {
-	return Time::now().toMicros();
-}
+static uint64_t StapplerCoreTimeNow(wasm_exec_env_t exec_env) { return Time::now().toMicros(); }
 
-static uint32_t StapplerCoreTimeToHttp(wasm_exec_env_t exec_env, uint64_t t, char *buf, uint32_t size) {
+static uint32_t StapplerCoreTimeToHttp(wasm_exec_env_t exec_env, uint64_t t, char *buf,
+		uint32_t size) {
 	if (size < 30) {
 		return 0;
 	}
@@ -163,7 +170,8 @@ static uint32_t StapplerCoreTimeToHttp(wasm_exec_env_t exec_env, uint64_t t, cha
 	return uint32_t(xt.encodeRfc822(buf));
 }
 
-static uint32_t StapplerCoreTimeToAtomXml(wasm_exec_env_t exec_env, uint64_t t, char *buf, uint32_t size) {
+static uint32_t StapplerCoreTimeToAtomXml(wasm_exec_env_t exec_env, uint64_t t, char *buf,
+		uint32_t size) {
 	if (size < 21) {
 		return 0;
 	}
@@ -172,7 +180,8 @@ static uint32_t StapplerCoreTimeToAtomXml(wasm_exec_env_t exec_env, uint64_t t, 
 	return uint32_t(xt.encodeIso8601(buf, 0));
 }
 
-static uint32_t StapplerCoreTimeToCTime(wasm_exec_env_t exec_env, uint64_t t, char *buf, uint32_t size) {
+static uint32_t StapplerCoreTimeToCTime(wasm_exec_env_t exec_env, uint64_t t, char *buf,
+		uint32_t size) {
 	if (size < 25) {
 		return 0;
 	}
@@ -181,7 +190,8 @@ static uint32_t StapplerCoreTimeToCTime(wasm_exec_env_t exec_env, uint64_t t, ch
 	return uint32_t(xt.encodeCTime(buf));
 }
 
-static uint32_t StapplerCoreTimeToIso8601(wasm_exec_env_t exec_env, uint64_t t, uint32_t precision, char *buf, uint32_t size) {
+static uint32_t StapplerCoreTimeToIso8601(wasm_exec_env_t exec_env, uint64_t t, uint32_t precision,
+		char *buf, uint32_t size) {
 	if (size < 22 + precision) {
 		return 0;
 	}
@@ -190,7 +200,8 @@ static uint32_t StapplerCoreTimeToIso8601(wasm_exec_env_t exec_env, uint64_t t, 
 	return uint32_t(xt.encodeIso8601(buf, precision));
 }
 
-static uint32_t StapplerCoreTimeToFormat(wasm_exec_env_t exec_env, uint64_t t, char *fmt, uint32_t fmtLen, char *buf, uint32_t bufLen) {
+static uint32_t StapplerCoreTimeToFormat(wasm_exec_env_t exec_env, uint64_t t, char *fmt,
+		uint32_t fmtLen, char *buf, uint32_t bufLen) {
 	return uint32_t(Time(t).encodeToFormat(buf, bufLen, fmt));
 }
 
@@ -223,6 +234,7 @@ static NativeSymbol stapper_core_symbols[] = {
 	NativeSymbol{"time-to-format", (void *)&StapplerCoreTimeToFormat, "((I*~*~)i", NULL},
 };
 
-static NativeModule s_coreModule("stappler:wasm/core", stapper_core_symbols, sizeof(stapper_core_symbols) / sizeof(NativeSymbol));
+static NativeModule s_coreModule("stappler:wasm/core", stapper_core_symbols,
+		sizeof(stapper_core_symbols) / sizeof(NativeSymbol));
 
-}
+} // namespace stappler::wasm

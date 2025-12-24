@@ -26,9 +26,9 @@ THE SOFTWARE.
 
 #include "SPDataCbor.h"
 #include "SPDataValue.h"
-#include "SPFilepath.h"
 
 #if MODULE_STAPPLER_FILESYSTEM
+#include "SPFilepath.h"
 #include "SPFilesystem.h"
 #endif
 

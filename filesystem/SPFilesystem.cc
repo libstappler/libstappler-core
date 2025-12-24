@@ -26,9 +26,10 @@ THE SOFTWARE.
 #include "SPCore.h"
 #include "SPFilepath.h"
 #include "SPMemInterface.h"
-#include "SPPlatformUnistd.h"
 #include "SPStatus.h"
 #include "SPPlatform.h"
+
+#include <stdio.h>
 
 namespace STAPPLER_VERSIONIZED stappler::filesystem {
 
@@ -41,7 +42,7 @@ File File::open_tmp(StringView prefix, bool delOnClose) {
 	log::source().warn("filesystem", "File::open_tmp unavailable on win32");
 #else
 	char buf[256] = {0};
-	const char *tmp = P_tmpdir;
+	const char *tmp = "/tmp";
 	size_t len = strlen(tmp);
 	strcpy(&buf[0], tmp);
 	strcpy(&buf[len], "/");

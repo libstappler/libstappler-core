@@ -25,10 +25,10 @@
 #define CORE_CORE_DETAIL_SPMATH_H_
 
 #include "SPPlatformInit.h"
+#include <assert.h>
+#include <stdlib.h>
 #include <functional>
 #include <limits>
-#include <math.h>
-#include <stdint.h>
 
 // A part of SPCore.h, DO NOT include this directly
 

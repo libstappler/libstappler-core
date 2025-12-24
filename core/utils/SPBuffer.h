@@ -96,11 +96,11 @@ public:
 	}
 
 	size_t putc(char16_t c) {
-		auto len = unicode::utf8EncodeLength(c);
+		auto len = sprt::unicode::utf8EncodeLength(c);
 		if (_end - _ptr < len) {
 			overflow();
 		}
-		unicode::utf8EncodeBuf((char *)_ptr, c);
+		sprt::unicode::utf8EncodeBuf((char *)_ptr, _end - _ptr, c);
 		_ptr += len;
 
 		if (_ptr > _buffer.data() + _input) {

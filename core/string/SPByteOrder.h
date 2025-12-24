@@ -32,84 +32,76 @@ THE SOFTWARE.
 #endif
 #endif
 
-#ifndef __has_builtin         // Optional of course
-  #define __has_builtin(x) 0  // Compatibility with non-clang compilers
+#ifndef __has_builtin // Optional of course
+#define __has_builtin(x) 0  // Compatibility with non-clang compilers
 #endif
 
 //  Adapted code from BOOST_ENDIAN_INTRINSICS
 //  GCC and Clang recent versions provide intrinsic byte swaps via builtins
 #if (defined(__clang__) && __has_builtin(__builtin_bswap32) && __has_builtin(__builtin_bswap64)) \
-  || (defined(__GNUC__ ) && \
-  (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)))
+		|| (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)))
 
 // prior to 4.8, gcc did not provide __builtin_bswap16 on some platforms so we emulate it
 // see http://gcc.gnu.org/bugzilla/show_bug.cgi?id=52624
 // Clang has a similar problem, but their feature test macros make it easier to detect
 namespace STAPPLER_VERSIONIZED stappler::byteorder {
-# if (defined(__clang__) && __has_builtin(__builtin_bswap16)) \
-  || (defined(__GNUC__) &&(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))
+#if (defined(__clang__) && __has_builtin(__builtin_bswap16)) \
+		|| (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)))
 static SPINLINE inline uint16_t bswap16(uint16_t x) { return __builtin_bswap16(x); }
-# else
+#else
 static SPINLINE inline uint16_t bswap16(uint16_t x) { return __builtin_bswap32(x) << 16; }
-# endif
+#endif
 static SPINLINE inline uint32_t bswap32(uint32_t x) { return __builtin_bswap32(x); }
 static SPINLINE inline uint64_t bswap64(uint64_t x) { return __builtin_bswap64(x); }
-}
+} // namespace stappler::byteorder
 
 //  Linux systems provide the byteswap.h header, with
 #elif defined(__linux__)
 //  don't check for obsolete forms defined(linux) and defined(__linux) on the theory that
 //  compilers that predefine only these are so old that byteswap.h probably isn't present.
-# include <byteswap.h>
+#include <byteswap.h>
 namespace STAPPLER_VERSIONIZED stappler::byteorder {
 static SPINLINE inline uint16_t bswap16(uint16_t x) { return bswap_16(x); }
 static SPINLINE inline uint32_t bswap32(uint32_t x) { return bswap_32(x); }
 static SPINLINE inline uint64_t bswap64(uint64_t x) { return bswap_64(x); }
-}
+} // namespace stappler::byteorder
 
 #elif defined(_MSC_VER)
 //  Microsoft documents these as being compatible since Windows 95 and specificly
 //  lists runtime library support since Visual Studio 2003 (aka 7.1).
-# include <cstdlib>
+#include <cstdlib>
 namespace STAPPLER_VERSIONIZED stappler::byteorder {
 static SPINLINE inline uint16_t bswap16(uint16_t x) { return _byteswap_ushort(x); }
 static SPINLINE inline uint32_t bswap32(uint32_t x) { return _byteswap_ulong(x); }
 static SPINLINE inline uint64_t bswap64(uint64_t x) { return _byteswap_uint64(x); }
-}
+} // namespace stappler::byteorder
 #else
 namespace STAPPLER_VERSIONIZED stappler::byteorder {
-static SPINLINE inline uint16_t bswap16(uint16_t x) {
-	return (x & 0xFF) << 8 | ((x >> 8) & 0xFF);
-}
+static SPINLINE inline uint16_t bswap16(uint16_t x) { return (x & 0xFF) << 8 | ((x >> 8) & 0xFF); }
 
 static SPINLINE inline uint32_t bswap32(uint32_t x) {
-	return x & 0xFF << 24
-		| (x >> 8 & 0xFF) << 16
-		| (x >> 16 & 0xFF) << 8
-		| (x >> 24 & 0xFF);
+	return x & 0xFF << 24 | (x >> 8 & 0xFF) << 16 | (x >> 16 & 0xFF) << 8 | (x >> 24 & 0xFF);
 }
 static SPINLINE inline uint64_t bswap64(uint64_t x) {
-	return x & 0xFF << 56
-		| (x >> 8 & 0xFF) << 48
-		| (x >> 16 & 0xFF) << 40
-		| (x >> 24 & 0xFF) << 32
-		| (x >> 32 & 0xFF) << 24
-		| (x >> 40 & 0xFF) << 16
-		| (x >> 48 & 0xFF) << 8
-		| (x >> 56 & 0xFF);
+	return x & 0xFF << 56 | (x >> 8 & 0xFF) << 48 | (x >> 16 & 0xFF) << 40 | (x >> 24 & 0xFF) << 32
+			| (x >> 32 & 0xFF) << 24 | (x >> 40 & 0xFF) << 16 | (x >> 48 & 0xFF) << 8
+			| (x >> 56 & 0xFF);
 }
-}
+} // namespace stappler::byteorder
 #endif
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-#if __cpp_lib_endian >= 201907L
+#if __cpp_lib_endian >= 201'907L
 enum class Endian {
 	Big,
 	Little,
 	Mixed,
 	Network = Big,
-	Host = (std::endian::native == std::endian::little) ? Little : ((std::endian::native == std::endian::big) ? Big : Mixed), // no support for custom endian
+	Host = (std::endian::native == std::endian::little)
+			? Little
+			: ((std::endian::native == std::endian::big) ? Big
+														 : Mixed), // no support for custom endian
 };
 #else
 enum class Endian {
@@ -117,7 +109,8 @@ enum class Endian {
 	Little,
 	Mixed,
 	Network = Big,
-#if (__i386__) || (_M_IX86) || (__x86_64__) || (_M_X64) || (__arm__) || (_M_ARM) || (__arm64__) || (__arm64) || defined(__aarch64__) || defined(__e2k__)
+#if (__i386__) || (_M_IX86) || (__x86_64__) || (_M_X64) || (__arm__) || (_M_ARM) || (__arm64__) \
+		|| (__arm64) || defined(__aarch64__) || defined(__e2k__)
 	Host = Little,
 #else
 	Host = Big,
@@ -125,7 +118,7 @@ enum class Endian {
 };
 #endif
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace STAPPLER_VERSIONIZED stappler::byteorder {
 
@@ -145,30 +138,22 @@ struct Converter;
 
 template <class T>
 struct Converter<T, ShouldSwap::DoSwap, Bit8Size> {
-	static inline T Swap(T value) {
-		return value;
-	}
+	static inline T Swap(T value) { return value; }
 };
 
 template <class T>
 struct Converter<T, ShouldSwap::DoSwap, Bit16Size> {
-	static inline T Swap(T value) {
-		return bit_cast<T>(bswap16(bit_cast<uint16_t>(value)));
-	}
+	static inline T Swap(T value) { return bit_cast<T>(bswap16(bit_cast<uint16_t>(value))); }
 };
 
 template <class T>
 struct Converter<T, ShouldSwap::DoSwap, Bit32Size> {
-	static inline T Swap(T value) {
-		return bit_cast<T>(bswap32(bit_cast<uint32_t>(value)));
-	}
+	static inline T Swap(T value) { return bit_cast<T>(bswap32(bit_cast<uint32_t>(value))); }
 };
 
 template <class T>
 struct Converter<T, ShouldSwap::DoSwap, Bit64Size> {
-	static inline T Swap(T value) {
-		return bit_cast<T>(bswap64(bit_cast<uint64_t>(value)));
-	}
+	static inline T Swap(T value) { return bit_cast<T>(bswap64(bit_cast<uint64_t>(value))); }
 };
 
 template <class T, size_t Size>
@@ -189,26 +174,36 @@ struct Converter<T, ShouldSwap::NoSwap, Size> {
 
 
 static constexpr ShouldSwap hostToNetwork() {
-	if constexpr (Endian::Host == Endian::Network) { return ShouldSwap::NoSwap; }
-	if constexpr (Endian::Host == Endian::Little) { return ShouldSwap::DoSwap; }
+	if constexpr (Endian::Host == Endian::Network) {
+		return ShouldSwap::NoSwap;
+	}
+	if constexpr (Endian::Host == Endian::Little) {
+		return ShouldSwap::DoSwap;
+	}
 	return ShouldSwap::CustomSwap;
 }
 
 static constexpr ShouldSwap hostToLittle() {
-	if constexpr (Endian::Host == Endian::Little) { return ShouldSwap::NoSwap; }
-	if constexpr (Endian::Host == Endian::Big) { return ShouldSwap::DoSwap; }
+	if constexpr (Endian::Host == Endian::Little) {
+		return ShouldSwap::NoSwap;
+	}
+	if constexpr (Endian::Host == Endian::Big) {
+		return ShouldSwap::DoSwap;
+	}
 	return ShouldSwap::CustomSwap;
 }
 
 static constexpr ShouldSwap hostToBig() {
-	if constexpr (Endian::Host == Endian::Big) { return ShouldSwap::NoSwap; }
-	if constexpr (Endian::Host == Endian::Little) { return ShouldSwap::DoSwap; }
+	if constexpr (Endian::Host == Endian::Big) {
+		return ShouldSwap::NoSwap;
+	}
+	if constexpr (Endian::Host == Endian::Little) {
+		return ShouldSwap::DoSwap;
+	}
 	return ShouldSwap::CustomSwap;
 }
 
-static constexpr bool isLittleEndian() {
-	return Endian::Host == Endian::Little;
-}
+static constexpr bool isLittleEndian() { return Endian::Host == Endian::Little; }
 
 template <class T>
 using NetworkConverter = Converter<T, hostToNetwork(), sizeof(T)>;
@@ -261,6 +256,6 @@ struct ConverterTraits<Endian::Big, T> : BigConverter<T> { };
 template <typename T>
 struct ConverterTraits<Endian::Little, T> : LittleConverter<T> { };
 
-}
+} // namespace stappler::byteorder
 
 #endif /* STAPPLER_CORE_STRING_SPBYTEORDER_H_ */

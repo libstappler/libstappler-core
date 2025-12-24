@@ -55,4 +55,4 @@ Implements complex strongly-typed versionized database schemes:
 endef
 
 # module name resolution
-MODULE_stappler_db := MODULE_STAPPLER_DB
+$(call define_module, stappler_db, MODULE_STAPPLER_DB)

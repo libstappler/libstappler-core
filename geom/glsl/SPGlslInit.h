@@ -25,30 +25,4 @@
 
 #include "SPGlsl.h"
 
-#if __CDT_PARSER__ // Eclipse CDT parser
-
-#define layout(...)
-#define uniform struct
-#define readonly
-#define in
-#define out
-#define buffer struct
-
-#include <stdint.h>
-
-using uint = uint32_t;
-using vec2 = stappler::glsl::vec2;
-using vec3 = stappler::glsl::vec3;
-using vec4 = stappler::glsl::vec4;
-using mat4 = stappler::glsl::mat4;
-
-using namespace stappler::glsl;
-
-extern uint gl_VertexIndex;
-extern uint gl_InstanceIndex;
-extern vec4 gl_Position;
-extern vec2 gl_FragCoord;
-
-#endif
-
 #endif /* CORE_GEOM_GLSL_SPGLSLINIT_H_ */

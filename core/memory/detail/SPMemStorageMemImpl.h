@@ -273,7 +273,7 @@ public:
 	static constexpr size_type get_soo_size() { return 0; }
 
 	mem_soo_iface(const allocator &alloc) : _allocator(alloc) {
-		SPASSERT(_allocator, "Allocator should be defined");
+		sprt_passert(_allocator, "Allocator should be defined");
 	}
 
 	~mem_soo_iface() noexcept { clear_dealloc(_allocator); }
@@ -361,7 +361,7 @@ public:
 	static constexpr size_type get_soo_size() { return small_mem::max_capacity(); }
 
 	mem_soo_iface(const allocator &alloc) : _allocator(alloc) {
-		SPASSERT(_allocator, "Allocator should be defined");
+		sprt_passert(_allocator, "Allocator should be defined");
 		set_large_flag();
 		_large = large_mem();
 	}

@@ -48,7 +48,7 @@ void FileLocation::describe(const Callback<void(StringView)> &cb) {
 	cb << filename << ":" << lineno << "\n";
 	auto off = makeLineOffset();
 
-	auto lsize = string::detail::itoa(uint64_t(lineno), (char *)nullptr, 0);
+	auto lsize = sprt::itoa(uint64_t(lineno), (char *)nullptr, 0);
 
 	String outTmp;
 	outTmp.resize(off.pos + lsize, ' ');
@@ -75,7 +75,9 @@ ErrorReporter::ErrorReporter(const FileLocation &loc, ErrorReporter *err) {
 	ref = err->ref;
 }
 
-void ErrorReporter::setPos(const StringView &str) { pos = static_cast<uint32_t>(str.data() - line.data()); }
+void ErrorReporter::setPos(const StringView &str) {
+	pos = static_cast<uint32_t>(str.data() - line.data());
+}
 
 void ErrorReporter::reportError(StringView str, Stmt *stmt, Block *block, bool showSource) {
 	report(log::LogType::Error, str, stmt, block, showSource);
@@ -96,7 +98,7 @@ void ErrorReporter::report(log::LogType type, StringView str, Stmt *stmt, Block 
 	auto off = makeLineOffset();
 
 	auto l = lineno + off.lineOffset;
-	auto lsize = string::detail::itoa(uint64_t(l), (char *)nullptr, 0);
+	auto lsize = sprt::itoa(uint64_t(l), (char *)nullptr, 0);
 
 	String outTmp;
 	outTmp.resize(off.pos + lsize, ' ');
@@ -139,7 +141,7 @@ void ErrorReporter::report(log::LogType type, StringView str, Stmt *stmt, Block 
 			off = tmp->makeLineOffset();
 
 			l = tmp->lineno + off.lineOffset;
-			lsize = string::detail::itoa(uint64_t(l), (char *)nullptr, 0);
+			lsize = sprt::itoa(uint64_t(l), (char *)nullptr, 0);
 
 			outTmp.resize(off.pos + lsize, ' ');
 

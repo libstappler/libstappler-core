@@ -53,7 +53,7 @@ static int sp_epoll_pwait2(int fd, struct epoll_event *ev, int maxev, const stru
 Status EPollData::add(int fd, const epoll_event &ev) {
 	auto ret = ::epoll_ctl(_epollFd, EPOLL_CTL_ADD, fd, const_cast<epoll_event *>(&ev));
 	if (ret < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 	return Status::Ok;
 }
@@ -61,7 +61,7 @@ Status EPollData::add(int fd, const epoll_event &ev) {
 Status EPollData::remove(int fd) {
 	auto ret = ::epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, nullptr);
 	if (ret < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 	return Status::Ok;
 }
@@ -99,7 +99,7 @@ Status EPollData::runPoll(TimeInterval ival) {
 
 		return Status::Ok;
 	} else {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 }
 

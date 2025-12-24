@@ -22,95 +22,22 @@ THE SOFTWARE.
 **/
 
 #include "SPMemUuid.h"
+#include "SPRuntimeUuid.h"
 #include "SPString.h"
 #include "SPTime.h"
 
-#include "SPPlatformUnistd.h"
-
-#if WIN32
-#include <winsock.h>
-#endif
-
 namespace STAPPLER_VERSIONIZED stappler::memory {
-
-struct UuidState {
-	UuidState() {
-		struct {
-			pid_t pid;
-			size_t threadId;
-			uint64_t time;
-			char hostname[257];
-		} r;
-
-#if WIN32
-		r.pid = GetCurrentProcessId();
-#else
-		r.pid = getpid();
-#endif
-		r.time = Time::now().toMicros();
-
-		std::hash<std::thread::id> hasher;
-		r.threadId = hasher(std::this_thread::get_id());
-
-		gethostname(r.hostname, 256);
-		node = stappler::string::Sha256().update(CoderSource((const uint8_t*) &r, sizeof(r))).final();
-	}
-
-	int seqnum = 0;
-	stappler::string::Sha256::Buf node;
-};
-
-static thread_local UuidState tl_uuidState;
-
-static uint64_t getCurrentTime() {
-	// time magic to convert from epoch to UUID UTC
-	uint64_t time_now = (Time::now().toMicros() * 10) + 0x01B21DD213814000ULL;
-
-	thread_local uint64_t time_last = 0;
-	thread_local uint64_t fudge = 0;
-
-	if (time_last != time_now) {
-		if (time_last + fudge > time_now) {
-			fudge = time_last + fudge - time_now + 1;
-		} else {
-			fudge = 0;
-		}
-		time_last = time_now;
-	} else {
-		++fudge;
-	}
-
-	return time_now + fudge;
-}
 
 uuid uuid::generate() {
 	uuid_t d;
-	uint64_t timestamp = getCurrentTime();
-
-	/* time_low, uint32 */
-	d[3] = (unsigned char)timestamp;
-	d[2] = (unsigned char)(timestamp >> 8);
-	d[1] = (unsigned char)(timestamp >> 16);
-	d[0] = (unsigned char)(timestamp >> 24);
-	/* time_mid, uint16 */
-	d[5] = (unsigned char)(timestamp >> 32);
-	d[4] = (unsigned char)(timestamp >> 40);
-	/* time_hi_and_version, uint16 */
-	d[7] = (unsigned char)(timestamp >> 48);
-	d[6] = (unsigned char)(((timestamp >> 56) & 0x0F) | 0x50);
-	/* clock_seq_hi_and_reserved, uint8 */
-	d[8] = (unsigned char)(((tl_uuidState.seqnum >> 8) & 0x3F) | 0x80);
-	/* clock_seq_low, uint8 */
-	d[9] = (unsigned char)tl_uuidState.seqnum;
-	/* node, byte[6] */
-	memcpy(&d[10], tl_uuidState.node.data(), 6);
-
+	sprt::genuuid(d.data());
 	return uuid(d);
 }
 
 void uuid::format(char *buf, const uuid_t &d) {
-	snprintf(buf, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
+	snprintf(buf, 37, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x", d[0],
+			d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14],
+			d[15]);
 }
 
 static uint8_t parse_hexpair(const char *s) {
@@ -168,11 +95,9 @@ bool uuid::parse(uuid_t &d, StringView str) {
 	d[8] = base16::hexToChar(uuid_str[19], uuid_str[20]);
 	d[9] = base16::hexToChar(uuid_str[21], uuid_str[22]);
 
-	for (i = 6; i--;) {
-		d[10 + i] = parse_hexpair(&uuid_str[i*2+24]);
-	}
+	for (i = 6; i--;) { d[10 + i] = parse_hexpair(&uuid_str[i * 2 + 24]); }
 
 	return true;
 }
 
-}
+} // namespace stappler::memory

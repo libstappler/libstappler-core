@@ -30,7 +30,7 @@ Vec3::Vec3(const Size3 &s) : x(s.width), y(s.height), z(s.depth) { }
 
 Vec3::Vec3(const Extent3 &s) : x(s.width), y(s.height), z(s.depth) { }
 
-float Vec3::angle(const Vec3& v1, const Vec3& v2) {
+float Vec3::angle(const Vec3 &v1, const Vec3 &v2) {
 	const float dx = v1.y * v2.z - v1.z * v2.y;
 	const float dy = v1.z * v2.x - v1.x * v2.z;
 	const float dz = v1.x * v2.y - v1.y * v2.x;
@@ -38,7 +38,7 @@ float Vec3::angle(const Vec3& v1, const Vec3& v2) {
 	return atan2f(sqrt(dx * dx + dy * dy + dz * dz) + math::MATH_FLOAT_SMALL, dot(v1, v2));
 }
 
-void Vec3::clamp(const Vec3& min, const Vec3& max) {
+void Vec3::clamp(const Vec3 &min, const Vec3 &max) {
 	assert(!(min.x > max.x || min.y > max.y || min.z > max.z));
 
 	// Clamp the x value.
@@ -66,7 +66,7 @@ void Vec3::clamp(const Vec3& min, const Vec3& max) {
 	}
 }
 
-void Vec3::clamp(const Vec3& v, const Vec3& min, const Vec3& max, Vec3* dst) {
+void Vec3::clamp(const Vec3 &v, const Vec3 &min, const Vec3 &max, Vec3 *dst) {
 	assert(dst);
 	assert(!(min.x > max.x || min.y > max.y || min.z > max.z));
 
@@ -104,14 +104,4 @@ Vec3 Vec3::getNormalized() const {
 	return v;
 }
 
-#ifdef __LCC__
-
-const Vec3 Vec3::ZERO(0.0f, 0.0f, 0.0f);
-const Vec3 Vec3::ONE(1.0f, 1.0f, 1.0f);
-const Vec3 Vec3::UNIT_X(1.0f, 0.0f, 0.0f);
-const Vec3 Vec3::UNIT_Y(0.0f, 1.0f, 0.0f);
-const Vec3 Vec3::UNIT_Z(0.0f, 0.0f, 1.0f);
-
-#endif
-
-}
+} // namespace stappler::geom

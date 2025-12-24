@@ -36,4 +36,4 @@ documents.
 endef
 
 # module name resolution
-MODULE_stappler_layout := MODULE_STAPPLER_LAYOUT
+$(call define_module, stappler_layout, MODULE_STAPPLER_LAYOUT)

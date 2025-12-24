@@ -38,4 +38,4 @@ Module libstappler-vg implements vector graphic primitives:
 endef
 
 # module name resolution
-MODULE_stappler_vg := MODULE_STAPPLER_VG
+$(call define_module, stappler_vg, MODULE_STAPPLER_VG)

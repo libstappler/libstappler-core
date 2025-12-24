@@ -40,7 +40,7 @@ Status ThreadALooperHandle::read() {
 	auto source = reinterpret_cast<EventFdSource *>(_data);
 	auto ret = ::eventfd_read(source->fd, &source->eventTarget);
 	if (ret < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 	return Status::Ok;
 }
@@ -49,7 +49,7 @@ Status ThreadALooperHandle::write(uint64_t val) {
 	auto source = reinterpret_cast<EventFdSource *>(_data);
 	auto ret = ::eventfd_write(source->fd, val);
 	if (ret < 0) {
-		return status::errnoToStatus(errno);
+		return sprt::status::errnoToStatus(errno);
 	}
 	return Status::Ok;
 }
@@ -66,14 +66,15 @@ Status ThreadALooperHandle::disarm(ALooperData *alooper, EventFdSource *source) 
 	auto status = prepareDisarm();
 	if (status == Status::Ok) {
 		status = alooper->remove(source->fd);
-		++ _timeline;
+		++_timeline;
 	} else if (status == Status::ErrorAlreadyPerformed) {
 		return Status::Ok;
 	}
 	return status;
 }
 
-void ThreadALooperHandle::notify(ALooperData *alooper, EventFdSource *source, const NotifyData &data) {
+void ThreadALooperHandle::notify(ALooperData *alooper, EventFdSource *source,
+		const NotifyData &data) {
 	if (_status != Status::Ok) {
 		return;
 	}
@@ -82,14 +83,11 @@ void ThreadALooperHandle::notify(ALooperData *alooper, EventFdSource *source, co
 		while (read() == Status::Ok) {
 			_mutex.lock();
 
-			performAll([&] (uint32_t count) {
-				_mutex.unlock();
-			});
+			performAll([&](uint32_t count) { _mutex.unlock(); });
 		}
 	}
 
-	if ((data.queueFlags & ALOOPER_EVENT_ERROR)
-			|| (data.queueFlags & ALOOPER_EVENT_HANGUP)
+	if ((data.queueFlags & ALOOPER_EVENT_ERROR) || (data.queueFlags & ALOOPER_EVENT_HANGUP)
 			|| (data.queueFlags & ALOOPER_EVENT_INVALID)) {
 		cancel();
 	}
@@ -113,4 +111,4 @@ Status ThreadALooperHandle::perform(mem_std::Function<void()> &&func, Ref *targe
 	return Status::Ok;
 }
 
-}
+} // namespace stappler::event

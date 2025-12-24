@@ -25,10 +25,9 @@
 #define CORE_CORE_UTILS_SPENUM_H_
 
 #include "SPPlatformInit.h" // IWYU pragma: keep
+#include "SPRuntimeInt.h"
 
 #include <iterator>
-#include <string.h>
-#include <stdint.h>
 #include <bit>
 
 // A part of SPCore.h, DO NOT include this directly
@@ -42,23 +41,7 @@ namespace stappler {
 // EnumClass should contains value with name Max
 //
 
-template <typename T>
-struct ToIntWrapperType {
-	static_assert(std::is_integral_v<T> or std::is_enum_v<T>);
-
-	using type = decltype([]() {
-		if constexpr (std::is_enum_v<T>) {
-			return std::underlying_type_t<T>{};
-		} else {
-			return T{};
-		}
-	}());
-};
-
-template <typename E>
-constexpr typename ToIntWrapperType<E>::type toInt(const E &e) {
-	return static_cast<typename ToIntWrapperType<E>::type>(e);
-}
+using sprt::toInt;
 
 namespace detail {
 
@@ -146,7 +129,7 @@ struct enum_iterator {
 		return iterator(it.value - n);
 	}
 
-	typename ToIntWrapperType<E>::type value;
+	typename sprt::ToIntWrapperType<E>::type value;
 };
 
 template <typename E>
@@ -160,12 +143,12 @@ struct flags_iterator {
 	using reference = E;
 	using difference_type = std::ptrdiff_t;
 	using value_type = E;
-	using int_type = typename ToIntWrapperType<E>::type;
+	using int_type = typename sprt::ToIntWrapperType<E>::type;
 
 	using iterator = flags_iterator<E>;
 
 	constexpr flags_iterator() noexcept : value(1) { }
-	constexpr flags_iterator(int v, typename ToIntWrapperType<E>::type f) noexcept
+	constexpr flags_iterator(int v, typename sprt::ToIntWrapperType<E>::type f) noexcept
 	: value(v), flags(f) { }
 	constexpr flags_iterator(const flags_iterator &other) noexcept = default;
 
@@ -207,7 +190,7 @@ struct flags_iterator {
 	constexpr reference operator*() const { return E(int_type(1) << value); }
 
 	int value;
-	typename ToIntWrapperType<E>::type flags;
+	typename sprt::ToIntWrapperType<E>::type flags;
 };
 
 template <typename E, E Value>
@@ -218,7 +201,7 @@ struct flags_iterator_static {
 	using reference = E;
 	using difference_type = std::ptrdiff_t;
 	using value_type = E;
-	using int_type = typename ToIntWrapperType<E>::type;
+	using int_type = typename sprt::ToIntWrapperType<E>::type;
 
 	using iterator = flags_iterator_static<E, Value>;
 
@@ -275,7 +258,7 @@ struct flags_wrapper {
 
 	flags_wrapper(E e) : value(toInt(e)) { }
 
-	typename ToIntWrapperType<E>::type value;
+	typename sprt::ToIntWrapperType<E>::type value;
 };
 
 template <typename E, E Value>
@@ -300,7 +283,7 @@ constexpr auto each() -> detail::enum_wrapper<E, E(0), E(toInt(E::Max) - 1)> {
 
 template <typename E>
 auto flags(E flags) -> detail::flags_wrapper<E> {
-	static_assert(std::is_unsigned_v<typename ToIntWrapperType<E>::type>,
+	static_assert(std::is_unsigned_v<typename sprt::ToIntWrapperType<E>::type>,
 			"Flags should be unsigned");
 	return detail::flags_wrapper<E>(flags);
 }
@@ -318,19 +301,7 @@ auto flags() {
  *
  * Type should be unsigned, and SDK code style suggests to make it sized (uint32_t, uint64_t)
  */
-#define SP_DEFINE_ENUM_AS_MASK(Type) \
-	static_assert(std::is_unsigned_v<std::underlying_type_t<Type>>, #Type " should be unsigned");\
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator | (const Type &l, const Type &r) { return Type(::sp::toInt(l) | ::sp::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator & (const Type &l, const Type &r) { return Type(::sp::toInt(l) & ::sp::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator ^ (const Type &l, const Type &r) { return Type(::sp::toInt(l) ^ ::sp::toInt(r)); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator |= (Type &l, const Type &r) { l = Type(::sp::toInt(l) | ::sp::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator &= (Type &l, const Type &r) { l = Type(::sp::toInt(l) & ::sp::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type & operator ^= (Type &l, const Type &r) { l = Type(::sp::toInt(l) ^ ::sp::toInt(r)); return l; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const Type &l, const std::underlying_type<Type>::type &r) { return ::sp::toInt(l) == r; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator == (const std::underlying_type<Type>::type &l, const Type &r) { return l == ::sp::toInt(r); } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const Type &l, const std::underlying_type<Type>::type &r) { return ::sp::toInt(l) != r; } \
-	SP_COVERAGE_TRIVIAL constexpr inline bool operator != (const std::underlying_type<Type>::type &l, const Type &r) { return l != ::sp::toInt(r); } \
-	SP_COVERAGE_TRIVIAL constexpr inline Type operator~(const Type &t) { return Type(~::sp::toInt(t)); }
+#define SP_DEFINE_ENUM_AS_MASK(Type) SPRT_DEFINE_ENUM_AS_MASK(Type)
 
 /** SP_DEFINE_ENUM_AS_INCREMENTABLE adds operator++/operator-- for enumerations */
 #define SP_DEFINE_ENUM_AS_INCREMENTABLE(Type, First, Last) \

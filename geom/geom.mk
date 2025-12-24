@@ -43,4 +43,4 @@ Module libstappler-geom provides types for 2D and 2D rendering, like
 endef
 
 # module name resolution
-MODULE_stappler_geom := MODULE_STAPPLER_GEOM
+$(call define_module, stappler_geom, MODULE_STAPPLER_GEOM)

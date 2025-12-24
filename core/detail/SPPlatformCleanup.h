@@ -25,53 +25,10 @@
 
 // suppress common macro leak
 #if WIN32
-#undef interface
-#undef DELETE
-
-#if XWIN
-#pragma clang diagnostic pop
-#endif
 
 #endif
 
-// IDE-specific standart library mods
-#if __CDT_PARSER__
-#define SPUNUSED __attribute__((unused))
-#define SPINLINE
-
-// Eclipse fails to detect iterator_traits for pointer in new libstdc++
-// so, define it manually
-#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_NAMESPACE_STD
-#else
-namespace std {
-#endif
-
-template <typename PointerValue>
-struct iterator_traits<const PointerValue *> {
-	using value_type = PointerValue;
-	using difference_type = ptrdiff_t;
-	using pointer = const PointerValue *;
-	using reference = const PointerValue &;
-};
-
-template <typename PointerValue>
-struct iterator_traits<PointerValue *> {
-	using value_type = PointerValue;
-	using difference_type = ptrdiff_t;
-	using pointer = PointerValue *;
-	using reference = PointerValue &;
-};
-
-#ifdef _LIBCPP_END_NAMESPACE_STD
-_LIBCPP_END_NAMESPACE_STD
-#else
-}
-#endif
-
-#else // __CDT_PARSER__
 #define SPUNUSED [[maybe_unused]]
 #define SPINLINE __attribute__((always_inline))
-#endif // __CDT_PARSER__
 
 #endif // CORE_CORE_DETAIL_SPPLATFORMCLEANUP_H_

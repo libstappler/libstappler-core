@@ -28,10 +28,7 @@ THE SOFTWARE.
 #include "SPNetworkHandle.h"
 
 #ifdef LINUX
-// In linux, MIME types for downloaded files defined in extra FS attributes
 #include <sys/types.h>
-#include <sys/xattr.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #endif
 

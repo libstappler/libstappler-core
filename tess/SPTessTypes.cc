@@ -32,7 +32,7 @@ static constexpr bool DictDebug = false;
 
 int TessVerboseInfo = std::ios_base::xalloc();
 
-bool EdgeDictNode::operator < (const EdgeDictNode &other) const {
+bool EdgeDictNode::operator<(const EdgeDictNode &other) const {
 	if (value.y == other.value.y) {
 		return edge->direction < other.edge->direction;
 	} else {
@@ -40,7 +40,7 @@ bool EdgeDictNode::operator < (const EdgeDictNode &other) const {
 	}
 }
 
-bool EdgeDictNode::operator < (const Edge &other) const {
+bool EdgeDictNode::operator<(const Edge &other) const {
 	auto &left = other.getLeftVec();
 	if (value.y == left.y) {
 		return edge->direction < other.direction; // dst.y
@@ -49,11 +49,9 @@ bool EdgeDictNode::operator < (const Edge &other) const {
 	}
 }
 
-bool EdgeDictNode::operator < (const Vec2 &other) const {
-	return value.y < other.y;
-}
+bool EdgeDictNode::operator<(const Vec2 &other) const { return value.y < other.y; }
 
-bool EdgeDictNode::operator <= (const EdgeDictNode &other) const {
+bool EdgeDictNode::operator<=(const EdgeDictNode &other) const {
 	if (value.y == other.value.y) {
 		return value.w == other.value.w || edge->direction < other.edge->direction; // dst.y
 	} else {
@@ -61,7 +59,7 @@ bool EdgeDictNode::operator <= (const EdgeDictNode &other) const {
 	}
 }
 
-bool EdgeDictNode::operator== (const EdgeDictNode &other) const {
+bool EdgeDictNode::operator==(const EdgeDictNode &other) const {
 	return value.y == other.value.y && value.w == other.value.w;
 }
 
@@ -73,7 +71,7 @@ void Vertex::insertBefore(HalfEdge *eOrig) {
 	do {
 		e->setOrigin(this);
 		e = e->_originNext;
-	} while( e != eOrig );
+	} while (e != eOrig);
 }
 
 void Vertex::removeFromList(Vertex *newOrg) {
@@ -82,15 +80,15 @@ void Vertex::removeFromList(Vertex *newOrg) {
 	do {
 		e->setOrigin(newOrg);
 		e = e->_originNext;
-	} while( e != eStart );
+	} while (e != eStart);
 }
 
-void Vertex::foreach(const Callback<void(const HalfEdge &)> &cb) const {
+void Vertex::foreach (const Callback<void(const HalfEdge &)> &cb) const {
 	auto e = _edge;
 	do {
 		cb(*e);
 		e = e->_originNext;
-	} while( e != _edge );
+	} while (e != _edge);
 }
 
 void Vertex::relocate(const Vec2 &vec) {
@@ -99,15 +97,15 @@ void Vertex::relocate(const Vec2 &vec) {
 	do {
 		e->origin = vec;
 		e = e->_originNext;
-	} while( e != _edge );
+	} while (e != _edge);
 }
 
-void FaceEdge::foreach(const Callback<void(const FaceEdge &)> &cb) const {
+void FaceEdge::foreach (const Callback<void(const FaceEdge &)> &cb) const {
 	auto e = this;
 	do {
 		cb(*e);
 		e = e->_next;
-	} while( e != this );
+	} while (e != this);
 }
 
 void HalfEdge::splitEdgeLoops(HalfEdge *eOrg, HalfEdge *eNew, Vertex *v) {
@@ -116,35 +114,41 @@ void HalfEdge::splitEdgeLoops(HalfEdge *eOrg, HalfEdge *eNew, Vertex *v) {
 	eNew->setOrigin(v);
 
 	HalfEdge *a = eOrg, *b = eOrg->sym(), // original edge
-			*c = eNew, *d = eNew->sym(), // new edge
-			*e = eOrg->_leftNext, // next edge in left loop
-			*g = b->_originNext, *h = g->sym(); // prev edge in right loop
+								*c = eNew, *d = eNew->sym(), // new edge
+												   *e = eOrg->_leftNext, // next edge in left loop
+														   *g = b->_originNext,
+			 *h = g->sym(); // prev edge in right loop
 
-	e->_originNext = d; d->_originNext = g; // vertex cycle around dest vertex;
-	c->_originNext = b; b->_originNext = c; // cycle around new vertex;
-	a->_leftNext = c; c->_leftNext = e; // left face loop
-	h->_leftNext = d; d->_leftNext = b; // right face loop
-	c->_winding = a->_winding; d->_winding = b->_winding;
-	c->_realWinding = a->_realWinding; d->_realWinding = b->_realWinding;
+	e->_originNext = d;
+	d->_originNext = g; // vertex cycle around dest vertex;
+	c->_originNext = b;
+	b->_originNext = c; // cycle around new vertex;
+	a->_leftNext = c;
+	c->_leftNext = e; // left face loop
+	h->_leftNext = d;
+	d->_leftNext = b; // right face loop
+	c->_winding = a->_winding;
+	d->_winding = b->_winding;
+	c->_realWinding = a->_realWinding;
+	d->_realWinding = b->_realWinding;
 }
 
 void HalfEdge::joinEdgeLoops(HalfEdge *eOrg, HalfEdge *oPrev) {
 	// connect eOrg into vertex
 	HalfEdge *a = eOrg, *b = eOrg->sym(), // original edge
-				*e = oPrev, // next edge in left loop
-				*g = oPrev->_originNext, *h = g->sym(); // prev edge in right loop
+								*e = oPrev, // next edge in left loop
+										*g = oPrev->_originNext,
+			 *h = g->sym(); // prev edge in right loop
 
-	e->_originNext = b; b->_originNext = g; // cycle around new vertex;
-	a->_leftNext = e; h->_leftNext = b; // left and right loops
+	e->_originNext = b;
+	b->_originNext = g; // cycle around new vertex;
+	a->_leftNext = e;
+	h->_leftNext = b; // left and right loops
 }
 
-HalfEdge *HalfEdge::sym() const {
-	return (HalfEdge *)((char *)this - sizeof(HalfEdge) * isRight);
-}
+HalfEdge *HalfEdge::sym() const { return (HalfEdge *)((char *)this - sizeof(HalfEdge) * isRight); }
 
-uint32_t HalfEdge::getIndex() const {
-	return ((uintptr_t)this >> 5) % 1024;
-}
+uint32_t HalfEdge::getIndex() const { return ((uintptr_t)this >> 5) % 1'024; }
 
 void HalfEdge::setOrigin(const Vertex *v) {
 	origin = v->_origin;
@@ -156,60 +160,38 @@ void HalfEdge::copyOrigin(const HalfEdge *e) {
 	vertex = e->vertex;
 }
 
-HalfEdge *HalfEdge::getOriginNext() const {
-	return _originNext;
-}
+HalfEdge *HalfEdge::getOriginNext() const { return _originNext; }
 
-HalfEdge *HalfEdge::getOriginPrev() const {
-	return sym()->_leftNext;
-}
+HalfEdge *HalfEdge::getOriginPrev() const { return sym()->_leftNext; }
 
-HalfEdge *HalfEdge::getDestinationNext() const {
-	return sym()->_originNext->sym();
-}
+HalfEdge *HalfEdge::getDestinationNext() const { return sym()->_originNext->sym(); }
 
-HalfEdge *HalfEdge::getDestinationPrev() const {
-	return _leftNext->sym();
-}
+HalfEdge *HalfEdge::getDestinationPrev() const { return _leftNext->sym(); }
 
-HalfEdge *HalfEdge::getLeftLoopNext() const {
-	return _leftNext;
-}
+HalfEdge *HalfEdge::getLeftLoopNext() const { return _leftNext; }
 
-HalfEdge *HalfEdge::getLeftLoopPrev() const {
-	return _originNext->sym();
-}
+HalfEdge *HalfEdge::getLeftLoopPrev() const { return _originNext->sym(); }
 
-HalfEdge *HalfEdge::getRightLoopNext() const {
-	return sym()->_leftNext->sym();
-}
+HalfEdge *HalfEdge::getRightLoopNext() const { return sym()->_leftNext->sym(); }
 
-HalfEdge *HalfEdge::getRightLoopPrev() const {
-	return sym()->_originNext;
-}
+HalfEdge *HalfEdge::getRightLoopPrev() const { return sym()->_originNext; }
 
-const Vec2 &HalfEdge::getOrgVec() const {
-	return origin;
-}
+const Vec2 &HalfEdge::getOrgVec() const { return origin; }
 
-const Vec2 &HalfEdge::getDstVec() const {
-	return sym()->origin;
-}
+const Vec2 &HalfEdge::getDstVec() const { return sym()->origin; }
 
-float HalfEdge::getLength() const {
-	return origin.distance(sym()->origin);
-}
+float HalfEdge::getLength() const { return origin.distance(sym()->origin); }
 
-Edge *HalfEdge::getEdge() const {
-	return (Edge *)((char *)this - sizeof(HalfEdge) * edgeOffset);
-}
+Edge *HalfEdge::getEdge() const { return (Edge *)((char *)this - sizeof(HalfEdge) * edgeOffset); }
 
 bool HalfEdge::goesLeft() const {
-	return ((Edge *)((char *)this - sizeof(HalfEdge) * edgeOffset))->inverted != static_cast<bool>(edgeOffset);
+	return ((Edge *)((char *)this - sizeof(HalfEdge) * edgeOffset))->inverted
+			!= static_cast<bool>(edgeOffset);
 }
 
 bool HalfEdge::goesRight() const {
-	return ((Edge *)((char *)this - sizeof(HalfEdge) * edgeOffset))->inverted == static_cast<bool>(edgeOffset);
+	return ((Edge *)((char *)this - sizeof(HalfEdge) * edgeOffset))->inverted
+			== static_cast<bool>(edgeOffset);
 }
 
 void HalfEdge::foreachOnFace(const Callback<void(HalfEdge &)> &cb) {
@@ -217,7 +199,7 @@ void HalfEdge::foreachOnFace(const Callback<void(HalfEdge &)> &cb) {
 	do {
 		cb(*e);
 		e = e->_leftNext;
-	} while( e != this );
+	} while (e != this);
 }
 
 void HalfEdge::foreachOnVertex(const Callback<void(HalfEdge &)> &cb) {
@@ -225,7 +207,7 @@ void HalfEdge::foreachOnVertex(const Callback<void(HalfEdge &)> &cb) {
 	do {
 		cb(*e);
 		e = e->_originNext;
-	} while( e != this );
+	} while (e != this);
 }
 
 void HalfEdge::foreachOnFace(const Callback<void(const HalfEdge &)> &cb) const {
@@ -233,7 +215,7 @@ void HalfEdge::foreachOnFace(const Callback<void(const HalfEdge &)> &cb) const {
 	do {
 		cb(*e);
 		e = e->_leftNext;
-	} while( e != this );
+	} while (e != this);
 }
 
 void HalfEdge::foreachOnVertex(const Callback<void(const HalfEdge &)> &cb) const {
@@ -241,12 +223,10 @@ void HalfEdge::foreachOnVertex(const Callback<void(const HalfEdge &)> &cb) const
 	do {
 		cb(*e);
 		e = e->_originNext;
-	} while( e != this );
+	} while (e != this);
 }
 
-float HalfEdge::getDirection() const {
-	return getEdge()->direction;
-}
+float HalfEdge::getDirection() const { return getEdge()->direction; }
 
 Edge::Edge() {
 	left.isRight = -1;
@@ -259,29 +239,17 @@ Edge::Edge() {
 	right._leftNext = &left;
 }
 
-const Vec2 &Edge::getLeftVec() const {
-	return inverted ? right.getOrgVec() : left.getOrgVec();
-}
+const Vec2 &Edge::getLeftVec() const { return inverted ? right.getOrgVec() : left.getOrgVec(); }
 
-const Vec2 &Edge::getRightVec() const {
-	return inverted ? left.getOrgVec() : right.getOrgVec();
-}
+const Vec2 &Edge::getRightVec() const { return inverted ? left.getOrgVec() : right.getOrgVec(); }
 
-const Vec2 &Edge::getOrgVec() const {
-	return left.origin;
-}
+const Vec2 &Edge::getOrgVec() const { return left.origin; }
 
-const Vec2 &Edge::getDstVec() const {
-	return right.origin;
-}
+const Vec2 &Edge::getDstVec() const { return right.origin; }
 
-uint32_t Edge::getLeftOrg() const {
-	return inverted ? right.vertex : left.vertex;
-}
+uint32_t Edge::getLeftOrg() const { return inverted ? right.vertex : left.vertex; }
 
-uint32_t Edge::getRightOrg() const {
-	return inverted ? left.vertex : right.vertex;
-}
+uint32_t Edge::getRightOrg() const { return inverted ? left.vertex : right.vertex; }
 
 void Edge::updateInfo() {
 	if (std::isnan(direction)) {
@@ -290,13 +258,9 @@ void Edge::updateInfo() {
 	}
 };
 
-int16_t Edge::getLeftWinding() const {
-	return inverted ? right._realWinding : left._realWinding;
-}
+int16_t Edge::getLeftWinding() const { return inverted ? right._realWinding : left._realWinding; }
 
-int16_t Edge::getRightWinding() const {
-	return inverted ? left._realWinding : right._realWinding;
-}
+int16_t Edge::getRightWinding() const { return inverted ? left._realWinding : right._realWinding; }
 
 ObjectAllocator::ObjectAllocator(memory::pool_t *pool) : _pool(pool), _vertexes(pool) {
 	_vertexes.reserve(VertexSetPrealloc);
@@ -405,9 +369,9 @@ void ObjectAllocator::releaseVertex(Vertex *vDel) {
 
 void ObjectAllocator::trimVertexes() {
 	size_t offset = 0;
-	for (auto it = _vertexes.rbegin(); it != _vertexes.rend(); ++ it) {
+	for (auto it = _vertexes.rbegin(); it != _vertexes.rend(); ++it) {
 		if (*it == nullptr) {
-			++ offset;
+			++offset;
 		} else {
 			break;
 		}
@@ -420,7 +384,7 @@ void ObjectAllocator::trimVertexes() {
 
 void ObjectAllocator::preallocateVertexes(uint32_t n) {
 	if (auto vertsMem = (Vertex *)memory::pool::palloc(_pool, sizeof(Vertex) * n)) {
-		for (uint32_t i = 0; i < n; ++ i) {
+		for (uint32_t i = 0; i < n; ++i) {
 			auto mem = vertsMem + i;
 			mem->_edge = (HalfEdge *)(mem + 1);
 		}
@@ -436,20 +400,20 @@ void ObjectAllocator::preallocateVertexes(uint32_t n) {
 
 void ObjectAllocator::preallocateEdges(uint32_t n) {
 	if (auto edgesMem = (Edge *)memory::pool::palloc(_pool, sizeof(Edge) * n)) {
-		for (uint32_t i = 0; i < n; ++ i) {
+		for (uint32_t i = 0; i < n; ++i) {
 			auto mem = edgesMem + i;
 			mem->node = (EdgeDictNode *)(mem + 1);
 		}
 
 		Edge *etmp = _freeEdges;
 		_freeEdges = edgesMem;
-		(edgesMem + n - 1)-> node = (EdgeDictNode *)(etmp);
+		(edgesMem + n - 1)->node = (EdgeDictNode *)(etmp);
 	}
 }
 
 void ObjectAllocator::preallocateFaceEdges(uint32_t n) {
 	if (auto edgesMem = (FaceEdge *)memory::pool::palloc(_pool, sizeof(FaceEdge) * n)) {
-		for (uint32_t i = 0; i < n; ++ i) {
+		for (uint32_t i = 0; i < n; ++i) {
 			auto mem = edgesMem + i;
 			mem->_next = (FaceEdge *)(mem + 1);
 		}
@@ -483,9 +447,7 @@ VertexPriorityQueue::Heap::~Heap() {
 void VertexPriorityQueue::Heap::init() {
 	/* This method of building a heap is O(n), rather than O(n lg n). */
 
-	for (uint32_t i = size; i >= 1; --i) {
-		floatDown( i );
-	}
+	for (uint32_t i = size; i >= 1; --i) { floatDown(i); }
 
 	initialized = true;
 }
@@ -505,14 +467,14 @@ VertexPriorityQueue::Handle VertexPriorityQueue::Heap::insert(Key keyNew) {
 
 		max <<= 1;
 
-		nodes = (Node*) memory::pool::palloc(pool, ((max + 1) * sizeof(Node)));
+		nodes = (Node *)memory::pool::palloc(pool, ((max + 1) * sizeof(Node)));
 		if (nodes != NULL) {
 			memcpy(nodes, saveNodes, ((tmpSize + 1) * sizeof(Node)));
 		}
 
-		handles = (Elem*) memory::pool::palloc(pool, ((max + 1) * sizeof(Elem)));
+		handles = (Elem *)memory::pool::palloc(pool, ((max + 1) * sizeof(Elem)));
 		if (handles != NULL) {
-			memcpy(handles, saveHandles, (size_t) ((tmpSize + 1) * sizeof(Elem)));
+			memcpy(handles, saveHandles, (size_t)((tmpSize + 1) * sizeof(Elem)));
 		}
 
 		memory::pool::free(pool, saveNodes, (tmpSize + 1) * sizeof(Node));
@@ -533,7 +495,7 @@ VertexPriorityQueue::Handle VertexPriorityQueue::Heap::insert(Key keyNew) {
 	if (initialized) {
 		floatUp(curr);
 	}
-	SPASSERT(free != InvalidHandle, "pqHeapInsert");
+	sprt_passert(free != InvalidHandle, "pqHeapInsert");
 	return free;
 }
 
@@ -568,7 +530,7 @@ void VertexPriorityQueue::Heap::remove(Handle hCurr) {
 	Elem *h = handles;
 	uint32_t curr;
 
-	SPASSERT( hCurr >= 1 && hCurr <= Handle(max) && h[hCurr].key != nullptr, "pqHeapDelete");
+	sprt_passert(hCurr >= 1 && hCurr <= Handle(max) && h[hCurr].key != nullptr, "pqHeapDelete");
 
 	curr = h[hCurr].node;
 	n[curr].handle = n[size].handle;
@@ -600,7 +562,7 @@ void VertexPriorityQueue::Heap::floatDown(int curr) {
 			++child;
 		}
 
-		SPASSERT(child <= this->max, "FloatDown");
+		sprt_passert(child <= this->max, "FloatDown");
 
 		hChild = n[child].handle;
 		if (child > size || VertLeq(h[hCurr].key, h[hChild].key)) {
@@ -637,7 +599,7 @@ void VertexPriorityQueue::Heap::floatUp(int curr) {
 
 VertexPriorityQueue::VertexPriorityQueue(memory::pool_t *p, const memory::vector<Vertex *> &vec)
 : heap(p, uint32_t(vec.size())), max(uint32_t(vec.size())), pool(p) {
-	keys = (Key*) memory::pool::palloc(p, max * sizeof(Key));
+	keys = (Key *)memory::pool::palloc(p, max * sizeof(Key));
 
 	for (auto &v : vec) {
 		if (v) {
@@ -653,21 +615,19 @@ VertexPriorityQueue::VertexPriorityQueue(memory::pool_t *p, const memory::vector
 	}
 }
 
-VertexPriorityQueue::~VertexPriorityQueue() {
-	memory::pool::free(pool, keys, max * sizeof(Key));
-}
+VertexPriorityQueue::~VertexPriorityQueue() { memory::pool::free(pool, keys, max * sizeof(Key)); }
 
 
-#define LT(x,y)     (! VertLeq(y,x))
-#define GT(x,y)     (! VertLeq(x,y))
-#define KeySwap(a,b)   if(1){Key *tmp = *a; *a = *b; *b = tmp;}else
+#define LT(x, y)     (! VertLeq(y,x))
+#define GT(x, y)     (! VertLeq(x,y))
+#define KeySwap(a, b)   if(1){Key *tmp = *a; *a = *b; *b = tmp;}else
 
 bool VertexPriorityQueue::init() {
 	Key **p, **r, **i, **j, *piv;
 	struct {
 		Key **p, **r;
 	} Stack[50], *top = Stack;
-	unsigned int seed = 2016473283;
+	unsigned int seed = 2'016'473'283;
 
 	/* Create an array of indirect pointers to the keys, so that we
 	 * the handles we have returned are still valid. */
@@ -675,13 +635,11 @@ bool VertexPriorityQueue::init() {
 	 pq->order = (PQkey **)memAlloc( (size_t)
 	 (pq->size * sizeof(pq->order[0])) );
 	 */
-	order = (Key**) memory::pool::palloc(pool, size_t((size + 1) * sizeof(Key*)));
+	order = (Key **)memory::pool::palloc(pool, size_t((size + 1) * sizeof(Key *)));
 
 	p = order;
 	r = p + size - 1;
-	for (piv = keys, i = p; i <= r; ++piv, ++i) {
-		*i = piv;
-	}
+	for (piv = keys, i = p; i <= r; ++piv, ++i) { *i = piv; }
 
 	/* Sort the indirect pointers in descending order,
 	 * using randomized Quicksort */
@@ -692,7 +650,7 @@ bool VertexPriorityQueue::init() {
 		p = top->p;
 		r = top->r;
 		while (r > p + 10) {
-			seed = seed * 1539415821 + 1;
+			seed = seed * 1'539'415'821 + 1;
 			i = p + seed % (r - p + 1);
 			piv = *i;
 			*i = *p;
@@ -700,12 +658,8 @@ bool VertexPriorityQueue::init() {
 			i = p - 1;
 			j = r + 1;
 			do {
-				do {
-					++i;
-				} while (GT(**i, *piv));
-				do {
-					--j;
-				} while (LT(**j, *piv));
+				do { ++i; } while (GT(**i, *piv));
+				do { --j; } while (LT(**j, *piv));
 				KeySwap(i, j);
 			} while (i < j);
 			KeySwap(i, j); /* Undo last swap */
@@ -724,9 +678,7 @@ bool VertexPriorityQueue::init() {
 		/* Insertion sort small lists */
 		for (i = p + 1; i <= r; ++i) {
 			piv = *i;
-			for (j = i; j > p && LT(**(j - 1), *piv); --j) {
-				*j = *(j - 1);
-			}
+			for (j = i; j > p && LT(**(j - 1), *piv); --j) { *j = *(j - 1); }
 			*j = piv;
 		}
 	}
@@ -738,9 +690,7 @@ bool VertexPriorityQueue::init() {
 #ifndef NDEBUG
 	p = order;
 	r = p + size - 1;
-	for (i = p; i < r; ++i) {
-		SPASSERT( VertLeq( **(i+1), **i ), "pqInit");
-	}
+	for (i = p; i < r; ++i) { sprt_passert(VertLeq(**(i + 1), **i), "pqInit"); }
 #endif
 
 	return 1;
@@ -750,9 +700,7 @@ bool VertexPriorityQueue::init() {
 #undef GT
 #undef KeySwap
 
-bool VertexPriorityQueue::empty() const {
-	return size == 0 && heap.empty();
-}
+bool VertexPriorityQueue::empty() const { return size == 0 && heap.empty(); }
 
 VertexPriorityQueue::Handle VertexPriorityQueue::insert(Key keyNew) {
 	int curr;
@@ -761,23 +709,23 @@ VertexPriorityQueue::Handle VertexPriorityQueue::insert(Key keyNew) {
 		return heap.insert(keyNew);
 	}
 	curr = size;
-	if( ++ size >= max ) {
+	if (++size >= max) {
 		Key *saveKey = keys;
 		// If the heap overflows, double its size.
 		auto tmpSize = max;
 		max <<= 1;
-		keys = (Key*) memory::pool::palloc(pool, max * sizeof(Key));
+		keys = (Key *)memory::pool::palloc(pool, max * sizeof(Key));
 		if (keys) {
-			memcpy(keys, saveKey, (size_t) (tmpSize * sizeof(Key)));
+			memcpy(keys, saveKey, (size_t)(tmpSize * sizeof(Key)));
 		}
 
 		memory::pool::free(pool, saveKey, tmpSize * sizeof(Key));
 	}
-	SPASSERT(curr != InvalidHandle, "pqInsert");
+	sprt_passert(curr != InvalidHandle, "pqInsert");
 	keys[curr] = keyNew;
 
 	/* Negative handles index the sorted array. */
-	return -(curr+1);
+	return -(curr + 1);
 }
 
 void VertexPriorityQueue::remove(Handle curr) {
@@ -786,12 +734,10 @@ void VertexPriorityQueue::remove(Handle curr) {
 		return;
 	}
 	curr = -(curr + 1);
-	SPASSERT(curr < Handle(max) && keys[curr] != nullptr, "pqDelete");
+	sprt_passert(curr < Handle(max) && keys[curr] != nullptr, "pqDelete");
 
 	keys[curr] = nullptr;
-	while (size > 0 && *(order[size - 1]) == nullptr) {
-		--size;
-	}
+	while (size > 0 && *(order[size - 1]) == nullptr) { --size; }
 }
 
 VertexPriorityQueue::Key VertexPriorityQueue::extractMin() {
@@ -807,9 +753,7 @@ VertexPriorityQueue::Key VertexPriorityQueue::extractMin() {
 			return heap.extractMin();
 		}
 	}
-	do {
-		--size;
-	} while (size > 0 && *(order[size - 1]) == NULL);
+	do { --size; } while (size > 0 && *(order[size - 1]) == NULL);
 	sortMin->_queueHandle = maxOf<QueueHandle>();
 	return sortMin;
 }
@@ -835,12 +779,12 @@ EdgeDict::EdgeDict(memory::pool_t *p, uint32_t size) : nodes(p), pool(p) {
 	nodes.set_memory_persistent(true);
 }
 
-const EdgeDictNode * EdgeDict::push(Edge *edge, int16_t windingAbove) {
+const EdgeDictNode *EdgeDict::push(Edge *edge, int16_t windingAbove) {
 	if constexpr (DictDebug) {
 		std::cout << "\t\tDict push: " << *edge << "\n";
 	}
 
-	SPASSERT(edge, "edge should be defined");
+	sprt_passert(edge, "edge should be defined");
 
 	const EdgeDictNode *ret;
 	auto &dst = edge->getDstVec();
@@ -848,20 +792,16 @@ const EdgeDictNode * EdgeDict::push(Edge *edge, int16_t windingAbove) {
 
 	if (org == event) {
 		auto norm = dst - event;
-		ret = & (*nodes.emplace(EdgeDictNode{
-			event, norm,
-			Vec4(event.x, event.y, dst.x, dst.y),
-			edge, windingAbove,
-			std::abs(norm.x) > std::numeric_limits<float>::epsilon()
-		}).first);
+		ret = &(*nodes.emplace(EdgeDictNode{event, norm, Vec4(event.x, event.y, dst.x, dst.y), edge,
+								   windingAbove,
+								   std::abs(norm.x) > std::numeric_limits<float>::epsilon()})
+						.first);
 	} else if (dst == event) {
 		auto norm = org - event;
-		ret = & (*nodes.emplace(EdgeDictNode{
-			event, norm,
-			Vec4(event.x, event.y, org.x, org.y),
-			edge, windingAbove,
-			std::abs(norm.x) > std::numeric_limits<float>::epsilon()
-		}).first);
+		ret = &(*nodes.emplace(EdgeDictNode{event, norm, Vec4(event.x, event.y, org.x, org.y), edge,
+								   windingAbove,
+								   std::abs(norm.x) > std::numeric_limits<float>::epsilon()})
+						.first);
 	} else {
 		ret = nullptr;
 		std::cout << "Fail to add edge: " << *edge << " for " << event << "\n";
@@ -878,16 +818,12 @@ const EdgeDictNode * EdgeDict::push(Edge *edge, int16_t windingAbove) {
 void EdgeDict::pop(const EdgeDictNode *node) {
 	if constexpr (DictDebug) {
 		std::cout << "\t\tDict pop: " << *node->edge << "\n";
-		for (auto &it : nodes) {
-			std::cout << "\t\t\t\tpop: " << it << "\n";
-		}
+		for (auto &it : nodes) { std::cout << "\t\t\t\tpop: " << it << "\n"; }
 	}
 
 	auto it = nodes.lower_bound(*node);
 	auto end = nodes.end();
-	while (it != end && *it <= *node && &(*it) != node) {
-		++ it;
-	}
+	while (it != end && *it <= *node && &(*it) != node) { ++it; }
 	if (it != end && &(*it) == node) {
 		it->edge->node = nullptr;
 		nodes.erase(it);
@@ -896,9 +832,7 @@ void EdgeDict::pop(const EdgeDictNode *node) {
 
 void EdgeDict::update(Vertex *v, float tolerance) {
 	if constexpr (DictDebug) {
-		for (auto &it : nodes) {
-			std::cout << "\t\t\t\tupdate: " << it << "\n";
-		}
+		for (auto &it : nodes) { std::cout << "\t\t\t\tupdate: " << it << "\n"; }
 	}
 
 	event = v->_origin;
@@ -952,11 +886,12 @@ void EdgeDict::update(Vertex *v, float tolerance) {
 			}
 		}
 
-		++ it;
+		++it;
 	}
 }
 
-const EdgeDictNode * EdgeDict::checkForIntersects(Vertex *v, Vec2 &intersectPoint, IntersectionEvent &ev, float tolerance) const {
+const EdgeDictNode *EdgeDict::checkForIntersects(Vertex *v, Vec2 &intersectPoint,
+		IntersectionEvent &ev, float tolerance) const {
 	if (nodes.empty()) {
 		return nullptr;
 	}
@@ -988,7 +923,8 @@ const EdgeDictNode * EdgeDict::checkForIntersects(Vertex *v, Vec2 &intersectPoin
 	return nullptr;
 }
 
-const EdgeDictNode * EdgeDict::checkForIntersects(HalfEdge *edge, Vec2 &intersectPoint, IntersectionEvent &ev, float tolerance) const {
+const EdgeDictNode *EdgeDict::checkForIntersects(HalfEdge *edge, Vec2 &intersectPoint,
+		IntersectionEvent &ev, float tolerance) const {
 	if (nodes.empty()) {
 		return nullptr;
 	}
@@ -1027,7 +963,8 @@ const EdgeDictNode * EdgeDict::checkForIntersects(HalfEdge *edge, Vec2 &intersec
 
 		simd::f32x4 intersect;
 		if (simd::isVec2BboxIntersects(simdVec1, simd::load(&n.value.x), intersect)) {
-			Vec4 isect; simd::store(&isect.x, intersect);
+			Vec4 isect;
+			simd::store(&isect.x, intersect);
 			if (VertEq(nCurr, nDst, tolerance)) {
 				if (std::abs(isect.x) < tolerance) {
 					if (std::abs(isect.y) < tolerance) {
@@ -1049,7 +986,8 @@ const EdgeDictNode * EdgeDict::checkForIntersects(HalfEdge *edge, Vec2 &intersec
 				continue;
 			}
 
-			const float denom = isect.w * isect.x - isect.z * isect.y; // crossProduct2Vector(A, B, C, D);
+			const float denom =
+					isect.w * isect.x - isect.z * isect.y; // crossProduct2Vector(A, B, C, D);
 			if (denom != 0.0f) {
 				const auto CAx = org.x - n.value.x;
 				const auto CAy = org.y - n.value.y;
@@ -1083,12 +1021,12 @@ const EdgeDictNode * EdgeDict::checkForIntersects(HalfEdge *edge, Vec2 &intersec
 	return nullptr;
 }
 
-const EdgeDictNode * EdgeDict::getEdgeBelow(const Edge *e) const {
+const EdgeDictNode *EdgeDict::getEdgeBelow(const Edge *e) const {
 	if constexpr (DictDebug) {
 		auto nIt = nodes.begin();
 		while (nIt != nodes.end()) {
 			std::cout << "\t\t\t\t" << (void *)nIt._node << " " << *nIt << "\n";
-			++ nIt;
+			++nIt;
 		}
 	}
 
@@ -1101,20 +1039,16 @@ const EdgeDictNode * EdgeDict::getEdgeBelow(const Edge *e) const {
 		// first edge in dict greater or equal then e, no edges below
 		return nullptr;
 	} else {
-		-- it;
-		while (it != nodes.begin() && it->current() == event) {
-			-- it;
-		}
+		--it;
+		while (it != nodes.begin() && it->current() == event) { --it; }
 		// edge before it is less then e
 		return &(*it);
 	}
 }
 
-const EdgeDictNode * EdgeDict::getEdgeBelow(const Vec2 &vec, uint32_t vertex) const {
+const EdgeDictNode *EdgeDict::getEdgeBelow(const Vec2 &vec, uint32_t vertex) const {
 	if constexpr (DictDebug) {
-		for (auto &it : nodes) {
-			std::cout << "\t\t\t\t" << it << "\n";
-		}
+		for (auto &it : nodes) { std::cout << "\t\t\t\t" << it << "\n"; }
 	}
 
 	if (nodes.empty()) {
@@ -1126,9 +1060,10 @@ const EdgeDictNode * EdgeDict::getEdgeBelow(const Vec2 &vec, uint32_t vertex) co
 		// first edge in dict greater or equal then e, no edges below
 		return nullptr;
 	} else {
-		-- it;
-		while (it != nodes.begin() && it->edge && (it->edge->getRightOrg() == vertex || it->current() == vec)) {
-			-- it;
+		--it;
+		while (it != nodes.begin() && it->edge
+				&& (it->edge->getRightOrg() == vertex || it->current() == vec)) {
+			--it;
 		}
 		// edge before it is less then e
 		return &(*it);
@@ -1136,26 +1071,25 @@ const EdgeDictNode * EdgeDict::getEdgeBelow(const Vec2 &vec, uint32_t vertex) co
 }
 
 std::ostream &operator<<(std::ostream &out, const Vertex &v) {
-	switch (VerboseFlag(out.iword( TessVerboseInfo ))) {
-	case VerboseFlag::None:
-		out << "Vertex (" << v._uniqueIdx << ") : " << v._origin;
-		break;
-	case VerboseFlag::General:
-		out << "Vertex (" << v._uniqueIdx << ") : " << v._origin;
-		break;
+	switch (VerboseFlag(out.iword(TessVerboseInfo))) {
+	case VerboseFlag::None: out << "Vertex (" << v._uniqueIdx << ") : " << v._origin; break;
+	case VerboseFlag::General: out << "Vertex (" << v._uniqueIdx << ") : " << v._origin; break;
 	case VerboseFlag::Full:
 		out << "Vertex (" << v._uniqueIdx << ") : " << v._origin << "\n";
-		v.foreach([&] (const HalfEdge &e) {
+		v.foreach ([&](const HalfEdge &e) {
 			Vec2 orgVec = e.origin;
 			Vec2 dstVec = e.sym()->origin;
 			uint32_t orgIdx = e.vertex;
 			uint32_t dstIdx = e.sym()->vertex;
 
-			out << "\tEdge (" << e.getIndex() << ":" << e.sym()->getIndex() << ") : " << orgVec << " - " << dstVec << "\n";
-			out << "\t\tDir: (" << e.getIndex() << "; org: " << orgIdx << "; left: " << e._leftNext->getIndex()
-					<< "; ccw: " << e._originNext->getIndex() << ")\n";
-			out << "\t\tSym: (" << e.sym()->getIndex() << "; org: " << dstIdx << "; left: " << e.sym()->_leftNext->getIndex()
-					<< "; ccw: " << e.sym()->_originNext->getIndex() << ")\n";
+			out << "\tEdge (" << e.getIndex() << ":" << e.sym()->getIndex() << ") : " << orgVec
+				<< " - " << dstVec << "\n";
+			out << "\t\tDir: (" << e.getIndex() << "; org: " << orgIdx
+				<< "; left: " << e._leftNext->getIndex() << "; ccw: " << e._originNext->getIndex()
+				<< ")\n";
+			out << "\t\tSym: (" << e.sym()->getIndex() << "; org: " << dstIdx
+				<< "; left: " << e.sym()->_leftNext->getIndex()
+				<< "; ccw: " << e.sym()->_originNext->getIndex() << ")\n";
 		});
 		break;
 	}
@@ -1169,14 +1103,14 @@ std::ostream &operator<<(std::ostream &out, const HalfEdge &e) {
 	uint32_t orgIdx = e.vertex;
 	uint32_t dstIdx = e.sym()->vertex;
 
-	switch (VerboseFlag(out.iword( TessVerboseInfo ))) {
+	switch (VerboseFlag(out.iword(TessVerboseInfo))) {
 	case VerboseFlag::None:
-		out << "Edge (" << e.getIndex() << ":" << e.sym()->getIndex() << ") : " << orgVec << " - " << dstVec
-			<< "; " << e.vertex << " - " << e.sym()->vertex;
+		out << "Edge (" << e.getIndex() << ":" << e.sym()->getIndex() << ") : " << orgVec << " - "
+			<< dstVec << "; " << e.vertex << " - " << e.sym()->vertex;
 		break;
 	case VerboseFlag::General:
-		out << "Edge (" << e.getIndex() << ":" << e.sym()->getIndex() << ") : " << orgVec << " - " << dstVec
-			<< "; " << e.vertex << " - " << e.sym()->vertex
+		out << "Edge (" << e.getIndex() << ":" << e.sym()->getIndex() << ") : " << orgVec << " - "
+			<< dstVec << "; " << e.vertex << " - " << e.sym()->vertex
 			<< " winding: " << e._realWinding << ":" << e._winding << ";";
 		if (e.goesLeft()) {
 			out << " goes left; ";
@@ -1188,11 +1122,12 @@ std::ostream &operator<<(std::ostream &out, const HalfEdge &e) {
 		out << (void *)&e;
 		break;
 	case VerboseFlag::Full:
-		out << "Edge (" << e.getIndex() << ":" << e.sym()->getIndex() << ") : " << orgVec << " - " << dstVec
-			<< "; " << e.vertex << " - " << e.sym()->vertex
+		out << "Edge (" << e.getIndex() << ":" << e.sym()->getIndex() << ") : " << orgVec << " - "
+			<< dstVec << "; " << e.vertex << " - " << e.sym()->vertex
 			<< " winding: " << e._realWinding << ":" << e._winding << ";\n";
-		out << "\tDir: (" << e.getIndex() << "; org: " << orgIdx << "; left: " << e._leftNext->getIndex()
-				<< "; ccw: " << e._originNext->getIndex() << ")";
+		out << "\tDir: (" << e.getIndex() << "; org: " << orgIdx
+			<< "; left: " << e._leftNext->getIndex() << "; ccw: " << e._originNext->getIndex()
+			<< ")";
 		if (e.goesLeft()) {
 			out << " goes left;";
 		} else if (e.goesRight()) {
@@ -1201,8 +1136,9 @@ std::ostream &operator<<(std::ostream &out, const HalfEdge &e) {
 			out << " unknown direction;";
 		}
 		out << "\n";
-		out << "\tSym: (" << e.sym()->getIndex() << "; org: " << dstIdx << "; left: " << e.sym()->_leftNext->getIndex()
-				<< "; ccw: " << e.sym()->_originNext->getIndex() << ")";
+		out << "\tSym: (" << e.sym()->getIndex() << "; org: " << dstIdx
+			<< "; left: " << e.sym()->_leftNext->getIndex()
+			<< "; ccw: " << e.sym()->_originNext->getIndex() << ")";
 		if (e.sym()->goesLeft()) {
 			out << " goes left; ";
 		} else if (e.sym()->goesRight()) {
@@ -1226,7 +1162,7 @@ std::ostream &operator<<(std::ostream &out, const FaceEdge &e) {
 }
 
 std::ostream &operator<<(std::ostream &stream, VerboseFlag e) {
-	stream.iword( TessVerboseInfo ) = toInt(e);
+	stream.iword(TessVerboseInfo) = toInt(e);
 	return stream;
 }
 
@@ -1244,4 +1180,4 @@ std::ostream &operator<<(std::ostream &stream, const Edge &e) {
 	return stream;
 }
 
-}
+} // namespace stappler::geom

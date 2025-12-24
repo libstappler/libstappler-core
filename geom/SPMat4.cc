@@ -29,8 +29,8 @@ namespace STAPPLER_VERSIONIZED stappler::geom {
 constexpr float MATH_PIOVER2 = 1.57079632679489661923f;
 constexpr float MATH_EPSILON = 0.000001f;
 
-static void Mat4_createBillboardHelper(const Vec3& objectPosition, const Vec3& cameraPosition,
-		const Vec3& cameraUpVector, const Vec3* cameraForwardVector, Mat4* dst) {
+static void Mat4_createBillboardHelper(const Vec3 &objectPosition, const Vec3 &cameraPosition,
+		const Vec3 &cameraUpVector, const Vec3 *cameraForwardVector, Mat4 *dst) {
 	Vec3 delta(objectPosition, cameraPosition);
 	bool isSufficientDelta = delta.lengthSquared() > MATH_EPSILON;
 
@@ -59,14 +59,15 @@ static void Mat4_createBillboardHelper(const Vec3& objectPosition, const Vec3& c
 	}
 }
 
-void Mat4::createLookAt(const Vec3& eyePosition, const Vec3& targetPosition, const Vec3& up, Mat4* dst) {
-	createLookAt(eyePosition.x, eyePosition.y, eyePosition.z, targetPosition.x, targetPosition.y, targetPosition.z,
-			up.x, up.y, up.z, dst);
+void Mat4::createLookAt(const Vec3 &eyePosition, const Vec3 &targetPosition, const Vec3 &up,
+		Mat4 *dst) {
+	createLookAt(eyePosition.x, eyePosition.y, eyePosition.z, targetPosition.x, targetPosition.y,
+			targetPosition.z, up.x, up.y, up.z, dst);
 }
 
 void Mat4::createLookAt(float eyePositionX, float eyePositionY, float eyePositionZ,
-		float targetPositionX, float targetPositionY, float targetPositionZ,
-		float upX, float upY, float upZ, Mat4* dst) {
+		float targetPositionX, float targetPositionY, float targetPositionZ, float upX, float upY,
+		float upZ, Mat4 *dst) {
 	assert(dst);
 
 	Vec3 eye(eyePositionX, eyePositionY, eyePositionZ);
@@ -107,7 +108,8 @@ void Mat4::createLookAt(float eyePositionX, float eyePositionY, float eyePositio
 	dst->m[15] = 1.0f;
 }
 
-void Mat4::createPerspective(float fieldOfView, float aspectRatio, float zNearPlane, float zFarPlane, Mat4* dst) {
+void Mat4::createPerspective(float fieldOfView, float aspectRatio, float zNearPlane,
+		float zFarPlane, Mat4 *dst) {
 	assert(dst);
 	assert(zFarPlane != zNearPlane);
 
@@ -130,14 +132,16 @@ void Mat4::createPerspective(float fieldOfView, float aspectRatio, float zNearPl
 	dst->m[14] = -2.0f * zFarPlane * zNearPlane * f_n;
 }
 
-void Mat4::createOrthographic(float width, float height, float zNearPlane, float zFarPlane, Mat4* dst) {
+void Mat4::createOrthographic(float width, float height, float zNearPlane, float zFarPlane,
+		Mat4 *dst) {
 	float halfWidth = width / 2.0f;
 	float halfHeight = height / 2.0f;
-	createOrthographicOffCenter(-halfWidth, halfWidth, -halfHeight, halfHeight, zNearPlane, zFarPlane, dst);
+	createOrthographicOffCenter(-halfWidth, halfWidth, -halfHeight, halfHeight, zNearPlane,
+			zFarPlane, dst);
 }
 
 void Mat4::createOrthographicOffCenter(float left, float right, float bottom, float top,
-		float zNearPlane, float zFarPlane, Mat4* dst) {
+		float zNearPlane, float zFarPlane, Mat4 *dst) {
 	assert(dst);
 	assert(right != left);
 	assert(top != bottom);
@@ -154,20 +158,21 @@ void Mat4::createOrthographicOffCenter(float left, float right, float bottom, fl
 	dst->m[15] = 1;
 }
 
-void Mat4::createBillboard(const Vec3& objectPosition, const Vec3& cameraPosition,
-		const Vec3& cameraUpVector, Mat4* dst) {
+void Mat4::createBillboard(const Vec3 &objectPosition, const Vec3 &cameraPosition,
+		const Vec3 &cameraUpVector, Mat4 *dst) {
 	Mat4_createBillboardHelper(objectPosition, cameraPosition, cameraUpVector, nullptr, dst);
 }
 
-void Mat4::createBillboard(const Vec3& objectPosition, const Vec3& cameraPosition,
-		const Vec3& cameraUpVector, const Vec3& cameraForwardVector, Mat4* dst) {
-	Mat4_createBillboardHelper(objectPosition, cameraPosition, cameraUpVector, &cameraForwardVector, dst);
+void Mat4::createBillboard(const Vec3 &objectPosition, const Vec3 &cameraPosition,
+		const Vec3 &cameraUpVector, const Vec3 &cameraForwardVector, Mat4 *dst) {
+	Mat4_createBillboardHelper(objectPosition, cameraPosition, cameraUpVector, &cameraForwardVector,
+			dst);
 }
 
 void Mat4::createScale(const Vec3 &scale, Mat4 *dst) {
 	assert(dst);
 
-	memcpy((void*) dst, (const void*) &IDENTITY, sizeof(Mat4));
+	memcpy((void *)dst, (const void *)&IDENTITY, sizeof(Mat4));
 
 	dst->m[0] = scale.x;
 	dst->m[5] = scale.y;
@@ -177,7 +182,7 @@ void Mat4::createScale(const Vec3 &scale, Mat4 *dst) {
 void Mat4::createScale(float xScale, float yScale, float zScale, Mat4 *dst) {
 	assert(dst);
 
-	memcpy((void*) dst, (const void*) &IDENTITY, sizeof(Mat4));
+	memcpy((void *)dst, (const void *)&IDENTITY, sizeof(Mat4));
 
 	dst->m[0] = xScale;
 	dst->m[5] = yScale;
@@ -185,43 +190,42 @@ void Mat4::createScale(float xScale, float yScale, float zScale, Mat4 *dst) {
 }
 
 
-void Mat4::createRotation(const Quaternion& q, Mat4* dst)
-{
-    assert(dst);
+void Mat4::createRotation(const Quaternion &q, Mat4 *dst) {
+	assert(dst);
 
-    float x2 = q.x + q.x;
-    float y2 = q.y + q.y;
-    float z2 = q.z + q.z;
+	float x2 = q.x + q.x;
+	float y2 = q.y + q.y;
+	float z2 = q.z + q.z;
 
-    float xx2 = q.x * x2;
-    float yy2 = q.y * y2;
-    float zz2 = q.z * z2;
-    float xy2 = q.x * y2;
-    float xz2 = q.x * z2;
-    float yz2 = q.y * z2;
-    float wx2 = q.w * x2;
-    float wy2 = q.w * y2;
-    float wz2 = q.w * z2;
+	float xx2 = q.x * x2;
+	float yy2 = q.y * y2;
+	float zz2 = q.z * z2;
+	float xy2 = q.x * y2;
+	float xz2 = q.x * z2;
+	float yz2 = q.y * z2;
+	float wx2 = q.w * x2;
+	float wy2 = q.w * y2;
+	float wz2 = q.w * z2;
 
-    dst->m[0] = 1.0f - yy2 - zz2;
-    dst->m[1] = xy2 + wz2;
-    dst->m[2] = xz2 - wy2;
-    dst->m[3] = 0.0f;
+	dst->m[0] = 1.0f - yy2 - zz2;
+	dst->m[1] = xy2 + wz2;
+	dst->m[2] = xz2 - wy2;
+	dst->m[3] = 0.0f;
 
-    dst->m[4] = xy2 - wz2;
-    dst->m[5] = 1.0f - xx2 - zz2;
-    dst->m[6] = yz2 + wx2;
-    dst->m[7] = 0.0f;
+	dst->m[4] = xy2 - wz2;
+	dst->m[5] = 1.0f - xx2 - zz2;
+	dst->m[6] = yz2 + wx2;
+	dst->m[7] = 0.0f;
 
-    dst->m[8] = xz2 + wy2;
-    dst->m[9] = yz2 - wx2;
-    dst->m[10] = 1.0f - xx2 - yy2;
-    dst->m[11] = 0.0f;
+	dst->m[8] = xz2 + wy2;
+	dst->m[9] = yz2 - wx2;
+	dst->m[10] = 1.0f - xx2 - yy2;
+	dst->m[11] = 0.0f;
 
-    dst->m[12] = 0.0f;
-    dst->m[13] = 0.0f;
-    dst->m[14] = 0.0f;
-    dst->m[15] = 1.0f;
+	dst->m[12] = 0.0f;
+	dst->m[13] = 0.0f;
+	dst->m[14] = 0.0f;
+	dst->m[15] = 1.0f;
 }
 
 void Mat4::createRotation(const Vec3 &axis, float angle, Mat4 *dst) {
@@ -283,7 +287,7 @@ void Mat4::createRotation(const Vec3 &axis, float angle, Mat4 *dst) {
 void Mat4::createRotationX(float angle, Mat4 *dst) {
 	assert(dst);
 
-	memcpy((void*) dst, (const void*) &IDENTITY, sizeof(Mat4));
+	memcpy((void *)dst, (const void *)&IDENTITY, sizeof(Mat4));
 
 	float c = cos(angle);
 	float s = sin(angle);
@@ -297,7 +301,7 @@ void Mat4::createRotationX(float angle, Mat4 *dst) {
 void Mat4::createRotationY(float angle, Mat4 *dst) {
 	assert(dst);
 
-	memcpy((void*) dst, (const void*) &IDENTITY, sizeof(Mat4));
+	memcpy((void *)dst, (const void *)&IDENTITY, sizeof(Mat4));
 
 	float c = cos(angle);
 	float s = sin(angle);
@@ -311,7 +315,7 @@ void Mat4::createRotationY(float angle, Mat4 *dst) {
 void Mat4::createRotationZ(float angle, Mat4 *dst) {
 	assert(dst);
 
-	memcpy((void*) dst, (const void*) &IDENTITY, sizeof(Mat4));
+	memcpy((void *)dst, (const void *)&IDENTITY, sizeof(Mat4));
 
 	float c = cos(angle);
 	float s = sin(angle);
@@ -325,17 +329,18 @@ void Mat4::createRotationZ(float angle, Mat4 *dst) {
 void Mat4::createTranslation(const Vec3 &translation, Mat4 *dst) {
 	assert(dst);
 
-	memcpy((void*) dst, (const void*) &IDENTITY, sizeof(Mat4));
+	memcpy((void *)dst, (const void *)&IDENTITY, sizeof(Mat4));
 
 	dst->m[12] = translation.x;
 	dst->m[13] = translation.y;
 	dst->m[14] = translation.z;
 }
 
-void Mat4::createTranslation(float xTranslation, float yTranslation, float zTranslation, Mat4 *dst) {
+void Mat4::createTranslation(float xTranslation, float yTranslation, float zTranslation,
+		Mat4 *dst) {
 	assert(dst);
 
-	memcpy((void*) dst, (const void*) &IDENTITY, sizeof(Mat4));
+	memcpy((void *)dst, (const void *)&IDENTITY, sizeof(Mat4));
 
 	dst->m[12] = xTranslation;
 	dst->m[13] = yTranslation;
@@ -343,7 +348,8 @@ void Mat4::createTranslation(float xTranslation, float yTranslation, float zTran
 }
 
 bool Mat4::decompose(Vec3 *scale, Quaternion *rotation, Vec3 *translation) const {
-	return decompose(scale ? &scale->x : nullptr, rotation ? &rotation->x : nullptr, translation ? &translation->x : nullptr);
+	return decompose(scale ? &scale->x : nullptr, rotation ? &rotation->x : nullptr,
+			translation ? &translation->x : nullptr);
 }
 
 bool Mat4::decompose(float *scale, float *rotation, float *translation) const {
@@ -355,8 +361,9 @@ bool Mat4::decompose(float *scale, float *rotation, float *translation) const {
 	}
 
 	// Nothing left to do.
-	if (scale == nullptr && rotation == nullptr)
+	if (scale == nullptr && rotation == nullptr) {
 		return true;
+	}
 
 	// Extract the scale.
 	// This is simply the length of each axis (row/column) in the matrix.
@@ -372,8 +379,9 @@ bool Mat4::decompose(float *scale, float *rotation, float *translation) const {
 	// Determine if we have a negative scale (true if determinant is less than zero).
 	// In this case, we simply negate a single axis of the scale.
 	float det = determinant();
-	if (det < 0)
+	if (det < 0) {
 		scaleZ = -scaleZ;
+	}
 
 	if (scale) {
 		scale[0] = scaleX;
@@ -382,12 +390,15 @@ bool Mat4::decompose(float *scale, float *rotation, float *translation) const {
 	}
 
 	// Nothing left to do.
-	if (rotation == nullptr)
+	if (rotation == nullptr) {
 		return true;
+	}
 
 	// Scale too close to zero, can't decompose rotation.
-	if (scaleX < math::MATH_TOLERANCE || scaleY < math::MATH_TOLERANCE || fabs(scaleZ) < math::MATH_TOLERANCE)
+	if (scaleX < math::MATH_TOLERANCE || scaleY < math::MATH_TOLERANCE
+			|| fabs(scaleZ) < math::MATH_TOLERANCE) {
 		return false;
+	}
 
 	float rn;
 
@@ -461,29 +472,17 @@ float Mat4::determinant() const {
 	return (a0 * b5 - a1 * b4 + a2 * b3 + a3 * b2 - a4 * b1 + a5 * b0);
 }
 
-void Mat4::getScale(Vec3 *scale) const {
-	decompose(scale, nullptr, nullptr);
-}
+void Mat4::getScale(Vec3 *scale) const { decompose(scale, nullptr, nullptr); }
 
-bool Mat4::getRotation(Quaternion *rotation) const {
-	return decompose(nullptr, rotation, nullptr);
-}
+bool Mat4::getRotation(Quaternion *rotation) const { return decompose(nullptr, rotation, nullptr); }
 
-void Mat4::getTranslation(Vec3 *translation) const {
-	decompose(nullptr, nullptr, translation);
-}
+void Mat4::getTranslation(Vec3 *translation) const { decompose(nullptr, nullptr, translation); }
 
-void Mat4::getScale(float *scale) const {
-	decompose(scale, nullptr, nullptr);
-}
+void Mat4::getScale(float *scale) const { decompose(scale, nullptr, nullptr); }
 
-bool Mat4::getRotation(float *rotation) const {
-	return decompose(nullptr, rotation, nullptr);
-}
+bool Mat4::getRotation(float *rotation) const { return decompose(nullptr, rotation, nullptr); }
 
-void Mat4::getTranslation(float *translation) const {
-	decompose(nullptr, nullptr, translation);
-}
+void Mat4::getTranslation(float *translation) const { decompose(nullptr, nullptr, translation); }
 
 void Mat4::getUpVector(Vec3 *dst) const {
 	assert(dst);
@@ -551,8 +550,9 @@ bool Mat4::inverse() {
 	float det = a0 * b5 - a1 * b4 + a2 * b3 + a3 * b2 - a4 * b1 + a5 * b0;
 
 	// Close to zero, can't invert.
-	if (fabs(det) <= math::MATH_TOLERANCE)
+	if (fabs(det) <= math::MATH_TOLERANCE) {
 		return false;
+	}
 
 	// Support the case where m == dst.
 	Mat4 inverse;
@@ -581,9 +581,7 @@ bool Mat4::inverse() {
 	return true;
 }
 
-void Mat4::rotate(const Quaternion &q) {
-	rotate(q, this);
-}
+void Mat4::rotate(const Quaternion &q) { rotate(q, this); }
 
 void Mat4::rotate(const Quaternion &q, Mat4 *dst) const {
 	Mat4 r;
@@ -591,9 +589,7 @@ void Mat4::rotate(const Quaternion &q, Mat4 *dst) const {
 	multiply(*this, r, dst);
 }
 
-void Mat4::rotate(const Vec3 &axis, float angle) {
-	rotate(axis, angle, this);
-}
+void Mat4::rotate(const Vec3 &axis, float angle) { rotate(axis, angle, this); }
 
 void Mat4::rotate(const Vec3 &axis, float angle, Mat4 *dst) const {
 	Mat4 r;
@@ -601,9 +597,7 @@ void Mat4::rotate(const Vec3 &axis, float angle, Mat4 *dst) const {
 	multiply(*this, r, dst);
 }
 
-void Mat4::rotateX(float angle) {
-	rotateX(angle, this);
-}
+void Mat4::rotateX(float angle) { rotateX(angle, this); }
 
 void Mat4::rotateX(float angle, Mat4 *dst) const {
 	Mat4 r;
@@ -611,9 +605,7 @@ void Mat4::rotateX(float angle, Mat4 *dst) const {
 	multiply(*this, r, dst);
 }
 
-void Mat4::rotateY(float angle) {
-	rotateY(angle, this);
-}
+void Mat4::rotateY(float angle) { rotateY(angle, this); }
 
 void Mat4::rotateY(float angle, Mat4 *dst) const {
 	Mat4 r;
@@ -621,9 +613,7 @@ void Mat4::rotateY(float angle, Mat4 *dst) const {
 	multiply(*this, r, dst);
 }
 
-void Mat4::rotateZ(float angle) {
-	rotateZ(angle, this);
-}
+void Mat4::rotateZ(float angle) { rotateZ(angle, this); }
 
 void Mat4::rotateZ(float angle, Mat4 *dst) const {
 	Mat4 r;
@@ -631,17 +621,11 @@ void Mat4::rotateZ(float angle, Mat4 *dst) const {
 	multiply(*this, r, dst);
 }
 
-void Mat4::scale(float value) {
-	scale(value, this);
-}
+void Mat4::scale(float value) { scale(value, this); }
 
-void Mat4::scale(float value, Mat4 *dst) const {
-	scale(value, value, value, dst);
-}
+void Mat4::scale(float value, Mat4 *dst) const { scale(value, value, value, dst); }
 
-void Mat4::scale(float xScale, float yScale, float zScale) {
-	scale(xScale, yScale, zScale, this);
-}
+void Mat4::scale(float xScale, float yScale, float zScale) { scale(xScale, yScale, zScale, this); }
 
 void Mat4::scale(float xScale, float yScale, float zScale, Mat4 *dst) const {
 	Mat4 s;
@@ -649,17 +633,11 @@ void Mat4::scale(float xScale, float yScale, float zScale, Mat4 *dst) const {
 	multiply(*this, s, dst);
 }
 
-void Mat4::scale(const Vec3 &s) {
-	scale(s.x, s.y, s.z, this);
-}
+void Mat4::scale(const Vec3 &s) { scale(s.x, s.y, s.z, this); }
 
-void Mat4::scale(const Vec3 &s, Mat4 *dst) const {
-	scale(s.x, s.y, s.z, dst);
-}
+void Mat4::scale(const Vec3 &s, Mat4 *dst) const { scale(s.x, s.y, s.z, dst); }
 
-void Mat4::translate(float x, float y, float z) {
-	translate(x, y, z, this);
-}
+void Mat4::translate(float x, float y, float z) { translate(x, y, z, this); }
 
 void Mat4::translate(float x, float y, float z, Mat4 *dst) const {
 	Mat4 t;
@@ -667,52 +645,8 @@ void Mat4::translate(float x, float y, float z, Mat4 *dst) const {
 	multiply(*this, t, dst);
 }
 
-void Mat4::translate(const Vec3 &t) {
-	translate(t.x, t.y, t.z, this);
-}
+void Mat4::translate(const Vec3 &t) { translate(t.x, t.y, t.z, this); }
 
-void Mat4::translate(const Vec3 &t, Mat4 *dst) const {
-	translate(t.x, t.y, t.z, dst);
-}
+void Mat4::translate(const Vec3 &t, Mat4 *dst) const { translate(t.x, t.y, t.z, dst); }
 
-#ifdef __LCC__
-
-constexpr const Mat4 Mat4::IDENTITY = Mat4(
-	1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 1.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f);
-
-constexpr const Mat4 Mat4::ZERO = Mat4(
-	0.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 0.0f );
-
-constexpr const Mat4 Mat4::INVALID = Mat4(
-	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
-	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
-	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan(),
-	stappler::nan(), stappler::nan(), stappler::nan(), stappler::nan() );
-
-constexpr const Mat4 Mat4::ROTATION_Z_90 = Mat4(
-	0.0f, -1.0f, 0.0f, 0.0f,
-	1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f );
-
-constexpr const Mat4 Mat4::ROTATION_Z_180 = Mat4(
-	-1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, -1.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f );
-
-constexpr const Mat4 Mat4::ROTATION_Z_270 = Mat4(
-	0.0f, 1.0f, 0.0f, 0.0f,
-	-1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f );
-
-#endif
-
-}
+} // namespace stappler::geom

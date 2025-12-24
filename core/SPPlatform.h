@@ -25,37 +25,34 @@
 #define CORE_CORE_SPPLATFORM_H_
 
 #include "SPCore.h"
+#include "SPRuntimePlatform.h"
 
 namespace STAPPLER_VERSIONIZED stappler {
 
-enum class ClockType {
-	Default,
-	Monotonic,
-	Realtime,
-	Process,
-	Thread,
-
-	// hardware clock tick counter with unknown monotonic resolution
-	// see `rdtsc`
-	Hardware
-};
+using sprt::platform::ClockType;
 
 } // namespace STAPPLER_VERSIONIZED stappler
 
 namespace STAPPLER_VERSIONIZED stappler::platform {
 
-SP_PUBLIC size_t makeRandomBytes(uint8_t *buf, size_t count);
+SP_PUBLIC inline size_t makeRandomBytes(uint8_t *buf, size_t count) {
+	return sprt::platform::makeRandomBytes(buf, count);
+}
 
 // current time in microseconds
-SP_PUBLIC uint64_t clock(ClockType = ClockType::Default);
+SP_PUBLIC inline uint64_t clock(ClockType c = ClockType::Default) {
+	return sprt::platform::clock(c);
+}
 
 // current time in nanoseconds
-SP_PUBLIC uint64_t nanoclock(ClockType = ClockType::Default);
+SP_PUBLIC inline uint64_t nanoclock(ClockType c = ClockType::Default) {
+	return sprt::platform::nanoclock(c);
+}
 
 // sleep for the microseconds
-SP_PUBLIC void sleep(uint64_t microseconds);
+SP_PUBLIC inline void sleep(uint64_t microseconds) { return sprt::platform::sleep(microseconds); }
 
-SP_PUBLIC uint32_t getMemoryPageSize();
+SP_PUBLIC inline uint32_t getMemoryPageSize() { return sprt::platform::getMemoryPageSize(); }
 
 } // namespace stappler::platform
 

@@ -53,9 +53,15 @@ template <class T, class Flag>
 struct ValueWrapper {
 	using Type = T;
 
-	static constexpr ValueWrapper<T, Flag> max() { return ValueWrapper<T, Flag>(NumericLimits<T>::max()); }
-	static constexpr ValueWrapper<T, Flag> min() { return ValueWrapper<T, Flag>(NumericLimits<T>::min()); }
-	static constexpr ValueWrapper<T, Flag> epsilon() { return ValueWrapper<T, Flag>(NumericLimits<T>::epsilon()); }
+	static constexpr ValueWrapper<T, Flag> max() {
+		return ValueWrapper<T, Flag>(NumericLimits<T>::max());
+	}
+	static constexpr ValueWrapper<T, Flag> min() {
+		return ValueWrapper<T, Flag>(NumericLimits<T>::min());
+	}
+	static constexpr ValueWrapper<T, Flag> epsilon() {
+		return ValueWrapper<T, Flag>(NumericLimits<T>::epsilon());
+	}
 	static constexpr ValueWrapper<T, Flag> zero() { return ValueWrapper<T, Flag>(0); }
 
 	inline constexpr ValueWrapper() noexcept = default;
@@ -70,53 +76,96 @@ struct ValueWrapper {
 
 	inline void set(const T &val) { value = val; }
 	inline void set(T &&val) { value = std::move(val); }
-	inline constexpr T & get() { return value; }
-	inline constexpr const T & get() const { return value; }
+	inline constexpr T &get() { return value; }
+	inline constexpr const T &get() const { return value; }
 	inline constexpr bool empty() const { return value == 0; }
 
-	inline constexpr bool operator == (const ValueWrapper<T, Flag> & other) const { return value == other.value; }
-	inline constexpr bool operator != (const ValueWrapper<T, Flag> & other) const { return value != other.value; }
-	inline constexpr bool operator > (const ValueWrapper<T, Flag> & other) const { return value > other.value; }
-	inline constexpr bool operator < (const ValueWrapper<T, Flag> & other) const { return value < other.value; }
-	inline constexpr bool operator >= (const ValueWrapper<T, Flag> & other) const { return value >= other.value; }
-	inline constexpr bool operator <= (const ValueWrapper<T, Flag> & other) const { return value <= other.value; }
+	inline constexpr bool operator==(const ValueWrapper<T, Flag> &other) const {
+		return value == other.value;
+	}
+	inline constexpr bool operator!=(const ValueWrapper<T, Flag> &other) const {
+		return value != other.value;
+	}
+	inline constexpr bool operator>(const ValueWrapper<T, Flag> &other) const {
+		return value > other.value;
+	}
+	inline constexpr bool operator<(const ValueWrapper<T, Flag> &other) const {
+		return value < other.value;
+	}
+	inline constexpr bool operator>=(const ValueWrapper<T, Flag> &other) const {
+		return value >= other.value;
+	}
+	inline constexpr bool operator<=(const ValueWrapper<T, Flag> &other) const {
+		return value <= other.value;
+	}
 
-	inline constexpr void operator |= (const ValueWrapper<T, Flag> & other) { value |= other.value; }
-	inline constexpr void operator &= (const ValueWrapper<T, Flag> & other) { value &= other.value; }
-	inline constexpr void operator ^= (const ValueWrapper<T, Flag> & other) { value ^= other.value; }
-	inline constexpr void operator += (const ValueWrapper<T, Flag> & other) { value += other.value; }
-	inline constexpr void operator -= (const ValueWrapper<T, Flag> & other) { value -= other.value; }
-	inline constexpr void operator *= (const ValueWrapper<T, Flag> & other) { value *= other.value; }
-	inline constexpr void operator /= (const ValueWrapper<T, Flag> & other) { value /= other.value; }
+	inline constexpr void operator|=(const ValueWrapper<T, Flag> &other) { value |= other.value; }
+	inline constexpr void operator&=(const ValueWrapper<T, Flag> &other) { value &= other.value; }
+	inline constexpr void operator^=(const ValueWrapper<T, Flag> &other) { value ^= other.value; }
+	inline constexpr void operator+=(const ValueWrapper<T, Flag> &other) { value += other.value; }
+	inline constexpr void operator-=(const ValueWrapper<T, Flag> &other) { value -= other.value; }
+	inline constexpr void operator*=(const ValueWrapper<T, Flag> &other) { value *= other.value; }
+	inline constexpr void operator/=(const ValueWrapper<T, Flag> &other) { value /= other.value; }
 
-	inline constexpr ValueWrapper<T, Flag> operator|(const ValueWrapper<T, Flag>& v) const { return ValueWrapper<T, Flag>(value | v.value); }
-	inline constexpr ValueWrapper<T, Flag> operator&(const ValueWrapper<T, Flag>& v) const { return ValueWrapper<T, Flag>(value & v.value); }
-	inline constexpr ValueWrapper<T, Flag> operator^(const ValueWrapper<T, Flag>& v) const { return ValueWrapper<T, Flag>(value ^ v.value); }
-	inline constexpr ValueWrapper<T, Flag> operator+(const ValueWrapper<T, Flag>& v) const { return ValueWrapper<T, Flag>(value + v.value); }
-	inline constexpr ValueWrapper<T, Flag> operator-(const ValueWrapper<T, Flag>& v) const { return ValueWrapper<T, Flag>(value - v.value); }
-	inline constexpr ValueWrapper<T, Flag> operator*(const ValueWrapper<T, Flag>& v) const { return ValueWrapper<T, Flag>(value * v.value); }
-	inline constexpr ValueWrapper<T, Flag> operator/(const ValueWrapper<T, Flag>& v) const { return ValueWrapper<T, Flag>(value / v.value); }
-	inline constexpr ValueWrapper<T, Flag> operator-() const { return ValueWrapper<T, Flag>(-value); }
+	inline constexpr ValueWrapper<T, Flag> operator|(const ValueWrapper<T, Flag> &v) const {
+		return ValueWrapper<T, Flag>(value | v.value);
+	}
+	inline constexpr ValueWrapper<T, Flag> operator&(const ValueWrapper<T, Flag> &v) const {
+		return ValueWrapper<T, Flag>(value & v.value);
+	}
+	inline constexpr ValueWrapper<T, Flag> operator^(const ValueWrapper<T, Flag> &v) const {
+		return ValueWrapper<T, Flag>(value ^ v.value);
+	}
+	inline constexpr ValueWrapper<T, Flag> operator+(const ValueWrapper<T, Flag> &v) const {
+		return ValueWrapper<T, Flag>(value + v.value);
+	}
+	inline constexpr ValueWrapper<T, Flag> operator-(const ValueWrapper<T, Flag> &v) const {
+		return ValueWrapper<T, Flag>(value - v.value);
+	}
+	inline constexpr ValueWrapper<T, Flag> operator*(const ValueWrapper<T, Flag> &v) const {
+		return ValueWrapper<T, Flag>(value * v.value);
+	}
+	inline constexpr ValueWrapper<T, Flag> operator/(const ValueWrapper<T, Flag> &v) const {
+		return ValueWrapper<T, Flag>(value / v.value);
+	}
+	inline constexpr ValueWrapper<T, Flag> operator-() const {
+		return ValueWrapper<T, Flag>(-value);
+	}
 
-	inline ValueWrapper<T, Flag> &operator++ () { value ++; return *this; }
-	inline ValueWrapper<T, Flag> &operator-- () { value --; return *this; }
+	inline ValueWrapper<T, Flag> &operator++() {
+		value++;
+		return *this;
+	}
+	inline ValueWrapper<T, Flag> &operator--() {
+		value--;
+		return *this;
+	}
 
-	inline ValueWrapper<T, Flag> operator++ (int) { ValueWrapper<T, Flag> result(*this); ++(*this); return result; }
-	inline ValueWrapper<T, Flag> operator-- (int) { ValueWrapper<T, Flag> result(*this); --(*this); return result; }
+	inline ValueWrapper<T, Flag> operator++(int) {
+		ValueWrapper<T, Flag> result(*this);
+		++(*this);
+		return result;
+	}
+	inline ValueWrapper<T, Flag> operator--(int) {
+		ValueWrapper<T, Flag> result(*this);
+		--(*this);
+		return result;
+	}
 
 	// to enable progress
 	template <typename M>
-	inline constexpr std::enable_if_t<HasMultiplication<Type, M>::type::value, ValueWrapper<T, Flag>>
-	operator*(const M &v) const { return ValueWrapper<T, Flag>(value * v); }
+	inline constexpr std::enable_if_t<HasMultiplication<Type, M>::type::value,
+			ValueWrapper<T, Flag>>
+	operator*(const M &v) const {
+		return ValueWrapper<T, Flag>(value * v);
+	}
 
-#if SP_HAVE_THREE_WAY_COMPARISON
-	SP_THREE_WAY_COMPARISON_TYPE(ValueWrapper)
-#endif
+	auto operator<=>(const ValueWrapper &) const = default;
 
 	T value;
 };
 
-}
+} // namespace STAPPLER_VERSIONIZED stappler
 
 namespace std {
 
@@ -124,11 +173,12 @@ template <typename Value, typename Flag>
 struct hash<STAPPLER_VERSIONIZED_NAMESPACE::ValueWrapper<Value, Flag>> {
 	hash() { }
 
-	size_t operator() (const STAPPLER_VERSIONIZED_NAMESPACE::ValueWrapper<Value, Flag> &value) const noexcept {
+	size_t operator()(
+			const STAPPLER_VERSIONIZED_NAMESPACE::ValueWrapper<Value, Flag> &value) const noexcept {
 		return hash<Value>()(value.get());
 	}
 };
 
-}
+} // namespace std
 
 #endif /* CORE_CORE_DETAIL_SPVALUEWRAPPER_H_ */
